@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { 
@@ -27,8 +28,18 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ className }: SidebarProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [activeItem, setActiveItem] = useState("dashboard")
+
+  // Update active item based on current pathname
+  useEffect(() => {
+    const currentItem = navigationItems.find(item => item.href === pathname)
+    if (currentItem) {
+      setActiveItem(currentItem.id)
+    }
+  }, [pathname])
 
   const navigationItems = [
     {
@@ -104,7 +115,12 @@ export default function Sidebar({ className }: SidebarProps) {
 
   const handleItemClick = (itemId: string) => {
     setActiveItem(itemId)
-    console.log(`Navigating to: ${itemId}`)
+    
+    // Find the navigation item to get the href
+    const navigationItem = navigationItems.find(item => item.id === itemId)
+    if (navigationItem && navigationItem.href) {
+      router.push(navigationItem.href)
+    }
   }
 
   return (

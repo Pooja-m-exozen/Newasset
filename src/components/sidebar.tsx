@@ -61,7 +61,8 @@ export default function Sidebar({ className }: SidebarProps) {
       id: "locations",
       label: "Manage Location",
       icon: MapPin,
-      href: "/locations",
+      href: "/admin/managelocation",
+      
       description: "Location and site management"
     },
     {

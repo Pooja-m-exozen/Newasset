@@ -33,20 +33,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken')
+      const token = localStorage.getItem('authToken')
       if (token) {
         const response = await apiService.getProfile()
         if (response.success && response.user) {
           setUser(response.user)
         } else {
           // Token is invalid, clear it
-          localStorage.removeItem('token')
           localStorage.removeItem('authToken')
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error)
-      localStorage.removeItem('token')
       localStorage.removeItem('authToken')
     } finally {
       setIsLoading(false)
@@ -60,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(response.user)
         // Store the token in localStorage for API requests
         if (response.token) {
-          localStorage.setItem('token', response.token)
+          localStorage.setItem('authToken', response.token)
         }
       } else {
         throw new Error(response.message || 'Login failed')
@@ -71,7 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
     localStorage.removeItem('authToken')
     localStorage.removeItem('rememberMe')
     setUser(null)

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Input } from './input'
@@ -9,9 +9,10 @@ import { Checkbox } from './checkbox'
 import { Badge } from './badge'
 import { Separator } from './separator'
 import { generateQRCode, downloadQRCode, type QRCodeGenerationResponse } from '@/lib/DigitalAssets'
+import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, Download, Copy, Settings, Info, MapPin, Building, Calendar, Hash } from 'lucide-react'
+import { QrCode, Download, Copy, Settings, Info, MapPin, Building, Calendar, Hash, CheckCircle, X } from 'lucide-react'
 
 interface QRCodeGeneratorProps {
   assetId?: string;
@@ -19,6 +20,7 @@ interface QRCodeGeneratorProps {
 }
 
 export function QRCodeGenerator({ assetId, className }: QRCodeGeneratorProps) {
+  const { assets, fetchAssets, fetchAssetByTagId, getAssetIdFromTagId } = useDigitalAssets()
   const [inputAssetId, setInputAssetId] = useState(assetId || '')
   const [size, setSize] = useState(300)
   const [includeUrl, setIncludeUrl] = useState(true)
@@ -28,6 +30,71 @@ export function QRCodeGenerator({ assetId, className }: QRCodeGeneratorProps) {
   const [error, setError] = useState<string | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+  const [selectedAssetId, setSelectedAssetId] = useState<string>('')
+  const [isSearchingAsset, setIsSearchingAsset] = useState(false)
+  const [mappedAssetId, setMappedAssetId] = useState<string>('')
+
+  // Load assets on component mount
+  useEffect(() => {
+    fetchAssets()
+  }, []) // Remove fetchAssets from dependencies to prevent infinite loop
+
+  // Update input when asset is selected
+  useEffect(() => {
+    if (selectedAssetId) {
+      setInputAssetId(selectedAssetId)
+    }
+  }, [selectedAssetId])
+
+  const handleClearAsset = () => {
+    setSelectedAssetId('')
+    setInputAssetId('')
+    setMappedAssetId('')
+  }
+
+  // Search for asset by tag ID when user types
+  const handleAssetIdChange = async (value: string) => {
+    setInputAssetId(value)
+    setMappedAssetId('') // Reset mapped asset ID when input changes
+    
+    if (value.trim() && value.length >= 3) {
+      setIsSearchingAsset(true)
+      try {
+        // Try to find the asset in the existing assets list first
+        const existingAsset = assets.find(asset => 
+          asset.tagId.toLowerCase().includes(value.toLowerCase())
+        )
+        
+        if (existingAsset) {
+          setSelectedAssetId(existingAsset.tagId)
+          // Map tag ID to asset ID
+          const assetId = await getAssetIdFromTagId(existingAsset.tagId)
+          setMappedAssetId(assetId)
+        } else {
+          // If not found in existing assets, try to fetch from API
+          try {
+            await fetchAssetByTagId(value.trim())
+            setSelectedAssetId(value.trim())
+            // Map tag ID to asset ID
+            const assetId = await getAssetIdFromTagId(value.trim())
+            setMappedAssetId(assetId)
+          } catch (err) {
+            // Asset not found, clear selection
+            setSelectedAssetId('')
+            setMappedAssetId('')
+          }
+        }
+      } catch (err) {
+        setSelectedAssetId('')
+        setMappedAssetId('')
+      } finally {
+        setIsSearchingAsset(false)
+      }
+    } else {
+      setSelectedAssetId('')
+      setMappedAssetId('')
+    }
+  }
 
   const handleGenerate = async () => {
     if (!inputAssetId.trim()) {
@@ -100,12 +167,48 @@ export function QRCodeGenerator({ assetId, className }: QRCodeGeneratorProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="assetId">Asset ID</Label>
-            <Input
-              id="assetId"
-              placeholder="Enter Asset ID (e.g., ASSET555)"
-              value={inputAssetId}
-              onChange={(e) => setInputAssetId(e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                id="assetId"
+                placeholder="Enter Asset ID (e.g., ASSET555)"
+                value={inputAssetId}
+                onChange={(e) => handleAssetIdChange(e.target.value)}
+                onBlur={() => setIsSearchingAsset(false)}
+                className={selectedAssetId ? 'border-green-500 bg-green-50' : ''}
+              />
+              {isSearchingAsset && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                </div>
+              )}
+              {selectedAssetId && !isSearchingAsset && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+              )}
+              {inputAssetId && !isSearchingAsset && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-8 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  onClick={handleClearAsset}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+            {isSearchingAsset && (
+              <p className="text-xs text-muted-foreground">Searching for asset...</p>
+            )}
+            {selectedAssetId && !isSearchingAsset && (
+              <div className="space-y-1">
+                <p className="text-xs text-green-600">✓ Asset found: {selectedAssetId}</p>
+                {mappedAssetId && (
+                  <p className="text-xs text-blue-600">🔗 Mapped to Asset ID: {mappedAssetId}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -138,11 +241,6 @@ export function QRCodeGenerator({ assetId, className }: QRCodeGeneratorProps) {
             {isGenerating ? 'Generating...' : 'Generate QR Code'}
           </Button>
 
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
         </CardContent>
       </Card>
 

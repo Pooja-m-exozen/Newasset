@@ -5,13 +5,14 @@ import { BarcodeGenerator } from '@/components/ui/barcode-generator'
 import { NFCGenerator } from '@/components/ui/nfc-generator'
 import { BulkDigitalAssetsGenerator } from '@/components/ui/bulk-digital-assets-generator'
 import { AssetsViewer } from '@/components/ui/assets-viewer'
+import { QRCodeScanner } from '@/components/ui/qr-code-scanner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { PageHeader } from '@/components/ui/page-header'
-import { QrCode, Barcode, Wifi, Package, Database, Sparkles, Zap, TrendingUp, Users, Shield, Activity, BarChart3, Settings, ArrowRight, CheckCircle, Clock, Star, Download } from 'lucide-react'
+import { QrCode, Barcode, Wifi, Package, Database, Sparkles, Zap, TrendingUp, Users, Shield, Activity, BarChart3, Settings, ArrowRight, CheckCircle, Clock, Star, Download, Scan } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 export default function GeneratePage() {
@@ -76,6 +77,15 @@ export default function GeneratePage() {
       description: 'View and manage all your digital assets',
       color: 'from-indigo-500 to-blue-600',
       bgColor: 'bg-indigo-50 dark:bg-indigo-950/20'
+    },
+    {
+      value: 'scanner',
+      icon: Scan,
+      title: 'QR Scanner',
+      subtitle: 'Scan QR codes',
+      description: 'Scan QR codes to quickly add assets to your system',
+      color: 'from-yellow-500 to-orange-600',
+      bgColor: 'bg-yellow-50 dark:bg-yellow-950/20'
     }
   ]
 
@@ -119,8 +129,8 @@ export default function GeneratePage() {
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 
                 {/* Tab Headers */}
-                <div className="border-b bg-muted/50">
-                  <TabsList className="grid w-full grid-cols-5 h-auto bg-transparent border-0 p-0 rounded-none">
+                                  <div className="border-b bg-muted/50">
+                    <TabsList className="grid w-full grid-cols-6 h-auto bg-transparent border-0 p-0 rounded-none">
                     {tabConfig.map((tab) => (
                       <TabsTrigger 
                         key={tab.value}
@@ -303,6 +313,37 @@ export default function GeneratePage() {
                           </div>
                         </div>
                         <AssetsViewer />
+                      </TabsContent>
+
+                      <TabsContent value="scanner" className="mt-0 space-y-6">
+                        <div className="mb-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 rounded-lg bg-gradient-to-r from-yellow-500 to-orange-600">
+                              <Scan className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                              <h2 className="text-2xl font-semibold">QR Code Scanner</h2>
+                              <p className="text-muted-foreground mt-2">
+                                Scan QR codes to quickly add assets to your system.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Scan className="h-4 w-4" />
+                              Fast Scanning
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Shield className="h-4 w-4" />
+                              Secure
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Activity className="h-4 w-4" />
+                              Real-time
+                            </span>
+                          </div>
+                        </div>
+                        <QRCodeScanner />
                       </TabsContent>
                     </>
                   )}

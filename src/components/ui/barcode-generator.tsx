@@ -7,12 +7,15 @@ import { Input } from './input'
 import { Label } from './label'
 import { Badge } from './badge'
 import { Separator } from './separator'
-import { generateBarcode, downloadBarcode, type BarcodeGenerationResponse } from '@/lib/DigitalAssets'
+import { generateBarcode, type BarcodeGenerationResponse } from '@/lib/DigitalAssets'
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { Barcode, Download, Copy, Settings, Info, Hash, CheckCircle, X } from 'lucide-react'
+import { Barcode, Settings, Info, Hash, CheckCircle, X, Search, MapPin, Building } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
+
+// API Base URL constant
+const API_BASE_URL = 'http://192.168.0.5:5021'
 
 interface BarcodeGeneratorProps {
   assetId?: string;
@@ -29,156 +32,97 @@ const BARCODE_FORMATS = [
 ]
 
 export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) {
-  const { assets, fetchAssets, fetchAssetByTagId, getAssetIdFromTagId } = useDigitalAssets()
-  const [inputAssetId, setInputAssetId] = useState(assetId || '')
+  const { assets, fetchAssets, fetchAssetByTagId, getAssetIdFromTagId, loading: assetsLoading } = useDigitalAssets()
   const [format, setFormat] = useState('code128')
   const [height, setHeight] = useState(10)
   const [scale, setScale] = useState(3)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isDownloading, setIsDownloading] = useState(false)
   const [barcodeData, setBarcodeData] = useState<BarcodeGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [selectedAssetId, setSelectedAssetId] = useState<string>('')
-  const [isSearchingAsset, setIsSearchingAsset] = useState(false)
   const [mappedAssetId, setMappedAssetId] = useState<string>('')
+  const [selectedAssetFromDropdown, setSelectedAssetFromDropdown] = useState<string>('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [imageLoading, setImageLoading] = useState(false)
 
   // Load assets on component mount
   useEffect(() => {
     fetchAssets()
   }, []) // Remove fetchAssets from dependencies to prevent infinite loop
 
-  // Update input when asset is selected
-  useEffect(() => {
-    if (selectedAssetId) {
-      setInputAssetId(selectedAssetId)
+  // Handle asset selection from dropdown
+  const handleAssetSelect = async (assetTagId: string) => {
+    setSelectedAssetFromDropdown(assetTagId)
+    setSelectedAssetId(assetTagId)
+    setError(null) // Clear any previous errors
+    
+    try {
+      // Find the selected asset to get its _id
+      const selectedAsset = assets.find(asset => asset.tagId === assetTagId)
+      if (!selectedAsset) {
+        throw new Error('Selected asset not found')
+      }
+      
+      // Use the _id for barcode generation
+      const assetId = selectedAsset._id
+      setMappedAssetId(assetId)
+      
+      // Don't auto-generate barcode - user must click generate button
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process selected asset')
+      console.error('Error processing selected asset:', err)
     }
-  }, [selectedAssetId])
+  }
 
   const handleClearAsset = () => {
     setSelectedAssetId('')
-    setInputAssetId('')
     setMappedAssetId('')
+    setSelectedAssetFromDropdown('')
+    setBarcodeData(null)
+    setError(null)
   }
 
-  // Search for asset by tag ID when user types
-  const handleAssetIdChange = async (value: string) => {
-    setInputAssetId(value)
-    setMappedAssetId('') // Reset mapped asset ID when input changes
+  const handleGenerateBarcode = async (assetIdToUse?: string) => {
+    const assetId = assetIdToUse || mappedAssetId
     
-    if (value.trim() && value.length >= 3) {
-      setIsSearchingAsset(true)
-      try {
-        console.log('🔍 Searching for asset with tag ID:', value.trim())
-        
-        // Try to find the asset in the existing assets list first
-        const existingAsset = assets.find(asset => 
-          asset.tagId.toLowerCase().includes(value.toLowerCase())
-        )
-        
-        if (existingAsset) {
-          console.log('✅ Found asset in existing list:', existingAsset)
-          setSelectedAssetId(existingAsset.tagId)
-          // Map tag ID to asset ID
-          console.log('🔄 Mapping tag ID to asset ID for:', existingAsset.tagId)
-          const assetId = await getAssetIdFromTagId(existingAsset.tagId)
-          console.log('✅ Mapped asset ID:', assetId)
-          setMappedAssetId(assetId)
-        } else {
-          // If not found in existing assets, try to fetch from API
-          console.log('🔍 Asset not found in existing list, fetching from API...')
-          try {
-            await fetchAssetByTagId(value.trim())
-            setSelectedAssetId(value.trim())
-            // Map tag ID to asset ID
-            console.log('🔄 Mapping tag ID to asset ID for:', value.trim())
-            const assetId = await getAssetIdFromTagId(value.trim())
-            console.log('✅ Mapped asset ID:', assetId)
-            setMappedAssetId(assetId)
-          } catch (err) {
-            console.error('❌ Error fetching asset from API:', err)
-            // Asset not found, clear selection
-            setSelectedAssetId('')
-            setMappedAssetId('')
-          }
-        }
-      } catch (err) {
-        console.error('❌ Error in asset search:', err)
-        setSelectedAssetId('')
-        setMappedAssetId('')
-      } finally {
-        setIsSearchingAsset(false)
-      }
-    } else {
-      setSelectedAssetId('')
-      setMappedAssetId('')
-    }
-  }
-
-  const handleGenerate = async () => {
-    if (!inputAssetId.trim()) {
-      setError('Please enter an Asset ID')
+    if (!assetId) {
+      setError('Please select an asset from the dropdown')
       return
     }
-
-    if (!mappedAssetId) {
-      setError('Please enter a valid Asset ID to generate barcode')
-      return
-    }
-
-    console.log('🚀 Starting barcode generation...')
-    console.log('📝 Input Asset ID (tagId):', inputAssetId)
-    console.log('🆔 Mapped Asset ID (_id):', mappedAssetId)
-    console.log('⚙️ Generation options:', { format, height, scale })
 
     setIsGenerating(true)
     setError(null)
 
     try {
-      // Use the mapped asset ID (actual _id from API) instead of the tag ID
-      console.log('🔄 Calling generateBarcode with assetId:', mappedAssetId)
-      const result = await generateBarcode(mappedAssetId, {
+      const result = await generateBarcode(assetId, {
         format,
         height,
         scale
       })
-      console.log('✅ Barcode generated successfully:', result)
       setBarcodeData(result)
+      setImageLoading(true) // Start loading the image
       setSuccessMessage('Barcode generated successfully!')
       setShowSuccessToast(true)
     } catch (err) {
-      console.error('❌ Error generating barcode:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate barcode')
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleDownload = async () => {
-    if (!barcodeData) return
-
-    setIsDownloading(true)
-    try {
-      const filename = `barcode_${barcodeData.barcode.data}_${Date.now()}.png`
-      await downloadBarcode(barcodeData.barcode.url, filename)
-      setSuccessMessage('Barcode downloaded successfully!')
-      setShowSuccessToast(true)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to download barcode')
-    } finally {
-      setIsDownloading(false)
-    }
+  const handleGenerate = async () => {
+    await handleGenerateBarcode()
   }
 
-  const handleCopyUrl = async () => {
-    if (!barcodeData) return
-    
-    const fullUrl = `${window.location.origin}${barcodeData.barcode.shortUrl}`
-    await navigator.clipboard.writeText(fullUrl)
-    setSuccessMessage('Barcode URL copied to clipboard!')
-    setShowSuccessToast(true)
-  }
+  // Filter assets based on search term
+  const filteredAssets = assets.filter(asset => 
+    asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.model.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const selectedFormat = BARCODE_FORMATS.find(f => f.value === format)
 
@@ -191,102 +135,102 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
         />
       )}
       
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Barcode className="h-5 w-5" />
-            Generate Barcode
-          </CardTitle>
-          <CardDescription>
-            Generate a barcode for your digital asset
-          </CardDescription>
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+        <CardHeader className="pb-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-600">
+              <Barcode className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-bold text-gray-900">
+                Barcode Generator
+              </CardTitle>
+              <CardDescription className="text-gray-600 mt-1">
+                Select an asset and generate a professional barcode for digital asset tracking
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="assetId">Asset ID</Label>
-            <div className="relative">
-              <Input
-                id="assetId"
-                placeholder="Enter Asset ID (e.g., ASSET555)"
-                value={inputAssetId}
-                onChange={(e) => handleAssetIdChange(e.target.value)}
-                onBlur={() => setIsSearchingAsset(false)}
-                className={selectedAssetId ? 'border-green-500 bg-green-50' : ''}
-              />
-              {isSearchingAsset && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                </div>
-              )}
-              {selectedAssetId && !isSearchingAsset && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </div>
-              )}
-              {inputAssetId && !isSearchingAsset && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-8 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                  onClick={handleClearAsset}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
+          {/* Asset Selection Section */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <Label className="text-sm font-semibold text-gray-700">Step 1: Select Asset</Label>
             </div>
-            {/* Debug information */}
-            {inputAssetId && (
-              <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
-                <div className="font-medium text-gray-700 mb-2">Debug Info:</div>
-                <div className="space-y-1 text-xs">
-                  <div><span className="font-medium">Input Tag ID:</span> {inputAssetId}</div>
-                  <div><span className="font-medium">Mapped Asset ID:</span> {mappedAssetId || 'Not mapped'}</div>
-                  <div><span className="font-medium">Selected Asset:</span> {selectedAssetId || 'None'}</div>
-                  <div><span className="font-medium">Assets in Context:</span> {assets.length}</div>
-                </div>
+            
+            {assetsLoading && (
+              <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <span className="text-sm font-medium text-blue-700">Loading assets from API...</span>
               </div>
             )}
-          </div>
-
-          {/* Asset Selection */}
-          {assets.length > 0 && (
-            <div className="space-y-2">
-              <Label>Or select from existing assets:</Label>
-              <Select value={selectedAssetId} onValueChange={(value) => {
-                setSelectedAssetId(value)
-                setInputAssetId(value)
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose an existing asset" />
+            
+            <div className="space-y-3">
+              <div className="relative">
+                <Input
+                  placeholder="🔍 Search assets by tag ID, type, brand, or model..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  disabled={assetsLoading}
+                />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+              <Select value={selectedAssetFromDropdown} onValueChange={handleAssetSelect}>
+                <SelectTrigger className="h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                  <SelectValue placeholder={assetsLoading ? "⏳ Loading assets..." : "📋 Choose an asset from the list"} />
                 </SelectTrigger>
-                <SelectContent>
-                  {assets.map((asset) => (
-                    <SelectItem key={asset._id} value={asset.tagId}>
-                      <div className="flex flex-col space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{asset.tagId}</span>
-                          <Badge variant={asset.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                            {asset.status}
-                          </Badge>
+                <SelectContent className="max-h-80">
+                  {assetsLoading ? (
+                    <div className="p-4 text-center text-gray-500">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p className="text-sm">Loading assets...</p>
+                    </div>
+                  ) : filteredAssets.length > 0 ? (
+                    filteredAssets.map((asset) => (
+                      <SelectItem key={asset._id} value={asset.tagId} className="py-3">
+                        <div className="flex flex-col space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-gray-900">{asset.tagId}</span>
+                            <Badge 
+                              variant={asset.status === 'active' ? 'default' : 'secondary'} 
+                              className="text-xs px-2 py-1"
+                            >
+                              {asset.status}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <p className="font-medium">{asset.assetType} - {asset.brand} {asset.model}</p>
+                            <p className="flex items-center space-x-1">
+                              <Building className="h-3 w-3" />
+                              <span>{asset.location.building}, {asset.location.floor}</span>
+                            </p>
+                            <p className="text-blue-600 font-mono text-xs">ID: {asset._id}</p>
+                          </div>
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {asset.assetType} - {asset.brand} {asset.model}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {asset.location.building}, {asset.location.floor}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      <p className="text-sm">
+                        {searchTerm ? '🔍 No assets found matching your search.' : '📭 No assets available.'}
+                      </p>
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {assets.length} assets available. You can also type a tag ID above to search.
-              </p>
+              
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>
+                  {assetsLoading ? 'Loading...' : `${filteredAssets.length} of ${assets.length} assets shown`}
+                </span>
+                <span>Select an asset and click "Generate Barcode"</span>
+              </div>
             </div>
-          )}
+          </div>
 
+          {/* Barcode Configuration */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="format">Barcode Format</Label>
@@ -344,120 +288,237 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
             </div>
           )}
 
-          <Button 
-            onClick={handleGenerate} 
-            disabled={isGenerating || !inputAssetId.trim()}
-            className="w-full"
-          >
-            {isGenerating ? 'Generating...' : 'Generate Barcode'}
-          </Button>
-
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
+
+          {/* Asset Selection Feedback */}
+          {selectedAssetId && !barcodeData && (
+            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium text-green-800">
+                    Asset Selected: <strong>{selectedAssetId}</strong>
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    Ready to generate barcode. Click the button below to proceed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Generate Button Section */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <Label className="text-sm font-semibold text-gray-700">Step 2: Generate Barcode</Label>
+            </div>
+
+            <Button 
+              onClick={handleGenerate} 
+              disabled={isGenerating || !selectedAssetId}
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGenerating ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Generating Barcode...</span>
+                </div>
+              ) : selectedAssetId ? (
+                <div className="flex items-center space-x-2">
+                  <Barcode className="h-5 w-5" />
+                  <span>Generate Barcode for {selectedAssetId}</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Barcode className="h-5 w-5" />
+                  <span>Generate Barcode</span>
+                </div>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
       {barcodeData && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Generated Barcode
-              <Badge variant="secondary">{barcodeData.barcode.data}</Badge>
-            </CardTitle>
-            <CardDescription>
-              Barcode generated successfully for asset {barcodeData.barcode.data}
-            </CardDescription>
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+          <CardHeader className="pb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-600">
+                  <Barcode className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    Generated Barcode
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 mt-1">
+                    Barcode generated successfully for asset {barcodeData.barcode.data}
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                {barcodeData.barcode.data}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-center">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                <img
-                  src={`${window.location.origin}${barcodeData.barcode.url}`}
-                  alt={`Barcode for ${barcodeData.barcode.data}`}
-                  className="max-w-full h-auto object-contain"
-                  style={{ minHeight: '100px' }}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <h4 className="font-medium flex items-center space-x-2">
-                  <Hash className="h-4 w-4" />
-                  Barcode Information
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Data:</span>
-                    <span className="font-mono">{barcodeData.barcode.data}</span>
+              <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 bg-gradient-to-br from-gray-50 to-white shadow-inner">
+                {/* Barcode Display */}
+                <div className="relative w-80 h-40 bg-white rounded-xl shadow-2xl overflow-hidden border-4 border-white">
+                  {/* Barcode Image */}
+                  <div className="flex items-center justify-center w-full h-full p-6">
+                    {imageLoading && (
+                      <div className="flex items-center justify-center w-64 h-32 bg-gray-100 rounded-lg">
+                        <div className="text-center text-gray-500">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-2"></div>
+                          <p className="text-sm font-medium">Loading Barcode...</p>
+                        </div>
+                      </div>
+                    )}
+                    <img
+                      src={`${API_BASE_URL}${barcodeData.barcode.url}`}
+                      alt={`Barcode for ${barcodeData.barcode.data}`}
+                      className={`w-64 h-32 object-contain ${imageLoading ? 'hidden' : ''}`}
+                      crossOrigin="anonymous"
+                      onLoad={() => setImageLoading(false)}
+                      onError={(e) => {
+                        console.error('Failed to load barcode image:', e.currentTarget.src)
+                        setImageLoading(false)
+                        // Try alternative approach - fetch the image as blob
+                        fetch(`${API_BASE_URL}${barcodeData.barcode.url}`, {
+                          method: 'GET',
+                          headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                          },
+                        })
+                        .then(response => {
+                          if (response.ok) {
+                            return response.blob()
+                          }
+                          throw new Error('Failed to fetch image')
+                        })
+                        .then(blob => {
+                          const url = URL.createObjectURL(blob)
+                          e.currentTarget.src = url
+                          e.currentTarget.style.display = 'block'
+                          setImageLoading(false)
+                        })
+                        .catch(err => {
+                          console.error('Failed to fetch barcode image:', err)
+                          setImageLoading(false)
+                          // Fallback to a placeholder
+                          e.currentTarget.style.display = 'none'
+                          if (e.currentTarget.parentElement) {
+                            e.currentTarget.parentElement.innerHTML = `
+                              <div class="flex items-center justify-center w-64 h-32 bg-gray-100 rounded-lg">
+                                <div class="text-center text-gray-500">
+                                  <p class="text-sm font-medium">Barcode Image</p>
+                                  <p class="text-xs">Failed to load</p>
+                                  <p class="text-xs mt-2">URL: ${API_BASE_URL}${barcodeData.barcode.url}</p>
+                                </div>
+                              </div>
+                            `
+                          }
+                        })
+                      }}
+                    />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Format:</span>
-                    <Badge variant="outline">{barcodeData.barcode.format}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Height:</span>
-                    <span>{height}mm</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Scale:</span>
-                    <span>{scale}x</span>
+                </div>
+                
+                {/* Tag ID Display */}
+                <div className="mt-6 text-center">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-100 to-red-100 text-orange-800 rounded-full text-sm font-semibold shadow-sm">
+                    <Barcode className="h-4 w-4" />
+                    Tag ID: {barcodeData.barcode.data}
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="space-y-3">
-                <h4 className="font-medium flex items-center space-x-2">
-                  <Settings className="h-4 w-4" />
-                  Format Details
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Type:</span>
-                    <span>{selectedFormat?.label}</span>
+            {/* Barcode Information Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Barcode Information Card */}
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-1.5 rounded-md bg-blue-100">
+                      <Hash className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold text-gray-900">Barcode Information</CardTitle>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Description:</span>
-                    <span className="text-right">{selectedFormat?.description}</span>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data</Label>
+                      <p className="text-sm font-medium text-gray-900 font-mono">{barcodeData.barcode.data}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Format</Label>
+                      <Badge variant="outline" className="text-xs px-2 py-1">
+                        {barcodeData.barcode.format}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Height</Label>
+                      <p className="text-sm font-medium text-gray-900">{height}mm</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scale</Label>
+                      <p className="text-sm font-medium text-gray-900">{scale}x</p>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Asset ID:</span>
-                    <span className="font-mono">{inputAssetId}</span>
+                </CardContent>
+              </Card>
+
+              {/* Format Details Card */}
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-1.5 rounded-md bg-green-100">
+                      <Settings className="h-4 w-4 text-green-600" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold text-gray-900">Format Details</CardTitle>
                   </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Type</Label>
+                      <p className="text-sm font-medium text-gray-900">{selectedFormat?.label}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Asset ID</Label>
+                      <p className="text-sm font-medium text-gray-900 font-mono">{selectedAssetId}</p>
+                    </div>
+                    <div className="space-y-1 col-span-2">
+                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</Label>
+                      <p className="text-sm text-gray-700">{selectedFormat?.description}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Success Message */}
+            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium text-green-800">
+                    Barcode Generated Successfully!
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    The barcode is ready for use. You can scan it to access asset information.
+                  </p>
                 </div>
               </div>
-            </div>
-
-            <Separator />
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button 
-                onClick={handleDownload} 
-                disabled={isDownloading}
-                variant="outline"
-                className="flex-1"
-              >
-                {isDownloading ? 'Downloading...' : 'Download Barcode'}
-              </Button>
-              <Button 
-                onClick={handleCopyUrl} 
-                variant="outline"
-                className="flex-1"
-              >
-                Copy Barcode URL
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Barcode URL</Label>
-              <Input
-                value={`${window.location.origin}${barcodeData.barcode.shortUrl}`}
-                readOnly
-                className="text-xs"
-              />
             </div>
           </CardContent>
         </Card>

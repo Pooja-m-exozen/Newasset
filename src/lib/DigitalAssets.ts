@@ -626,11 +626,11 @@ export const generateAllDigitalAssets = async (
 
     console.log('🚀 Generating all digital assets for asset:', { assetId: resolvedAssetId });
     console.log('📦 Request body:', JSON.stringify(requestBody, null, 2));
-    console.log('🔗 API URL:', `${API_BASE_URL}/digital-assets/generate-all/${resolvedAssetId}`);
+    console.log('🔗 API URL:', `${API_BASE_URL}/digital-assets/all/${resolvedAssetId}`);
 
     const startTime = Date.now();
 
-    const response = await fetch(`${API_BASE_URL}/digital-assets/generate-all/${resolvedAssetId}`, {
+    const response = await fetch(`${API_BASE_URL}/digital-assets/all/${resolvedAssetId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

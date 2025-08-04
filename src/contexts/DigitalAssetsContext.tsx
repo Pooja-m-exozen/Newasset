@@ -29,6 +29,7 @@ interface DigitalAssetsContextType {
   searchAssetsByTerm: (searchTerm: string) => Promise<void>
   clearSelectedAsset: () => void
   clearError: () => void
+  setSelectedAsset: (asset: Asset | null) => void
   
   // Asset mapping
   getAssetIdFromInput: (input: string) => Promise<string>
@@ -239,6 +240,7 @@ export function DigitalAssetsProvider({ children }: { children: ReactNode }) {
     searchAssetsByTerm,
     clearSelectedAsset,
     clearError,
+    setSelectedAsset,
     
     // Asset mapping
     getAssetIdFromInput,

@@ -72,29 +72,10 @@ export default function Sidebar({ className }: SidebarProps) {
       id: "digital-assets",
       label: "Digital Assets",
       icon: FileDigit,
-      href: "/admin/digital-assets",
-      description: "Digital asset management",
-      submenu: [
-        {
-          id: "generate-digital-assets",
-          label: "Generate Digital Assets",
-          href: "/admin/digital-assets/generate",
-          description: "Create and generate digital assets"
-        },
-        {
-          id: "scan-view-digital-assets",
-          label: "Scan and View Digital Assets",
-          href: "/admin/digital-assets/scan-view",
-          description: "Scan and view digital assets"
-        },
-        {
-          id: "public-access",
-          label: "Public Access",
-          href: "/admin/digital-assets/public-access",
-          description: "Public access to digital assets"
-        }
-      ]
-    },
+      href: "/admin/digital-assets/generate",
+      description: "Create and generate digital assets"
+    }
+,    
     {
       id: "reports",
       label: "View All Logs/Reports",

@@ -2,6 +2,7 @@
 
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
+import { AdminDashboardProvider } from "@/contexts/AdminDashboard"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Sidebar from "@/components/sidebar"
@@ -24,15 +25,17 @@ export default function AdminLayout({
 
   return (
     <ProtectedRoute>
-      <div className="flex h-screen bg-gray-50">
-        <Sidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto">
-            {children}
-          </main>
+      <AdminDashboardProvider>
+        <div className="flex h-screen bg-gray-50">
+          <Sidebar />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Header />
+            <main className="flex-1 overflow-y-auto">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </AdminDashboardProvider>
     </ProtectedRoute>
   )
 } 

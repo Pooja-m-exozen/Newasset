@@ -13,7 +13,10 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Zap
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  FileDigit
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +30,7 @@ export default function Sidebar({ className }: SidebarProps) {
   const { user, logout } = useAuth()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [activeItem, setActiveItem] = useState("dashboard")
+  const [expandedSubmenu, setExpandedSubmenu] = useState<string | null>(null)
 
   // Update active item based on current pathname
   useEffect(() => {
@@ -62,15 +66,61 @@ export default function Sidebar({ className }: SidebarProps) {
       label: "Manage Location",
       icon: MapPin,
       href: "/admin/managelocation",
-      
       description: "Location and site management"
+    },
+    {
+      id: "digital-assets",
+      label: "Digital Assets",
+      icon: FileDigit,
+      href: "/admin/digital-assets",
+      description: "Digital asset management",
+      submenu: [
+        {
+          id: "generate-digital-assets",
+          label: "Generate Digital Assets",
+          href: "/admin/digital-assets/generate",
+          description: "Create and generate digital assets"
+        },
+        {
+          id: "scan-view-digital-assets",
+          label: "Scan and View Digital Assets",
+          href: "/admin/digital-assets/scan-view",
+          description: "Scan and view digital assets"
+        },
+        {
+          id: "public-access",
+          label: "Public Access",
+          href: "/admin/digital-assets/public-access",
+          description: "Public access to digital assets"
+        }
+      ]
     },
     {
       id: "reports",
       label: "View All Logs/Reports",
       icon: FileText,
-      href: "/reports",
-      description: "Reports and audit trails"
+      href: "/admin/viewalllogs",
+      description: "Reports and audit trails",
+      submenu: [
+        {
+          id: "assets-logs",
+          label: "Assets Logs",
+          href: "/admin/viewalllogs/assets-logs",
+          description: "Asset activity and changes"
+        },
+        {
+          id: "maintenance-logs",
+          label: "Maintenance Logs",
+          href: "/admin/viewalllogs/maintenance-logs",
+          description: "Maintenance activities and schedules"
+        },
+        {
+          id: "audit-trails",
+          label: "Audit Trails Logs",
+          href: "/admin/viewalllogs/audit-trails",
+          description: "System access and changes"
+        }
+      ]
     }
   ]
 
@@ -82,6 +132,15 @@ export default function Sidebar({ className }: SidebarProps) {
     if (navigationItem && navigationItem.href) {
       router.push(navigationItem.href)
     }
+  }
+
+  const handleSubmenuToggle = (itemId: string) => {
+    setExpandedSubmenu(expandedSubmenu === itemId ? null : itemId)
+  }
+
+  const handleSubmenuItemClick = (parentId: string, submenuItem: any) => {
+    setActiveItem(submenuItem.id)
+    router.push(submenuItem.href)
   }
 
   return (
@@ -114,7 +173,7 @@ export default function Sidebar({ className }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navigationItems.map((item) => (
           <div key={item.id}>
             <Button
@@ -127,7 +186,13 @@ export default function Sidebar({ className }: SidebarProps) {
                 isCollapsed && "justify-center px-2 py-2.5",
                 "transform hover:scale-[1.01]"
               )}
-              onClick={() => handleItemClick(item.id)}
+              onClick={() => {
+                if (item.submenu) {
+                  handleSubmenuToggle(item.id)
+                } else {
+                  handleItemClick(item.id)
+                }
+              }}
             >
               <item.icon className={cn(
                 "flex-shrink-0 transition-colors duration-200",
@@ -147,7 +212,48 @@ export default function Sidebar({ className }: SidebarProps) {
                   )}
                 </div>
               )}
+              {!isCollapsed && item.submenu && (
+                <div className="ml-auto">
+                  {expandedSubmenu === item.id ? (
+                    <ChevronUp className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  )}
+                </div>
+              )}
             </Button>
+
+            {/* Submenu */}
+            {!isCollapsed && item.submenu && expandedSubmenu === item.id && (
+              <div className="ml-4 mt-1 space-y-1">
+                {item.submenu.map((submenuItem: any) => (
+                  <Button
+                    key={submenuItem.id}
+                    variant={activeItem === submenuItem.id ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start h-auto py-2 px-3 rounded-lg transition-all duration-200 group text-sm",
+                      activeItem === submenuItem.id 
+                        ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700" 
+                        : "hover:bg-gray-50 text-gray-700",
+                      "transform hover:scale-[1.01]"
+                    )}
+                    onClick={() => handleSubmenuItemClick(item.id, submenuItem)}
+                  >
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-sm">{submenuItem.label}</div>
+                      {submenuItem.description && (
+                        <div className={cn(
+                          "text-xs mt-0.5 transition-colors duration-200",
+                          activeItem === submenuItem.id ? "text-blue-100" : "text-gray-400 group-hover:text-gray-500"
+                        )}>
+                          {submenuItem.description}
+                        </div>
+                      )}
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </nav>

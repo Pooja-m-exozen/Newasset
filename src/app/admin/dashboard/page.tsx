@@ -5,6 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { PredictionsCard } from "@/components/ui/predictions-card"
+import { PredictionDetailsModal } from "@/components/ui/prediction-details-modal"
+import { useAdminDashboard } from "@/contexts/AdminDashboard"
+import { useState } from "react"
 import { 
   Users, 
   Building2, 
@@ -32,51 +37,98 @@ import {
   Wifi,
   Battery,
   Thermometer,
-  Gauge
+  Gauge,
+  RefreshCw,
+  Brain
 } from "lucide-react"
 
 export default function AdminDashboardPage() {
+  const { 
+    dashboardData, 
+    predictionsData,
+    isLoading, 
+    isPredictionsLoading,
+    error, 
+    predictionsError,
+    refreshDashboard, 
+    refreshPredictions 
+  } = useAdminDashboard()
+
+  const [selectedPrediction, setSelectedPrediction] = useState<any>(null)
+  const [isPredictionModalOpen, setIsPredictionModalOpen] = useState(false)
+
+  // Calculate stats from API data
   const stats = [
     {
-      title: "Total Users",
-      value: "1,234",
+      title: "Total Assets",
+      value: dashboardData?.data?.assetStats?.totalAssets?.toString() || "0",
       change: "+12%",
-      icon: Users,
+      icon: Building2,
       color: "bg-blue-500",
       trend: "up"
     },
     {
       title: "Active Assets",
-      value: "856",
+      value: dashboardData?.data?.assetStats?.activeAssets?.toString() || "0",
       change: "+8%",
-      icon: Building2,
+      icon: CheckCircle,
       color: "bg-green-500",
       trend: "up"
     },
     {
-      title: "Locations",
-      value: "45",
+      title: "Under Maintenance",
+      value: dashboardData?.data?.assetStats?.underMaintenance?.toString() || "0",
       change: "+3%",
-      icon: MapPin,
-      color: "bg-purple-500",
+      icon: Clock,
+      color: "bg-yellow-500",
       trend: "up"
     },
     {
-      title: "Reports Generated",
-      value: "2,341",
+      title: "Critical Assets",
+      value: dashboardData?.data?.assetStats?.criticalAssets?.toString() || "0",
       change: "+15%",
-      icon: FileText,
-      color: "bg-orange-500",
+      icon: AlertCircle,
+      color: "bg-red-500",
       trend: "up"
     }
   ]
 
   const assetStatus = [
-    { name: "HVAC Systems", status: "operational", count: 45, percentage: 85 },
-    { name: "Electrical", status: "operational", count: 32, percentage: 92 },
-    { name: "Plumbing", status: "maintenance", count: 18, percentage: 65 },
-    { name: "Security", status: "operational", count: 28, percentage: 88 },
-    { name: "Fire Safety", status: "warning", count: 12, percentage: 45 }
+    { 
+      name: "Active Assets", 
+      status: "operational", 
+      count: dashboardData?.data?.assetStats?.activeAssets || 0, 
+      percentage: dashboardData?.data?.assetStats?.totalAssets ? 
+        Math.round((dashboardData.data.assetStats.activeAssets / dashboardData.data.assetStats.totalAssets) * 100) : 0 
+    },
+    { 
+      name: "Under Maintenance", 
+      status: "maintenance", 
+      count: dashboardData?.data?.assetStats?.underMaintenance || 0, 
+      percentage: dashboardData?.data?.assetStats?.totalAssets ? 
+        Math.round((dashboardData.data.assetStats.underMaintenance / dashboardData.data.assetStats.totalAssets) * 100) : 0 
+    },
+    { 
+      name: "Inactive Assets", 
+      status: "inactive", 
+      count: dashboardData?.data?.assetStats?.inactiveAssets || 0, 
+      percentage: dashboardData?.data?.assetStats?.totalAssets ? 
+        Math.round((dashboardData.data.assetStats.inactiveAssets / dashboardData.data.assetStats.totalAssets) * 100) : 0 
+    },
+    { 
+      name: "Critical Assets", 
+      status: "warning", 
+      count: dashboardData?.data?.assetStats?.criticalAssets || 0, 
+      percentage: dashboardData?.data?.assetStats?.totalAssets ? 
+        Math.round((dashboardData.data.assetStats.criticalAssets / dashboardData.data.assetStats.totalAssets) * 100) : 0 
+    },
+    { 
+      name: "High Priority", 
+      status: "warning", 
+      count: dashboardData?.data?.assetStats?.highPriorityAssets || 0, 
+      percentage: dashboardData?.data?.assetStats?.totalAssets ? 
+        Math.round((dashboardData.data.assetStats.highPriorityAssets / dashboardData.data.assetStats.totalAssets) * 100) : 0 
+    }
   ]
 
   const recentActivities = [
@@ -131,6 +183,7 @@ export default function AdminDashboardPage() {
     switch (status) {
       case 'operational': return 'bg-green-500'
       case 'maintenance': return 'bg-yellow-500'
+      case 'inactive': return 'bg-gray-500'
       case 'warning': return 'bg-red-500'
       default: return 'bg-gray-500'
     }
@@ -145,11 +198,62 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const handleViewPredictionDetails = (prediction: any) => {
+    setSelectedPrediction(prediction)
+    setIsPredictionModalOpen(true)
+  }
+
+  const handleExportPrediction = (prediction: any) => {
+    // Implement export functionality
+    console.log('Exporting prediction:', prediction)
+  }
+
+  const handleExportPredictions = () => {
+    // Implement bulk export functionality
+    console.log('Exporting all predictions')
+  }
+
+  if (isLoading) {
+    return (
+      <ProtectedRoute>
+        <div className="flex h-screen bg-gray-50">
+          <div className="flex-1 overflow-auto">
+            <div className="flex items-center justify-center h-full">
+              <LoadingSpinner size="lg" />
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
+  }
+
+  if (error) {
+    return (
+      <ProtectedRoute>
+        <div className="flex h-screen bg-gray-50">
+          <div className="flex-1 overflow-auto">
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="mb-4">
+                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load dashboard data</h3>
+                  <p className="text-gray-600 mb-4">{error}</p>
+                </div>
+                <Button onClick={refreshDashboard} disabled={isLoading}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex h-screen bg-gray-50">
-        
-        
         <div className="flex-1 overflow-auto">
           {/* Header */}
           <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -159,6 +263,15 @@ export default function AdminDashboardPage() {
                 <p className="text-gray-600">Welcome back! Here's what's happening with your facilities.</p>
               </div>
               <div className="flex items-center space-x-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={refreshDashboard}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
                 <Button variant="outline" size="sm">
                   <Search className="w-4 h-4 mr-2" />
                   Search
@@ -224,7 +337,7 @@ export default function AdminDashboardPage() {
                       {/* Performance Chart */}
                       <div className="h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold text-gray-900">Efficiency Trend</h3>
+                          <h3 className="font-semibold text-gray-900">Asset Distribution</h3>
                           <Badge variant="secondary">Live</Badge>
                         </div>
                         <div className="flex items-end justify-between h-40">
@@ -240,16 +353,23 @@ export default function AdminDashboardPage() {
                       {/* Metrics Grid */}
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">94%</div>
-                          <div className="text-sm text-green-600">Efficiency</div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {dashboardData?.data?.assetStats?.totalAssets ? 
+                              Math.round((dashboardData.data.assetStats.activeAssets / dashboardData.data.assetStats.totalAssets) * 100) : 0}%
+                          </div>
+                          <div className="text-sm text-green-600">Active Rate</div>
                         </div>
                         <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">12</div>
-                          <div className="text-sm text-blue-600">Active Alerts</div>
+                          <div className="text-2xl font-bold text-blue-600">
+                            {dashboardData?.data?.assetStats?.criticalAssets || 0}
+                          </div>
+                          <div className="text-sm text-blue-600">Critical Alerts</div>
                         </div>
                         <div className="text-center p-3 bg-purple-50 rounded-lg">
-                          <div className="text-2xl font-bold text-purple-600">$45K</div>
-                          <div className="text-sm text-purple-600">Cost Saved</div>
+                          <div className="text-2xl font-bold text-purple-600">
+                            {dashboardData?.data?.assetStats?.highPriorityAssets || 0}
+                          </div>
+                          <div className="text-sm text-purple-600">High Priority</div>
                         </div>
                       </div>
                     </div>
@@ -276,7 +396,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <Progress value={asset.percentage} className="h-2" />
                         <div className="flex justify-between text-xs text-gray-500">
-                          <span>Operational</span>
+                          <span>Percentage</span>
                           <span>{asset.percentage}%</span>
                         </div>
                       </div>
@@ -284,6 +404,16 @@ export default function AdminDashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Predictions Analytics */}
+            <div className="grid grid-cols-1 gap-6">
+              <PredictionsCard
+                predictions={predictionsData?.predictions || []}
+                isLoading={isPredictionsLoading}
+                onViewDetails={handleViewPredictionDetails}
+                onExport={handleExportPredictions}
+              />
             </div>
 
             {/* Recent Activity and Quick Actions */}
@@ -385,8 +515,8 @@ export default function AdminDashboardPage() {
                         <Thermometer className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Temperature</p>
-                        <p className="text-lg font-bold text-blue-600">24°C</p>
+                        <p className="text-sm font-medium text-gray-700">Total Assets</p>
+                        <p className="text-lg font-bold text-blue-600">{dashboardData?.data?.assetStats?.totalAssets || 0}</p>
                       </div>
                     </div>
                   </div>
@@ -397,8 +527,8 @@ export default function AdminDashboardPage() {
                         <Battery className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Power</p>
-                        <p className="text-lg font-bold text-green-600">98%</p>
+                        <p className="text-sm font-medium text-gray-700">Active Assets</p>
+                        <p className="text-lg font-bold text-green-600">{dashboardData?.data?.assetStats?.activeAssets || 0}</p>
                       </div>
                     </div>
                   </div>
@@ -409,8 +539,8 @@ export default function AdminDashboardPage() {
                         <Wifi className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Connectivity</p>
-                        <p className="text-lg font-bold text-purple-600">Online</p>
+                        <p className="text-sm font-medium text-gray-700">Under Maintenance</p>
+                        <p className="text-lg font-bold text-purple-600">{dashboardData?.data?.assetStats?.underMaintenance || 0}</p>
                       </div>
                     </div>
                   </div>
@@ -421,8 +551,8 @@ export default function AdminDashboardPage() {
                         <Gauge className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Performance</p>
-                        <p className="text-lg font-bold text-orange-600">94%</p>
+                        <p className="text-sm font-medium text-gray-700">Critical Assets</p>
+                        <p className="text-lg font-bold text-orange-600">{dashboardData?.data?.assetStats?.criticalAssets || 0}</p>
                       </div>
                     </div>
                   </div>
@@ -431,6 +561,17 @@ export default function AdminDashboardPage() {
             </Card>
           </main>
         </div>
+
+        {/* Prediction Details Modal */}
+        <PredictionDetailsModal
+          prediction={selectedPrediction}
+          isOpen={isPredictionModalOpen}
+          onClose={() => {
+            setIsPredictionModalOpen(false)
+            setSelectedPrediction(null)
+          }}
+          onExport={handleExportPrediction}
+        />
       </div>
     </ProtectedRoute>
   )

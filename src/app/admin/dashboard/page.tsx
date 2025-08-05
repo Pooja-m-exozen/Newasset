@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { PredictionsCard } from "@/components/ui/predictions-card"
 import { PredictionDetailsModal } from "@/components/ui/prediction-details-modal"
+import { InsightsCards } from "@/components/ui/insights-cards"
+import { PerformanceChart } from "@/components/ui/performance-chart"
 import { useAdminDashboard } from "@/contexts/AdminDashboard"
 import { useState } from "react"
 import { 
@@ -15,7 +17,6 @@ import {
   Building2, 
   MapPin, 
   FileText, 
-  BarChart3, 
   TrendingUp,
   Activity,
   AlertCircle,
@@ -26,32 +27,33 @@ import {
   Filter,
   Download,
   MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
   Calendar,
   DollarSign,
   Target,
   Zap,
   Shield,
-  Wifi,
-  Battery,
-  Thermometer,
-  Gauge,
   RefreshCw,
-  Brain
+  Brain,
+  BarChart3,
+  Settings,
+  Bell
 } from "lucide-react"
 
 export default function AdminDashboardPage() {
   const { 
     dashboardData, 
     predictionsData,
+    aiInsightsData,
+    aiInsightCards,
     isLoading, 
     isPredictionsLoading,
+    isAIInsightsLoading,
     error, 
     predictionsError,
+    aiInsightsError,
     refreshDashboard, 
-    refreshPredictions 
+    refreshPredictions,
+    refreshAIInsights
   } = useAdminDashboard()
 
   const [selectedPrediction, setSelectedPrediction] = useState<any>(null)
@@ -65,7 +67,8 @@ export default function AdminDashboardPage() {
       change: "+12%",
       icon: Building2,
       color: "bg-blue-500",
-      trend: "up"
+      trend: "up",
+      description: "Total registered assets in the system"
     },
     {
       title: "Active Assets",
@@ -73,7 +76,8 @@ export default function AdminDashboardPage() {
       change: "+8%",
       icon: CheckCircle,
       color: "bg-green-500",
-      trend: "up"
+      trend: "up",
+      description: "Currently operational assets"
     },
     {
       title: "Under Maintenance",
@@ -81,7 +85,8 @@ export default function AdminDashboardPage() {
       change: "+3%",
       icon: Clock,
       color: "bg-yellow-500",
-      trend: "up"
+      trend: "up",
+      description: "Assets currently being serviced"
     },
     {
       title: "Critical Assets",
@@ -89,7 +94,8 @@ export default function AdminDashboardPage() {
       change: "+15%",
       icon: AlertCircle,
       color: "bg-red-500",
-      trend: "up"
+      trend: "up",
+      description: "Assets requiring immediate attention"
     }
   ]
 
@@ -121,13 +127,6 @@ export default function AdminDashboardPage() {
       count: dashboardData?.data?.assetStats?.criticalAssets || 0, 
       percentage: dashboardData?.data?.assetStats?.totalAssets ? 
         Math.round((dashboardData.data.assetStats.criticalAssets / dashboardData.data.assetStats.totalAssets) * 100) : 0 
-    },
-    { 
-      name: "High Priority", 
-      status: "warning", 
-      count: dashboardData?.data?.assetStats?.highPriorityAssets || 0, 
-      percentage: dashboardData?.data?.assetStats?.totalAssets ? 
-        Math.round((dashboardData.data.assetStats.highPriorityAssets / dashboardData.data.assetStats.totalAssets) * 100) : 0 
     }
   ]
 
@@ -170,15 +169,6 @@ export default function AdminDashboardPage() {
     }
   ]
 
-  const performanceData = [
-    { month: "Jan", efficiency: 85, maintenance: 12, alerts: 3 },
-    { month: "Feb", efficiency: 88, maintenance: 8, alerts: 2 },
-    { month: "Mar", efficiency: 92, maintenance: 15, alerts: 1 },
-    { month: "Apr", efficiency: 89, maintenance: 10, alerts: 4 },
-    { month: "May", efficiency: 94, maintenance: 6, alerts: 1 },
-    { month: "Jun", efficiency: 91, maintenance: 9, alerts: 2 }
-  ]
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'operational': return 'bg-green-500'
@@ -211,6 +201,10 @@ export default function AdminDashboardPage() {
   const handleExportPredictions = () => {
     // Implement bulk export functionality
     console.log('Exporting all predictions')
+  }
+
+  const handleRefreshAIInsights = () => {
+    refreshAIInsights('performance', '90_days')
   }
 
   if (isLoading) {
@@ -262,7 +256,7 @@ export default function AdminDashboardPage() {
                 <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
                 <p className="text-gray-600">Welcome back! Here's what's happening with your facilities.</p>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -271,6 +265,15 @@ export default function AdminDashboardPage() {
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                   Refresh
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRefreshAIInsights}
+                  disabled={isAIInsightsLoading}
+                >
+                  <Brain className={`w-4 h-4 mr-2 ${isAIInsightsLoading ? 'animate-spin' : ''}`} />
+                  Update AI Insights
                 </Button>
                 <Button variant="outline" size="sm">
                   <Search className="w-4 h-4 mr-2" />
@@ -305,6 +308,7 @@ export default function AdminDashboardPage() {
                             {stat.change} from last month
                           </span>
                         </div>
+                        <p className="text-xs text-gray-500 mt-2">{stat.description}</p>
                       </div>
                       <div className={`w-12 h-12 ${stat.color} rounded-lg flex items-center justify-center shadow-lg`}>
                         <stat.icon className="w-6 h-6 text-white" />
@@ -315,73 +319,24 @@ export default function AdminDashboardPage() {
               ))}
             </div>
 
-            {/* Performance Overview */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* System Performance Chart */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>System Performance</CardTitle>
-                        <CardDescription>Real-time monitoring of key metrics</CardDescription>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Performance Chart */}
-                      <div className="h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold text-gray-900">Asset Distribution</h3>
-                          <Badge variant="secondary">Live</Badge>
-                        </div>
-                        <div className="flex items-end justify-between h-40">
-                          {performanceData.map((data, index) => (
-                            <div key={index} className="flex flex-col items-center">
-                              <div className="w-8 bg-blue-500 rounded-t-sm" style={{ height: `${data.efficiency}%` }}></div>
-                              <span className="text-xs text-gray-600 mt-2">{data.month}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Metrics Grid */}
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">
-                            {dashboardData?.data?.assetStats?.totalAssets ? 
-                              Math.round((dashboardData.data.assetStats.activeAssets / dashboardData.data.assetStats.totalAssets) * 100) : 0}%
-                          </div>
-                          <div className="text-sm text-green-600">Active Rate</div>
-                        </div>
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">
-                            {dashboardData?.data?.assetStats?.criticalAssets || 0}
-                          </div>
-                          <div className="text-sm text-blue-600">Critical Alerts</div>
-                        </div>
-                        <div className="text-center p-3 bg-purple-50 rounded-lg">
-                          <div className="text-2xl font-bold text-purple-600">
-                            {dashboardData?.data?.assetStats?.highPriorityAssets || 0}
-                          </div>
-                          <div className="text-sm text-purple-600">High Priority</div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+            {/* Performance Analytics Chart */}
+            <PerformanceChart
+              aiInsightsData={aiInsightsData}
+              isLoading={isAIInsightsLoading}
+              error={aiInsightsError}
+              onRefresh={handleRefreshAIInsights}
+            />
 
+            {/* Asset Status and Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Asset Status */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Asset Status</CardTitle>
-                  <CardDescription>Current operational status</CardDescription>
+                  <CardTitle className="flex items-center">
+                    <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
+                    Asset Status
+                  </CardTitle>
+                  <CardDescription>Current operational status distribution</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -404,27 +359,17 @@ export default function AdminDashboardPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Predictions Analytics */}
-            <div className="grid grid-cols-1 gap-6">
-              <PredictionsCard
-                predictions={predictionsData?.predictions || []}
-                isLoading={isPredictionsLoading}
-                onViewDetails={handleViewPredictionDetails}
-                onExport={handleExportPredictions}
-              />
-            </div>
-
-            {/* Recent Activity and Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Recent Activity */}
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle>Recent Activity</CardTitle>
+                        <CardTitle className="flex items-center">
+                          <Activity className="w-5 h-5 mr-2 text-green-600" />
+                          Recent Activity
+                        </CardTitle>
                         <CardDescription>Latest system activities and updates</CardDescription>
                       </div>
                       <Button variant="outline" size="sm">
@@ -464,98 +409,45 @@ export default function AdminDashboardPage() {
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>Common tasks and shortcuts</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button variant="outline" className="h-20 flex-col hover:bg-blue-50">
-                      <Users className="w-6 h-6 mb-2 text-blue-600" />
-                      <span className="text-sm font-medium">Add User</span>
-                    </Button>
-                    <Button variant="outline" className="h-20 flex-col hover:bg-green-50">
-                      <Building2 className="w-6 h-6 mb-2 text-green-600" />
-                      <span className="text-sm font-medium">Add Asset</span>
-                    </Button>
-                    <Button variant="outline" className="h-20 flex-col hover:bg-purple-50">
-                      <MapPin className="w-6 h-6 mb-2 text-purple-600" />
-                      <span className="text-sm font-medium">Add Location</span>
-                    </Button>
-                    <Button variant="outline" className="h-20 flex-col hover:bg-orange-50">
-                      <FileText className="w-6 h-6 mb-2 text-orange-600" />
-                      <span className="text-sm font-medium">Generate Report</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
 
-            {/* Asset Monitoring */}
+            {/* Predictions Analytics */}
+            <div className="grid grid-cols-1 gap-6">
+              <PredictionsCard
+                predictions={predictionsData?.predictions || []}
+                isLoading={isPredictionsLoading}
+                onViewDetails={handleViewPredictionDetails}
+                onExport={handleExportPredictions}
+              />
+            </div>
+
+            {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Asset Monitoring</CardTitle>
-                    <CardDescription>Real-time asset performance and health</CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </div>
+                <CardTitle className="flex items-center">
+                  <Zap className="w-5 h-5 mr-2 text-orange-600" />
+                  Quick Actions
+                </CardTitle>
+                <CardDescription>Common tasks and shortcuts</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <Thermometer className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Total Assets</p>
-                        <p className="text-lg font-bold text-blue-600">{dashboardData?.data?.assetStats?.totalAssets || 0}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                        <Battery className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Active Assets</p>
-                        <p className="text-lg font-bold text-green-600">{dashboardData?.data?.assetStats?.activeAssets || 0}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                        <Wifi className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Under Maintenance</p>
-                        <p className="text-lg font-bold text-purple-600">{dashboardData?.data?.assetStats?.underMaintenance || 0}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                        <Gauge className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Critical Assets</p>
-                        <p className="text-lg font-bold text-orange-600">{dashboardData?.data?.assetStats?.criticalAssets || 0}</p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Button variant="outline" className="h-20 flex-col hover:bg-blue-50 transition-colors">
+                    <Users className="w-6 h-6 mb-2 text-blue-600" />
+                    <span className="text-sm font-medium">Add User</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col hover:bg-green-50 transition-colors">
+                    <Building2 className="w-6 h-6 mb-2 text-green-600" />
+                    <span className="text-sm font-medium">Add Asset</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col hover:bg-purple-50 transition-colors">
+                    <MapPin className="w-6 h-6 mb-2 text-purple-600" />
+                    <span className="text-sm font-medium">Add Location</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col hover:bg-orange-50 transition-colors">
+                    <FileText className="w-6 h-6 mb-2 text-orange-600" />
+                    <span className="text-sm font-medium">Generate Report</span>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

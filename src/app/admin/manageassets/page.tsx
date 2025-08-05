@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AssetProvider, useAssetContext } from '../../../contexts/AdminAssetContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { Asset, AssetType } from '../../../lib/adminasset';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -23,7 +24,8 @@ import { LoadingSpinner } from '../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../components/ui/error-display';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { PageHeader } from '../../../components/ui/page-header';
-import { PermissionsUI } from './permissions/assets/admin/PermissionsUI';
+import { PermissionsUI } from '../../../components/ui/permissions-ui';
+
 import { useToast, ToastContainer } from '../../../components/ui/toast';
 
 // Permissions Display Component
@@ -36,6 +38,7 @@ const PermissionsDisplay: React.FC = () => {
     clearError 
   } = useAssetContext();
   const { addToast, toasts, removeToast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     // Fetch permissions when component mounts (only if not already loaded)
@@ -70,11 +73,13 @@ const PermissionsDisplay: React.FC = () => {
   return (
     <>
       <PermissionsUI
-        permissions={state.adminPermissions}
+        permissions={undefined}
         loading={state.loading}
         error={state.error}
         onUpdatePermissions={handleUpdatePermissions}
         onClearError={clearError}
+        bearerToken={localStorage.getItem('authToken') || undefined}
+        role="viewer"
       />
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </>
@@ -379,11 +384,12 @@ const AssetsList: React.FC = () => {
       />
 
       {/* Success Toast */}
-      <SuccessToast
-        message={successMessage}
-        isVisible={showSuccess}
-        onClose={() => setShowSuccess(false)}
-      />
+      {showSuccess && (
+        <SuccessToast
+          message={successMessage}
+          onClose={() => setShowSuccess(false)}
+        />
+      )}
     </div>
   );
 };
@@ -592,11 +598,12 @@ const AssetTypeManagement: React.FC = () => {
       />
 
       {/* Success Toast */}
-      <SuccessToast
-        message={successMessage}
-        isVisible={showSuccess}
-        onClose={() => setShowSuccess(false)}
-      />
+      {showSuccess && (
+        <SuccessToast
+          message={successMessage}
+          onClose={() => setShowSuccess(false)}
+        />
+      )}
     </div>
   );
 };

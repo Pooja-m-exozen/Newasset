@@ -16,7 +16,23 @@ import {
   Zap,
   ChevronDown,
   ChevronUp,
-  FileDigit
+  FileDigit,
+  Brain,
+  BarChart3,
+  Activity,
+  Settings,
+  Shield,
+  Database,
+  QrCode,
+  Barcode,
+  Wifi,
+  Scan,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Star,
+  Bot
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -74,8 +90,21 @@ export default function Sidebar({ className }: SidebarProps) {
       icon: FileDigit,
       href: "/admin/digital-assets/generate",
       description: "Create and generate digital assets"
-    }
-,    
+    },
+    {
+      id: "ai-analytics",
+      label: "AI Analytics",
+      icon: Brain,
+      href: "/admin/ai-analytics",
+      description: "AI-powered analytics and insights"
+    },
+    {
+      id: "automation",
+      label: "Automation",
+      icon: Bot,
+      href: "/admin/automation",
+      description: "Automated workflows and processes"
+    },
     {
       id: "reports",
       label: "View All Logs/Reports",

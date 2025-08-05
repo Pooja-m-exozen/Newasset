@@ -124,9 +124,9 @@ export default function GeneratePage() {
                 <div className="border-b bg-muted/40">
                   <TabsList className="grid w-full grid-cols-6 h-auto bg-transparent border-0 p-0 rounded-none gap-2">
                     {tabConfig.map((tab) => (
-                      <TabsTrigger
+                      <TabsTrigger 
                         key={tab.value}
-                        value={tab.value}
+                        value={tab.value} 
                         className="flex flex-col items-center justify-center space-y-2 px-4 py-6 text-center text-sm font-medium transition-all duration-300 ease-in-out data-[state=active]:bg-background data-[state=active]:shadow-md hover:bg-muted/30 border-r border-border"
                       >
                         <div className={`p-3 rounded-xl bg-gradient-to-r ${tab.color} shadow-md`}>
@@ -140,53 +140,53 @@ export default function GeneratePage() {
                     ))}
                   </TabsList>
                 </div>
-
+                
                 {/* Tab Contents */}
                 <div className="p-6">
                   <TabsContent value="bulk" className="space-y-6">
-                    <BulkDigitalAssetsGenerator />
-                  </TabsContent>
-
+                        <BulkDigitalAssetsGenerator />
+                      </TabsContent>
+                      
                   <TabsContent value="qr" className="space-y-6">
-                    <QRCodeGenerator />
-                  </TabsContent>
-
+                        <QRCodeGenerator />
+                      </TabsContent>
+                      
                   <TabsContent value="barcode" className="space-y-6">
-                    <BarcodeGenerator />
-                  </TabsContent>
-
+                        <BarcodeGenerator />
+                      </TabsContent>
+                      
                   <TabsContent value="nfc" className="space-y-6">
-                    <NFCGenerator />
-                  </TabsContent>
-
+                        <NFCGenerator />
+                      </TabsContent>
+                      
                   <TabsContent value="viewer" className="space-y-6">
                     <div className="flex items-start gap-4">
                       <div className="p-3 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-600 shadow">
-                        <Database className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
+                              <Database className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
                         <h2 className="text-xl font-semibold">Asset Viewer</h2>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Browse and manage all your digital assets in one centralized location with advanced filtering.
-                        </p>
+                                Browse and manage all your digital assets in one centralized location with advanced filtering.
+                              </p>
                         <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            Multi-User
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Database className="h-4 w-4" />
-                            Centralized
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Activity className="h-4 w-4" />
-                            Real-time
-                          </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="h-4 w-4" />
+                              Multi-User
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Database className="h-4 w-4" />
+                              Centralized
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Activity className="h-4 w-4" />
+                              Real-time
+                            </span>
                         </div>
-                      </div>
-                    </div>
-                    <AssetsViewer />
-                  </TabsContent>
+                          </div>
+                        </div>
+                        <AssetsViewer />
+                      </TabsContent>
                 </div>
               </Tabs>
             </CardContent>
@@ -216,3 +216,4 @@ export default function GeneratePage() {
     </div>
   )
 }
+ 

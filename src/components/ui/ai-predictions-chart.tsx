@@ -111,19 +111,19 @@ export function AIPredictionsChart({
     
     if (total === 0) {
       return (
-        <div className="text-center py-12">
-          <PieChart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 font-medium">No data available for pie chart</p>
+        <div className="text-center py-8">
+          <PieChart className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-600 font-medium text-sm">No data available for pie chart</p>
         </div>
       )
     }
     
     return (
-      <div className="flex items-center justify-center space-x-12">
+      <div className="flex items-center justify-center space-x-8">
         {/* Chart */}
         <div className="flex-shrink-0">
-          <div className="relative w-64 h-64">
-            <svg className="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
+          <div className="relative w-56 h-56">
+            <svg className="w-56 h-56 transform -rotate-90" viewBox="0 0 100 100">
               {Object.entries(data).map(([key, value]: [string, number], index: number) => {
                 const percentage = (value / total) * 100
                 const radius = 45
@@ -163,16 +163,16 @@ export function AIPredictionsChart({
 
         {/* Legend */}
         <div className="flex-shrink-0">
-          <div className="space-y-3">
+          <div className="space-y-2">
             {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-              <div key={key} className="flex items-center space-x-3">
+              <div key={key} className="flex items-center space-x-2">
                 <div 
-                  className="w-4 h-4 rounded-sm shadow-sm"
+                  className="w-3 h-3 rounded-sm shadow-sm"
                   style={{ backgroundColor: colors[index % colors.length] }}
                 />
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-semibold capitalize text-gray-900">{key}</span>
-                  <span className="text-sm text-gray-600">({value})</span>
+                <div className="flex items-center space-x-1">
+                  <span className="text-xs font-semibold capitalize text-gray-900">{key}</span>
+                  <span className="text-xs text-gray-600">({value})</span>
                 </div>
               </div>
             ))}
@@ -188,64 +188,66 @@ export function AIPredictionsChart({
     
     if (maxValue === 0) {
       return (
-        <div className="text-center py-12">
-          <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 font-medium">No data available for bar chart</p>
+        <div className="text-center py-8">
+          <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-600 font-medium text-sm">No data available for bar chart</p>
         </div>
       )
     }
     
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="text-center">
-          <h4 className="text-xl font-bold text-gray-900 mb-2">{title}</h4>
-          <p className="text-sm text-gray-600">Comparative analysis</p>
+          <h4 className="text-lg font-bold text-gray-900 mb-1">{title}</h4>
+          <p className="text-xs text-gray-600">Comparative analysis</p>
         </div>
         
-        <div className="flex items-center justify-center space-x-12">
+        <div className="flex items-center justify-center space-x-8">
           {/* Chart */}
           <div className="flex-shrink-0">
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-              <div className="h-80 relative">
+            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+              <div className="h-64 relative">
                 {/* Y-axis */}
                 <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 font-medium">
                   {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
                     <div key={value} className="flex items-center">
-                      <span className="w-8 text-right">{value}</span>
-                      <div className="w-2 h-px bg-gray-200 ml-2"></div>
+                      <span className="w-6 text-right">{value}</span>
+                      <div className="w-2 h-px bg-gray-200 ml-1"></div>
                     </div>
                   ))}
                 </div>
                 
                 {/* Grid lines */}
-                <div className="absolute inset-0 flex flex-col justify-between ml-10">
+                <div className="absolute inset-0 flex flex-col justify-between ml-8">
                   {[0, 1, 2, 3, 4].map((i) => (
                     <div key={i} className="w-full h-px bg-gray-100"></div>
                   ))}
                 </div>
                 
-                {/* Chart area */}
-                <div className="ml-10 h-full flex items-end justify-between space-x-4">
-                  {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-                    <div key={key} className="flex flex-col items-center flex-1 group">
-                      <div 
-                        className="w-full rounded-t-lg transition-all duration-500 hover:opacity-80 relative cursor-pointer shadow-lg hover:shadow-xl min-h-[20px]"
-                        style={{ 
-                          height: `${(value / maxValue) * 280}px`,
-                          backgroundColor: colors[index % colors.length],
-                          background: `linear-gradient(to top, ${colors[index % colors.length]}, ${colors[index % colors.length]}dd)`
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white opacity-30"></div>
-                        <div className="absolute inset-0 bg-gradient-to-l from-transparent to-white opacity-20"></div>
-                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg whitespace-nowrap">
-                          <div className="font-bold">{value}</div>
-                          <div className="text-xs opacity-75">{key}</div>
+                {/* Chart area - Scrollable */}
+                <div className="ml-8 h-full overflow-x-auto">
+                  <div className="flex items-end space-x-6 min-w-max px-4">
+                    {Object.entries(data).map(([key, value]: [string, number], index: number) => (
+                      <div key={key} className="flex flex-col items-center group">
+                        <div 
+                          className="w-12 rounded-t-lg transition-all duration-500 hover:opacity-80 relative cursor-pointer shadow-lg hover:shadow-xl min-h-[16px]"
+                          style={{ 
+                            height: `${(value / maxValue) * 220}px`,
+                            backgroundColor: colors[index % colors.length],
+                            background: `linear-gradient(to top, ${colors[index % colors.length]}, ${colors[index % colors.length]}dd)`
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white opacity-30"></div>
+                          <div className="absolute inset-0 bg-gradient-to-l from-transparent to-white opacity-20"></div>
+                          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg whitespace-nowrap">
+                            <div className="font-bold">{value}</div>
+                            <div className="text-xs opacity-75">{key}</div>
+                          </div>
                         </div>
+                        <span className="text-xs text-gray-600 mt-1 text-center font-medium capitalize">{key}</span>
                       </div>
-                      <span className="text-xs text-gray-600 mt-2 text-center font-medium capitalize">{key}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -253,16 +255,16 @@ export function AIPredictionsChart({
 
           {/* Legend */}
           <div className="flex-shrink-0">
-            <div className="space-y-3">
+            <div className="space-y-2">
               {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-                <div key={key} className="flex items-center space-x-3">
+                <div key={key} className="flex items-center space-x-2">
                   <div 
-                    className="w-4 h-4 rounded-sm shadow-sm"
+                    className="w-3 h-3 rounded-sm shadow-sm"
                     style={{ backgroundColor: colors[index % colors.length] }}
                   />
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-semibold capitalize text-gray-900">{key}</span>
-                    <span className="text-sm text-gray-600">({value})</span>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs font-semibold capitalize text-gray-900">{key}</span>
+                    <span className="text-xs text-gray-600">({value})</span>
                   </div>
                 </div>
               ))}
@@ -416,15 +418,15 @@ export function AIPredictionsChart({
   }
 
   return (
-    <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50 to-purple-100">
-      <CardHeader>
+    <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50 to-purple-100 h-full">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center text-purple-900">
-              <Brain className="w-6 h-6 mr-3 text-purple-600" />
+            <CardTitle className="flex items-center text-purple-900 text-lg">
+              <Brain className="w-5 h-5 mr-2 text-purple-600" />
               AI Predictions Analytics
             </CardTitle>
-            <CardDescription className="text-purple-700">
+            <CardDescription className="text-purple-700 text-sm">
               Advanced graphical representation of AI predictions
             </CardDescription>
           </div>
@@ -435,7 +437,7 @@ export function AIPredictionsChart({
               onClick={() => setShowDetails(!showDetails)}
               className="border-purple-200 text-purple-600 hover:bg-purple-50"
             >
-              <Eye className="w-4 h-4 mr-2" />
+              <Eye className="w-4 h-4 mr-1" />
               {showDetails ? 'Hide' : 'Show'} Details
             </Button>
             <Button 
@@ -444,36 +446,36 @@ export function AIPredictionsChart({
               onClick={onRefresh}
               className="border-purple-200 text-purple-600 hover:bg-purple-50"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <RefreshCw className="w-4 h-4 mr-1" />
               Refresh
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Chart Type Selection */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-purple-200">
+      <CardContent className="pt-0">
+        <div className="space-y-3">
+          {/* Chart Type Selection - More Compact */}
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-purple-200">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-3">
-                  <Filter className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm font-semibold text-gray-700">Chart Type:</span>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Filter className="w-4 h-4 text-purple-600" />
+                  <span className="text-xs font-semibold text-gray-700">Chart:</span>
                   <Select value={selectedChartType} onValueChange={(value: string) => setSelectedChartType(value as 'pie' | 'bar')}>
-                    <SelectTrigger className="w-32 bg-white border-purple-200">
+                    <SelectTrigger className="w-24 h-8 bg-white border-purple-200 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pie">Pie Chart</SelectItem>
-                      <SelectItem value="bar">Bar Chart</SelectItem>
+                      <SelectItem value="pie">Pie</SelectItem>
+                      <SelectItem value="bar">Bar</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Target className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm font-semibold text-gray-700">Metric:</span>
+                <div className="flex items-center space-x-2">
+                  <Target className="w-4 h-4 text-purple-600" />
+                  <span className="text-xs font-semibold text-gray-700">Metric:</span>
                   <Select value={selectedMetric} onValueChange={(value: string) => setSelectedMetric(value as 'confidence' | 'maintenance' | 'assetType')}>
-                    <SelectTrigger className="w-48 bg-white border-purple-200">
+                    <SelectTrigger className="w-32 h-8 bg-white border-purple-200 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -485,41 +487,41 @@ export function AIPredictionsChart({
                 </div>
               </div>
               
-              <Badge variant="outline" className="border-purple-200 text-purple-600 font-semibold">
+              <Badge variant="outline" className="border-purple-200 text-purple-600 font-semibold text-xs">
                 Real-time
               </Badge>
             </div>
           </div>
 
-          {/* Chart Display */}
-          <div className="bg-white rounded-xl p-8 shadow-sm border border-purple-200">
+          {/* Chart Display - More Compact */}
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-purple-200 flex-1">
             {renderChart()}
           </div>
 
-          {/* Detailed Information Panel */}
+          {/* Detailed Information Panel - More Compact */}
           {showDetails && (
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-purple-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <Info className="w-5 h-5 text-purple-600" />
-                <h4 className="text-lg font-semibold text-gray-900">Prediction Details</h4>
+            <div className="bg-white rounded-lg p-3 shadow-sm border border-purple-200">
+              <div className="flex items-center space-x-2 mb-2">
+                <Info className="w-4 h-4 text-purple-600" />
+                <h4 className="text-sm font-semibold text-gray-900">Prediction Details</h4>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-2">
                 <div>
-                  <h5 className="font-medium text-gray-700 mb-2">Confidence Distribution</h5>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
+                  <h5 className="font-medium text-gray-700 mb-1 text-sm">Confidence Distribution</h5>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
                       <span>High (&gt;80%):</span>
                       <span className="font-semibold text-green-600">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.8).length}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs">
                       <span>Medium (60-80%):</span>
                       <span className="font-semibold text-yellow-600">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.6 && p.prediction.confidence <= 0.8).length}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs">
                       <span>Low (&lt;60%):</span>
                       <span className="font-semibold text-red-600">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length}
@@ -528,15 +530,15 @@ export function AIPredictionsChart({
                   </div>
                 </div>
                 <div>
-                  <h5 className="font-medium text-gray-700 mb-2">Asset Types</h5>
-                  <div className="space-y-2">
+                  <h5 className="font-medium text-gray-700 mb-1 text-sm">Asset Types</h5>
+                  <div className="space-y-1">
                     {Object.entries(
                       predictionsData.predictions.reduce((acc: Record<string, number>, p: Prediction) => {
                         acc[p.assetType] = (acc[p.assetType] || 0) + 1
                         return acc
                       }, {})
                     ).map(([type, count]) => (
-                      <div key={type} className="flex justify-between text-sm">
+                      <div key={type} className="flex justify-between text-xs">
                         <span className="capitalize">{type}:</span>
                         <span className="font-semibold text-blue-600">{count}</span>
                       </div>

@@ -617,29 +617,25 @@ export function EnhancedDashboard({
         {/* Main Content */}
         <main className="p-6 space-y-6">
           {/* Advanced Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {advancedStats.map((stat, index) => (
-              <Card key={index} className="hover:shadow-xl transition-all duration-300 hover:scale-105 border-0 shadow-lg">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center shadow-lg`}>
-                      <stat.icon className="w-6 h-6 text-white" />
+              <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:scale-105 border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center shadow-sm`}>
+                      <stat.icon className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex items-center space-x-1">
-                      <TrendingUp className={`w-4 h-4 ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
-                      <span className={`text-sm font-medium ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                      <TrendingUp className={`w-3 h-3 ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
+                      <span className={`text-xs font-medium ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
                         {stat.change}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                    <p className="text-sm text-gray-500">{stat.subValue}</p>
-                    <div className="flex items-center space-x-2">
-                      <Progress value={stat.health} className="h-2 flex-1" />
-                      <span className="text-xs text-gray-500">{stat.health}%</span>
-                    </div>
+                    <p className="text-xs font-medium text-gray-600">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-xs text-gray-500">{stat.subValue}</p>
                     <p className="text-xs text-gray-500">{stat.description}</p>
                   </div>
                 </CardContent>
@@ -648,13 +644,13 @@ export function EnhancedDashboard({
           </div>
 
           {/* Asset Health Monitoring and Cost Analysis */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Asset Health Monitoring */}
             <Card className="shadow-lg border-0">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-base">
                   <div className="flex items-center">
-                    <Thermometer className="w-5 h-5 mr-2 text-red-600" />
+                    <Thermometer className="w-4 h-4 mr-2 text-red-600" />
                     Asset Health Monitoring
                   </div>
                   {onRefreshHealth && (
@@ -665,48 +661,48 @@ export function EnhancedDashboard({
                       disabled={isHealthLoading}
                       className="hover:bg-red-50"
                     >
-                      <RefreshCw className={`w-4 h-4 mr-2 ${isHealthLoading ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-3 h-3 mr-1 ${isHealthLoading ? 'animate-spin' : ''}`} />
                       Refresh
                     </Button>
                   )}
                 </CardTitle>
-                <CardDescription>Real-time asset health status distribution</CardDescription>
+                <CardDescription className="text-sm">Real-time asset health status distribution</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {isHealthLoading ? (
-                  <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center justify-center py-6">
                     <div className="text-center">
                       <LoadingSpinner size="lg" />
-                      <p className="mt-4 text-gray-600">Loading health data...</p>
+                      <p className="mt-3 text-gray-600 text-sm">Loading health data...</p>
                     </div>
                   </div>
                 ) : healthError ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load health data</h3>
-                    <p className="text-gray-600 mb-4">{healthError}</p>
+                  <div className="text-center py-6">
+                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Failed to load health data</h3>
+                    <p className="text-gray-600 mb-3 text-sm">{healthError}</p>
                     {onRefreshHealth && (
-                      <Button onClick={onRefreshHealth} disabled={isHealthLoading}>
-                        <RefreshCw className={`w-4 h-4 mr-2 ${isHealthLoading ? 'animate-spin' : ''}`} />
+                      <Button onClick={onRefreshHealth} disabled={isHealthLoading} size="sm">
+                        <RefreshCw className={`w-3 h-3 mr-1 ${isHealthLoading ? 'animate-spin' : ''}`} />
                         Try Again
                       </Button>
                     )}
                   </div>
                 ) : healthData?.success ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {assetHealthData.map((asset, index) => (
-                      <div key={index} className="space-y-2">
+                      <div key={index} className="space-y-1">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <asset.icon className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm font-medium text-gray-700">{asset.name}</span>
+                            <asset.icon className="w-3 h-3 text-gray-600" />
+                            <span className="text-xs font-medium text-gray-700">{asset.name}</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <div className={`w-2 h-2 rounded-full ${asset.color}`}></div>
                             <span className="text-xs text-gray-500">{asset.count} units</span>
                           </div>
                         </div>
-                        <Progress value={asset.percentage} className="h-2" />
+                        <Progress value={asset.percentage} className="h-1.5" />
                         <div className="flex justify-between text-xs text-gray-500">
                           <span>Percentage</span>
                           <span>{asset.percentage}%</span>
@@ -715,25 +711,25 @@ export function EnhancedDashboard({
                     ))}
                     
                     {/* Health Summary */}
-                    <div className="mt-4 p-3 bg-red-50 rounded-lg">
+                    <div className="mt-3 p-2 bg-red-50 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <Thermometer className="w-4 h-4 text-red-600" />
-                          <span className="text-sm font-medium text-red-900">
+                          <Thermometer className="w-3 h-3 text-red-600" />
+                          <span className="text-xs font-medium text-red-900">
                             Total Assets: {assetHealthData.reduce((sum, asset) => sum + asset.count, 0)}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-red-600 border-red-200">
+                        <Badge variant="outline" className="text-red-600 border-red-200 text-xs">
                           Real-time
                         </Badge>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <Thermometer className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No health data available</h3>
-                    <p className="text-gray-600">Asset health data will appear here once available</p>
+                  <div className="text-center py-6">
+                    <Thermometer className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">No health data available</h3>
+                    <p className="text-gray-600 text-sm">Asset health data will appear here once available</p>
                   </div>
                 )}
               </CardContent>
@@ -741,10 +737,10 @@ export function EnhancedDashboard({
 
             {/* Cost Analysis */}
             <Card className="shadow-lg border-0">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-base">
                   <div className="flex items-center">
-                    <DollarSign className="w-5 h-5 mr-2 text-green-600" />
+                    <DollarSign className="w-4 h-4 mr-2 text-green-600" />
                     Cost Analysis
                   </div>
                   {onRefreshCost && (
@@ -755,64 +751,64 @@ export function EnhancedDashboard({
                       disabled={isCostLoading}
                       className="hover:bg-green-50"
                     >
-                      <RefreshCw className={`w-4 h-4 mr-2 ${isCostLoading ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-3 h-3 mr-1 ${isCostLoading ? 'animate-spin' : ''}`} />
                       Refresh
                     </Button>
                   )}
                 </CardTitle>
-                <CardDescription>Asset cost analysis and depreciation tracking</CardDescription>
+                <CardDescription className="text-sm">Asset cost analysis and depreciation tracking</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {isCostLoading ? (
-                  <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center justify-center py-6">
                     <div className="text-center">
                       <LoadingSpinner size="lg" />
-                      <p className="mt-4 text-gray-600">Loading cost data...</p>
+                      <p className="mt-3 text-gray-600 text-sm">Loading cost data...</p>
                     </div>
                   </div>
                 ) : costError ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load cost data</h3>
-                    <p className="text-gray-600 mb-4">{costError}</p>
+                  <div className="text-center py-6">
+                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Failed to load cost data</h3>
+                    <p className="text-gray-600 mb-3 text-sm">{costError}</p>
                     {onRefreshCost && (
-                      <Button onClick={onRefreshCost} disabled={isCostLoading}>
-                        <RefreshCw className={`w-4 h-4 mr-2 ${isCostLoading ? 'animate-spin' : ''}`} />
+                      <Button onClick={onRefreshCost} disabled={isCostLoading} size="sm">
+                        <RefreshCw className={`w-3 h-3 mr-1 ${isCostLoading ? 'animate-spin' : ''}`} />
                         Try Again
                       </Button>
                     )}
                   </div>
                 ) : costData?.success ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Total Purchase Cost</span>
-                      <span className="text-lg font-bold text-gray-900">
+                      <span className="text-xs font-medium text-gray-700">Total Purchase Cost</span>
+                      <span className="text-sm font-bold text-gray-900">
                         ${costAnalysisData.totalPurchaseCost.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Current Value</span>
-                      <span className="text-lg font-bold text-green-600">
+                      <span className="text-xs font-medium text-gray-700">Current Value</span>
+                      <span className="text-sm font-bold text-green-600">
                         ${costAnalysisData.totalCurrentValue.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Total Depreciation</span>
-                      <span className="text-lg font-bold text-red-600">
+                      <span className="text-xs font-medium text-gray-700">Total Depreciation</span>
+                      <span className="text-sm font-bold text-red-600">
                         ${costAnalysisData.totalDepreciation.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Avg. Depreciation Rate</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-xs font-medium text-gray-700">Avg. Depreciation Rate</span>
+                      <span className="text-xs font-medium text-gray-900">
                         {costAnalysisData.avgDepreciationRate.toFixed(2)}%
                       </span>
                     </div>
                     <Progress 
                       value={costAnalysisData.totalCurrentValue > 0 ? (costAnalysisData.totalCurrentValue / costAnalysisData.totalPurchaseCost) * 100 : 0} 
-                      className="h-3" 
+                      className="h-2" 
                     />
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       {costAnalysisData.breakdown.map((item, index) => (
                         <div key={index} className="flex items-center justify-between">
                           <span className="text-xs text-gray-600">{item.category}</span>
@@ -827,25 +823,25 @@ export function EnhancedDashboard({
                     </div>
                     
                     {/* Cost Summary */}
-                    <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                    <div className="mt-3 p-2 bg-green-50 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <DollarSign className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium text-green-900">
+                          <DollarSign className="w-3 h-3 text-green-600" />
+                          <span className="text-xs font-medium text-green-900">
                             Total Assets: {costAnalysisData.assetCount}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-green-600 border-green-200">
+                        <Badge variant="outline" className="text-green-600 border-green-200 text-xs">
                           Real-time
                         </Badge>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No cost data available</h3>
-                    <p className="text-gray-600">Asset cost data will appear here once available</p>
+                  <div className="text-center py-6">
+                    <DollarSign className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">No cost data available</h3>
+                    <p className="text-gray-600 text-sm">Asset cost data will appear here once available</p>
                   </div>
                 )}
               </CardContent>
@@ -853,10 +849,10 @@ export function EnhancedDashboard({
 
             {/* Trend Analysis */}
             <Card className="shadow-lg border-0">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-base">
                   <div className="flex items-center">
-                    <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
+                    <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
                     Trend Analysis
                   </div>
                   {onRefreshTrends && (
@@ -867,88 +863,88 @@ export function EnhancedDashboard({
                       disabled={isTrendsLoading}
                       className="hover:bg-blue-50"
                     >
-                      <RefreshCw className={`w-4 h-4 mr-2 ${isTrendsLoading ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-3 h-3 mr-1 ${isTrendsLoading ? 'animate-spin' : ''}`} />
                       Refresh
                     </Button>
                   )}
                 </CardTitle>
-                <CardDescription>Performance trends and analytics</CardDescription>
+                <CardDescription className="text-sm">Performance trends and analytics</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {isTrendsLoading ? (
-                  <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center justify-center py-6">
                     <div className="text-center">
                       <LoadingSpinner size="lg" />
-                      <p className="mt-4 text-gray-600">Loading trends data...</p>
+                      <p className="mt-3 text-gray-600 text-sm">Loading trends data...</p>
                     </div>
                   </div>
                 ) : trendsError ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load trends data</h3>
-                    <p className="text-gray-600 mb-4">{trendsError}</p>
+                  <div className="text-center py-6">
+                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Failed to load trends data</h3>
+                    <p className="text-gray-600 mb-3 text-sm">{trendsError}</p>
                     {onRefreshTrends && (
-                      <Button onClick={onRefreshTrends} disabled={isTrendsLoading}>
-                        <RefreshCw className={`w-4 h-4 mr-2 ${isTrendsLoading ? 'animate-spin' : ''}`} />
+                      <Button onClick={onRefreshTrends} disabled={isTrendsLoading} size="sm">
+                        <RefreshCw className={`w-3 h-3 mr-1 ${isTrendsLoading ? 'animate-spin' : ''}`} />
                         Try Again
                       </Button>
                     )}
                   </div>
                 ) : trendsData?.success ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <p className="text-2xl font-bold text-blue-600">{trendAnalysis.scheduled}</p>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-2 bg-blue-50 rounded-lg">
+                        <p className="text-lg font-bold text-blue-600">{trendAnalysis.scheduled}</p>
                         <p className="text-xs text-gray-600">Scheduled</p>
                       </div>
-                      <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                        <p className="text-2xl font-bold text-yellow-600">{trendAnalysis.inProgress}</p>
+                      <div className="text-center p-2 bg-yellow-50 rounded-lg">
+                        <p className="text-lg font-bold text-yellow-600">{trendAnalysis.inProgress}</p>
                         <p className="text-xs text-gray-600">In Progress</p>
                       </div>
-                      <div className="text-center p-3 bg-green-50 rounded-lg">
-                        <p className="text-2xl font-bold text-green-600">{trendAnalysis.completed}</p>
+                      <div className="text-center p-2 bg-green-50 rounded-lg">
+                        <p className="text-lg font-bold text-green-600">{trendAnalysis.completed}</p>
                         <p className="text-xs text-gray-600">Completed</p>
                       </div>
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <p className="text-2xl font-bold text-red-600">{trendAnalysis.overdue}</p>
+                      <div className="text-center p-2 bg-red-50 rounded-lg">
+                        <p className="text-lg font-bold text-red-600">{trendAnalysis.overdue}</p>
                         <p className="text-xs text-gray-600">Overdue</p>
                       </div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Efficiency</span>
-                        <span className="text-sm font-medium text-gray-900">{trendAnalysis.efficiency}%</span>
+                        <span className="text-xs text-gray-600">Efficiency</span>
+                        <span className="text-xs font-medium text-gray-900">{trendAnalysis.efficiency}%</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Avg. Completion</span>
-                        <span className="text-sm font-medium text-gray-900">{trendAnalysis.avgCompletionTime}</span>
+                        <span className="text-xs text-gray-600">Avg. Completion</span>
+                        <span className="text-xs font-medium text-gray-900">{trendAnalysis.avgCompletionTime}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Cost Savings</span>
-                        <span className="text-sm font-medium text-green-600">{trendAnalysis.costSavings}</span>
+                        <span className="text-xs text-gray-600">Cost Savings</span>
+                        <span className="text-xs font-medium text-green-600">{trendAnalysis.costSavings}</span>
                       </div>
                     </div>
                     
                     {/* Trends Summary */}
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="mt-3 p-2 bg-blue-50 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">
+                          <TrendingUp className="w-3 h-3 text-blue-600" />
+                          <span className="text-xs font-medium text-blue-900">
                             Period: {trendsData.period} | Total Records: {trendsData.totalRecords}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-blue-600 border-blue-200">
+                        <Badge variant="outline" className="text-blue-600 border-blue-200 text-xs">
                           Real-time
                         </Badge>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No trends data available</h3>
-                    <p className="text-gray-600">Trend analysis data will appear here once available</p>
+                  <div className="text-center py-6">
+                    <TrendingUp className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">No trends data available</h3>
+                    <p className="text-gray-600 text-sm">Trend analysis data will appear here once available</p>
                   </div>
                 )}
               </CardContent>
@@ -957,89 +953,76 @@ export function EnhancedDashboard({
 
 
 
-          {/* AI Predictions Chart Section */}
-          <div data-predictions-section>
-            <AIPredictionsChart
-              predictionsData={predictionsData}
-              isLoading={isPredictionsLoading}
-              error={predictionsError}
-              onRefresh={onRefreshPredictions || (() => {})}
-            />
+          {/* AI Predictions Chart Section and Quick Actions - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* AI Predictions Chart Section - Reduced Width */}
+            <div className="lg:col-span-2">
+              <AIPredictionsChart
+                predictionsData={predictionsData}
+                isLoading={isPredictionsLoading}
+                error={predictionsError}
+                onRefresh={onRefreshPredictions || (() => {})}
+              />
+            </div>
+
+            {/* Quick Actions - Side Panel */}
+            <div className="lg:col-span-1">
+              <Card className="shadow-lg border-0 h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Zap className="w-5 h-5 mr-2 text-orange-600" />
+                    Quick Actions
+                  </CardTitle>
+                  <CardDescription>Common tasks and shortcuts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-3">
+                    <Button 
+                      variant="outline" 
+                      className="h-16 flex-col hover:bg-blue-50 transition-colors justify-start"
+                      onClick={handleAddUserClick}
+                    >
+                      <Users className="w-5 h-5 mb-1 text-blue-600" />
+                      <span className="text-sm font-medium">Add User</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="h-16 flex-col hover:bg-green-50 transition-colors justify-start"
+                      onClick={handleAddAssetClick}
+                    >
+                      <Building2 className="w-5 h-5 mb-1 text-green-600" />
+                      <span className="text-sm font-medium">Add Asset</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="h-16 flex-col hover:bg-purple-50 transition-colors justify-start"
+                      onClick={handleAddLocationClick}
+                    >
+                      <MapPin className="w-5 h-5 mb-1 text-purple-600" />
+                      <span className="text-sm font-medium">Add Location</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="h-16 flex-col hover:bg-orange-50 transition-colors justify-start"
+                      onClick={handleGenerateReportClick}
+                    >
+                      <FileText className="w-5 h-5 mb-1 text-orange-600" />
+                      <span className="text-sm font-medium">Generate Report</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="h-16 flex-col hover:bg-red-50 transition-colors justify-start"
+                      onClick={handleViewAlertsClick}
+                    >
+                      <AlertCircle className="w-5 h-5 mb-1 text-red-600" />
+                      <span className="text-sm font-medium">View Alerts</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-
-          {/* Quick Actions Grid */}
-          <Card className="shadow-lg border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Zap className="w-5 h-5 mr-2 text-orange-600" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>Common tasks and shortcuts</CardDescription>
-            </CardHeader>
-            <CardContent>
-                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                 <Button 
-                   variant="outline" 
-                   className="h-20 flex-col hover:bg-blue-50 transition-colors"
-                   onClick={handleAddUserClick}
-                 >
-                   <Users className="w-6 h-6 mb-2 text-blue-600" />
-                   <span className="text-sm font-medium">Add User</span>
-                 </Button>
-                 <Button 
-                   variant="outline" 
-                   className="h-20 flex-col hover:bg-green-50 transition-colors"
-                   onClick={handleAddAssetClick}
-                 >
-                   <Building2 className="w-6 h-6 mb-2 text-green-600" />
-                   <span className="text-sm font-medium">Add Asset</span>
-                 </Button>
-                 <Button 
-                   variant="outline" 
-                   className="h-20 flex-col hover:bg-purple-50 transition-colors"
-                   onClick={handleAddLocationClick}
-                 >
-                   <MapPin className="w-6 h-6 mb-2 text-purple-600" />
-                   <span className="text-sm font-medium">Add Location</span>
-                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-20 flex-col hover:bg-orange-50 transition-colors"
-                  onClick={handleGenerateReportClick}
-                >
-                  <FileText className="w-6 h-6 mb-2 text-orange-600" />
-                  <span className="text-sm font-medium">Generate Report</span>
-                </Button>
-                                 <Button 
-                   variant="outline" 
-                   className="h-20 flex-col hover:bg-red-50 transition-colors"
-                   onClick={handleViewAlertsClick}
-                 >
-                   <AlertCircle className="w-6 h-6 mb-2 text-red-600" />
-                   <span className="text-sm font-medium">View Alerts</span>
-                 </Button>
-
-                <Button 
-                  variant="outline" 
-                  className="h-20 flex-col hover:bg-indigo-50 transition-colors"
-                  onClick={() => {
-                    const predictionsSection = document.querySelector('[data-predictions-section]')
-                    if (predictionsSection) {
-                      predictionsSection.scrollIntoView({ behavior: 'smooth' })
-                    }
-                  }}
-                >
-                  <Brain className="w-6 h-6 mb-2 text-indigo-600" />
-                  <span className="text-sm font-medium">View Predictions</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col hover:bg-gray-50 transition-colors">
-                  <Settings className="w-6 h-6 mb-2 text-gray-600" />
-                  <span className="text-sm font-medium">Settings</span>
-                </Button>
-              </div>
-            </CardContent>
-                     </Card>
-         </main>
+        </main>
        </div>
 
        {/* Alerts Modal */}

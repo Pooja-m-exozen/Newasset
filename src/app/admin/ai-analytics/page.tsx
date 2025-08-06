@@ -26,6 +26,10 @@ export default function AIAnalyticsPage() {
   const [selectedTimeRange, setSelectedTimeRange] = useState('30_days')
   const [selectedInsightType, setSelectedInsightType] = useState('performance')
   const [bearerToken, setBearerToken] = useState('')
+  const [anomalies, setAnomalies] = useState<any[]>([])
+  const [totalAnomalies, setTotalAnomalies] = useState(0)
+  const [anomaliesLoading, setAnomaliesLoading] = useState(false)
+  const [anomaliesError, setAnomaliesError] = useState<string | null>(null)
 
   // Get bearer token from localStorage or prompt user
   useEffect(() => {
@@ -96,8 +100,68 @@ export default function AIAnalyticsPage() {
     }
   }
 
+  const fetchPerformanceAnomalies = async (assetIds?: string, timeWindow?: string) => {
+    if (!bearerToken) {
+      setAnomaliesError('Bearer token is required')
+      return
+    }
+
+    setAnomaliesLoading(true)
+    setAnomaliesError(null)
+    
+    try {
+      const requestBody = {
+        assetIds: assetIds || "688c4937d60a8def2a6cd5dc",
+        optimizationCriteria: {
+          minimizeCost: true,
+          maximizeEfficiency: true,
+          timeWindow: timeWindow || "30_days"
+        }
+      }
+
+      const response = await fetch('http://192.168.0.5:5021/api/ai/anomalies/performance', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${bearerToken}`
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please login again.')
+        } else if (response.status === 403) {
+          throw new Error('Access denied. You do not have permission to view anomalies.')
+        } else {
+          throw new Error(`Failed to fetch anomalies: ${response.status}`)
+        }
+      }
+
+      const data = await response.json()
+      
+      if (data && data.success) {
+        setAnomalies(data.anomalies || [])
+        setTotalAnomalies(data.totalAnomalies || 0)
+      } else {
+        setAnomalies([])
+        setTotalAnomalies(0)
+      }
+    } catch (err) {
+      setAnomaliesError(err instanceof Error ? err.message : 'Failed to fetch performance anomalies')
+      setAnomalies([])
+      setTotalAnomalies(0)
+    } finally {
+      setAnomaliesLoading(false)
+    }
+  }
+
   const handleRefresh = () => {
     fetchInsights()
+    fetchPerformanceAnomalies()
+  }
+
+  const handleAnomaliesRefresh = () => {
+    fetchPerformanceAnomalies()
   }
 
   const handleTimeRangeChange = (timeRange: string) => {
@@ -118,6 +182,7 @@ export default function AIAnalyticsPage() {
   useEffect(() => {
     if (bearerToken) {
       fetchInsights()
+      fetchPerformanceAnomalies()
     }
   }, [bearerToken])
 
@@ -146,6 +211,11 @@ export default function AIAnalyticsPage() {
             onTimeRangeChange={handleTimeRangeChange}
             onInsightTypeChange={handleInsightTypeChange}
             onFetchRecommendations={fetchRecommendations}
+            anomalies={anomalies}
+            totalAnomalies={totalAnomalies}
+            anomaliesLoading={anomaliesLoading}
+            anomaliesError={anomaliesError}
+            onAnomaliesRefresh={handleAnomaliesRefresh}
           />
         </div>
       </div>

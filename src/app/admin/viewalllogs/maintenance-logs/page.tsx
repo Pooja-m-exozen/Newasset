@@ -28,7 +28,10 @@ import {
   PauseCircle,
   RefreshCw,
   Activity,
-  MapPin
+  MapPin,
+  X,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface MaintenanceLog {
@@ -64,18 +67,15 @@ export default function MaintenanceLogsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
-  const [filterType, setFilterType] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleAuthError = (errorMessage: string) => {
     setError(errorMessage);
-    // Clear invalid token
     localStorage.removeItem('authToken');
     sessionStorage.removeItem('authToken');
-    
-    // Redirect to login after a delay
     setTimeout(() => {
       window.location.href = '/login';
     }, 3000);
@@ -86,7 +86,6 @@ export default function MaintenanceLogsPage() {
       setLoading(true);
       setError(null);
       
-      // Get token from localStorage or sessionStorage
       const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       
       if (!token) {
@@ -114,8 +113,6 @@ export default function MaintenanceLogsPage() {
       }
 
       const data = await response.json();
-      
-      // Handle different response structures
       const maintenanceLogs = data.data || data.maintenanceLogs || data.logs || data || [];
       
       if (Array.isArray(maintenanceLogs)) {
@@ -139,7 +136,6 @@ export default function MaintenanceLogsPage() {
   };
 
   useEffect(() => {
-    // Check for valid authentication token
     const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     if (!token) {
       setError('Authentication required. Please login to view maintenance logs.');
@@ -159,9 +155,8 @@ export default function MaintenanceLogsPage() {
                          log.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || log.status === filterStatus;
     const matchesPriority = filterPriority === 'all' || log.priority === filterPriority;
-    const matchesType = filterType === 'all' || log.maintenanceType === filterType;
     
-    return matchesSearch && matchesStatus && matchesPriority && matchesType;
+    return matchesSearch && matchesStatus && matchesPriority;
   }).sort((a, b) => {
     let aValue: any = a[sortBy as keyof typeof a];
     let bValue: any = b[sortBy as keyof typeof b];
@@ -181,18 +176,18 @@ export default function MaintenanceLogsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      scheduled: { color: 'bg-blue-100 text-blue-800', label: 'Scheduled' },
-      'in-progress': { color: 'bg-yellow-100 text-yellow-800', label: 'In Progress' },
-      completed: { color: 'bg-green-100 text-green-800', label: 'Completed' },
-      overdue: { color: 'bg-red-100 text-red-800', label: 'Overdue' },
-      cancelled: { color: 'bg-gray-100 text-gray-800', label: 'Cancelled' },
-      paused: { color: 'bg-purple-100 text-purple-800', label: 'Paused' }
+      scheduled: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Scheduled' },
+      'in-progress': { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'In Progress' },
+      completed: { color: 'bg-green-100 text-green-800 border-green-200', label: 'Completed' },
+      overdue: { color: 'bg-red-100 text-red-800 border-red-200', label: 'Overdue' },
+      cancelled: { color: 'bg-gray-100 text-gray-800 border-gray-200', label: 'Cancelled' },
+      paused: { color: 'bg-purple-100 text-purple-800 border-purple-200', label: 'Paused' }
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.scheduled;
     
     return (
-      <Badge className={config.color}>
+      <Badge className={`${config.color} border font-medium`}>
         {config.label}
       </Badge>
     );
@@ -200,36 +195,19 @@ export default function MaintenanceLogsPage() {
 
   const getPriorityBadge = (priority: string) => {
     const priorityConfig = {
-      low: { color: 'bg-gray-100 text-gray-800', label: 'Low' },
-      medium: { color: 'bg-blue-100 text-blue-800', label: 'Medium' },
-      high: { color: 'bg-orange-100 text-orange-800', label: 'High' },
-      critical: { color: 'bg-red-100 text-red-800', label: 'Critical' }
+      low: { color: 'bg-gray-100 text-gray-800 border-gray-200', label: 'Low' },
+      medium: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Medium' },
+      high: { color: 'bg-orange-100 text-orange-800 border-orange-200', label: 'High' },
+      critical: { color: 'bg-red-100 text-red-800 border-red-200', label: 'Critical' }
     };
     
     const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.medium;
     
     return (
-      <Badge className={config.color}>
+      <Badge className={`${config.color} border font-medium`}>
         {config.label}
       </Badge>
     );
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'in-progress':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'overdue':
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case 'cancelled':
-        return <XCircle className="w-4 h-4 text-gray-500" />;
-      case 'paused':
-        return <PauseCircle className="w-4 h-4 text-purple-500" />;
-      default:
-        return <Calendar className="w-4 h-4 text-blue-500" />;
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -242,47 +220,8 @@ export default function MaintenanceLogsPage() {
     return new Date(dateString).toLocaleString();
   };
 
-  const downloadPDF = () => {
-    try {
-      // Create PDF content
-      const pdfContent = {
-        title: 'Maintenance Logs Report',
-        data: filteredLogs.map(log => ({
-          'Asset Name': log.assetName || 'N/A',
-          'Asset ID': log.assetId || 'N/A',
-          'Maintenance Type': log.maintenanceType || 'N/A',
-          'Technician': log.technicianName || 'N/A',
-          'Status': log.status || 'N/A',
-          'Priority': log.priority || 'N/A',
-          'Scheduled Date': formatDateTime(log.date),
-          'Work Started': log.workStartedAt ? formatDateTime(log.workStartedAt) : 'Not started',
-          'Work Completed': log.workCompletedAt ? formatDateTime(log.workCompletedAt) : 'Not completed',
-          'Cost': log.cost ? `$${log.cost}` : 'N/A',
-          'Location': log.location || 'N/A'
-        }))
-      };
-
-      // Create and download PDF
-      const blob = new Blob([JSON.stringify(pdfContent, null, 2)], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `maintenance-logs-${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      console.log('PDF download completed');
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      alert('Failed to download PDF. Please try again.');
-    }
-  };
-
   const downloadExcel = () => {
     try {
-      // Create CSV content
       const headers = [
         'Asset Name', 'Asset ID', 'Maintenance Type', 'Technician', 'Status', 
         'Priority', 'Scheduled Date', 'Work Started', 'Work Completed', 'Cost', 'Location'
@@ -305,7 +244,6 @@ export default function MaintenanceLogsPage() {
         ].join(','))
       ].join('\n');
 
-      // Create and download CSV
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -315,8 +253,6 @@ export default function MaintenanceLogsPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
-      console.log('Excel download completed');
     } catch (error) {
       console.error('Error downloading Excel:', error);
       alert('Failed to download Excel file. Please try again.');
@@ -327,7 +263,6 @@ export default function MaintenanceLogsPage() {
     setSearchTerm('');
     setFilterStatus('all');
     setFilterPriority('all');
-    setFilterType('all');
     setSortBy('date');
     setSortOrder('desc');
   };
@@ -350,8 +285,8 @@ export default function MaintenanceLogsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="p-4 lg:p-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Error Display */}
           <ErrorDisplay 
@@ -359,81 +294,83 @@ export default function MaintenanceLogsPage() {
             onClearError={() => setError(null)} 
           />
 
-          {/* Enhanced Header */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl">
-                    <Wrench className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Maintenance Logs</h1>
-                    <p className="text-gray-600 mt-1">Track maintenance activities, schedules, and technician assignments</p>
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleRefresh}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  disabled={refreshing}
-                >
-                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
+          {/* Simple Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Wrench className="w-6 h-6 text-white" />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Download Buttons */}
-          <div className="flex justify-between items-center">
-            <div className="flex gap-3">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Maintenance Logs</h1>
+                <p className="text-gray-600">Track and manage maintenance activities</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
               <Button 
-                onClick={downloadPDF}
+                onClick={handleRefresh}
                 variant="outline"
-                className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:bg-white/90"
+                size="sm"
+                disabled={refreshing}
               >
-                <FileText className="w-4 h-4" />
-                Download PDF
+                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
               <Button 
                 onClick={downloadExcel}
                 variant="outline"
-                className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:bg-white/90"
+                size="sm"
               >
-                <FileSpreadsheet className="w-4 h-4" />
-                Download Excel
+                <Download className="w-4 h-4 mr-2" />
+                Export
               </Button>
-            </div>
-            
-            <div className="text-sm text-gray-500">
-              Showing {filteredLogs.length} of {logs.length} logs
             </div>
           </div>
 
-          {/* Enhanced Filters */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          {/* Simple Search and Filters */}
+          <Card>
             <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-                {/* Search and Filters */}
-                <div className="flex flex-col lg:flex-row gap-4 flex-1">
-                  <div className="relative flex-1 max-w-md">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                        <Search className="w-3 h-3 text-white" />
-                      </div>
-                    </div>
-                    <Input
-                      placeholder="Search assets, technicians..."
-                      value={searchTerm}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                      className="pl-12 bg-white/50 backdrop-blur-sm border-gray-200 focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+              <div className="space-y-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search assets, technicians, or descriptions..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                {/* Filters Toggle */}
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2"
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filters
+                    {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
                   
-                  <div className="flex gap-2">
+                  {(searchTerm || filterStatus !== 'all' || filterPriority !== 'all') && (
+                    <Button
+                      variant="ghost"
+                      onClick={handleClearFilters}
+                      size="sm"
+                      className="text-gray-500"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+
+                {/* Filters */}
+                {showFilters && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="bg-white/50 backdrop-blur-sm border-gray-200 focus:ring-2 focus:ring-blue-500">
+                      <SelectTrigger>
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -448,7 +385,7 @@ export default function MaintenanceLogsPage() {
                     </Select>
 
                     <Select value={filterPriority} onValueChange={setFilterPriority}>
-                      <SelectTrigger className="bg-white/50 backdrop-blur-sm border-gray-200 focus:ring-2 focus:ring-blue-500">
+                      <SelectTrigger>
                         <SelectValue placeholder="Filter by priority" />
                       </SelectTrigger>
                       <SelectContent>
@@ -459,166 +396,110 @@ export default function MaintenanceLogsPage() {
                         <SelectItem value="critical">Critical</SelectItem>
                       </SelectContent>
                     </Select>
-
-                    <Select value={filterType} onValueChange={setFilterType}>
-                      <SelectTrigger className="bg-white/50 backdrop-blur-sm border-gray-200 focus:ring-2 focus:ring-blue-500">
-                        <SelectValue placeholder="Filter by type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="Preventive">Preventive</SelectItem>
-                        <SelectItem value="Corrective">Corrective</SelectItem>
-                        <SelectItem value="Emergency">Emergency</SelectItem>
-                        <SelectItem value="Predictive">Predictive</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:bg-white/90"
-                    onClick={handleClearFilters}
-                  >
-                    <Filter className="w-4 h-4" />
-                    Clear Filters
-                  </Button>
-                </div>
-              </div>
-
-              {/* Sort Options */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex flex-wrap gap-4 items-center">
-                  <span className="text-sm font-medium text-gray-600">Sort by:</span>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="bg-white/50 backdrop-blur-sm border-gray-200 focus:ring-2 focus:ring-blue-500">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="date">Scheduled Date</SelectItem>
-                      <SelectItem value="createdAt">Created Date</SelectItem>
-                      <SelectItem value="updatedAt">Last Updated</SelectItem>
-                      <SelectItem value="workStartedAt">Work Started</SelectItem>
-                      <SelectItem value="workCompletedAt">Work Completed</SelectItem>
-                      <SelectItem value="assetName">Asset Name</SelectItem>
-                      <SelectItem value="technicianName">Technician</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    variant="outline"
-                    className="bg-white/50 backdrop-blur-sm border-0 shadow-lg hover:bg-white/90"
-                  >
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                    {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
-                  </Button>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
+          {/* Results Count */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Showing {filteredLogs.length} of {logs.length} maintenance logs
+            </p>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>Sort by:</span>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Scheduled Date</SelectItem>
+                  <SelectItem value="assetName">Asset Name</SelectItem>
+                  <SelectItem value="technicianName">Technician</SelectItem>
+                  <SelectItem value="status">Status</SelectItem>
+                  <SelectItem value="priority">Priority</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </Button>
+            </div>
+          </div>
+
           {/* Logs Table */}
           {filteredLogs.length === 0 ? (
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <Card>
               <CardContent className="p-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Wrench className="w-8 h-8 text-gray-400" />
-                </div>
+                <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {logs.length === 0 ? "No maintenance logs available" : "No maintenance logs found"}
+                  {logs.length === 0 ? "No maintenance logs available" : "No logs found"}
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  {logs.length === 0 ? "No maintenance logs are currently available in the system" : "No maintenance logs match your current filters"}
+                  {logs.length === 0 ? "No maintenance logs are currently available" : "Try adjusting your search or filters"}
                 </p>
                 <Button
                   onClick={logs.length === 0 ? handleRefresh : handleClearFilters}
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  variant="outline"
                 >
                   {logs.length === 0 ? "Refresh" : "Clear Filters"}
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Activity className="w-5 h-5 text-blue-600" />
-                    <span className="text-xl font-bold">Maintenance Activities</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    {filteredLogs.length} of {logs.length} logs
-                  </div>
-                </CardTitle>
-              </CardHeader>
+            <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50/50">
+                      <TableRow>
                         <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
+                          className="cursor-pointer hover:bg-gray-50"
                           onClick={() => handleSort('assetName')}
                         >
                           Asset
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
+                          className="cursor-pointer hover:bg-gray-50"
                           onClick={() => handleSort('maintenanceType')}
                         >
-                          Maintenance Type
+                          Type
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
+                          className="cursor-pointer hover:bg-gray-50"
                           onClick={() => handleSort('technicianName')}
                         >
                           Technician
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
+                          className="cursor-pointer hover:bg-gray-50"
                           onClick={() => handleSort('status')}
                         >
                           Status
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
+                          className="cursor-pointer hover:bg-gray-50"
                           onClick={() => handleSort('priority')}
                         >
                           Priority
                         </TableHead>
                         <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
+                          className="cursor-pointer hover:bg-gray-50"
                           onClick={() => handleSort('date')}
                         >
-                          Scheduled Date
+                          Scheduled
                         </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
-                          onClick={() => handleSort('workStartedAt')}
-                        >
-                          Work Started
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
-                          onClick={() => handleSort('workCompletedAt')}
-                        >
-                          Work Completed
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-100/50"
-                          onClick={() => handleSort('cost')}
-                        >
-                          Cost
-                        </TableHead>
+                        <TableHead>Progress</TableHead>
+                        <TableHead>Cost</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredLogs.map((log) => (
-                        <TableRow key={log._id} className="hover:bg-gray-50/30">
+                        <TableRow key={log._id} className="hover:bg-gray-50">
                           <TableCell>
                             <div>
                               <div className="font-medium">{log.assetName || 'N/A'}</div>
@@ -635,10 +516,7 @@ export default function MaintenanceLogsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(log.status)}
-                              {getStatusBadge(log.status)}
-                            </div>
+                            {getStatusBadge(log.status)}
                           </TableCell>
                           <TableCell>
                             {getPriorityBadge(log.priority)}
@@ -646,34 +524,35 @@ export default function MaintenanceLogsPage() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm">{formatDateTime(log.date)}</span>
+                              <span className="text-sm">{formatDate(log.date)}</span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            {log.workStartedAt ? (
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm">{formatDateTime(log.workStartedAt)}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">Not started</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {log.workCompletedAt ? (
-                              <div className="flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-green-400" />
-                                <span className="text-sm">{formatDateTime(log.workCompletedAt)}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">Not completed</span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {log.workStartedAt ? (
+                                <>
+                                  <Clock className="w-4 h-4 text-blue-500" />
+                                  <span className="text-sm">Started</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-4 h-4 text-gray-400" />
+                                  <span className="text-sm text-gray-500">Not started</span>
+                                </>
+                              )}
+                              {log.workCompletedAt && (
+                                <>
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                  <span className="text-sm">Completed</span>
+                                </>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {log.cost ? (
                               <span className="font-medium">${log.cost}</span>
                             ) : (
-                              <span className="text-gray-400">N/A</span>
+                              <span className="text-gray-400">-</span>
                             )}
                           </TableCell>
                         </TableRow>

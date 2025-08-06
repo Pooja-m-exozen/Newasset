@@ -37,7 +37,22 @@ export interface UpdateLocationRequest {
 export interface ApiResponse<T> {
   success: boolean;
   locations?: T[];
+  location?: T;
   message?: string;
+}
+
+// Google Maps Geocoding Response Interface
+export interface GoogleMapsGeocodingResponse {
+  results: Array<{
+    formatted_address: string;
+    geometry: {
+      location: {
+        lat: number;
+        lng: number;
+      };
+    };
+  }>;
+  status: string;
 }
 
 // Get token from localStorage
@@ -46,6 +61,34 @@ const getAuthToken = (): string | null => {
     return localStorage.getItem('authToken');
   }
   return null;
+};
+
+// Geocoding function to convert address to coordinates
+export const geocodeAddress = async (address: string): Promise<LocationCoordinates> => {
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyCqvcEKoqwRG5PBDIVp-MjHyjXKT3s4KY4';
+  
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_API_KEY}`;
+    console.log('Geocoding URL:', url);
+
+    const response = await fetch(url);
+    const data: GoogleMapsGeocodingResponse = await response.json();
+    
+    console.log('Geocoding response:', data);
+    
+    if (data.status === 'OK' && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      return {
+        latitude: location.lat,
+        longitude: location.lng
+      };
+    } else {
+      throw new Error(`Geocoding failed: ${data.status}`);
+    }
+  } catch (error) {
+    console.error('Error geocoding address:', error);
+    throw new Error('Failed to geocode address. Please check the address or try again.');
+  }
 };
 
 // Generic API request function with authentication
@@ -123,7 +166,7 @@ export const createLocation = async (locationData: CreateLocationRequest): Promi
       throw new Error(data.message || 'Failed to create location');
     }
 
-    return data.locations?.[0] || {} as Location;
+    return data.location || {} as Location;
   } catch (error) {
     console.error('Error creating location:', error);
     throw error;
@@ -142,7 +185,7 @@ export const updateLocation = async (id: string, locationData: UpdateLocationReq
       throw new Error(data.message || 'Failed to update location');
     }
 
-    return data.locations?.[0] || {} as Location;
+    return data.location || {} as Location;
   } catch (error) {
     console.error('Error updating location:', error);
     throw error;
@@ -174,7 +217,7 @@ export const getLocationById = async (id: string): Promise<Location> => {
       throw new Error(data.message || 'Failed to fetch location');
     }
 
-    return data.locations?.[0] || {} as Location;
+    return data.location || {} as Location;
   } catch (error) {
     console.error('Error fetching location:', error);
     throw error;

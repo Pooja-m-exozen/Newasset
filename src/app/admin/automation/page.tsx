@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import ProtectedRoute from "@/components/ProtectedRoute"
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AutomationWorkflows } from '@/components/ui/automation-workflows'
@@ -15,14 +16,20 @@ import {
   Zap,
   Settings,
   BarChart3,
-  Target
+  Target,
+  Plus,
+  Search,
+  Filter,
+  RefreshCw
 } from 'lucide-react'
 
 export default function AutomationPage() {
   return (
-    <AutomationProvider>
-      <AutomationPageContent />
-    </AutomationProvider>
+    <ProtectedRoute>
+      <AutomationProvider>
+        <AutomationPageContent />
+      </AutomationProvider>
+    </ProtectedRoute>
   )
 }
 
@@ -31,129 +38,153 @@ function AutomationPageContent() {
   const [activeTab, setActiveTab] = useState('workflows')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="container mx-auto p-6 space-y-8">
-        {/* Enhanced Header */}
-        <div className="relative overflow-hidden bg-white rounded-2xl shadow-xl border border-gray-100">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-pink-600/10"></div>
-          <div className="relative p-8">
-            <div className="flex items-center justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-lg">
-                    <Bot className="h-10 w-10 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      Automation Hub
-                    </h1>
-                    <p className="text-gray-600 mt-2 text-lg">
-                      Streamline operations with intelligent workflows and smart automation
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Status Indicators */}
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${isAuthenticated ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                    <span className="text-sm text-gray-600">
-                      {isAuthenticated ? 'Connected' : 'Not Connected'}
-                    </span>
-                  </div>
-                  {loading && (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span className="text-sm text-gray-600">Loading...</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Quick Actions */}
-              <div className="flex items-center space-x-3">
-                <Button 
-                  variant="outline"
-                  className="border-gray-200 hover:bg-gray-50"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </Button>
-                <Button 
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Quick Start
-                </Button>
-              </div>
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Automation Hub</h1>
+              <p className="text-gray-600">Streamline operations with intelligent workflows and smart automation</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="hover:bg-blue-50"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="hover:bg-purple-50"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="hover:bg-green-50"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Search
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="hover:bg-yellow-50"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Filter
+              </Button>
+              <Button 
+                size="sm" 
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Workflow
+              </Button>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Redesigned Tabs - Only 3 tabs */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="border-b border-gray-100">
-              <TabsList className="grid w-full grid-cols-3 h-20 bg-gray-50/50 p-3">
-                <TabsTrigger 
-                  value="workflows" 
-                  className="flex items-center gap-4 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:border data-[state=active]:border-gray-200 rounded-xl transition-all duration-200 hover:bg-gray-50"
-                >
-                  <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-md">
-                    <Bot className="h-6 w-6 text-white" />
+        {/* Main Content */}
+        <main className="p-6 space-y-6">
+
+          {/* Connection Status */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${isAuthenticated ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm font-medium text-gray-700">
+                  Automation System: {isAuthenticated ? 'Connected' : 'Not Connected'}
+                </span>
+                {loading && (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span className="text-sm text-gray-500">Loading...</span>
                   </div>
-                  <div className="text-left">
-                    <div className="font-bold text-lg">Workflows</div>
-                    <div className="text-sm text-gray-500">Automated processes</div>
-                  </div>
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="scheduling" 
-                  className="flex items-center gap-4 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:border data-[state=active]:border-gray-200 rounded-xl transition-all duration-200 hover:bg-gray-50"
-                >
-                  <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md">
-                    <Clock className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-lg">Smart Timing</div>
-                    <div className="text-sm text-gray-500">Intelligent scheduling</div>
-                  </div>
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="decisions" 
-                  className="flex items-center gap-4 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:border data-[state=active]:border-gray-200 rounded-xl transition-all duration-200 hover:bg-gray-50"
-                >
-                  <div className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-md">
-                    <Brain className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-lg">AI Decisions</div>
-                    <div className="text-sm text-gray-500">Powered logic</div>
-                  </div>
-                </TabsTrigger>
-              </TabsList>
+                )}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="hover:bg-blue-50"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Quick Start
+              </Button>
             </div>
+          </div>
 
-            <div className="p-8">
-              {/* Workflow Automation */}
-              <TabsContent value="workflows" className="space-y-6 mt-0">
-                <AutomationWorkflows />
-              </TabsContent>
+          {/* Tabs Section */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <div className="border-b border-gray-200">
+                <TabsList className="grid w-full grid-cols-3 h-16 bg-gray-50/50 p-2">
+                  <TabsTrigger 
+                    value="workflows" 
+                    className="flex items-center gap-3 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                  >
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-sm">
+                      <Bot className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-semibold text-sm">Workflows</div>
+                      <div className="text-xs text-gray-500">Automated processes</div>
+                    </div>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="scheduling" 
+                    className="flex items-center gap-3 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                  >
+                    <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-sm">
+                      <Clock className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-semibold text-sm">Smart Timing</div>
+                      <div className="text-xs text-gray-500">Intelligent scheduling</div>
+                    </div>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="decisions" 
+                    className="flex items-center gap-3 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-gray-200 rounded-lg transition-all duration-200 hover:bg-gray-50"
+                  >
+                    <div className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-sm">
+                      <Brain className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-semibold text-sm">AI Decisions</div>
+                      <div className="text-xs text-gray-500">Powered logic</div>
+                    </div>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-              {/* Smart Scheduling */}
-              <TabsContent value="scheduling" className="space-y-6 mt-0">
-                <AutomationScheduling />
-              </TabsContent>
+              <div className="p-6">
+                {/* Workflow Automation */}
+                <TabsContent value="workflows" className="space-y-6 mt-0">
+                  <AutomationWorkflows />
+                </TabsContent>
 
-              {/* Intelligent Decision Making */}
-              <TabsContent value="decisions" className="space-y-6 mt-0">
-                <AutomationDecisions />
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
+                {/* Smart Scheduling */}
+                <TabsContent value="scheduling" className="space-y-6 mt-0">
+                  <AutomationScheduling />
+                </TabsContent>
+
+                {/* Intelligent Decision Making */}
+                <TabsContent value="decisions" className="space-y-6 mt-0">
+                  <AutomationDecisions />
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        </main>
       </div>
     </div>
   )

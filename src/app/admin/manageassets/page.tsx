@@ -86,35 +86,6 @@ const PermissionsDisplay: React.FC = () => {
   );
 };
 
-// Create Asset Type Modal Component - Now using AssetTypeFormModal from @ui/asset-type-form-modal
-// const CreateAssetTypeModal: React.FC<{ isOpen: boolean; onClose: () => void; onSuccess?: () => void }> = ({ 
-//   isOpen, 
-//   onClose,
-//   onSuccess
-// }) => {
-//   // ... old implementation removed - now using AssetTypeFormModal component
-// };
-
-// Edit Asset Type Modal Component - Now using AssetTypeFormModal from @ui/asset-type-form-modal
-// const EditAssetTypeModal: React.FC<{ isOpen: boolean; onClose: () => void; assetType: AssetType; onSuccess?: () => void }> = ({ 
-//   isOpen, 
-//   onClose, 
-//   assetType,
-//   onSuccess
-// }) => {
-//   // ... old implementation removed - now using AssetTypeFormModal component
-// };
-
-// Mobile Asset Card Component - Now using AssetCard from @ui/asset-card
-// const MobileAssetCard: React.FC<{ asset: Asset; onView: (asset: Asset) => void; onEdit: (asset: Asset) => void; onDelete: (assetId: string) => void }> = ({ 
-//   asset, 
-//   onView,
-//   onEdit, 
-//   onDelete 
-// }) => {
-//   // ... old implementation removed - now using AssetCard component
-// };
-
 // Main Assets List Component
 const AssetsList: React.FC = () => {
   const { 
@@ -131,6 +102,8 @@ const AssetsList: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   const [successMessage, setSuccessMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
@@ -182,6 +155,15 @@ const AssetsList: React.FC = () => {
     setShowSuccess(true);
   };
 
+  const filteredAssets = state.assets.filter(asset => {
+    const matchesSearch = asset.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || asset.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
   if (state.loading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -208,8 +190,8 @@ const AssetsList: React.FC = () => {
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Asset Overview</h2>
-              <p className="text-gray-600 text-sm">Showing {state.assets.length} assets in your facility</p>
+              <h2 className="text-xl font-bold text-gray-900">Asset Management</h2>
+              <p className="text-gray-600 text-sm">Manage and track all facility assets</p>
             </div>
           </div>
           <Button 
@@ -222,13 +204,61 @@ const AssetsList: React.FC = () => {
             Add New Asset
           </Button>
         </div>
+
+        {/* Search and Filter Section */}
+        <div className="mt-6 flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <Input
+              placeholder="Search assets by ID, brand, model, or serial number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Retired">Retired</option>
+            </select>
+            {(searchTerm || filterStatus !== 'all') && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterStatus('all');
+                }}
+                className="border-gray-300 hover:border-blue-500"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="mt-4 text-sm text-gray-600">
+          Showing {filteredAssets.length} of {state.assets.length} assets
+        </div>
       </div>
 
       {/* Assets Display */}
-      {state.assets.length === 0 ? (
+      {filteredAssets.length === 0 ? (
         <EmptyState
-          title="No assets found"
-          description="Get started by adding your first asset to your facility"
+          title={searchTerm || filterStatus !== 'all' ? 'No matching assets' : 'No assets found'}
+          description={searchTerm || filterStatus !== 'all' 
+            ? 'Try adjusting your search or filters'
+            : 'Get started by adding your first asset to your facility'
+          }
           actionText="Add First Asset"
           onAction={() => setIsCreateModalOpen(true)}
           icon={
@@ -255,7 +285,7 @@ const AssetsList: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {state.assets.map((asset, index) => (
+                    {filteredAssets.map((asset, index) => (
                       <TableRow 
                         key={asset._id || `asset-${index}`} 
                         className={`hover:bg-blue-50 transition-all duration-200 border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
@@ -334,9 +364,9 @@ const AssetsList: React.FC = () => {
           <div className="lg:hidden">
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900 mb-1">Asset Overview</h3>
-              <p className="text-gray-600 text-sm">Showing {state.assets.length} assets</p>
+              <p className="text-gray-600 text-sm">Showing {filteredAssets.length} assets</p>
             </div>
-            {state.assets.map((asset, index) => (
+            {filteredAssets.map((asset, index) => (
               <AssetCard
                 key={asset._id || `asset-${index}`}
                 asset={asset}
@@ -692,49 +722,6 @@ const ManageAssetsPage: React.FC = () => {
                   </svg>
                   Asset Permissions
                 </Button>
-              </div>
-              
-              {/* Enhanced stats cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total Assets</p>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
-                    </div>
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Asset Types</p>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
-                    </div>
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Active Assets</p>
-                      <p className="text-2xl font-bold text-gray-900">0</p>
-                    </div>
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 

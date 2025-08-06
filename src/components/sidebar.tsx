@@ -91,13 +91,7 @@ export default function Sidebar({ className }: SidebarProps) {
       href: "/admin/digital-assets/generate",
       description: "Create and generate digital assets"
     },
-    {
-      id: "ai-analytics",
-      label: "AI Analytics",
-      icon: Brain,
-      href: "/admin/ai-analytics",
-      description: "AI-powered analytics and insights"
-    },
+
     {
       id: "automation",
       label: "Automation",

@@ -100,6 +100,80 @@ export interface PerformanceData {
   healthScore: number
 }
 
+// Asset Health interfaces
+export interface AssetHealth {
+  assetId: string
+  tagId: string
+  assetType: string
+  assignedTo?: {
+    _id: string
+    name: string
+    email: string
+  }
+  status: string
+  priority: string
+  health: {
+    status: 'excellent' | 'good' | 'fair' | 'poor' | 'critical'
+    score: number
+    factors: string[]
+  }
+  performanceMetrics: any
+  alerts: any[]
+}
+
+export interface HealthStatistics {
+  excellent: number
+  good: number
+  fair: number
+  poor: number
+  critical: number
+}
+
+export interface HealthResponse {
+  success: boolean
+  healthData: AssetHealth[]
+  statistics: HealthStatistics
+}
+
+// Cost Analysis interfaces
+export interface AssetCost {
+  assetId: string
+  tagId: string
+  assetType: string
+  age: number
+  depreciationAmount: number | null
+}
+
+export interface CostStatistics {
+  totalPurchaseCost: number
+  totalCurrentValue: number
+  totalDepreciation: number
+  avgDepreciationRate: number
+  assetCount: number
+}
+
+export interface CostResponse {
+  success: boolean
+  costData: AssetCost[]
+  statistics: CostStatistics
+}
+
+// Trends Analysis interfaces
+export interface TrendData {
+  date: string
+  maintenanceCount: number
+  emergencyCount: number
+  completedCount: number
+  pendingCount: number
+}
+
+export interface TrendsResponse {
+  success: boolean
+  trendData: TrendData[]
+  period: string
+  totalRecords: number
+}
+
 // Maintenance Logs interfaces
 export interface MaintenanceLogLocation {
   coordinates: {
@@ -190,7 +264,7 @@ class AdminDashboardService {
     }
   }
 
-  async getPredictions(): Promise<PredictionsResponse> {
+    async getPredictions(): Promise<PredictionsResponse> {
     try {
       const response = await fetch(`${API_BASE_URL}/analytics/predictions`, {
         method: 'GET',
@@ -198,7 +272,7 @@ class AdminDashboardService {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.message || 'Failed to fetch predictions data')
       }
@@ -206,6 +280,63 @@ class AdminDashboardService {
       return result
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to fetch predictions data')
+    }
+  }
+
+  async getHealthData(): Promise<HealthResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/analytics/health`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to fetch health data')
+      }
+
+      return result
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to fetch health data')
+    }
+  }
+
+  async getCostData(): Promise<CostResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/analytics/cost`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to fetch cost data')
+      }
+
+      return result
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to fetch cost data')
+    }
+  }
+
+  async getTrendsData(): Promise<TrendsResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/analytics/trends`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to fetch trends data')
+      }
+
+      return result
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to fetch trends data')
     }
   }
 

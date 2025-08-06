@@ -9,7 +9,6 @@ import {
   Brain,
   BarChart3,
   PieChart,
-  LineChart,
   RefreshCw,
   TrendingUp,
   TrendingDown,
@@ -63,7 +62,7 @@ export function AIPredictionsChart({
   error,
   onRefresh
 }: AIPredictionsChartProps) {
-  const [selectedChartType, setSelectedChartType] = useState<'pie' | 'bar' | 'line'>('pie')
+  const [selectedChartType, setSelectedChartType] = useState<'pie' | 'bar'>('pie')
   const [selectedMetric, setSelectedMetric] = useState<'confidence' | 'maintenance' | 'assetType'>('confidence')
   const [showDetails, setShowDetails] = useState(false)
 
@@ -80,11 +79,13 @@ export function AIPredictionsChart({
       low: predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length
     }
 
-    // Asset type distribution
-    const assetTypeData = predictions.reduce((acc: Record<string, number>, p: Prediction) => {
-      acc[p.assetType] = (acc[p.assetType] || 0) + 1
-      return acc
-    }, {})
+    // Asset type distribution - ensure we have all asset types even if count is 0
+    const assetTypeData = {
+      HVAC: predictions.filter((p: Prediction) => p.assetType === 'HVAC').length,
+      Pump: predictions.filter((p: Prediction) => p.assetType === 'Pump').length,
+      Equipment: predictions.filter((p: Prediction) => p.assetType === 'equipment').length,
+      Motor: predictions.filter((p: Prediction) => p.assetType === 'Motor').length
+    }
 
     // Maintenance timeline (next 30 days)
     const maintenanceData = predictions.reduce((acc: Record<string, number>, p: Prediction) => {
@@ -110,26 +111,22 @@ export function AIPredictionsChart({
     
     if (total === 0) {
       return (
-        <div className="text-center py-8">
-          <PieChart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No data available for pie chart</p>
+        <div className="text-center py-12">
+          <PieChart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 font-medium">No data available for pie chart</p>
         </div>
       )
     }
     
     return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">{title}</h4>
-          <p className="text-sm text-gray-600">Distribution analysis</p>
-        </div>
-        
-        <div className="flex items-center justify-center">
-          <div className="relative w-56 h-56">
-            <svg className="w-56 h-56 transform -rotate-90" viewBox="0 0 100 100">
+      <div className="flex items-center justify-center space-x-12">
+        {/* Chart */}
+        <div className="flex-shrink-0">
+          <div className="relative w-64 h-64">
+            <svg className="w-64 h-64 transform -rotate-90" viewBox="0 0 100 100">
               {Object.entries(data).map(([key, value]: [string, number], index: number) => {
                 const percentage = (value / total) * 100
-                const radius = 40
+                const radius = 45
                 const circumference = 2 * Math.PI * radius
                 const strokeDasharray = (percentage / 100) * circumference
                 const strokeDashoffset = index === 0 ? 0 : 
@@ -147,7 +144,10 @@ export function AIPredictionsChart({
                     strokeWidth="8"
                     strokeDasharray={strokeDasharray}
                     strokeDashoffset={strokeDashoffset}
-                    className="transition-all duration-300 hover:stroke-opacity-80 cursor-pointer"
+                    className="transition-all duration-700 hover:stroke-opacity-80 cursor-pointer"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                    }}
                   />
                 )
               })}
@@ -155,30 +155,28 @@ export function AIPredictionsChart({
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-3xl font-bold text-gray-900">{total}</div>
-                <div className="text-sm text-gray-600">Total</div>
+                <div className="text-sm text-gray-600 font-medium">Total</div>
               </div>
             </div>
           </div>
         </div>
-        
-        <div className="grid grid-cols-1 gap-3">
-          {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-            <div key={key} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-              <div className="flex items-center space-x-3">
+
+        {/* Legend */}
+        <div className="flex-shrink-0">
+          <div className="space-y-3">
+            {Object.entries(data).map(([key, value]: [string, number], index: number) => (
+              <div key={key} className="flex items-center space-x-3">
                 <div 
-                  className="w-4 h-4 rounded-full"
+                  className="w-4 h-4 rounded-sm shadow-sm"
                   style={{ backgroundColor: colors[index % colors.length] }}
                 />
-                <div>
-                  <span className="text-sm font-medium capitalize text-gray-900">{key}</span>
-                  <div className="text-xs text-gray-500">
-                    {((value / total) * 100).toFixed(1)}% of total
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-semibold capitalize text-gray-900">{key}</span>
+                  <span className="text-sm text-gray-600">({value})</span>
                 </div>
               </div>
-              <Badge variant="secondary" className="font-semibold">{value}</Badge>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -190,9 +188,9 @@ export function AIPredictionsChart({
     
     if (maxValue === 0) {
       return (
-        <div className="text-center py-8">
-          <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No data available for bar chart</p>
+        <div className="text-center py-12">
+          <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 font-medium">No data available for bar chart</p>
         </div>
       )
     }
@@ -200,83 +198,76 @@ export function AIPredictionsChart({
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">{title}</h4>
+          <h4 className="text-xl font-bold text-gray-900 mb-2">{title}</h4>
           <p className="text-sm text-gray-600">Comparative analysis</p>
         </div>
         
-        <div className="space-y-4">
-          {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-            <div key={key} className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium capitalize text-gray-900">{key}</span>
-                <span className="text-gray-600 font-semibold">{value}</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                <div
-                  className="h-4 rounded-full transition-all duration-500 hover:opacity-80 relative"
-                  style={{ 
-                    width: `${(value / maxValue) * 100}%`,
-                    backgroundColor: colors[index % colors.length]
-                  }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white opacity-20"></div>
+        <div className="flex items-center justify-center space-x-12">
+          {/* Chart */}
+          <div className="flex-shrink-0">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <div className="h-80 relative">
+                {/* Y-axis */}
+                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 font-medium">
+                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
+                    <div key={value} className="flex items-center">
+                      <span className="w-8 text-right">{value}</span>
+                      <div className="w-2 h-px bg-gray-200 ml-2"></div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Grid lines */}
+                <div className="absolute inset-0 flex flex-col justify-between ml-10">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} className="w-full h-px bg-gray-100"></div>
+                  ))}
+                </div>
+                
+                {/* Chart area */}
+                <div className="ml-10 h-full flex items-end justify-between space-x-4">
+                  {Object.entries(data).map(([key, value]: [string, number], index: number) => (
+                    <div key={key} className="flex flex-col items-center flex-1 group">
+                      <div 
+                        className="w-full rounded-t-lg transition-all duration-500 hover:opacity-80 relative cursor-pointer shadow-lg hover:shadow-xl min-h-[20px]"
+                        style={{ 
+                          height: `${(value / maxValue) * 280}px`,
+                          backgroundColor: colors[index % colors.length],
+                          background: `linear-gradient(to top, ${colors[index % colors.length]}, ${colors[index % colors.length]}dd)`
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white opacity-30"></div>
+                        <div className="absolute inset-0 bg-gradient-to-l from-transparent to-white opacity-20"></div>
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg whitespace-nowrap">
+                          <div className="font-bold">{value}</div>
+                          <div className="text-xs opacity-75">{key}</div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-600 mt-2 text-center font-medium capitalize">{key}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="text-xs text-gray-500 text-right">
-                {((value / maxValue) * 100).toFixed(1)}% of max
-              </div>
             </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
+          </div>
 
-  const renderLineChart = (data: Record<string, number>, title: string) => {
-    const entries = Object.entries(data)
-    const maxValue = Math.max(...Object.values(data))
-    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
-    
-    if (maxValue === 0) {
-      return (
-        <div className="text-center py-8">
-          <LineChart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No data available for line chart</p>
-        </div>
-      )
-    }
-    
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">{title}</h4>
-          <p className="text-sm text-gray-600">Trend analysis</p>
-        </div>
-        
-        <div className="h-64 flex items-end justify-between space-x-3">
-          {entries.map(([key, value]: [string, number], index: number) => (
-            <div key={key} className="flex flex-col items-center flex-1 group">
-              <div 
-                className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg transition-all duration-300 hover:from-blue-700 hover:to-blue-500 relative cursor-pointer"
-                style={{ height: `${(value / maxValue) * 200}px` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white opacity-20"></div>
-                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                  {value}
+          {/* Legend */}
+          <div className="flex-shrink-0">
+            <div className="space-y-3">
+              {Object.entries(data).map(([key, value]: [string, number], index: number) => (
+                <div key={key} className="flex items-center space-x-3">
+                  <div 
+                    className="w-4 h-4 rounded-sm shadow-sm"
+                    style={{ backgroundColor: colors[index % colors.length] }}
+                  />
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-semibold capitalize text-gray-900">{key}</span>
+                    <span className="text-sm text-gray-600">({value})</span>
+                  </div>
                 </div>
-              </div>
-              <span className="text-xs text-gray-600 mt-2 text-center font-medium">{key}</span>
+              ))}
             </div>
-          ))}
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          {entries.map(([key, value]: [string, number]) => (
-            <div key={key} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-              <span className="capitalize text-gray-700">{key}:</span>
-              <span className="font-semibold text-gray-900">{value}</span>
-            </div>
-          ))}
+          </div>
         </div>
       </div>
     )
@@ -297,8 +288,6 @@ export function AIPredictionsChart({
         return renderPieChart(data, titles[selectedMetric as keyof typeof titles])
       case 'bar':
         return renderBarChart(data, titles[selectedMetric as keyof typeof titles])
-      case 'line':
-        return renderLineChart(data, titles[selectedMetric as keyof typeof titles])
       default:
         return renderPieChart(data, titles[selectedMetric as keyof typeof titles])
     }
@@ -317,7 +306,6 @@ export function AIPredictionsChart({
     switch (chartType) {
       case 'pie': return PieChart
       case 'bar': return BarChart3
-      case 'line': return LineChart
       default: return PieChart
     }
   }
@@ -463,93 +451,54 @@ export function AIPredictionsChart({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-8">
-          {/* Enhanced Chart Controls */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-purple-200">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between space-y-4 lg:space-y-0 lg:space-x-6">
-              <div className="flex items-center space-x-4">
+        <div className="space-y-6">
+          {/* Chart Type Selection */}
+          <div className="bg-white rounded-xl p-4 shadow-sm border border-purple-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-3">
                   <Filter className="w-5 h-5 text-purple-600" />
                   <span className="text-sm font-semibold text-gray-700">Chart Type:</span>
-                                     <Select value={selectedChartType} onValueChange={(value: string) => setSelectedChartType(value as 'pie' | 'bar' | 'line')}>
-                     <SelectTrigger className="w-36 bg-white border-purple-200">
-                       <SelectValue />
-                     </SelectTrigger>
-                     <SelectContent>
-                       <SelectItem value="pie">Pie Chart</SelectItem>
-                       <SelectItem value="bar">Bar Chart</SelectItem>
-                       <SelectItem value="line">Line Chart</SelectItem>
-                     </SelectContent>
-                   </Select>
+                  <Select value={selectedChartType} onValueChange={(value: string) => setSelectedChartType(value as 'pie' | 'bar')}>
+                    <SelectTrigger className="w-32 bg-white border-purple-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pie">Pie Chart</SelectItem>
+                      <SelectItem value="bar">Bar Chart</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Target className="w-5 h-5 text-purple-600" />
                   <span className="text-sm font-semibold text-gray-700">Metric:</span>
-                                     <Select value={selectedMetric} onValueChange={(value: string) => setSelectedMetric(value as 'confidence' | 'maintenance' | 'assetType')}>
-                     <SelectTrigger className="w-44 bg-white border-purple-200">
-                       <SelectValue />
-                     </SelectTrigger>
-                     <SelectContent>
-                       <SelectItem value="confidence">Confidence</SelectItem>
-                       <SelectItem value="assetType">Asset Type</SelectItem>
-                       <SelectItem value="maintenance">Maintenance</SelectItem>
-                     </SelectContent>
-                   </Select>
+                  <Select value={selectedMetric} onValueChange={(value: string) => setSelectedMetric(value as 'confidence' | 'maintenance' | 'assetType')}>
+                    <SelectTrigger className="w-48 bg-white border-purple-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="confidence">Confidence</SelectItem>
+                      <SelectItem value="assetType">Asset Type</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               
-                             <div className="flex items-center space-x-2">
-                 {React.createElement(getChartIcon(selectedChartType), { className: "w-5 h-5 text-purple-600" })}
-                 {React.createElement(getMetricIcon(selectedMetric), { className: "w-5 h-5 text-purple-600" })}
-                 <Badge variant="outline" className="border-purple-200 text-purple-600">
-                   Real-time
-                 </Badge>
-               </div>
+              <Badge variant="outline" className="border-purple-200 text-purple-600 font-semibold">
+                Real-time
+              </Badge>
             </div>
           </div>
 
-          {/* Enhanced Chart Display */}
-          <div className="bg-white rounded-lg p-8 shadow-sm border border-purple-200">
+          {/* Chart Display */}
+          <div className="bg-white rounded-xl p-8 shadow-sm border border-purple-200">
             {renderChart()}
-          </div>
-
-          {/* Enhanced Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200 shadow-sm">
-              <div className="flex items-center space-x-3 mb-3">
-                <Target className="w-6 h-6 text-blue-600" />
-                <span className="text-sm font-semibold text-gray-700">Total Predictions</span>
-              </div>
-              <div className="text-3xl font-bold text-blue-600">{predictionsData.count}</div>
-              <div className="text-xs text-blue-600 mt-1">AI-generated insights</div>
-            </div>
-            
-            <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200 shadow-sm">
-              <div className="flex items-center space-x-3 mb-3">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-                <span className="text-sm font-semibold text-gray-700">High Confidence</span>
-              </div>
-              <div className="text-3xl font-bold text-green-600">
-                {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.8).length}
-              </div>
-              <div className="text-xs text-green-600 mt-1">Reliable predictions</div>
-            </div>
-            
-            <div className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200 shadow-sm">
-              <div className="flex items-center space-x-3 mb-3">
-                <AlertTriangle className="w-6 h-6 text-orange-600" />
-                <span className="text-sm font-semibold text-gray-700">Needs Attention</span>
-              </div>
-              <div className="text-3xl font-bold text-orange-600">
-                {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length}
-              </div>
-              <div className="text-xs text-orange-600 mt-1">Requires review</div>
-            </div>
           </div>
 
           {/* Detailed Information Panel */}
           {showDetails && (
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-purple-200">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-purple-200">
               <div className="flex items-center space-x-2 mb-4">
                 <Info className="w-5 h-5 text-purple-600" />
                 <h4 className="text-lg font-semibold text-gray-900">Prediction Details</h4>
@@ -558,24 +507,24 @@ export function AIPredictionsChart({
                 <div>
                   <h5 className="font-medium text-gray-700 mb-2">Confidence Distribution</h5>
                   <div className="space-y-2">
-                                         <div className="flex justify-between text-sm">
-                       <span>High (&gt;80%):</span>
-                       <span className="font-semibold text-green-600">
-                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.8).length}
-                       </span>
-                     </div>
-                     <div className="flex justify-between text-sm">
-                       <span>Medium (60-80%):</span>
-                       <span className="font-semibold text-yellow-600">
-                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.6 && p.prediction.confidence <= 0.8).length}
-                       </span>
-                     </div>
-                     <div className="flex justify-between text-sm">
-                       <span>Low (&lt;60%):</span>
-                       <span className="font-semibold text-red-600">
-                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length}
-                       </span>
-                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span>High (&gt;80%):</span>
+                      <span className="font-semibold text-green-600">
+                        {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.8).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Medium (60-80%):</span>
+                      <span className="font-semibold text-yellow-600">
+                        {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.6 && p.prediction.confidence <= 0.8).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Low (&lt;60%):</span>
+                      <span className="font-semibold text-red-600">
+                        {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div>

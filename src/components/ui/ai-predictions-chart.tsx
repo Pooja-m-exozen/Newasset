@@ -112,8 +112,8 @@ export function AIPredictionsChart({
     if (total === 0) {
       return (
         <div className="text-center py-8">
-          <PieChart className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 font-medium text-sm">No data available for pie chart</p>
+          <PieChart className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium text-sm">No data available for pie chart</p>
         </div>
       )
     }
@@ -154,8 +154,8 @@ export function AIPredictionsChart({
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900">{total}</div>
-                <div className="text-sm text-gray-600 font-medium">Total</div>
+                <div className="text-3xl font-bold text-foreground">{total}</div>
+                <div className="text-sm text-muted-foreground font-medium">Total</div>
               </div>
             </div>
           </div>
@@ -171,8 +171,8 @@ export function AIPredictionsChart({
                   style={{ backgroundColor: colors[index % colors.length] }}
                 />
                 <div className="flex items-center space-x-1">
-                  <span className="text-xs font-semibold capitalize text-gray-900">{key}</span>
-                  <span className="text-xs text-gray-600">({value})</span>
+                  <span className="text-xs font-semibold capitalize text-foreground">{key}</span>
+                  <span className="text-xs text-muted-foreground">({value})</span>
                 </div>
               </div>
             ))}
@@ -189,8 +189,8 @@ export function AIPredictionsChart({
     if (maxValue === 0) {
       return (
         <div className="text-center py-8">
-          <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 font-medium text-sm">No data available for bar chart</p>
+          <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium text-sm">No data available for bar chart</p>
         </div>
       )
     }
@@ -198,53 +198,58 @@ export function AIPredictionsChart({
     return (
       <div className="space-y-4">
         <div className="text-center">
-          <h4 className="text-lg font-bold text-gray-900 mb-1">{title}</h4>
-          <p className="text-xs text-gray-600">Comparative analysis</p>
+          <h4 className="text-lg font-bold text-foreground mb-1">{title}</h4>
+          <p className="text-xs text-muted-foreground">Comparative analysis</p>
         </div>
         
-        <div className="flex items-center justify-center space-x-8">
-          {/* Chart */}
-          <div className="flex-shrink-0">
-            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+        <div className="flex items-start space-x-6">
+          {/* Chart Container - Vertical Scrollable */}
+          <div className="flex-1 min-w-0">
+            <div className="bg-gradient-to-br from-background to-muted rounded-xl border border-border p-6 shadow-lg">
               <div className="h-64 relative">
-                {/* Y-axis */}
-                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 font-medium">
+                {/* Y-axis with refined styling */}
+                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted-foreground font-medium">
                   {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
                     <div key={value} className="flex items-center">
-                      <span className="w-6 text-right">{value}</span>
-                      <div className="w-2 h-px bg-gray-200 ml-1"></div>
+                      <span className="w-8 text-right font-semibold">{value}</span>
+                      <div className="w-2 h-px bg-border ml-2"></div>
                     </div>
                   ))}
                 </div>
                 
-                {/* Grid lines */}
-                <div className="absolute inset-0 flex flex-col justify-between ml-8">
+                {/* Enhanced Grid lines */}
+                <div className="absolute inset-0 flex flex-col justify-between ml-10">
                   {[0, 1, 2, 3, 4].map((i) => (
-                    <div key={i} className="w-full h-px bg-gray-100"></div>
+                    <div key={i} className="w-full h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
                   ))}
                 </div>
                 
-                {/* Chart area - Scrollable */}
-                <div className="ml-8 h-full overflow-x-auto">
-                  <div className="flex items-end space-x-6 min-w-max px-4">
+                {/* Vertical Scrollable Chart Area */}
+                <div className="ml-10 h-full overflow-y-auto">
+                  <div className="flex items-end space-x-8 min-w-max px-6 pb-4">
                     {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-                      <div key={key} className="flex flex-col items-center group">
+                      <div key={key} className="flex flex-col items-center">
+                        {/* Value Label Above Bar */}
+                        <div className="mb-2 text-center">
+                          <span className="text-xs font-bold text-foreground">{value}</span>
+                        </div>
+                        
+                        {/* Refined Bar Design */}
                         <div 
-                          className="w-12 rounded-t-lg transition-all duration-500 hover:opacity-80 relative cursor-pointer shadow-lg hover:shadow-xl min-h-[16px]"
+                          className="w-12 rounded-t-lg transition-all duration-700 shadow-md min-h-[6px] relative overflow-hidden"
                           style={{ 
-                            height: `${(value / maxValue) * 220}px`,
-                            backgroundColor: colors[index % colors.length],
-                            background: `linear-gradient(to top, ${colors[index % colors.length]}, ${colors[index % colors.length]}dd)`
+                            height: `${(value / maxValue) * 200}px`,
+                            background: `linear-gradient(135deg, ${colors[index % colors.length]} 0%, ${colors[index % colors.length]}dd 50%, ${colors[index % colors.length]} 100%)`
                           }}
                         >
-                          <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white opacity-30"></div>
-                          <div className="absolute inset-0 bg-gradient-to-l from-transparent to-white opacity-20"></div>
-                          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg whitespace-nowrap">
-                            <div className="font-bold">{value}</div>
-                            <div className="text-xs opacity-75">{key}</div>
-                          </div>
+                          {/* Bar Shine Effect */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white to-transparent opacity-30"></div>
+                          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-white to-transparent opacity-20"></div>
+                          
+                          {/* Bar Border */}
+                          <div className="absolute inset-0 rounded-t-lg border border-white/20"></div>
                         </div>
-                        <span className="text-xs text-gray-600 mt-1 text-center font-medium capitalize">{key}</span>
+                        
                       </div>
                     ))}
                   </div>
@@ -253,21 +258,35 @@ export function AIPredictionsChart({
             </div>
           </div>
 
-          {/* Legend */}
+          {/* Enhanced Legend with Better Visibility */}
           <div className="flex-shrink-0">
-            <div className="space-y-2">
-              {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-                <div key={key} className="flex items-center space-x-2">
-                  <div 
-                    className="w-3 h-3 rounded-sm shadow-sm"
-                    style={{ backgroundColor: colors[index % colors.length] }}
-                  />
-                  <div className="flex items-center space-x-1">
-                    <span className="text-xs font-semibold capitalize text-gray-900">{key}</span>
-                    <span className="text-xs text-gray-600">({value})</span>
+            <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
+              <h5 className="text-sm font-semibold text-foreground mb-4 border-b border-border pb-2">Categories</h5>
+              <div className="space-y-4">
+                {Object.entries(data).map(([key, value]: [string, number], index: number) => (
+                  <div key={key} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-accent transition-colors">
+                    <div 
+                      className="w-4 h-4 rounded-sm shadow-sm"
+                      style={{ backgroundColor: colors[index % colors.length] }}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-bold capitalize text-foreground">{key}</span>
+                        <span className="text-sm font-bold text-muted-foreground">{value}</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div 
+                          className="h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${(value / maxValue) * 100}%`,
+                            backgroundColor: colors[index % colors.length]
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -315,19 +334,19 @@ export function AIPredictionsChart({
   // Loading state
   if (isLoading) {
     return (
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50 to-purple-100">
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center text-purple-900">
-                <Brain className="w-6 h-6 mr-3 text-purple-600" />
+              <CardTitle className="flex items-center text-foreground">
+                <Brain className="w-6 h-6 mr-3 text-primary" />
                 AI Predictions Analytics
               </CardTitle>
-              <CardDescription className="text-purple-700">
+              <CardDescription className="text-muted-foreground">
                 Graphical representation of AI predictions
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" disabled className="border-purple-200 text-purple-600">
+            <Button variant="outline" size="sm" disabled className="border-border text-muted-foreground">
               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
               Loading...
             </Button>
@@ -336,8 +355,8 @@ export function AIPredictionsChart({
         <CardContent>
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-purple-700 font-medium">Loading AI predictions...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground font-medium">Loading AI predictions...</p>
             </div>
           </div>
         </CardContent>
@@ -348,19 +367,19 @@ export function AIPredictionsChart({
   // Error state
   if (error) {
     return (
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-red-50 to-red-100">
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-destructive/10 to-destructive/5">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center text-red-900">
-                <Brain className="w-6 h-6 mr-3 text-red-600" />
+              <CardTitle className="flex items-center text-destructive">
+                <Brain className="w-6 h-6 mr-3 text-destructive" />
                 AI Predictions Analytics
               </CardTitle>
-              <CardDescription className="text-red-700">
+              <CardDescription className="text-destructive/70">
                 Graphical representation of AI predictions
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={onRefresh} className="border-red-200 text-red-600 hover:bg-red-50">
+            <Button variant="outline" size="sm" onClick={onRefresh} className="border-destructive/20 text-destructive hover:bg-destructive/10">
               <RefreshCw className="w-4 h-4 mr-2" />
               Retry
             </Button>
@@ -368,10 +387,10 @@ export function AIPredictionsChart({
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-6" />
-            <h3 className="text-xl font-semibold text-red-900 mb-3">Failed to load predictions</h3>
-            <p className="text-red-700 mb-6 max-w-md mx-auto">{error}</p>
-            <Button onClick={onRefresh} className="bg-red-600 hover:bg-red-700">
+            <AlertTriangle className="w-16 h-16 text-destructive mx-auto mb-6" />
+            <h3 className="text-xl font-semibold text-destructive mb-3">Failed to load predictions</h3>
+            <p className="text-destructive/70 mb-6 max-w-md mx-auto">{error}</p>
+            <Button onClick={onRefresh} className="bg-destructive hover:bg-destructive/90">
               <RefreshCw className="w-4 h-4 mr-2" />
               Try Again
             </Button>
@@ -384,19 +403,19 @@ export function AIPredictionsChart({
   // Empty state
   if (!predictionsData?.success || !predictionsData?.predictions?.length) {
     return (
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-gray-50 to-gray-100">
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center text-gray-900">
-                <Brain className="w-6 h-6 mr-3 text-gray-600" />
+              <CardTitle className="flex items-center text-foreground">
+                <Brain className="w-6 h-6 mr-3 text-muted-foreground" />
                 AI Predictions Analytics
               </CardTitle>
-              <CardDescription className="text-gray-700">
+              <CardDescription className="text-muted-foreground">
                 Graphical representation of AI predictions
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={onRefresh} className="border-gray-200 text-gray-600 hover:bg-gray-50">
+            <Button variant="outline" size="sm" onClick={onRefresh} className="border-border text-muted-foreground hover:bg-accent">
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
@@ -404,9 +423,9 @@ export function AIPredictionsChart({
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <Brain className="w-16 h-16 text-gray-400 mx-auto mb-6" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">No predictions available</h3>
-            <p className="text-gray-600 mb-6">AI predictions will appear here once data is available</p>
+            <Brain className="w-16 h-16 text-muted-foreground mx-auto mb-6" />
+            <h3 className="text-xl font-semibold text-foreground mb-3">No predictions available</h3>
+            <p className="text-muted-foreground mb-6">AI predictions will appear here once data is available</p>
             <Button onClick={onRefresh} variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh Data
@@ -418,15 +437,15 @@ export function AIPredictionsChart({
   }
 
   return (
-    <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50 to-purple-100 h-full">
+    <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted h-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center text-purple-900 text-lg">
-              <Brain className="w-5 h-5 mr-2 text-purple-600" />
+            <CardTitle className="flex items-center text-foreground text-lg">
+              <Brain className="w-5 h-5 mr-2 text-primary" />
               AI Predictions Analytics
             </CardTitle>
-            <CardDescription className="text-purple-700 text-sm">
+            <CardDescription className="text-muted-foreground text-sm">
               Advanced graphical representation of AI predictions
             </CardDescription>
           </div>
@@ -435,7 +454,7 @@ export function AIPredictionsChart({
               variant="outline" 
               size="sm" 
               onClick={() => setShowDetails(!showDetails)}
-              className="border-purple-200 text-purple-600 hover:bg-purple-50"
+              className="border-border text-muted-foreground hover:bg-accent"
             >
               <Eye className="w-4 h-4 mr-1" />
               {showDetails ? 'Hide' : 'Show'} Details
@@ -444,7 +463,7 @@ export function AIPredictionsChart({
               variant="outline" 
               size="sm" 
               onClick={onRefresh}
-              className="border-purple-200 text-purple-600 hover:bg-purple-50"
+              className="border-border text-muted-foreground hover:bg-accent"
             >
               <RefreshCw className="w-4 h-4 mr-1" />
               Refresh
@@ -455,14 +474,14 @@ export function AIPredictionsChart({
       <CardContent className="pt-0">
         <div className="space-y-3">
           {/* Chart Type Selection - More Compact */}
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-purple-200">
+          <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <Filter className="w-4 h-4 text-purple-600" />
-                  <span className="text-xs font-semibold text-gray-700">Chart:</span>
+                  <Filter className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold text-muted-foreground">Chart:</span>
                   <Select value={selectedChartType} onValueChange={(value: string) => setSelectedChartType(value as 'pie' | 'bar')}>
-                    <SelectTrigger className="w-24 h-8 bg-white border-purple-200 text-xs">
+                    <SelectTrigger className="w-24 h-8 bg-background border-border text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -472,10 +491,10 @@ export function AIPredictionsChart({
                   </Select>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Target className="w-4 h-4 text-purple-600" />
-                  <span className="text-xs font-semibold text-gray-700">Metric:</span>
+                  <Target className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold text-muted-foreground">Metric:</span>
                   <Select value={selectedMetric} onValueChange={(value: string) => setSelectedMetric(value as 'confidence' | 'maintenance' | 'assetType')}>
-                    <SelectTrigger className="w-32 h-8 bg-white border-purple-200 text-xs">
+                    <SelectTrigger className="w-32 h-8 bg-background border-border text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -487,50 +506,50 @@ export function AIPredictionsChart({
                 </div>
               </div>
               
-              <Badge variant="outline" className="border-purple-200 text-purple-600 font-semibold text-xs">
+              <Badge variant="outline" className="border-border text-muted-foreground font-semibold text-xs">
                 Real-time
               </Badge>
             </div>
           </div>
 
           {/* Chart Display - More Compact */}
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-purple-200 flex-1">
+          <div className="bg-card rounded-lg p-3 shadow-sm border border-border flex-1">
             {renderChart()}
           </div>
 
           {/* Detailed Information Panel - More Compact */}
           {showDetails && (
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-purple-200">
+            <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
               <div className="flex items-center space-x-2 mb-2">
-                <Info className="w-4 h-4 text-purple-600" />
-                <h4 className="text-sm font-semibold text-gray-900">Prediction Details</h4>
+                <Info className="w-4 h-4 text-primary" />
+                <h4 className="text-sm font-semibold text-foreground">Prediction Details</h4>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <div>
-                  <h5 className="font-medium text-gray-700 mb-1 text-sm">Confidence Distribution</h5>
+                  <h5 className="font-medium text-muted-foreground mb-1 text-sm">Confidence Distribution</h5>
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
                       <span>High (&gt;80%):</span>
-                      <span className="font-semibold text-green-600">
+                      <span className="font-semibold text-green-600 dark:text-green-400">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.8).length}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span>Medium (60-80%):</span>
-                      <span className="font-semibold text-yellow-600">
+                      <span className="font-semibold text-yellow-600 dark:text-yellow-400">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.6 && p.prediction.confidence <= 0.8).length}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span>Low (&lt;60%):</span>
-                      <span className="font-semibold text-red-600">
+                      <span className="font-semibold text-red-600 dark:text-red-400">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length}
                       </span>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <h5 className="font-medium text-gray-700 mb-1 text-sm">Asset Types</h5>
+                  <h5 className="font-medium text-muted-foreground mb-1 text-sm">Asset Types</h5>
                   <div className="space-y-1">
                     {Object.entries(
                       predictionsData.predictions.reduce((acc: Record<string, number>, p: Prediction) => {
@@ -540,7 +559,7 @@ export function AIPredictionsChart({
                     ).map(([type, count]) => (
                       <div key={type} className="flex justify-between text-xs">
                         <span className="capitalize">{type}:</span>
-                        <span className="font-semibold text-blue-600">{count}</span>
+                        <span className="font-semibold text-primary">{count}</span>
                       </div>
                     ))}
                   </div>

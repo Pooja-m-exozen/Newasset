@@ -11,6 +11,7 @@ import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../../components/ui/error-display';
 import { EmptyState } from '../../../../components/ui/empty-state';
 import { PageHeader } from '../../../../components/ui/page-header';
+import { Label } from '../../../../components/ui/label';
 import { 
   Search, 
   Filter, 
@@ -31,7 +32,34 @@ import {
   MapPin,
   X,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Plus,
+  Eye,
+  Edit,
+  MoreHorizontal,
+  TrendingUp,
+  BarChart3,
+  Settings,
+  FilterX,
+  Mail,
+  Shield,
+  UserCheck,
+  UserPlus,
+  EyeOff,
+  Eye as EyeIcon,
+  Upload,
+  Star,
+  CheckCircle as CheckCircleIcon,
+  AlertCircle,
+  Trash2,
+  Edit as EditIcon,
+  FileDown,
+  FileUp,
+  Printer,
+  Settings2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 interface MaintenanceLog {
@@ -51,7 +79,7 @@ interface MaintenanceLog {
   workCompletedAt?: string;
   status: 'scheduled' | 'in-progress' | 'completed' | 'overdue' | 'cancelled' | 'paused';
   priority: 'low' | 'medium' | 'high' | 'critical';
-  location: string;
+  location: string | { building?: string; floor?: string; room?: string };
   cost?: number;
   partsUsed: any[];
   attachments: any[];
@@ -71,6 +99,10 @@ export default function MaintenanceLogsPage() {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [showViewLogModal, setShowViewLogModal] = useState(false);
+  const [viewingLog, setViewingLog] = useState<MaintenanceLog | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   const handleAuthError = (errorMessage: string) => {
     setError(errorMessage);
@@ -174,6 +206,12 @@ export default function MaintenanceLogsPage() {
     }
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentLogs = filteredLogs.slice(startIndex, endIndex);
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       scheduled: { color: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Scheduled' },
@@ -187,7 +225,7 @@ export default function MaintenanceLogsPage() {
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.scheduled;
     
     return (
-      <Badge className={`${config.color} border font-medium`}>
+      <Badge className={`${config.color} px-2 py-1 text-xs font-medium border`}>
         {config.label}
       </Badge>
     );
@@ -204,7 +242,7 @@ export default function MaintenanceLogsPage() {
     const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.medium;
     
     return (
-      <Badge className={`${config.color} border font-medium`}>
+      <Badge className={`${config.color} px-2 py-1 text-xs font-medium border`}>
         {config.label}
       </Badge>
     );
@@ -212,7 +250,14 @@ export default function MaintenanceLogsPage() {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    if (diffInHours < 48) return "1 day ago";
+    return `${Math.floor(diffInHours / 24)} days ago`;
   };
 
   const formatDateTime = (dateString: string) => {
@@ -239,8 +284,8 @@ export default function MaintenanceLogsPage() {
           `"${formatDateTime(log.date)}"`,
           `"${log.workStartedAt ? formatDateTime(log.workStartedAt) : 'Not started'}"`,
           `"${log.workCompletedAt ? formatDateTime(log.workCompletedAt) : 'Not completed'}"`,
-          `"${log.cost ? `$${log.cost}` : 'N/A'}"`,
-          `"${log.location || 'N/A'}"`
+          `"${log.cost ? '$' + log.cost : 'N/A'}"`,
+          `"${formatLocation(log.location)}"`
         ].join(','))
       ].join('\n');
 
@@ -259,12 +304,91 @@ export default function MaintenanceLogsPage() {
     }
   };
 
+  const downloadPDF = () => {
+    try {
+      // Create a simple HTML table for PDF generation
+      const tableHTML = `
+        <html>
+          <head>
+            <title>Maintenance Logs Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; font-weight: bold; }
+              .status-scheduled { background-color: #dbeafe; color: #1e40af; }
+              .status-in-progress { background-color: #fef3c7; color: #d97706; }
+              .status-completed { background-color: #d1fae5; color: #059669; }
+              .status-overdue { background-color: #fee2e2; color: #dc2626; }
+              .status-cancelled { background-color: #f3f4f6; color: #374151; }
+              .status-paused { background-color: #f3e8ff; color: #7c3aed; }
+              .priority-low { background-color: #f3f4f6; color: #374151; }
+              .priority-medium { background-color: #dbeafe; color: #1e40af; }
+              .priority-high { background-color: #fed7aa; color: #ea580c; }
+              .priority-critical { background-color: #fee2e2; color: #dc2626; }
+            </style>
+          </head>
+          <body>
+            <h1>Maintenance Logs Report</h1>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+            <p>Total Records: ${filteredLogs.length}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Asset Name</th>
+                  <th>Asset ID</th>
+                  <th>Maintenance Type</th>
+                  <th>Technician</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Scheduled Date</th>
+                  <th>Cost</th>
+                  <th>Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredLogs.map(log => `
+                  <tr>
+                    <td>${log.assetName || 'N/A'}</td>
+                    <td>${log.assetId || 'N/A'}</td>
+                    <td>${log.maintenanceType || 'N/A'}</td>
+                    <td>${log.technicianName || 'N/A'}</td>
+                    <td><span class="status-${log.status}">${log.status}</span></td>
+                    <td><span class="priority-${log.priority}">${log.priority}</span></td>
+                    <td>${formatDateTime(log.date)}</td>
+                    <td>${log.cost ? '$' + log.cost : 'N/A'}</td>
+                    <td>${formatLocation(log.location)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      // Create blob and download
+      const blob = new Blob([tableHTML], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `maintenance-logs-${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF file. Please try again.');
+    }
+  };
+
   const handleClearFilters = () => {
     setSearchTerm('');
     setFilterStatus('all');
     setFilterPriority('all');
     setSortBy('date');
     setSortOrder('desc');
+    setCurrentPage(1);
   };
 
   const handleSort = (field: string) => {
@@ -276,99 +400,172 @@ export default function MaintenanceLogsPage() {
     }
   };
 
+  const openViewLogModal = (log: MaintenanceLog) => {
+    setViewingLog(log);
+    setShowViewLogModal(true);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(word => word[0]).join('').toUpperCase();
+  };
+
+  const formatLocation = (location: string | { building?: string; floor?: string; room?: string } | undefined) => {
+    if (!location) return 'N/A';
+    if (typeof location === 'string') return location;
+    if (typeof location === 'object') {
+      const parts = [
+        location.building,
+        location.floor,
+        location.room
+      ].filter(Boolean);
+      return parts.length > 0 ? parts.join(' ') : 'N/A';
+    }
+    return 'N/A';
+  };
+
+  const getSortIcon = (field: string) => {
+    if (sortBy !== field) return <ArrowUpDown className="w-4 h-4" />;
+    return sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
+  };
+
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  useEffect(() => {
+    // Check for system preference or stored theme preference
+    const savedTheme = localStorage.getItem('theme')
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      setIsDarkMode(true)
+      document.documentElement.classList.add('dark')
+    } else {
+      setIsDarkMode(false)
+      document.documentElement.classList.remove('dark')
+    }
+  }, [])
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <LoadingSpinner size="lg" text="Loading maintenance logs..." />
+      <div className={`flex h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 overflow-auto">
+            <main className="p-6 space-y-6">
+              <div className="flex items-center justify-center py-12">
+                <div className="flex items-center space-x-3">
+                  <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+                  <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>Loading maintenance logs...</span>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Error Display */}
-          <ErrorDisplay 
-            error={error} 
-            onClearError={() => setError(null)} 
-          />
+    <div className={`flex h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="flex-1 flex flex-col">
+        <div className="flex-1 overflow-auto">
+          <main className="p-6 space-y-6">
+            {/* Error Display */}
+            <ErrorDisplay 
+              error={error} 
+              onClearError={() => setError(null)} 
+            />
 
-          {/* Simple Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Wrench className="w-6 h-6 text-white" />
-              </div>
+            {/* Header Section */}
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Maintenance Logs</h1>
-                <p className="text-gray-600">Track and manage maintenance activities</p>
+                <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Maintenance Logs</h1>
+                <p className={`mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Comprehensive maintenance tracking and management system</p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="flex items-center space-x-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </Button>
+                <Button 
+                  size="sm"
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Log</span>
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                onClick={handleRefresh}
-                variant="outline"
-                size="sm"
-                disabled={refreshing}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button 
-                onClick={downloadExcel}
-                variant="outline"
-                size="sm"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-            </div>
-          </div>
 
-          {/* Simple Search and Filters */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search assets, technicians, or descriptions..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                {/* Filters Toggle */}
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center gap-2"
-                  >
-                    <Filter className="w-4 h-4" />
-                    Filters
-                    {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </Button>
-                  
-                  {(searchTerm || filterStatus !== 'all' || filterPriority !== 'all') && (
-                    <Button
-                      variant="ghost"
-                      onClick={handleClearFilters}
+            {/* Search and Filters */}
+            <Card className={`border-0 shadow-sm ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                  <div className="flex-1 w-full lg:w-auto">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        placeholder="Search logs by asset, technician, or description..."
+                        className={`pl-10 h-11 text-sm ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'} focus:border-blue-500 focus:ring-blue-500`}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="outline" 
                       size="sm"
-                      className="text-gray-500"
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="flex items-center space-x-2"
                     >
-                      <X className="w-4 h-4 mr-1" />
-                      Clear
+                      <Filter className="w-4 h-4" />
+                      <span>Filter</span>
                     </Button>
-                  )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={downloadExcel}
+                      className="flex items-center space-x-2"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span>Excel</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={downloadPDF}
+                      className="flex items-center space-x-2"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      <span>PDF</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Print</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Print</span>
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Filters */}
                 {showFilters && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t border-gray-200 mt-6">
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                       <SelectTrigger>
                         <SelectValue placeholder="Filter by status" />
@@ -396,175 +593,431 @@ export default function MaintenanceLogsPage() {
                         <SelectItem value="critical">Critical</SelectItem>
                       </SelectContent>
                     </Select>
+
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="date">Scheduled Date</SelectItem>
+                        <SelectItem value="assetName">Asset Name</SelectItem>
+                        <SelectItem value="technicianName">Technician</SelectItem>
+                        <SelectItem value="status">Status</SelectItem>
+                        <SelectItem value="priority">Priority</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Button 
+                      variant="outline" 
+                      onClick={handleClearFilters}
+                      className="flex items-center space-x-2"
+                    >
+                      <FilterX className="w-4 h-4" />
+                      <span>Clear Filters</span>
+                    </Button>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Results Count */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Showing {filteredLogs.length} of {logs.length} maintenance logs
-            </p>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>Sort by:</span>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">Scheduled Date</SelectItem>
-                  <SelectItem value="assetName">Asset Name</SelectItem>
-                  <SelectItem value="technicianName">Technician</SelectItem>
-                  <SelectItem value="status">Status</SelectItem>
-                  <SelectItem value="priority">Priority</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Table Section */}
+            <Card className={`border-0 shadow-sm ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Maintenance Logs</CardTitle>
+                    <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Showing {currentLogs.length} of {filteredLogs.length} logs (Page {currentPage} of {totalPages})
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" onClick={downloadExcel}>
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={downloadPDF}>
+                      <FileDown className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Printer className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                                 {filteredLogs.length === 0 ? (
+                   <div className="flex items-center justify-center py-12">
+                     <div className="text-center">
+                       <Wrench className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                       <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                         {logs.length === 0 ? "No maintenance logs available" : "No logs found"}
+                       </h3>
+                       <p className={`mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                         {logs.length === 0 ? "No maintenance logs are currently available" : "Try adjusting your search or filters"}
+                       </p>
+                      <Button
+                        onClick={logs.length === 0 ? handleRefresh : handleClearFilters}
+                        variant="outline"
+                      >
+                        {logs.length === 0 ? "Refresh" : "Clear Filters"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className={isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'}>
+                          <TableHead 
+                            className={`cursor-pointer font-semibold ${isDarkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'}`}
+                            onClick={() => handleSort('assetName')}
+                          >
+                            <div className="flex items-center space-x-1">
+                              <span>Asset</span>
+                              {getSortIcon('assetName')}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className={`cursor-pointer font-semibold ${isDarkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'}`}
+                            onClick={() => handleSort('maintenanceType')}
+                          >
+                            <div className="flex items-center space-x-1">
+                              <span>Type</span>
+                              {getSortIcon('maintenanceType')}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className={`cursor-pointer font-semibold ${isDarkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'}`}
+                            onClick={() => handleSort('technicianName')}
+                          >
+                            <div className="flex items-center space-x-1">
+                              <span>Technician</span>
+                              {getSortIcon('technicianName')}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className={`cursor-pointer font-semibold ${isDarkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'}`}
+                            onClick={() => handleSort('status')}
+                          >
+                            <div className="flex items-center space-x-1">
+                              <span>Status</span>
+                              {getSortIcon('status')}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className={`cursor-pointer font-semibold ${isDarkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'}`}
+                            onClick={() => handleSort('priority')}
+                          >
+                            <div className="flex items-center space-x-1">
+                              <span>Priority</span>
+                              {getSortIcon('priority')}
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className={`cursor-pointer font-semibold ${isDarkMode ? 'hover:bg-gray-600 text-white' : 'hover:bg-gray-100 text-gray-900'}`}
+                            onClick={() => handleSort('date')}
+                          >
+                            <div className="flex items-center space-x-1">
+                              <span>Scheduled</span>
+                              {getSortIcon('date')}
+                            </div>
+                          </TableHead>
+                          <TableHead className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Progress</TableHead>
+                          <TableHead className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Cost</TableHead>
+                          <TableHead className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Location</TableHead>
+                          <TableHead className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentLogs.map((log) => (
+                          <TableRow key={log._id} className={`hover:transition-colors ${isDarkMode ? 'hover:bg-gray-700 border-gray-700' : 'hover:bg-gray-50 border-gray-200'}`}>
+                            <TableCell>
+                              <div>
+                                <div className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{log.assetName || 'N/A'}</div>
+                                <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>{log.assetId || 'N/A'}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-100 text-gray-700'}`}>
+                                {log.maintenanceType || 'N/A'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-gray-400" />
+                                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{log.technicianName || 'N/A'}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(log.status)}
+                            </TableCell>
+                            <TableCell>
+                              {getPriorityBadge(log.priority)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(log.date)}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {log.workStartedAt ? (
+                                  <>
+                                    <Clock className="w-4 h-4 text-blue-500" />
+                                    <span className="text-sm text-blue-600">Started</span>
+                                  </>
+                                                                 ) : (
+                                   <>
+                                     <Clock className="w-4 h-4 text-gray-400" />
+                                     <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Not started</span>
+                                   </>
+                                 )}
+                                {log.workCompletedAt && (
+                                  <>
+                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                    <span className="text-sm text-green-600">Completed</span>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {log.cost ? (
+                                <span className="font-semibold text-green-600">${log.cost}</span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </TableCell>
+                                                         <TableCell>
+                               <div className="flex items-center gap-2">
+                                 <MapPin className="w-4 h-4 text-gray-400" />
+                                 <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{formatLocation(log.location)}</span>
+                               </div>
+                             </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 hover:bg-blue-50"
+                                onClick={() => openViewLogModal(log)}
+                              >
+                                <Eye className="w-4 h-4 text-blue-600" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                                 {/* Pagination */}
+                 {filteredLogs.length > 0 && (
+                   <div className={`px-6 py-4 border-t ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+                     <div className="flex items-center justify-between">
+                       <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                         Showing {startIndex + 1} to {Math.min(endIndex, filteredLogs.length)} of {filteredLogs.length} results
+                       </div>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          const page = i + 1;
+                          return (
+                            <Button 
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className={currentPage === page ? "bg-blue-600 text-white hover:bg-blue-700" : ""}
+                            >
+                              {page}
+                            </Button>
+                          );
+                        })}
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </div>
+
+      {/* View Log Modal */}
+      {showViewLogModal && viewingLog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Maintenance Log Details</h3>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                onClick={() => {
+                  setShowViewLogModal(false);
+                  setViewingLog(null);
+                }}
+                className="h-8 w-8 p-0"
               >
-                {sortOrder === 'asc' ? '↑' : '↓'}
+                <X className="w-4 h-4" />
               </Button>
             </div>
-          </div>
-
-          {/* Logs Table */}
-          {filteredLogs.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {logs.length === 0 ? "No maintenance logs available" : "No logs found"}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {logs.length === 0 ? "No maintenance logs are currently available" : "Try adjusting your search or filters"}
-                </p>
-                <Button
-                  onClick={logs.length === 0 ? handleRefresh : handleClearFilters}
-                  variant="outline"
-                >
-                  {logs.length === 0 ? "Refresh" : "Clear Filters"}
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleSort('assetName')}
-                        >
-                          Asset
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleSort('maintenanceType')}
-                        >
-                          Type
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleSort('technicianName')}
-                        >
-                          Technician
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleSort('status')}
-                        >
-                          Status
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleSort('priority')}
-                        >
-                          Priority
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-gray-50"
-                          onClick={() => handleSort('date')}
-                        >
-                          Scheduled
-                        </TableHead>
-                        <TableHead>Progress</TableHead>
-                        <TableHead>Cost</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLogs.map((log) => (
-                        <TableRow key={log._id} className="hover:bg-gray-50">
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{log.assetName || 'N/A'}</div>
-                              <div className="text-sm text-gray-500">{log.assetId || 'N/A'}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{log.maintenanceType || 'N/A'}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-gray-400" />
-                              <span>{log.technicianName || 'N/A'}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(log.status)}
-                          </TableCell>
-                          <TableCell>
-                            {getPriorityBadge(log.priority)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm">{formatDate(log.date)}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {log.workStartedAt ? (
-                                <>
-                                  <Clock className="w-4 h-4 text-blue-500" />
-                                  <span className="text-sm">Started</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Clock className="w-4 h-4 text-gray-400" />
-                                  <span className="text-sm text-gray-500">Not started</span>
-                                </>
-                              )}
-                              {log.workCompletedAt && (
-                                <>
-                                  <CheckCircle className="w-4 h-4 text-green-500" />
-                                  <span className="text-sm">Completed</span>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {log.cost ? (
-                              <span className="font-medium">${log.cost}</span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+            <div className="space-y-6">
+              {/* Log Header */}
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-2xl">
+                  {getInitials(viewingLog.assetName || 'Asset')}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <div>
+                  <h4 className="text-xl font-semibold text-gray-900">{viewingLog.assetName || 'N/A'}</h4>
+                  <div className="flex items-center space-x-2 mt-1">
+                    {getStatusBadge(viewingLog.status)}
+                    {getPriorityBadge(viewingLog.priority)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Log Information Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Asset ID</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Building2 className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-900">{viewingLog.assetId || 'N/A'}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Maintenance Type</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Wrench className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-900">{viewingLog.maintenanceType || 'N/A'}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Technician</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <User className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-900">{viewingLog.technicianName || 'N/A'}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Location</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-900">{formatLocation(viewingLog.location)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Status</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      {getStatusBadge(viewingLog.status)}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Priority</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      {getPriorityBadge(viewingLog.priority)}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Scheduled Date</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-900">{formatDateTime(viewingLog.date)}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">Cost</Label>
+                    <div className="mt-1">
+                      <span className="text-gray-900">
+                        {viewingLog.cost ? `$${viewingLog.cost}` : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Information */}
+              <div className="space-y-4">
+                <h5 className="font-semibold text-gray-900">Progress Timeline</h5>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <Clock className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Created: {formatDateTime(viewingLog.createdAt)}</span>
+                  </div>
+                  {viewingLog.workStartedAt && (
+                    <div className="flex items-center space-x-3">
+                      <Activity className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm text-blue-600">Work Started: {formatDateTime(viewingLog.workStartedAt)}</span>
+                    </div>
+                  )}
+                  {viewingLog.workPausedAt && (
+                    <div className="flex items-center space-x-3">
+                      <PauseCircle className="w-4 h-4 text-yellow-500" />
+                      <span className="text-sm text-yellow-600">Work Paused: {formatDateTime(viewingLog.workPausedAt)}</span>
+                    </div>
+                  )}
+                  {viewingLog.workCompletedAt && (
+                    <div className="flex items-center space-x-3">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-green-600">Work Completed: {formatDateTime(viewingLog.workCompletedAt)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              {viewingLog.description && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Description</Label>
+                  <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                    <p className="text-gray-900">{viewingLog.description}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowViewLogModal(false);
+                    setViewingLog(null);
+                  }}
+                  className="h-10"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 } 

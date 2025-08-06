@@ -510,11 +510,11 @@ export function EnhancedDashboard({
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'low': return 'bg-green-100 text-green-800 border-green-200'
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'high': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800'
+      case 'low': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800'
+      case 'critical': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+      default: return 'bg-muted text-muted-foreground border-border'
     }
   }
 
@@ -522,12 +522,12 @@ export function EnhancedDashboard({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex h-screen bg-gradient-to-br from-background to-muted">
         <div className="flex-1 overflow-auto">
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <LoadingSpinner size="lg" />
-              <p className="mt-4 text-gray-600">Loading advanced dashboard...</p>
+              <p className="mt-4 text-muted-foreground">Loading advanced dashboard...</p>
             </div>
           </div>
         </div>
@@ -537,14 +537,14 @@ export function EnhancedDashboard({
 
   if (error) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex h-screen bg-gradient-to-br from-background to-muted">
         <div className="flex-1 overflow-auto">
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="mb-4">
                 <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load dashboard data</h3>
-                <p className="text-gray-600 mb-4">{error}</p>
+                <h3 className="text-lg font-semibold text-foreground mb-2">Failed to load dashboard data</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
               </div>
               <Button onClick={onRefresh} disabled={isLoading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -558,72 +558,50 @@ export function EnhancedDashboard({
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex h-screen bg-gradient-to-br from-background to-muted">
       <div className="flex-1 overflow-auto">
         {/* Advanced Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+        <header className="bg-card border-b border-border px-4 sm:px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600">Real-time facility management and analytics</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">Real-time facility management and analytics</p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={onRefresh}
                 disabled={isLoading}
-                className="hover:bg-blue-50"
+                className="hover:bg-accent"
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
+                <RefreshCw className={`w-4 h-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
               </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleAIAnalyticsClick}
                 disabled={isLoading}
-                className="hover:bg-purple-50"
+                className="hover:bg-accent"
               >
-                <Brain className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                AI Insights
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => {}} // Removed onRefreshPerformance
-                disabled={isLoading}
-                className="hover:bg-green-50"
-              >
-                <BarChart3 className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Performance
-              </Button>
-              <Button variant="outline" size="sm" className="hover:bg-orange-50">
-                <Search className="w-4 h-4 mr-2" />
-                Search
-              </Button>
-              <Button variant="outline" size="sm" className="hover:bg-yellow-50">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </Button>
-              <Button size="sm" className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Asset
+                <Brain className={`w-4 h-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">AI Insights</span>
               </Button>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="p-6 space-y-6">
+        <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           {/* Advanced Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             {advancedStats.map((stat, index) => (
               <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:scale-105 border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center shadow-sm`}>
-                      <stat.icon className="w-5 h-5 text-white" />
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 ${stat.color} rounded-lg flex items-center justify-center shadow-sm`}>
+                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
                     <div className="flex items-center space-x-1">
                       <TrendingUp className={`w-3 h-3 ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
@@ -632,11 +610,11 @@ export function EnhancedDashboard({
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    <p className="text-xs text-gray-500">{stat.subValue}</p>
-                    <p className="text-xs text-gray-500">{stat.description}</p>
+                  <div className="space-y-1 sm:space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">{stat.title}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.subValue}</p>
+                    <p className="text-xs text-muted-foreground">{stat.description}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -644,7 +622,7 @@ export function EnhancedDashboard({
           </div>
 
           {/* Asset Health Monitoring and Cost Analysis */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Asset Health Monitoring */}
             <Card className="shadow-lg border-0">
               <CardHeader className="pb-3">
@@ -671,16 +649,16 @@ export function EnhancedDashboard({
               <CardContent className="pt-0">
                 {isHealthLoading ? (
                   <div className="flex items-center justify-center py-6">
-                    <div className="text-center">
-                      <LoadingSpinner size="lg" />
-                      <p className="mt-3 text-gray-600 text-sm">Loading health data...</p>
-                    </div>
+                                          <div className="text-center">
+                        <LoadingSpinner size="lg" />
+                        <p className="mt-3 text-muted-foreground text-sm">Loading health data...</p>
+                      </div>
                   </div>
                 ) : healthError ? (
                   <div className="text-center py-6">
                     <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-gray-900 mb-2">Failed to load health data</h3>
-                    <p className="text-gray-600 mb-3 text-sm">{healthError}</p>
+                    <h3 className="text-base font-semibold text-foreground mb-2">Failed to load health data</h3>
+                    <p className="text-muted-foreground mb-3 text-sm">{healthError}</p>
                     {onRefreshHealth && (
                       <Button onClick={onRefreshHealth} disabled={isHealthLoading} size="sm">
                         <RefreshCw className={`w-3 h-3 mr-1 ${isHealthLoading ? 'animate-spin' : ''}`} />
@@ -694,16 +672,16 @@ export function EnhancedDashboard({
                       <div key={index} className="space-y-1">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <asset.icon className="w-3 h-3 text-gray-600" />
-                            <span className="text-xs font-medium text-gray-700">{asset.name}</span>
+                            <asset.icon className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-xs font-medium text-foreground">{asset.name}</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <div className={`w-2 h-2 rounded-full ${asset.color}`}></div>
-                            <span className="text-xs text-gray-500">{asset.count} units</span>
+                            <span className="text-xs text-muted-foreground">{asset.count} units</span>
                           </div>
                         </div>
                         <Progress value={asset.percentage} className="h-1.5" />
-                        <div className="flex justify-between text-xs text-gray-500">
+                        <div className="flex justify-between text-xs text-muted-foreground">
                           <span>Percentage</span>
                           <span>{asset.percentage}%</span>
                         </div>
@@ -727,9 +705,9 @@ export function EnhancedDashboard({
                   </div>
                 ) : (
                   <div className="text-center py-6">
-                    <Thermometer className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-gray-900 mb-2">No health data available</h3>
-                    <p className="text-gray-600 text-sm">Asset health data will appear here once available</p>
+                    <Thermometer className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-foreground mb-2">No health data available</h3>
+                    <p className="text-muted-foreground text-sm">Asset health data will appear here once available</p>
                   </div>
                 )}
               </CardContent>
@@ -761,16 +739,16 @@ export function EnhancedDashboard({
               <CardContent className="pt-0">
                 {isCostLoading ? (
                   <div className="flex items-center justify-center py-6">
-                    <div className="text-center">
-                      <LoadingSpinner size="lg" />
-                      <p className="mt-3 text-gray-600 text-sm">Loading cost data...</p>
-                    </div>
+                                          <div className="text-center">
+                        <LoadingSpinner size="lg" />
+                        <p className="mt-3 text-muted-foreground text-sm">Loading cost data...</p>
+                      </div>
                   </div>
                 ) : costError ? (
                   <div className="text-center py-6">
                     <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-gray-900 mb-2">Failed to load cost data</h3>
-                    <p className="text-gray-600 mb-3 text-sm">{costError}</p>
+                    <h3 className="text-base font-semibold text-foreground mb-2">Failed to load cost data</h3>
+                    <p className="text-muted-foreground mb-3 text-sm">{costError}</p>
                     {onRefreshCost && (
                       <Button onClick={onRefreshCost} disabled={isCostLoading} size="sm">
                         <RefreshCw className={`w-3 h-3 mr-1 ${isCostLoading ? 'animate-spin' : ''}`} />
@@ -781,26 +759,26 @@ export function EnhancedDashboard({
                 ) : costData?.success ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-700">Total Purchase Cost</span>
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-xs font-medium text-muted-foreground">Total Purchase Cost</span>
+                      <span className="text-sm font-bold text-foreground">
                         ${costAnalysisData.totalPurchaseCost.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-700">Current Value</span>
-                      <span className="text-sm font-bold text-green-600">
+                      <span className="text-xs font-medium text-muted-foreground">Current Value</span>
+                      <span className="text-sm font-bold text-green-600 dark:text-green-400">
                         ${costAnalysisData.totalCurrentValue.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-700">Total Depreciation</span>
-                      <span className="text-sm font-bold text-red-600">
+                      <span className="text-xs font-medium text-muted-foreground">Total Depreciation</span>
+                      <span className="text-sm font-bold text-red-600 dark:text-red-400">
                         ${costAnalysisData.totalDepreciation.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-700">Avg. Depreciation Rate</span>
-                      <span className="text-xs font-medium text-gray-900">
+                      <span className="text-xs font-medium text-muted-foreground">Avg. Depreciation Rate</span>
+                      <span className="text-xs font-medium text-foreground">
                         {costAnalysisData.avgDepreciationRate.toFixed(2)}%
                       </span>
                     </div>
@@ -811,12 +789,12 @@ export function EnhancedDashboard({
                     <div className="space-y-1">
                       {costAnalysisData.breakdown.map((item, index) => (
                         <div key={index} className="flex items-center justify-between">
-                          <span className="text-xs text-gray-600">{item.category}</span>
+                          <span className="text-xs text-muted-foreground">{item.category}</span>
                           <div className="flex items-center space-x-2">
-                            <span className="text-xs font-medium text-gray-900">
+                            <span className="text-xs font-medium text-foreground">
                               ${item.amount.toLocaleString()}
                             </span>
-                            <span className="text-xs text-gray-500">({item.percentage}%)</span>
+                            <span className="text-xs text-muted-foreground">({item.percentage}%)</span>
                           </div>
                         </div>
                       ))}
@@ -839,9 +817,9 @@ export function EnhancedDashboard({
                   </div>
                 ) : (
                   <div className="text-center py-6">
-                    <DollarSign className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-gray-900 mb-2">No cost data available</h3>
-                    <p className="text-gray-600 text-sm">Asset cost data will appear here once available</p>
+                    <DollarSign className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-foreground mb-2">No cost data available</h3>
+                    <p className="text-muted-foreground text-sm">Asset cost data will appear here once available</p>
                   </div>
                 )}
               </CardContent>
@@ -873,16 +851,16 @@ export function EnhancedDashboard({
               <CardContent className="pt-0">
                 {isTrendsLoading ? (
                   <div className="flex items-center justify-center py-6">
-                    <div className="text-center">
-                      <LoadingSpinner size="lg" />
-                      <p className="mt-3 text-gray-600 text-sm">Loading trends data...</p>
-                    </div>
+                                          <div className="text-center">
+                        <LoadingSpinner size="lg" />
+                        <p className="mt-3 text-muted-foreground text-sm">Loading trends data...</p>
+                      </div>
                   </div>
                 ) : trendsError ? (
                   <div className="text-center py-6">
                     <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-gray-900 mb-2">Failed to load trends data</h3>
-                    <p className="text-gray-600 mb-3 text-sm">{trendsError}</p>
+                    <h3 className="text-base font-semibold text-foreground mb-2">Failed to load trends data</h3>
+                    <p className="text-muted-foreground mb-3 text-sm">{trendsError}</p>
                     {onRefreshTrends && (
                       <Button onClick={onRefreshTrends} disabled={isTrendsLoading} size="sm">
                         <RefreshCw className={`w-3 h-3 mr-1 ${isTrendsLoading ? 'animate-spin' : ''}`} />
@@ -893,35 +871,35 @@ export function EnhancedDashboard({
                 ) : trendsData?.success ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-2 bg-blue-50 rounded-lg">
-                        <p className="text-lg font-bold text-blue-600">{trendAnalysis.scheduled}</p>
-                        <p className="text-xs text-gray-600">Scheduled</p>
+                      <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{trendAnalysis.scheduled}</p>
+                        <p className="text-xs text-muted-foreground">Scheduled</p>
                       </div>
-                      <div className="text-center p-2 bg-yellow-50 rounded-lg">
-                        <p className="text-lg font-bold text-yellow-600">{trendAnalysis.inProgress}</p>
-                        <p className="text-xs text-gray-600">In Progress</p>
+                      <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">{trendAnalysis.inProgress}</p>
+                        <p className="text-xs text-muted-foreground">In Progress</p>
                       </div>
-                      <div className="text-center p-2 bg-green-50 rounded-lg">
-                        <p className="text-lg font-bold text-green-600">{trendAnalysis.completed}</p>
-                        <p className="text-xs text-gray-600">Completed</p>
+                      <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-green-600 dark:text-green-400">{trendAnalysis.completed}</p>
+                        <p className="text-xs text-muted-foreground">Completed</p>
                       </div>
-                      <div className="text-center p-2 bg-red-50 rounded-lg">
-                        <p className="text-lg font-bold text-red-600">{trendAnalysis.overdue}</p>
-                        <p className="text-xs text-gray-600">Overdue</p>
+                      <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-red-600 dark:text-red-400">{trendAnalysis.overdue}</p>
+                        <p className="text-xs text-muted-foreground">Overdue</p>
                       </div>
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Efficiency</span>
-                        <span className="text-xs font-medium text-gray-900">{trendAnalysis.efficiency}%</span>
+                        <span className="text-xs text-muted-foreground">Efficiency</span>
+                        <span className="text-xs font-medium text-foreground">{trendAnalysis.efficiency}%</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Avg. Completion</span>
-                        <span className="text-xs font-medium text-gray-900">{trendAnalysis.avgCompletionTime}</span>
+                        <span className="text-xs text-muted-foreground">Avg. Completion</span>
+                        <span className="text-xs font-medium text-foreground">{trendAnalysis.avgCompletionTime}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">Cost Savings</span>
-                        <span className="text-xs font-medium text-green-600">{trendAnalysis.costSavings}</span>
+                        <span className="text-xs text-muted-foreground">Cost Savings</span>
+                        <span className="text-xs font-medium text-green-600 dark:text-green-400">{trendAnalysis.costSavings}</span>
                       </div>
                     </div>
                     
@@ -942,9 +920,9 @@ export function EnhancedDashboard({
                   </div>
                 ) : (
                   <div className="text-center py-6">
-                    <TrendingUp className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-gray-900 mb-2">No trends data available</h3>
-                    <p className="text-gray-600 text-sm">Trend analysis data will appear here once available</p>
+                    <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-foreground mb-2">No trends data available</h3>
+                    <p className="text-muted-foreground text-sm">Trend analysis data will appear here once available</p>
                   </div>
                 )}
               </CardContent>
@@ -954,7 +932,7 @@ export function EnhancedDashboard({
 
 
           {/* AI Predictions Chart Section and Quick Actions - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
             {/* AI Predictions Chart Section - Reduced Width */}
             <div className="lg:col-span-2">
               <AIPredictionsChart
@@ -968,54 +946,54 @@ export function EnhancedDashboard({
             {/* Quick Actions - Side Panel */}
             <div className="lg:col-span-1">
               <Card className="shadow-lg border-0 h-full">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Zap className="w-5 h-5 mr-2 text-orange-600" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-base">
+                    <Zap className="w-4 h-4 mr-2 text-orange-600" />
                     Quick Actions
                   </CardTitle>
-                  <CardDescription>Common tasks and shortcuts</CardDescription>
+                  <CardDescription className="text-sm">Common tasks and shortcuts</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 gap-3">
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-1 gap-2 sm:gap-3">
                     <Button 
                       variant="outline" 
-                      className="h-16 flex-col hover:bg-blue-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-blue-50 transition-colors justify-start"
                       onClick={handleAddUserClick}
                     >
-                      <Users className="w-5 h-5 mb-1 text-blue-600" />
-                      <span className="text-sm font-medium">Add User</span>
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-blue-600" />
+                      <span className="text-xs sm:text-sm font-medium">Add User</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-16 flex-col hover:bg-green-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-green-50 transition-colors justify-start"
                       onClick={handleAddAssetClick}
                     >
-                      <Building2 className="w-5 h-5 mb-1 text-green-600" />
-                      <span className="text-sm font-medium">Add Asset</span>
+                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-green-600" />
+                      <span className="text-xs sm:text-sm font-medium">Add Asset</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-16 flex-col hover:bg-purple-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-purple-50 transition-colors justify-start"
                       onClick={handleAddLocationClick}
                     >
-                      <MapPin className="w-5 h-5 mb-1 text-purple-600" />
-                      <span className="text-sm font-medium">Add Location</span>
+                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-purple-600" />
+                      <span className="text-xs sm:text-sm font-medium">Add Location</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-16 flex-col hover:bg-orange-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-orange-50 transition-colors justify-start"
                       onClick={handleGenerateReportClick}
                     >
-                      <FileText className="w-5 h-5 mb-1 text-orange-600" />
-                      <span className="text-sm font-medium">Generate Report</span>
+                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-orange-600" />
+                      <span className="text-xs sm:text-sm font-medium">Generate Report</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-16 flex-col hover:bg-red-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-red-50 transition-colors justify-start"
                       onClick={handleViewAlertsClick}
                     >
-                      <AlertCircle className="w-5 h-5 mb-1 text-red-600" />
-                      <span className="text-sm font-medium">View Alerts</span>
+                      <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-red-600" />
+                      <span className="text-xs sm:text-sm font-medium">View Alerts</span>
                     </Button>
                   </div>
                 </CardContent>

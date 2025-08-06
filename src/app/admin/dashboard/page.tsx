@@ -34,12 +34,12 @@ export default function AdminDashboardPage() {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex h-screen bg-gradient-to-br from-background to-muted">
           <div className="flex-1 overflow-auto">
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <LoadingSpinner size="lg" />
-                <p className="mt-4 text-gray-600">Loading dashboard...</p>
+                <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
               </div>
             </div>
           </div>
@@ -51,14 +51,14 @@ export default function AdminDashboardPage() {
   if (error) {
     return (
       <ProtectedRoute>
-        <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex h-screen bg-gradient-to-br from-background to-muted">
           <div className="flex-1 overflow-auto">
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="mb-4">
                   <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load dashboard data</h3>
-                  <p className="text-gray-600 mb-4">{error}</p>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Failed to load dashboard data</h3>
+                  <p className="text-muted-foreground mb-4">{error}</p>
                 </div>
                 <Button onClick={refreshDashboard} disabled={isLoading}>
                   <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />

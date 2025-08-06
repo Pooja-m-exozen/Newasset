@@ -149,20 +149,20 @@ export default function Sidebar({ className }: SidebarProps) {
 
   return (
     <div className={cn(
-      "flex flex-col h-screen bg-white border-r border-gray-200 shadow-sm transition-all duration-300",
+      "flex flex-col h-screen bg-sidebar border-r border-sidebar-border shadow-sm transition-all duration-300",
       isCollapsed ? "w-16" : "w-64",
       className
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!isCollapsed && (
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-teal-500 rounded-lg flex items-center justify-center shadow-sm">
               <Zap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">FacilioTrack</h2>
-              <p className="text-xs text-gray-400">Enterprise</p>
+              <h2 className="text-base font-semibold text-sidebar-foreground">FacilioTrack</h2>
+              <p className="text-xs text-sidebar-accent-foreground">Enterprise</p>
             </div>
           </div>
         )}
@@ -170,9 +170,9 @@ export default function Sidebar({ className }: SidebarProps) {
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-8 w-8 p-0 hover:bg-gray-100 rounded-lg"
+          className="h-8 w-8 p-0 hover:bg-sidebar-accent rounded-lg"
         >
-          {isCollapsed ? <ChevronRight className="w-4 h-4 text-gray-500" /> : <ChevronLeft className="w-4 h-4 text-gray-500" />}
+          {isCollapsed ? <ChevronRight className="w-4 h-4 text-sidebar-accent-foreground" /> : <ChevronLeft className="w-4 h-4 text-sidebar-accent-foreground" />}
         </Button>
       </div>
 
@@ -185,8 +185,8 @@ export default function Sidebar({ className }: SidebarProps) {
               className={cn(
                 "w-full justify-start h-auto py-2.5 px-3 rounded-lg transition-all duration-200 group",
                 activeItem === item.id 
-                  ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700" 
-                  : "hover:bg-gray-50 text-gray-700",
+                  ? "bg-blue-700 text-white shadow-sm hover:bg-blue-800 dark:bg-sidebar-primary dark:text-sidebar-primary-foreground dark:hover:bg-sidebar-primary/90" 
+                  : "hover:bg-blue-100 text-blue-900 dark:hover:bg-sidebar-accent dark:text-sidebar-foreground",
                 isCollapsed && "justify-center px-2 py-2.5",
                 "transform hover:scale-[1.01]"
               )}
@@ -201,7 +201,7 @@ export default function Sidebar({ className }: SidebarProps) {
               <item.icon className={cn(
                 "flex-shrink-0 transition-colors duration-200",
                 isCollapsed ? "w-5 h-5" : "w-4 h-4 mr-3",
-                activeItem === item.id ? "text-white" : "text-gray-500 group-hover:text-gray-700"
+                activeItem === item.id ? "text-sidebar-primary-foreground" : "text-sidebar-accent-foreground group-hover:text-sidebar-foreground"
               )} />
               {!isCollapsed && (
                 <div className="flex-1 text-left">
@@ -209,7 +209,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   {item.description && (
                     <div className={cn(
                       "text-xs mt-0.5 transition-colors duration-200",
-                      activeItem === item.id ? "text-blue-100" : "text-gray-400 group-hover:text-gray-500"
+                      activeItem === item.id ? "text-sidebar-primary-foreground/70" : "text-sidebar-accent-foreground group-hover:text-sidebar-foreground/70"
                     )}>
                       {item.description}
                     </div>
@@ -219,9 +219,9 @@ export default function Sidebar({ className }: SidebarProps) {
               {!isCollapsed && item.submenu && (
                 <div className="ml-auto">
                   {expandedSubmenu === item.id ? (
-                    <ChevronUp className="w-4 h-4 text-gray-500" />
+                    <ChevronUp className="w-4 h-4 text-sidebar-accent-foreground" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                    <ChevronDown className="w-4 h-4 text-sidebar-accent-foreground" />
                   )}
                 </div>
               )}
@@ -233,12 +233,12 @@ export default function Sidebar({ className }: SidebarProps) {
                 {item.submenu.map((submenuItem: any) => (
                   <Button
                     key={submenuItem.id}
-                    variant={activeItem === submenuItem.id ? "default" : "ghost"}
+                    variant="ghost"
                     className={cn(
-                      "w-full justify-start h-auto py-2 px-3 rounded-lg transition-all duration-200 group text-sm",
+                      "w-full justify-start h-auto py-2 px-3 rounded-lg transition-all duration-200 group text-sm bg-transparent",
                       activeItem === submenuItem.id 
-                        ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700" 
-                        : "hover:bg-gray-50 text-gray-700",
+                        ? "bg-blue-700 text-white shadow-sm hover:bg-blue-800 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700" 
+                        : "text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-900 dark:hover:text-blue-300",
                       "transform hover:scale-[1.01]"
                     )}
                     onClick={() => handleSubmenuItemClick(item.id, submenuItem)}
@@ -248,7 +248,9 @@ export default function Sidebar({ className }: SidebarProps) {
                       {submenuItem.description && (
                         <div className={cn(
                           "text-xs mt-0.5 transition-colors duration-200",
-                          activeItem === submenuItem.id ? "text-blue-100" : "text-gray-400 group-hover:text-gray-500"
+                          activeItem === submenuItem.id 
+                            ? "text-white/70 dark:text-white/70" 
+                            : "text-gray-500 dark:text-gray-400 group-hover:text-blue-700 dark:group-hover:text-blue-300"
                         )}>
                           {submenuItem.description}
                         </div>
@@ -263,13 +265,13 @@ export default function Sidebar({ className }: SidebarProps) {
       </nav>
 
       {/* Footer - Logout Button */}
-      <div className="p-3 border-t border-gray-200">
+      <div className="p-3 border-t border-sidebar-border">
         <Button
           variant="ghost"
           size="sm"
           onClick={logout}
           className={cn(
-            "w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-all duration-200 py-2.5",
+            "w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300 rounded-lg transition-all duration-200 py-2.5",
             isCollapsed && "w-10 h-10 p-0 justify-center mx-auto"
           )}
         >

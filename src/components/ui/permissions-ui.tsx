@@ -333,12 +333,9 @@ export function PermissionsUI({
     setApiError(null)
 
     try {
-      // Try different endpoint formats
-      const encodedRole = encodeURIComponent(selectedRole)
-      const url = `http://192.168.0.5:5021/api/admin/permissions/assets/${encodedRole}`
+      // Try the original working endpoint first
+      const url = `http://192.168.0.5:5021/api/admin/permissions/assets/${selectedRole.toLowerCase()}`
       console.log('Fetching permissions from:', url)
-      console.log('Selected role:', selectedRole)
-      console.log('Encoded role:', encodedRole)
       
       const response = await fetch(url, {
         method: 'GET',
@@ -355,41 +352,56 @@ export function PermissionsUI({
         const errorText = await response.text()
         console.error('Error response:', errorText)
         
-        // Try alternative endpoint if first one fails
-        const alternativeUrl = `http://192.168.0.5:5021/api/admin/permissions/assets?role=${encodedRole}`
-        console.log('Trying alternative URL:', alternativeUrl)
-        
-        const altResponse = await fetch(alternativeUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${bearerToken}`,
-            'Content-Type': 'application/json'
+        // Try alternative endpoint with role ID if first one fails
+        const roleData = roles.find(role => role.name === selectedRole)
+        if (roleData) {
+          const roleId = roleData._id
+          const alternativeUrl = `http://192.168.0.5:5021/api/roles/${roleId}/permissions`
+          console.log('Trying alternative URL:', alternativeUrl)
+          
+          const altResponse = await fetch(alternativeUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${bearerToken}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          if (!altResponse.ok) {
+            const altErrorText = await altResponse.text()
+            console.error('Alternative endpoint also failed:', altErrorText)
+            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
           }
-        })
-        
-        if (!altResponse.ok) {
-          const altErrorText = await altResponse.text()
-          console.error('Alternative endpoint also failed:', altErrorText)
-          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
-        }
-        
-        const altData = await altResponse.json()
-        console.log('Alternative endpoint response:', altData)
-        
-        if (altData.success) {
-          console.log('Role permissions from alternative endpoint:', altData.permissions)
-          setApiPermissions(altData.permissions)
+          
+          const altData = await altResponse.json()
+          console.log('Alternative endpoint response:', altData)
+          
+          if (altData.success) {
+            console.log('Role permissions from alternative endpoint:', altData.data?.permissions || altData.permissions)
+            const permissions = altData.data?.permissions || altData.permissions
+            if (permissions) {
+              setApiPermissions(permissions)
+            } else {
+              setDefaultPermissions()
+            }
+          } else {
+            throw new Error('Failed to fetch permissions from both endpoints')
+          }
         } else {
-          throw new Error('Failed to fetch permissions from both endpoints')
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
         }
       } else {
         const data = await response.json()
-        
         console.log('Permissions API Response:', data)
         
         if (data.success) {
-          console.log('Role permissions:', data.permissions)
-          setApiPermissions(data.permissions)
+          console.log('Role permissions:', data.data?.permissions || data.permissions)
+          const permissions = data.data?.permissions || data.permissions
+          if (permissions) {
+            setApiPermissions(permissions)
+          } else {
+            setDefaultPermissions()
+          }
         } else {
           throw new Error('Failed to fetch permissions')
         }
@@ -402,6 +414,24 @@ export function PermissionsUI({
     }
   }
 
+  const setDefaultPermissions = () => {
+    setApiPermissions({
+      assetManagement: {},
+      digitalAssets: {},
+      maintenance: {},
+      compliance: {},
+      analytics: {},
+      userManagement: {},
+      systemAdmin: {},
+      admin: {},
+      locationManagement: {},
+      documentManagement: {},
+      financialManagement: {},
+      workflowManagement: {},
+      mobileFeatures: {}
+    })
+  }
+
   // Update permissions via API
   const updatePermissions = async (updatedPermissions: Permissions) => {
     if (!bearerToken || !selectedRole) return
@@ -411,15 +441,30 @@ export function PermissionsUI({
     setApiError(null)
 
     try {
+      // Find the role ID for the selected role
+      const selectedRoleData = roles.find(role => role.name === selectedRole)
+      if (!selectedRoleData) {
+        throw new Error(`Role "${selectedRole}" not found`)
+      }
+
+      // Find the role ID for the selected role
+      const roleDataForUpdate = roles.find(role => role.name === selectedRole)
+      if (!roleDataForUpdate) {
+        throw new Error(`Role "${selectedRole}" not found`)
+      }
+
+      const roleId = roleDataForUpdate._id
+      console.log('Updating permissions for role:', selectedRole, 'with ID:', roleId)
+
       const requestBody = {
         permissions: updatedPermissions
       }
 
-      console.log('Making POST request to:', `http://192.168.0.5:5021/api/admin/permissions/assets/${selectedRole}`)
+      console.log('Making PUT request to:', `http://192.168.0.5:5021/api/roles/${roleId}/permissions`)
       console.log('Request body:', JSON.stringify(requestBody, null, 2))
       
-      const response = await fetch(`http://192.168.0.5:5021/api/admin/permissions/assets/${selectedRole}`, {
-        method: 'POST',
+      const response = await fetch(`http://192.168.0.5:5021/api/roles/${roleId}/permissions`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
           'Content-Type': 'application/json'
@@ -428,13 +473,19 @@ export function PermissionsUI({
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
       }
 
       const data = await response.json()
+      console.log('API Response:', data)
       
       if (data.success) {
-        // Don't call onUpdatePermissions to avoid triggering any refetch
+        // Update local state with the returned permissions structure
+        if (data.data && data.data.permissions) {
+          setApiPermissions(data.data.permissions)
+        }
         handleSaveSuccess()
         console.log('Permissions updated successfully:', data.message)
       } else {
@@ -452,11 +503,16 @@ export function PermissionsUI({
   }
 
   useEffect(() => {
-    if (!isSaving && selectedRole) {
-      fetchRoles()
+    if (!isSaving && selectedRole && roles.length > 0) {
       fetchPermissions()
     }
-  }, [bearerToken, selectedRole]) // Fetch when bearerToken or selectedRole changes
+  }, [bearerToken, selectedRole, roles]) // Fetch when bearerToken, selectedRole, or roles change
+
+  useEffect(() => {
+    if (bearerToken) {
+      fetchRoles()
+    }
+  }, [bearerToken]) // Fetch roles when bearerToken changes
 
   // Handle save success without any refetch
   const handleSaveSuccess = () => {
@@ -541,6 +597,69 @@ export function PermissionsUI({
     if (apiPermissions) {
       updatePermissions(apiPermissions)
     }
+  }
+
+  // Helper function to convert flattened permissions to structured format
+  const convertFlattenedToStructured = (flattenedPermissions: { [key: string]: boolean }): Permissions => {
+    const structuredPermissions: Permissions = {
+      assetManagement: {},
+      digitalAssets: {},
+      maintenance: {},
+      compliance: {},
+      analytics: {},
+      userManagement: {},
+      systemAdmin: {},
+      admin: {},
+      locationManagement: {},
+      documentManagement: {},
+      financialManagement: {},
+      workflowManagement: {},
+      mobileFeatures: {}
+    }
+
+    // Map permissions to their respective categories
+    const permissionMapping: { [key: string]: keyof Permissions } = {
+      view: 'assetManagement',
+      create: 'assetManagement',
+      edit: 'assetManagement',
+      delete: 'assetManagement',
+      assign: 'assetManagement',
+      bulkOperations: 'assetManagement',
+      import: 'assetManagement',
+      export: 'assetManagement',
+      generate: 'digitalAssets',
+      scan: 'digitalAssets',
+      bulkGenerate: 'digitalAssets',
+      download: 'digitalAssets',
+      customize: 'digitalAssets',
+      approve: 'maintenance',
+      schedule: 'maintenance',
+      complete: 'maintenance',
+      audit: 'compliance',
+      report: 'analytics',
+      share: 'documentManagement',
+      assignRoles: 'userManagement',
+      managePermissions: 'userManagement',
+      configure: 'systemAdmin',
+      backup: 'systemAdmin',
+      restore: 'systemAdmin',
+      monitor: 'systemAdmin',
+      upload: 'documentManagement',
+      offline: 'mobileFeatures',
+      sync: 'mobileFeatures',
+      location: 'locationManagement',
+      camera: 'mobileFeatures',
+      notifications: 'mobileFeatures'
+    }
+
+    Object.entries(flattenedPermissions).forEach(([permission, value]) => {
+      const category = permissionMapping[permission]
+      if (category && structuredPermissions[category]) {
+        (structuredPermissions[category] as any)[permission] = value
+      }
+    })
+
+    return structuredPermissions
   }
 
   const getPermissionLabel = (permission: string) => {

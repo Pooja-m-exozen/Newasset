@@ -40,7 +40,16 @@ import {
   Bell,
   CreditCard,
   Workflow,
-  Smartphone
+  Smartphone,
+  Info,
+  Search,
+  Sparkles,
+  TrendingUp,
+  Clock,
+  Star,
+  ArrowLeft,
+  Filter,
+  MoreHorizontal
 } from 'lucide-react'
 
 interface PermissionCategory {
@@ -93,7 +102,31 @@ interface Permissions {
   mobileFeatures: PermissionCategory
 }
 
-// New API interfaces for POST method
+// API interfaces
+interface Role {
+  _id: string
+  name: string
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+  __v: number
+  permissions: {
+    permissions?: Permissions
+    role?: string
+    createdBy?: string
+    version?: number
+    isActive?: boolean
+    createdAt?: string
+    updatedAt?: string
+    __v?: number
+  }
+}
+
+interface RolesResponse {
+  success: boolean
+  roles: Role[]
+}
+
 interface PermissionRequest {
   role: string
   permissions: {
@@ -235,7 +268,7 @@ export function PermissionsUI({
   onUpdatePermissions,
   onClearError,
   bearerToken,
-  role = 'viewer'
+  role = ''
 }: PermissionsUIProps) {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [apiPermissions, setApiPermissions] = useState<Permissions | null>(null)
@@ -244,16 +277,20 @@ export function PermissionsUI({
   const [showUpdateModal, setShowUpdateModal] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [selectedRole, setSelectedRole] = useState(role)
+  const [roles, setRoles] = useState<Role[]>([])
+  const [rolesLoading, setRolesLoading] = useState(false)
+  const [rolesError, setRolesError] = useState<string | null>(null)
 
-  // Fetch permissions from API
-  const fetchPermissions = async () => {
+  // Fetch roles from API
+  const fetchRoles = async () => {
     if (!bearerToken) return
 
-    setApiLoading(true)
-    setApiError(null)
+    setRolesLoading(true)
+    setRolesError(null)
 
     try {
-      const response = await fetch(`http://192.168.0.5:5021/api/auth/me`, {
+      const response = await fetch(`http://192.168.0.5:5021/api/roles`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
@@ -265,15 +302,97 @@ export function PermissionsUI({
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data: ApiResponse = await response.json()
+      const data: RolesResponse = await response.json()
       
-      console.log('API Response:', data)
+      console.log('Roles API Response:', data)
       
       if (data.success) {
-        console.log('User permissions:', data.user.permissions)
-        setApiPermissions(data.user.permissions)
+        console.log('Available roles:', data.roles)
+        setRoles(data.roles)
+        
+        // Set the first role as default if no role is selected
+        if (!selectedRole && data.roles.length > 0) {
+          setSelectedRole(data.roles[0].name)
+        }
       } else {
-        throw new Error('Failed to fetch permissions')
+        throw new Error('Failed to fetch roles')
+      }
+    } catch (error) {
+      console.error('Error fetching roles:', error)
+      setRolesError(error instanceof Error ? error.message : 'Failed to fetch roles')
+    } finally {
+      setRolesLoading(false)
+    }
+  }
+
+  // Fetch permissions from API
+  const fetchPermissions = async () => {
+    if (!bearerToken || !selectedRole) return
+
+    setApiLoading(true)
+    setApiError(null)
+
+    try {
+      // Try different endpoint formats
+      const encodedRole = encodeURIComponent(selectedRole)
+      const url = `http://192.168.0.5:5021/api/admin/permissions/assets/${encodedRole}`
+      console.log('Fetching permissions from:', url)
+      console.log('Selected role:', selectedRole)
+      console.log('Encoded role:', encodedRole)
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${bearerToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
+        
+        // Try alternative endpoint if first one fails
+        const alternativeUrl = `http://192.168.0.5:5021/api/admin/permissions/assets?role=${encodedRole}`
+        console.log('Trying alternative URL:', alternativeUrl)
+        
+        const altResponse = await fetch(alternativeUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${bearerToken}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (!altResponse.ok) {
+          const altErrorText = await altResponse.text()
+          console.error('Alternative endpoint also failed:', altErrorText)
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
+        }
+        
+        const altData = await altResponse.json()
+        console.log('Alternative endpoint response:', altData)
+        
+        if (altData.success) {
+          console.log('Role permissions from alternative endpoint:', altData.permissions)
+          setApiPermissions(altData.permissions)
+        } else {
+          throw new Error('Failed to fetch permissions from both endpoints')
+        }
+      } else {
+        const data = await response.json()
+        
+        console.log('Permissions API Response:', data)
+        
+        if (data.success) {
+          console.log('Role permissions:', data.permissions)
+          setApiPermissions(data.permissions)
+        } else {
+          throw new Error('Failed to fetch permissions')
+        }
       }
     } catch (error) {
       console.error('Error fetching permissions:', error)
@@ -285,34 +404,21 @@ export function PermissionsUI({
 
   // Update permissions via API
   const updatePermissions = async (updatedPermissions: Permissions) => {
-    if (!bearerToken) return
+    if (!bearerToken || !selectedRole) return
 
     setIsSaving(true)
     setApiLoading(true)
     setApiError(null)
 
     try {
-      // Convert the complex permissions structure to the simplified format expected by the API
-      const simplifiedPermissions: { [key: string]: boolean } = {}
-      
-      // Flatten all permissions from all categories
-      Object.entries(updatedPermissions).forEach(([category, permissions]) => {
-        Object.entries(permissions).forEach(([permission, enabled]) => {
-          if (enabled !== undefined && typeof enabled === 'boolean') {
-            simplifiedPermissions[permission] = enabled
-          }
-        })
-      })
-
-      const requestBody: PermissionRequest = {
-        role: role,
-        permissions: simplifiedPermissions
+      const requestBody = {
+        permissions: updatedPermissions
       }
 
-      console.log('Making POST request to:', `http://192.168.0.5:5021/api/admin/permissions/assets`)
+      console.log('Making POST request to:', `http://192.168.0.5:5021/api/admin/permissions/assets/${selectedRole}`)
       console.log('Request body:', JSON.stringify(requestBody, null, 2))
       
-      const response = await fetch(`http://192.168.0.5:5021/api/admin/permissions/assets`, {
+      const response = await fetch(`http://192.168.0.5:5021/api/admin/permissions/assets/${selectedRole}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
@@ -325,7 +431,7 @@ export function PermissionsUI({
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data: PermissionResponse = await response.json()
+      const data = await response.json()
       
       if (data.success) {
         // Don't call onUpdatePermissions to avoid triggering any refetch
@@ -346,10 +452,11 @@ export function PermissionsUI({
   }
 
   useEffect(() => {
-    if (!isSaving) {
+    if (!isSaving && selectedRole) {
+      fetchRoles()
       fetchPermissions()
     }
-  }, [bearerToken, role]) // Only fetch on initial load or when bearerToken/role changes
+  }, [bearerToken, selectedRole]) // Fetch when bearerToken or selectedRole changes
 
   // Handle save success without any refetch
   const handleSaveSuccess = () => {
@@ -361,6 +468,14 @@ export function PermissionsUI({
     setTimeout(() => {
       setShowSuccessMessage(false)
     }, 3000)
+  }
+
+  const handleRoleChange = (newRole: string) => {
+    console.log('Role changed from:', selectedRole, 'to:', newRole)
+    setSelectedRole(newRole)
+    // Clear current permissions when role changes
+    setApiPermissions(null)
+    setApiError(null)
   }
 
   const categories = [
@@ -382,7 +497,11 @@ export function PermissionsUI({
 
   const getCategoryIcon = (category: string) => {
     const foundCategory = categories.find(cat => cat.value === category)
-    return foundCategory ? <foundCategory.icon className="h-4 w-4" /> : <Settings className="h-4 w-4" />
+    if (foundCategory?.icon) {
+      const IconComponent = foundCategory.icon
+      return <IconComponent className="h-4 w-4" />
+    }
+    return <Settings className="h-4 w-4" />
   }
 
   const getCategoryColor = (category: string) => {
@@ -461,39 +580,55 @@ export function PermissionsUI({
     return labels[permission] || permission
   }
 
-  if (loading || apiLoading) {
+  if (loading || apiLoading || rolesLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex justify-center items-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading permissions...</p>
+          <div className="relative mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 rounded-full flex items-center justify-center mx-auto animate-pulse">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <div className="absolute inset-0 w-12 h-12 border-4 border-blue-200 dark:border-blue-800 rounded-full animate-ping opacity-20"></div>
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+            Loading Permissions
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 text-xs">
+            Please wait while we fetch your permission data
+          </p>
         </div>
       </div>
     )
   }
 
-  if (error || apiError) {
+  if (error || apiError || rolesError) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center gap-2 text-red-800">
-          <AlertTriangle className="h-5 w-5" />
-          <span className="font-medium">Error loading permissions</span>
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">Error Loading Permissions</h3>
+            <p className="text-red-600 dark:text-red-400 text-xs">{error || apiError || rolesError}</p>
+          </div>
         </div>
-        <p className="text-red-600 mt-2">{error || apiError}</p>
-        <div className="flex gap-2 mt-3">
+        <div className="flex gap-2">
           <Button 
-            onClick={onClearError || (() => setApiError(null))}
+            onClick={onClearError || (() => { setApiError(null); setRolesError(null) })}
             variant="outline" 
             size="sm"
+            className="border-red-300 dark:border-red-600 hover:border-red-400 dark:hover:border-red-500 text-red-700 dark:text-red-300 text-xs"
           >
             Try Again
           </Button>
           <Button 
-            onClick={fetchPermissions}
+            onClick={() => { fetchRoles(); fetchPermissions() }}
             variant="outline" 
             size="sm"
+            className="border-red-300 dark:border-red-600 hover:border-red-400 dark:hover:border-red-500 text-red-700 dark:text-red-300 text-xs"
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="h-3 w-3 mr-1" />
             Refresh
           </Button>
         </div>
@@ -501,15 +636,23 @@ export function PermissionsUI({
     )
   }
 
-  if (!apiPermissions) {
+  if (!apiPermissions || roles.length === 0) {
     return (
-      <div className="text-center py-8">
-        <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">No permissions data available</p>
-        <Button onClick={fetchPermissions} className="mt-4">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Load Permissions
-        </Button>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-500 dark:to-gray-600 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Shield className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">No Permissions Data Available</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-3 text-xs">Unable to load permission data at this time</p>
+          <Button 
+            onClick={() => { fetchRoles(); fetchPermissions() }} 
+            className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white text-xs"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Load Permissions
+          </Button>
+        </div>
       </div>
     )
   }
@@ -519,59 +662,113 @@ export function PermissionsUI({
     : Object.entries(apiPermissions).filter(([key]) => key === selectedCategory)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Success Message */}
       {showSuccessMessage && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-green-800">
-            <CheckCircle className="h-5 w-5" />
-            <span className="font-medium">Permissions updated successfully!</span>
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <h4 className="text-xs font-semibold text-green-800 dark:text-green-200">
+                Permissions Updated Successfully!
+              </h4>
+              <p className="text-green-600 dark:text-green-400 text-xs">
+                The permissions for role "{selectedRole}" have been saved.
+              </p>
+            </div>
           </div>
-          <p className="text-green-600 mt-2">The permissions for role "{role}" have been saved.</p>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Permissions Management</h2>
-          <p className="text-gray-600">Configure access controls for role: <span className="font-medium">{role}</span></p>
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 rounded-lg flex items-center justify-center">
+              <Shield className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                Permissions Management
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">
+                Configure access controls for different roles
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => { fetchRoles(); fetchPermissions() }}
+              variant="outline"
+              size="sm"
+              disabled={apiLoading || rolesLoading}
+              className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 text-xs"
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${apiLoading || rolesLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button
+              onClick={() => setShowUpdateModal(true)}
+              size="sm"
+              className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white text-xs"
+              disabled={apiLoading || rolesLoading}
+            >
+              <Save className="h-3 w-3 mr-1" />
+              Save Changes
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <Button
-            onClick={fetchPermissions}
-            variant="outline"
-            size="sm"
-            disabled={apiLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${apiLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button
-            onClick={() => setShowUpdateModal(true)}
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700"
-            disabled={apiLoading}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Save Changes
-          </Button>
+      </div>
+
+      {/* Role Selection */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+              <Users className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Label htmlFor="role-select" className="text-xs font-medium text-gray-700 dark:text-gray-300">Select Role</Label>
+          </div>
+          <Select value={selectedRole} onValueChange={handleRoleChange}>
+            <SelectTrigger className="w-64 border-gray-300 dark:border-gray-600 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-purple-500 dark:focus:ring-purple-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs">
+              <SelectValue placeholder="Select a role" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              {roles.map(role => (
+                <SelectItem key={role._id} value={role.name} className="text-gray-900 dark:text-white hover:bg-purple-50 dark:hover:bg-purple-900/20 text-xs">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{role.name}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Created: {new Date(role.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="category-filter" className="text-sm font-medium">Category:</Label>
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+              <Filter className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            </div>
+            <Label htmlFor="category-filter" className="text-xs font-medium text-gray-700 dark:text-gray-300">Filter by Category</Label>
+          </div>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
+            <SelectTrigger className="w-48 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs">
+              <SelectValue placeholder="Select a category" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               {categories.map(category => (
-                <SelectItem key={category.value} value={category.value}>
+                <SelectItem key={category.value} value={category.value} className="text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/20 text-xs">
                   <div className="flex items-center gap-2">
-                    <category.icon className="h-4 w-4" />
+                    <category.icon className="h-3 w-3" />
                     {category.label}
                   </div>
                 </SelectItem>
@@ -582,26 +779,28 @@ export function PermissionsUI({
       </div>
 
       {/* Permissions Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {filteredCategories.map(([categoryKey, permissions]) => (
-          <Card key={categoryKey} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {getCategoryIcon(categoryKey)}
-                {categories.find(cat => cat.value === categoryKey)?.label || categoryKey}
+          <Card key={categoryKey} className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <CardHeader className="border-b border-gray-200 dark:border-gray-700 pb-3">
+              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  {getCategoryIcon(categoryKey)}
+                </div>
+                <span className="text-sm">{categories.find(cat => cat.value === categoryKey)?.label || categoryKey}</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-600 dark:text-gray-400 text-xs">
                 Manage permissions for {categoryKey.replace(/([A-Z])/g, ' $1').toLowerCase()}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="p-3">
+              <div className="space-y-2">
                 {Object.entries(permissions).map(([permissionKey, enabled]) => (
-                  <div key={permissionKey} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={permissionKey} className="flex items-center justify-between py-1 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{getPermissionLabel(permissionKey)}</span>
-                        <Badge variant="outline" className={`text-xs ${enabled ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">{getPermissionLabel(permissionKey)}</span>
+                        <Badge variant="outline" className={`text-xs ${enabled ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'}`}>
                           {enabled ? 'Enabled' : 'Disabled'}
                         </Badge>
                       </div>
@@ -609,7 +808,7 @@ export function PermissionsUI({
                     <Switch
                       checked={enabled as boolean}
                       onChange={(e) => handlePermissionToggle(categoryKey, permissionKey, e.target.checked)}
-                      className="ml-4"
+                      className="ml-3"
                     />
                   </div>
                 ))}
@@ -621,26 +820,32 @@ export function PermissionsUI({
 
       {/* Update Confirmation Modal */}
       <Dialog open={showUpdateModal} onOpenChange={setShowUpdateModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Save className="h-5 w-5" />
-              Save Permission Changes
+            <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+              <div className="w-6 h-6 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center">
+                <Save className="h-3 w-3 text-white" />
+              </div>
+              <span className="text-sm">Save Permission Changes</span>
             </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to save the permission changes? This will update the permissions for the {role} role.
+            <DialogDescription className="text-gray-600 dark:text-gray-400 text-xs">
+              Are you sure you want to save the permission changes? This will update the permissions for the <span className="font-medium text-blue-600 dark:text-blue-400">{selectedRole}</span> role.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUpdateModal(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUpdateModal(false)}
+              className="border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 text-xs"
+            >
               Cancel
             </Button>
             <Button 
               onClick={handleSaveChanges}
               disabled={apiLoading}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white text-xs"
             >
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="h-3 w-3 mr-1" />
               {apiLoading ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>

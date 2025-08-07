@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/contexts/AuthContext"
 import { useUserManagement } from "@/contexts/UserManagementContext"
 import { useToast, ToastContainer } from "@/components/ui/toast"
+import { PermissionsUI } from "@/components/ui/permissions-ui"
 import { User } from "@/lib/manageuser"
 import { 
   Users, 
@@ -406,22 +407,53 @@ export default function AdminManageUsersPage() {
     <ProtectedRoute>
       <div className="flex h-screen bg-gradient-to-br from-background to-muted">
         <div className="flex-1 overflow-auto">
-          {/* Header */}
-          <header className="bg-card border-b border-border px-4 sm:px-6 py-4 shadow-sm">
+          {/* Enhanced Header */}
+          <header className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-b border-border px-4 sm:px-6 py-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">User Management</h1>
-                <p className="text-sm sm:text-base text-muted-foreground">Manage users, roles, and permissions</p>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                    User Management
+                  </h1>
+                  <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                    Manage users, roles, and permissions with advanced controls
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-700 dark:text-green-300 font-medium">Live</span>
+                </div>
               </div>
             </div>
           </header>
 
           {/* Main Content */}
-          <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-            {/* Header Section */}
-            <div className="flex items-center justify-between">
-              <div>
-               
+          <main className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+            {/* Enhanced Header Section */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      {sortedUsers.length} Users
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-950/20 rounded-full">
+                    <UserCheck className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                      {users.filter(u => u.status === 'active').length} Active
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Manage your team members, roles, and access permissions
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <Button 
@@ -429,15 +461,15 @@ export default function AdminManageUsersPage() {
                   size="sm"
                   onClick={loadData}
                   disabled={isLoading}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span>Refresh</span>
+                  <span className="hidden sm:inline">Refresh</span>
                 </Button>
                 <Button 
                   size="sm"
                   onClick={() => setShowCreateUserModal(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Add User</span>
@@ -757,7 +789,7 @@ export default function AdminManageUsersPage() {
               </div>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="userName" className="text-sm font-medium text-gray-700">Full Name</Label>
+                  <Label htmlFor="userName" className="text-sm font-medium text-foreground">Full Name</Label>
                   <Input
                     id="userName"
                     placeholder="Enter full name"
@@ -767,7 +799,7 @@ export default function AdminManageUsersPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="userEmail" className="text-sm font-medium text-gray-700">Email Address</Label>
+                  <Label htmlFor="userEmail" className="text-sm font-medium text-foreground">Email Address</Label>
                   <Input
                     id="userEmail"
                     type="email"
@@ -778,7 +810,7 @@ export default function AdminManageUsersPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="userPassword" className="text-sm font-medium text-gray-700">Password</Label>
+                  <Label htmlFor="userPassword" className="text-sm font-medium text-foreground">Password</Label>
                   <div className="relative mt-1">
                     <Input
                       id="userPassword"

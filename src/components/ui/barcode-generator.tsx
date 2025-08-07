@@ -135,17 +135,17 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
         />
       )}
       
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+      <Card className="shadow-sm">
         <CardHeader className="pb-6">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-600">
+            <div className="p-2 rounded-lg bg-orange-500">
               <Barcode className="h-6 w-6 text-white" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold text-gray-900">
+              <CardTitle className="text-xl font-semibold">
                 Barcode Generator
               </CardTitle>
-              <CardDescription className="text-gray-600 mt-1">
+              <CardDescription className="text-muted-foreground mt-1">
                 Select an asset and generate a professional barcode for digital asset tracking
               </CardDescription>
             </div>
@@ -156,13 +156,13 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <Label className="text-sm font-semibold text-gray-700">Step 1: Select Asset</Label>
+              <Label className="text-sm font-semibold">Step 1: Select Asset</Label>
             </div>
             
             {assetsLoading && (
-              <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                <span className="text-sm font-medium text-blue-700">Loading assets from API...</span>
+              <div className="flex items-center space-x-3 p-4 bg-muted/50 border border-border rounded-lg">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                <span className="text-sm font-medium">Loading assets from API...</span>
               </div>
             )}
             
@@ -172,19 +172,19 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                   placeholder="🔍 Search assets by tag ID, type, brand, or model..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-11 text-sm"
                   disabled={assetsLoading}
                 />
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               </div>
               <Select value={selectedAssetFromDropdown} onValueChange={handleAssetSelect}>
-                <SelectTrigger className="h-12 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                <SelectTrigger className="h-11 text-sm">
                   <SelectValue placeholder={assetsLoading ? "⏳ Loading assets..." : "📋 Choose an asset from the list"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
                   {assetsLoading ? (
-                    <div className="p-4 text-center text-gray-500">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <div className="p-4 text-center text-muted-foreground">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
                       <p className="text-sm">Loading assets...</p>
                     </div>
                   ) : filteredAssets.length > 0 ? (
@@ -192,7 +192,7 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                       <SelectItem key={asset._id} value={asset.tagId} className="py-3">
                         <div className="flex flex-col space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="font-semibold text-gray-900">{asset.tagId}</span>
+                            <span className="font-semibold">{asset.tagId}</span>
                             <Badge 
                               variant={asset.status === 'active' ? 'default' : 'secondary'} 
                               className="text-xs px-2 py-1"
@@ -200,19 +200,19 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                               {asset.status}
                             </Badge>
                           </div>
-                          <div className="text-xs text-gray-600 space-y-1">
+                          <div className="text-xs text-muted-foreground space-y-1">
                             <p className="font-medium">{asset.assetType} - {asset.brand} {asset.model}</p>
                             <p className="flex items-center space-x-1">
                               <Building className="h-3 w-3" />
                               <span>{asset.location.building}, {asset.location.floor}</span>
                             </p>
-                            <p className="text-blue-600 font-mono text-xs">ID: {asset._id}</p>
+                            <p className="text-primary font-mono text-xs">ID: {asset._id}</p>
                           </div>
                         </div>
                       </SelectItem>
                     ))
                   ) : (
-                    <div className="p-4 text-center text-gray-500">
+                    <div className="p-4 text-center text-muted-foreground">
                       <p className="text-sm">
                         {searchTerm ? '🔍 No assets found matching your search.' : '📭 No assets available.'}
                       </p>
@@ -221,7 +221,7 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                 </SelectContent>
               </Select>
               
-              <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   {assetsLoading ? 'Loading...' : `${filteredAssets.length} of ${assets.length} assets shown`}
                 </span>
@@ -277,33 +277,33 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
           </div>
 
           {selectedFormat && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="p-3 bg-muted/50 border border-border rounded-md">
               <div className="flex items-start space-x-2">
-                <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                 <div className="text-sm">
-                  <p className="font-medium text-blue-900">{selectedFormat.label}</p>
-                  <p className="text-blue-700">{selectedFormat.description}</p>
+                  <p className="font-medium">{selectedFormat.label}</p>
+                  <p className="text-muted-foreground">{selectedFormat.description}</p>
                 </div>
               </div>
             </div>
           )}
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
           {/* Asset Selection Feedback */}
           {selectedAssetId && !barcodeData && (
-            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+            <div className="p-4 bg-muted/50 border border-border rounded-lg">
               <div className="flex items-center space-x-3">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-sm font-medium text-green-800">
+                  <p className="text-sm font-medium">
                     Asset Selected: <strong>{selectedAssetId}</strong>
                   </p>
-                  <p className="text-xs text-green-600 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Ready to generate barcode. Click the button below to proceed.
                   </p>
                 </div>
@@ -315,13 +315,13 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <Label className="text-sm font-semibold text-gray-700">Step 2: Generate Barcode</Label>
+              <Label className="text-sm font-semibold">Step 2: Generate Barcode</Label>
             </div>
 
             <Button 
               onClick={handleGenerate} 
               disabled={isGenerating || !selectedAssetId}
-              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-11 text-base font-semibold"
             >
               {isGenerating ? (
                 <div className="flex items-center space-x-2">
@@ -345,18 +345,18 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
       </Card>
 
       {barcodeData && (
-        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+        <Card className="shadow-sm">
           <CardHeader className="pb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-600">
+                <div className="p-2 rounded-lg bg-orange-500">
                   <Barcode className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl font-bold text-gray-900">
+                  <CardTitle className="text-xl font-semibold">
                     Generated Barcode
                   </CardTitle>
-                  <CardDescription className="text-gray-600 mt-1">
+                  <CardDescription className="text-muted-foreground mt-1">
                     Barcode generated successfully for asset {barcodeData.barcode.data}
                   </CardDescription>
                 </div>
@@ -368,15 +368,15 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-center">
-              <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 bg-gradient-to-br from-gray-50 to-white shadow-inner">
+              <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
                 {/* Barcode Display */}
-                <div className="relative w-80 h-40 bg-white rounded-xl shadow-2xl overflow-hidden border-4 border-white">
+                <div className="relative w-80 h-40 bg-white rounded-lg shadow-sm overflow-hidden border border-border">
                   {/* Barcode Image */}
                   <div className="flex items-center justify-center w-full h-full p-6">
                     {imageLoading && (
-                      <div className="flex items-center justify-center w-64 h-32 bg-gray-100 rounded-lg">
-                        <div className="text-center text-gray-500">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-2"></div>
+                      <div className="flex items-center justify-center w-64 h-32 bg-muted/50 rounded-lg">
+                        <div className="text-center text-muted-foreground">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
                           <p className="text-sm font-medium">Loading Barcode...</p>
                         </div>
                       </div>
@@ -416,8 +416,8 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                           e.currentTarget.style.display = 'none'
                           if (e.currentTarget.parentElement) {
                             e.currentTarget.parentElement.innerHTML = `
-                              <div class="flex items-center justify-center w-64 h-32 bg-gray-100 rounded-lg">
-                                <div class="text-center text-gray-500">
+                              <div class="flex items-center justify-center w-64 h-32 bg-muted/50 rounded-lg">
+                                <div class="text-center text-muted-foreground">
                                   <p class="text-sm font-medium">Barcode Image</p>
                                   <p class="text-xs">Failed to load</p>
                                   <p class="text-xs mt-2">URL: ${API_BASE_URL}${barcodeData.barcode.url}</p>
@@ -433,7 +433,7 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                 
                 {/* Tag ID Display */}
                 <div className="mt-6 text-center">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-100 to-red-100 text-orange-800 rounded-full text-sm font-semibold shadow-sm">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/50 text-foreground rounded-full text-sm font-semibold shadow-sm">
                     <Barcode className="h-4 w-4" />
                     Tag ID: {barcodeData.barcode.data}
                   </div>
@@ -444,62 +444,62 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
             {/* Barcode Information Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Barcode Information Card */}
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
+              <Card className="shadow-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-2">
                     <div className="p-1.5 rounded-md bg-blue-100">
                       <Hash className="h-4 w-4 text-blue-600" />
                     </div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">Barcode Information</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Barcode Information</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data</Label>
-                      <p className="text-sm font-medium text-gray-900 font-mono">{barcodeData.barcode.data}</p>
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Data</Label>
+                      <p className="text-sm font-medium font-mono">{barcodeData.barcode.data}</p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Format</Label>
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Format</Label>
                       <Badge variant="outline" className="text-xs px-2 py-1">
                         {barcodeData.barcode.format}
                       </Badge>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Height</Label>
-                      <p className="text-sm font-medium text-gray-900">{height}mm</p>
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Height</Label>
+                      <p className="text-sm font-medium">{height}mm</p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Scale</Label>
-                      <p className="text-sm font-medium text-gray-900">{scale}x</p>
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Scale</Label>
+                      <p className="text-sm font-medium">{scale}x</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Format Details Card */}
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
+              <Card className="shadow-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-2">
                     <div className="p-1.5 rounded-md bg-green-100">
                       <Settings className="h-4 w-4 text-green-600" />
                     </div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">Format Details</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Format Details</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Type</Label>
-                      <p className="text-sm font-medium text-gray-900">{selectedFormat?.label}</p>
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Type</Label>
+                      <p className="text-sm font-medium">{selectedFormat?.label}</p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Asset ID</Label>
-                      <p className="text-sm font-medium text-gray-900 font-mono">{selectedAssetId}</p>
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Asset ID</Label>
+                      <p className="text-sm font-medium font-mono">{selectedAssetId}</p>
                     </div>
                     <div className="space-y-1 col-span-2">
-                      <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</Label>
-                      <p className="text-sm text-gray-700">{selectedFormat?.description}</p>
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Description</Label>
+                      <p className="text-sm text-muted-foreground">{selectedFormat?.description}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -507,14 +507,14 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
             </div>
 
             {/* Success Message */}
-            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+            <div className="p-4 bg-muted/50 border border-border rounded-lg">
               <div className="flex items-center space-x-3">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-sm font-medium text-green-800">
+                  <p className="text-sm font-medium">
                     Barcode Generated Successfully!
                   </p>
-                  <p className="text-xs text-green-600 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     The barcode is ready for use. You can scan it to access asset information.
                   </p>
                 </div>

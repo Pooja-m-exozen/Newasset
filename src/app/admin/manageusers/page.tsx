@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
 import { useUserManagement } from "@/contexts/UserManagementContext"
 import { useToast, ToastContainer } from "@/components/ui/toast"
@@ -36,7 +38,10 @@ import {
   Star,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 
 
@@ -63,6 +68,10 @@ export default function AdminManageUsersPage() {
   const [editingUser, setEditingUser] = useState<{ id: string; name: string; currentRole: string } | null>(null)
   const [deletingUser, setDeletingUser] = useState<{ id: string; name: string } | null>(null)
   const [viewingUser, setViewingUser] = useState<User | null>(null)
+  const [sortField, setSortField] = useState<string>("name")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
   const [newUserData, setNewUserData] = useState({
     name: "",
     email: "",
@@ -362,262 +371,381 @@ export default function AdminManageUsersPage() {
     user.projectName.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Sort users
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const aValue = a[sortField as keyof User] || ""
+    const bValue = b[sortField as keyof User] || ""
+    
+    if (sortDirection === "asc") {
+      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+    } else {
+      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
+    }
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedUsers = sortedUsers.slice(startIndex, endIndex)
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortDirection("asc")
+    }
+  }
+
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase()
   }
 
   return (
     <ProtectedRoute>
-      <div className="flex h-screen bg-gray-50">
-    
-        
-        <div className="flex-1 flex flex-col">
-          
-        
+      <div className="flex h-screen bg-gradient-to-br from-background to-muted">
         <div className="flex-1 overflow-auto">
-            <main className="p-6 space-y-6">
-              {/* Header Section */}
+          {/* Header */}
+          <header className="bg-card border-b border-border px-4 sm:px-6 py-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                  <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-                  <p className="text-gray-600 mt-1">Manage users, roles, and permissions</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">User Management</h1>
+                <p className="text-sm sm:text-base text-muted-foreground">Manage users, roles, and permissions</p>
               </div>
-                <div className="flex items-center space-x-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={loadData}
-                    disabled={isLoading}
-                    className="flex items-center space-x-2"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    <span>Refresh</span>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+            {/* Header Section */}
+            <div className="flex items-center justify-between">
+              <div>
+               
+              </div>
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={loadData}
+                  disabled={isLoading}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
                 </Button>
-                  <Button 
-                    size="sm"
-                    onClick={() => setShowCreateUserModal(true)}
-                    className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>Add User</span>
+                <Button 
+                  size="sm"
+                  onClick={() => setShowCreateUserModal(true)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Add User</span>
                 </Button>
               </div>
             </div>
 
-            {/* Search and Filters */}
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-                  <div className="flex-1 w-full lg:w-auto">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input
-                        placeholder="Search users by name, email, role, or project..."
-                        className="pl-10 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="flex items-center space-x-2"
-                    >
-                      <Filter className="w-4 h-4" />
-                      <span>Filter</span>
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowRolesModal(true)}
-                      className="flex items-center space-x-2"
-                    >
-                      <Shield className="w-4 h-4" />
-                      <span>Roles ({roles.length})</span>
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="flex items-center space-x-2"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      <span>Date</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Users List */}
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Users</h3>
-                      <p className="text-sm text-gray-600">Showing {filteredUsers.length} of {users.length} users</p>
-                  </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="divide-y divide-gray-100">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="flex items-center space-x-3">
-                        <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-                        <span className="text-gray-600">Loading users...</span>
+            {/* Enhanced Search and Filter Container */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {/* Search Section */}
+                  <div className="flex items-end gap-4">
+                    <div className="w-full max-w-md">
+                      <Label className="text-sm font-medium text-muted-foreground mb-2">Search Users</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search by name, email, role, or project..."
+                          className="pl-10 h-11 text-sm"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                       </div>
                     </div>
-                  ) : (
-                    filteredUsers.map((user) => (
-                      <div key={user._id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-lg">
-                              {getInitials(user.name)}
-                            </div>
-                            <div className="flex-1">
-                            <div className="flex items-center space-x-3">
-                                <h4 className="font-semibold text-gray-900">{user.name}</h4>
-                                {user.isVerified && (
-                                  <CheckCircle className="w-4 h-4 text-green-500" />
-                                )}
-                                <Badge className={`${getStatusColor(user.status)} px-2 py-0.5 text-xs`}>
-                                  {user.status}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                                <div className="flex items-center space-x-1">
-                                  <Mail className="w-3 h-3" />
-                                  <span>{user.email}</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Shield className="w-3 h-3" />
-                                  <Badge className={`${getRoleColor(user.role)} px-2 py-0.5 text-xs`}>
-                                    {user.role}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Clock className="w-3 h-3" />
-                                  <span>{formatDate(user.createdAt)}</span>
-                                </div>
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">{user.projectName}</p>
-                            </div>
-                          </div>
-                            <div className="flex items-center space-x-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 hover:bg-blue-50"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                console.log('View user button clicked for user:', user)
-                                openViewUserModal(user)
-                              }}
-                            >
-                              <Eye className="w-4 h-4 text-blue-600" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 hover:bg-green-50"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                console.log('Edit user role button clicked for user:', user)
-                                openEditUserRoleModal(user)
-                              }}
-                            >
-                              <Edit className="w-4 h-4 text-green-600" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 hover:bg-red-50"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                console.log('Delete user button clicked for user:', user)
-                                openDeleteUserModal(user)
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </Button>
-                            </div>
+                    <div className="flex items-center gap-3">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setShowRoleModal(true)}
+                        className="flex items-center gap-2 h-11 px-4 bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700 hover:text-purple-800"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Create Role</span>
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setShowRolesModal(true)}
+                        className="flex items-center gap-2 h-11 px-4 bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700 hover:text-indigo-800"
+                      >
+                        <Shield className="w-4 h-4" />
+                        <span>Manage Roles</span>
+                        <Badge variant="secondary" className="ml-1 bg-indigo-100 text-indigo-700">
+                          {roles.length}
+                        </Badge>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Search Results Info */}
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      <span>
+                        Showing {paginatedUsers.length} of {sortedUsers.length} users
+                        {searchTerm && ` matching "${searchTerm}"`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span>Real-time search</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+              {/* Users Table */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-6">
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                        <Users className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-foreground">User Management</h2>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Manage users, roles, and permissions in a structured table format
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-muted-foreground">
+                        {sortedUsers.length} users
+                      </span>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                
+                <CardContent className="p-0">
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="flex items-center gap-3">
+                          <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+                          <span className="text-muted-foreground">Loading users...</span>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead className="w-12">
+                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
+                                <Users className="w-4 h-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead 
+                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              onClick={() => handleSort("name")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>Name</span>
+                                <ArrowUpDown className="w-4 h-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead 
+                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              onClick={() => handleSort("email")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>Email</span>
+                                <ArrowUpDown className="w-4 h-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead 
+                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              onClick={() => handleSort("role")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>Role</span>
+                                <ArrowUpDown className="w-4 h-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead 
+                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              onClick={() => handleSort("projectName")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>Project</span>
+                                <ArrowUpDown className="w-4 h-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead 
+                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              onClick={() => handleSort("status")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>Status</span>
+                                <ArrowUpDown className="w-4 h-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead 
+                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              onClick={() => handleSort("createdAt")}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>Created</span>
+                                <ArrowUpDown className="w-4 h-4" />
+                              </div>
+                            </TableHead>
+                            <TableHead className="w-32 text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedUsers.map((user) => (
+                            <TableRow key={user._id} className="hover:bg-accent/50 transition-colors">
+                              <TableCell>
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
+                                {getInitials(user.name)}
+                              </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{user.name}</span>
+                                  {user.isVerified && (
+                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Mail className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-sm">{user.email}</span>
+                                  </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={`${getRoleColor(user.role)} px-2 py-1 text-xs`}>
+                                      {user.role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm text-muted-foreground">{user.projectName}</span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`${getStatusColor(user.status)} px-2 py-1 text-xs`}>
+                                    {user.status}
+                                    </Badge>
+                                  </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <Clock className="w-3 h-3" />
+                                    <span>{formatDate(user.createdAt)}</span>
+                                  </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 justify-end">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                    className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                    onClick={() => openViewUserModal(user)}
+                                  >
+                                    <Eye className="w-4 h-4 text-blue-600" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                    className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                    onClick={() => openEditUserRoleModal(user)}
+                                  >
+                                    <Edit className="w-4 h-4 text-green-600" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                                    onClick={() => openDeleteUserModal(user)}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-600" />
+                              </Button>
+                            </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                          </div>
+                    )}
+                </CardContent>
+              </Card>
 
-                {/* Pagination */}
-                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              {/* Enhanced Pagination */}
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
-                      Showing {filteredUsers.length} of {users.length} results
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">Previous</Button>
-                      <Button variant="outline" size="sm" className="bg-blue-600 text-white hover:bg-blue-700">1</Button>
-                    <Button variant="outline" size="sm">2</Button>
-                    <Button variant="outline" size="sm">3</Button>
-                    <Button variant="outline" size="sm">Next</Button>
+                    <div className="text-sm text-muted-foreground">
+                      Showing {startIndex + 1} to {Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} results
                     </div>
-                  </div>
-                </div>
-              </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                      </Button>
+                      
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          const page = i + 1
+                          return (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {page}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="flex items-center gap-1"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {/* Quick Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button 
-                  onClick={() => setShowRoleModal(true)}
-                  className="bg-white p-4 rounded-lg border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all duration-200 text-left group"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                      <Shield className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Create New Role</h4>
-                      <p className="text-sm text-gray-600">Add a new role with permissions</p>
-                    </div>
-                  </div>
-                </button>
 
-                <button 
-                  onClick={() => setShowRolesModal(true)}
-                  className="bg-white p-4 rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200 text-left group"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                      <Settings className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Manage Roles</h4>
-                      <p className="text-sm text-gray-600">Edit existing roles and permissions</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
             </main>
-          </div>
         </div>
 
         {/* Create User Modal */}
         {showCreateUserModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="bg-card rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto border border-border">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Create New User</h3>
+                <h3 className="text-xl font-semibold text-foreground">Create New User</h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -697,18 +825,18 @@ export default function AdminManageUsersPage() {
                 </div>
                 <div className="flex space-x-3 pt-4">
                   <Button
-                    className="flex-1 h-10"
+                    className="flex-1 h-10 bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={handleCreateUser}
                     disabled={isCreatingUser}
                   >
                     {isCreatingUser ? (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin text-white" />
                         Creating...
                       </>
                     ) : (
                       <>
-                        <UserPlus className="w-4 h-4 mr-2" />
+                        <UserPlus className="w-4 h-4 mr-2 text-white" />
                         Create User
                       </>
                     )}
@@ -729,53 +857,67 @@ export default function AdminManageUsersPage() {
 
         {/* Create Role Modal */}
         {showRoleModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Create New Role</h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg">
+                    <Plus className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground">Create New Role</h3>
+                    <p className="text-sm text-muted-foreground">Add a new role with permissions</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowRoleModal(false)}
-                  className="h-8 w-8 p-0"
+                  onClick={() => {
+                    setShowRoleModal(false)
+                    setNewRoleName("")
+                  }}
+                  className="h-8 w-8 p-0 hover:bg-accent"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="roleName" className="text-sm font-medium text-gray-700">Role Name</Label>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="roleName" className="text-sm font-medium text-muted-foreground">Role Name</Label>
                   <Input
                     id="roleName"
                     placeholder="Enter role name (e.g., manager, technician)"
                     value={newRoleName}
                     onChange={(e) => setNewRoleName(e.target.value)}
-                    className="mt-1 h-10"
+                    className="h-11"
                   />
                 </div>
-                <div className="flex space-x-3 pt-4">
+                <div className="flex gap-3 pt-4">
                   <Button
-                    className="flex-1 h-10"
+                    className="flex-1 h-11 bg-purple-600 hover:bg-purple-700 text-white"
                     onClick={handleCreateRole}
                     disabled={isCreatingRole}
                   >
                     {isCreatingRole ? (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin text-white" />
                         Creating...
                       </>
                     ) : (
                       <>
-                    <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="w-4 h-4 mr-2 text-white" />
                         Create Role
                       </>
                     )}
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => setShowRoleModal(false)}
+                    onClick={() => {
+                      setShowRoleModal(false)
+                      setNewRoleName("")
+                    }}
                     disabled={isCreatingRole}
-                    className="h-10"
+                    className="h-11 px-6"
                   >
                     Cancel
                   </Button>
@@ -787,10 +929,18 @@ export default function AdminManageUsersPage() {
 
         {/* Edit Role Modal */}
         {showEditRoleModal && editingRole && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Edit Role</h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+                    <Edit className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground">Edit Role</h3>
+                    <p className="text-sm text-muted-foreground">Update role information</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -798,36 +948,36 @@ export default function AdminManageUsersPage() {
                     setShowEditRoleModal(false)
                     setEditingRole(null)
                   }}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-accent"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="editRoleName" className="text-sm font-medium text-gray-700">Role Name</Label>
-                                      <Input
-                      id="editRoleName"
-                      placeholder="Enter new role name"
-                      value={editingRole.name}
-                      onChange={(e) => setEditingRole(prev => prev ? { id: prev.id, name: e.target.value } : null)}
-                      className="mt-1 h-10"
-                    />
-                </div>
-                <div className="flex space-x-3 pt-4">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="editRoleName" className="text-sm font-medium text-muted-foreground">Role Name</Label>
+                      <Input
+                        id="editRoleName"
+                        placeholder="Enter new role name"
+                        value={editingRole?.name || ''}
+                        onChange={(e) => setEditingRole(prev => prev ? { id: prev.id, name: e.target.value } : null)}
+                    className="h-11"
+                      />
+                    </div>
+                <div className="flex gap-3 pt-4">
                   <Button
-                    className="flex-1 h-10"
+                    className="flex-1 h-11 bg-green-600 hover:bg-green-700 text-white"
                     onClick={handleEditRole}
                     disabled={isUpdatingRole}
                   >
                     {isUpdatingRole ? (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin text-white" />
                         Updating...
                       </>
                     ) : (
                       <>
-                        <Edit className="w-4 h-4 mr-2" />
+                        <Edit className="w-4 h-4 mr-2 text-white" />
                         Update Role
                       </>
                     )}
@@ -839,7 +989,7 @@ export default function AdminManageUsersPage() {
                       setEditingRole(null)
                     }}
                     disabled={isUpdatingRole}
-                    className="h-10"
+                    className="h-11 px-6"
                   >
                     Cancel
                   </Button>
@@ -851,10 +1001,18 @@ export default function AdminManageUsersPage() {
 
         {/* Edit User Role Modal */}
         {showEditUserRoleModal && editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Edit User Role</h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+                    <Edit className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground">Edit User Role</h3>
+                    <p className="text-sm text-muted-foreground">Update user's role assignment</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -862,19 +1020,19 @@ export default function AdminManageUsersPage() {
                     setShowEditUserRoleModal(false)
                     setEditingUser(null)
                   }}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-accent"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="editUserRole" className="text-sm font-medium text-gray-700">Role</Label>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="editUserRole" className="text-sm font-medium text-muted-foreground">Role</Label>
                   <select
                     id="editUserRole"
-                    value={editingUser.currentRole}
+                    value={editingUser?.currentRole || ''}
                     onChange={(e) => setEditingUser(prev => prev ? { ...prev, currentRole: e.target.value } : null)}
-                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full h-11 px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                   >
                     <option value="">Select a role</option>
                     {roles.map((role) => (
@@ -884,20 +1042,20 @@ export default function AdminManageUsersPage() {
                     ))}
                   </select>
                 </div>
-                <div className="flex space-x-3 pt-4">
+                <div className="flex gap-3 pt-4">
                   <Button
-                    className="flex-1 h-10"
+                    className="flex-1 h-11 bg-green-600 hover:bg-green-700 text-white"
                     onClick={handleEditUserRole}
                     disabled={isUpdatingUserRole}
                   >
                     {isUpdatingUserRole ? (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin text-white" />
                         Updating...
                       </>
                     ) : (
                       <>
-                        <Edit className="w-4 h-4 mr-2" />
+                        <Edit className="w-4 h-4 mr-2 text-white" />
                         Update Role
                       </>
                     )}
@@ -909,7 +1067,7 @@ export default function AdminManageUsersPage() {
                       setEditingUser(null)
                     }}
                     disabled={isUpdatingUserRole}
-                    className="h-10"
+                    className="h-11 px-6"
                   >
                     Cancel
                   </Button>
@@ -921,10 +1079,18 @@ export default function AdminManageUsersPage() {
 
         {/* Delete User Confirmation Modal */}
         {showDeleteUserModal && deletingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Confirm Deletion</h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-red-500 to-pink-600 rounded-lg">
+                    <Trash2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground">Confirm Deletion</h3>
+                    <p className="text-sm text-muted-foreground">This action cannot be undone</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -932,16 +1098,26 @@ export default function AdminManageUsersPage() {
                     setShowDeleteUserModal(false)
                     setDeletingUser(null)
                   }}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-accent"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="space-y-4">
-                <p className="text-sm text-gray-700">
-                  Are you sure you want to delete user "{deletingUser.name}"? This action cannot be undone.
-                </p>
-                <div className="flex justify-end space-x-3">
+              <div className="space-y-6">
+                <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <div>
+                      <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                        Are you sure you want to delete user "{deletingUser?.name || 'Unknown'}"?
+                      </p>
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        This action cannot be undone and will permanently remove the user from the system.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -949,23 +1125,23 @@ export default function AdminManageUsersPage() {
                       setDeletingUser(null)
                     }}
                     disabled={isDeletingUser}
-                    className="h-10"
+                    className="h-11 px-6"
                   >
                     Cancel
                   </Button>
                   <Button
-                    className="h-10"
+                    className="h-11 px-6 bg-red-600 hover:bg-red-700 text-white"
                     onClick={handleDeleteUser}
                     disabled={isDeletingUser}
                   >
                     {isDeletingUser ? (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin text-white" />
                         Deleting...
                       </>
                     ) : (
                       <>
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="w-4 h-4 mr-2 text-white" />
                         Delete User
                       </>
                     )}
@@ -978,10 +1154,18 @@ export default function AdminManageUsersPage() {
 
         {/* View User Modal */}
         {showViewUserModal && viewingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
+            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">User Details</h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                    <Eye className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground">User Details</h3>
+                    <p className="text-sm text-muted-foreground">View complete user information</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -989,119 +1173,138 @@ export default function AdminManageUsersPage() {
                     setShowViewUserModal(false)
                     setViewingUser(null)
                   }}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-accent"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
+              
               <div className="space-y-6">
                 {/* User Header */}
+                <Card className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+                  <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-2xl">
-                    {getInitials(viewingUser.name)}
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-2xl shadow-lg">
+                    {getInitials(viewingUser?.name || '')}
                   </div>
-                  <div>
-                    <h4 className="text-xl font-semibold text-gray-900">{viewingUser.name}</h4>
-                    <div className="flex items-center space-x-2 mt-1">
-                      {viewingUser.isVerified && (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      <div className="flex-1">
+                        <h4 className="text-xl font-semibold text-foreground">{viewingUser?.name || 'Unknown User'}</h4>
+                        <div className="flex items-center gap-3 mt-2">
+                      {viewingUser?.isVerified && (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <CheckCircle className="w-4 h-4" />
+                              <span className="text-sm font-medium">Verified</span>
+                            </div>
                       )}
-                      <Badge className={`${getStatusColor(viewingUser.status)} px-2 py-0.5 text-xs`}>
-                        {viewingUser.status}
+                          <Badge className={`${getStatusColor(viewingUser?.status || 'inactive')} px-3 py-1`}>
+                        {viewingUser?.status || 'Unknown'}
                       </Badge>
-                      <Badge className={`${getRoleColor(viewingUser.role)} px-2 py-0.5 text-xs`}>
-                        {viewingUser.role}
+                          <Badge className={`${getRoleColor(viewingUser?.role || 'user')} px-3 py-1`}>
+                        {viewingUser?.role || 'Unknown'}
                       </Badge>
                     </div>
                   </div>
                 </div>
+                  </CardContent>
+                </Card>
 
                 {/* User Information Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Email Address</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-900">{viewingUser.email}</span>
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg font-semibold text-foreground">Personal Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <Mail className="w-4 h-4 text-blue-600" />
+                          <span className="text-foreground font-medium">{viewingUser?.email || 'No email'}</span>
                       </div>
                     </div>
                     
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Role</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Shield className="w-4 h-4 text-gray-400" />
-                        <Badge className={`${getRoleColor(viewingUser.role)} px-2 py-0.5 text-xs`}>
-                          {viewingUser.role}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Role</Label>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <Shield className="w-4 h-4 text-purple-600" />
+                          <Badge className={`${getRoleColor(viewingUser?.role || 'user')} px-3 py-1`}>
+                          {viewingUser?.role || 'Unknown'}
                         </Badge>
                       </div>
                     </div>
 
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Project</Label>
-                      <div className="mt-1">
-                        <span className="text-gray-900">{viewingUser.projectName}</span>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Project</Label>
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <span className="text-foreground font-medium">{viewingUser?.projectName || 'No project'}</span>
                       </div>
                     </div>
-                  </div>
+                    </CardContent>
+                  </Card>
 
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Account Status</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge className={`${getStatusColor(viewingUser.status)} px-2 py-0.5 text-xs`}>
-                          {viewingUser.status}
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg font-semibold text-foreground">Account Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Account Status</Label>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <Badge className={`${getStatusColor(viewingUser?.status || 'inactive')} px-3 py-1`}>
+                          {viewingUser?.status || 'Unknown'}
                         </Badge>
-                        {viewingUser.isVerified && (
-                          <div className="flex items-center space-x-1 text-green-600">
+                        {viewingUser?.isVerified && (
+                            <div className="flex items-center gap-1 text-green-600">
                             <CheckCircle className="w-3 h-3" />
-                            <span className="text-xs">Verified</span>
+                              <span className="text-xs font-medium">Verified</span>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Created</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-900">{formatDate(viewingUser.createdAt)}</span>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Created</Label>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <Clock className="w-4 h-4 text-green-600" />
+                          <span className="text-foreground font-medium">{formatDate(viewingUser?.createdAt || '')}</span>
                       </div>
                     </div>
 
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Last Updated</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-900">{formatDate(viewingUser.updatedAt)}</span>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">Last Updated</Label>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <Clock className="w-4 h-4 text-orange-600" />
+                          <span className="text-foreground font-medium">{formatDate(viewingUser?.updatedAt || '')}</span>
                       </div>
                     </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
 
-
-
                 {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 pt-4 border-t">
+                <div className="flex justify-end gap-3 pt-6 border-t border-border">
                   <Button
                     variant="outline"
                     onClick={() => {
                       setShowViewUserModal(false)
                       setViewingUser(null)
                     }}
-                    className="h-10"
+                    className="h-10 px-6"
                   >
+                    <X className="w-4 h-4 mr-2" />
                     Close
                   </Button>
                   <Button
                     onClick={() => {
                       setShowViewUserModal(false)
                       setViewingUser(null)
-                      openEditUserRoleModal(viewingUser)
+                      if (viewingUser) {
+                        openEditUserRoleModal(viewingUser)
+                      }
                     }}
-                    className="h-10"
+                    className="h-10 px-6 bg-green-600 hover:bg-green-700 text-white"
                   >
-                    <Edit className="w-4 h-4 mr-2" />
+                    <Edit className="w-4 h-4 mr-2 text-white" />
                     Edit Role
                   </Button>
                 </div>
@@ -1112,72 +1315,99 @@ export default function AdminManageUsersPage() {
 
         {/* Roles Management Modal */}
         {showRolesModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Role Management</h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground">Role Management</h3>
+                    <p className="text-sm text-muted-foreground">Manage all roles and permissions</p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowRolesModal(false)}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-accent"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600">Total Roles: {roles.length}</p>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Total Roles: {roles.length}</span>
+                  </div>
                   <Button
                     size="sm"
                     onClick={() => {
                       setShowRolesModal(false)
                       setShowRoleModal(true)
                     }}
-                    className="flex items-center space-x-2"
+                    className="flex items-center gap-2 h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Role</span>
                   </Button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {roles.map((role) => (
-                    <div
-                      key={role._id}
-                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div>
-                        <Badge className={`${getRoleColor(role.name)} px-3 py-1 text-sm font-medium`}>
-                          {role.name}
-                        </Badge>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Created: {formatDate(role.createdAt)}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-green-50" 
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            console.log('Edit button clicked for role:', role)
-                            openEditRoleModal(role)
-                          }}
-                        >
-                          <Edit className="w-4 h-4 text-green-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-red-50">
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </div>
+                    <Card key={role._id} className="border-0 shadow-sm hover:shadow-md transition-all duration-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                              <Shield className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <Badge className={`${getRoleColor(role.name)} px-3 py-1 text-sm font-medium`}>
+                                {role.name}
+                              </Badge>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Created: {formatDate(role.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600" 
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setShowRolesModal(false)
+                                openEditRoleModal(role)
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                console.log('Delete button clicked for role:', role)
+                                // Add delete role functionality here
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </div>
             </div>
-        </div>
+          </div>
         )}
 
         <ToastContainer toasts={toasts} onClose={removeToast} />

@@ -10,7 +10,8 @@ import {
   Clock,
   MoreHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye
 } from 'lucide-react';
 
 interface AssetTableProps {
@@ -37,9 +38,9 @@ export const AssetTable: React.FC<AssetTableProps> = ({
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-gray-50">
+          <TableRow className="hover:bg-accent/50">
             <TableHead 
-              className="cursor-pointer hover:bg-gray-100"
+              className="cursor-pointer hover:bg-accent transition-colors"
               onClick={() => onSort('tagId')}
             >
               <div className="flex items-center gap-1">
@@ -47,37 +48,9 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                 {getSortIcon('tagId')}
               </div>
             </TableHead>
-            <TableHead 
-              className="cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort('assetType')}
-            >
-              <div className="flex items-center gap-1">
-                Type
-                {getSortIcon('assetType')}
-              </div>
-            </TableHead>
-            <TableHead>Assigned To</TableHead>
             <TableHead>Location</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Priority</TableHead>
-            <TableHead 
-              className="cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort('createdAt')}
-            >
-              <div className="flex items-center gap-1">
-                Created
-                {getSortIcon('createdAt')}
-              </div>
-            </TableHead>
-            <TableHead 
-              className="cursor-pointer hover:bg-gray-100"
-              onClick={() => onSort('updatedAt')}
-            >
-              <div className="flex items-center gap-1">
-                Last Updated
-                {getSortIcon('updatedAt')}
-              </div>
-            </TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -87,43 +60,20 @@ export const AssetTable: React.FC<AssetTableProps> = ({
             const priorityBadge = getPriorityBadge(asset.priority || 'medium');
             
             return (
-              <TableRow key={asset._id} className="hover:bg-gray-50 transition-colors">
+              <TableRow key={asset._id} className="hover:bg-accent/50 transition-colors">
                 <TableCell>
                   <div>
-                    <div className="font-medium text-gray-900">{asset.brand} {asset.model}</div>
-                    <div className="text-sm text-gray-500 font-mono">{asset.tagId}</div>
+                    <div className="font-medium text-foreground">{asset.brand} {asset.model}</div>
+                    <div className="text-sm text-muted-foreground font-mono">{asset.tagId}</div>
                     {asset.serialNumber && (
-                      <div className="text-xs text-gray-400">SN: {asset.serialNumber}</div>
+                      <div className="text-xs text-muted-foreground/70">SN: {asset.serialNumber}</div>
                     )}
                   </div>
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <div className="font-medium text-gray-900">{asset.assetType}</div>
-                    {asset.subcategory && (
-                      <div className="text-sm text-gray-500">{asset.subcategory}</div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {asset.assignedTo ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{asset.assignedTo.name}</div>
-                        <div className="text-sm text-gray-500">{asset.assignedTo.email}</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 italic">Unassigned</span>
-                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-gray-400" />
-                    <div className="text-sm">
+                    <Building2 className="w-4 h-4 text-muted-foreground" />
+                    <div className="text-sm text-foreground">
                       {asset.location.building && `${asset.location.building}`}
                       {asset.location.floor && ` - ${asset.location.floor}`}
                       {asset.location.room && ` - ${asset.location.room}`}
@@ -142,24 +92,14 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{formatDate(asset.createdAt)}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">{formatDateTime(asset.updatedAt)}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
                   <Button 
                     variant="ghost" 
                     size="sm"
                     onClick={() => onViewDetails?.(asset)}
+                    className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
+                    title="View Details"
                   >
-                    <MoreHorizontal className="w-4 h-4" />
+                    <Eye className="w-4 h-4 text-muted-foreground hover:text-accent-foreground" />
                   </Button>
                 </TableCell>
               </TableRow>

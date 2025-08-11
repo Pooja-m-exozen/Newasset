@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { Badge } from './badge';
 import { Button } from './button';
-import { AuditLog, getActionBadge, formatDateTime } from '../../lib/Report';
+import { AuditLog, getActionBadge, } from '../../lib/Report';
 import { 
   User,
   Clock,
@@ -21,7 +21,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  MoreHorizontal
+  // MoreHorizontal
 } from 'lucide-react';
 
 interface AuditTableProps {

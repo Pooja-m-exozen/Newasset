@@ -4,12 +4,11 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../../components/ui/error-display';
-import { EmptyState } from '../../../../components/ui/empty-state';
-import { PageHeader } from '../../../../components/ui/page-header';
+
 import { AuditTable } from '../../../../components/ui/audit-table';
 import { PDFDownload, ExcelDownload } from '../../../../components/ui/pdf-download';
 import { AuditProvider, useAuditContext } from '../../../../contexts/AuditContext';
-import { filterAuditLogs } from '../../../../lib/Report';
+import { filterAuditLogs, type AuditLog } from '../../../../lib/Report';
 import { SuccessToast } from '../../../../components/ui/success-toast';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
@@ -22,62 +21,46 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Download,
-  Calendar,
   Activity,
   BarChart3,
   TrendingUp,
   Plus,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
   Clock,
   FileText,
   User,
-  Building2,
-  Settings,
-  MoreHorizontal,
-  FileSpreadsheet,
-  FileDown,
-  Printer,
-  FilterX,
   MapPin,
-  Tag,
   Building,
-  Edit,
-  Trash2,
-  Lock,
-  Unlock
+  Edit
 } from 'lucide-react';
 
 function AuditTrailsContent() {
-  const { logs, loading, error, successMessage, clearError, clearSuccess, exportToPDF, exportToExcel } = useAuditContext();
+  const { logs, loading, error, successMessage, clearError, clearSuccess } = useAuditContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState('all');
   const [filterResourceType, setFilterResourceType] = useState('all');
   const [sortBy, setSortBy] = useState('timestamp');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const filteredLogs = useMemo(() => {
-    let filtered = filterAuditLogs(logs, searchTerm, filterAction, filterResourceType);
+    const filtered = filterAuditLogs(logs, searchTerm, filterAction, filterResourceType);
     
     // Sort logs
     filtered.sort((a, b) => {
-      let aValue: any = a[sortBy as keyof typeof a];
-      let bValue: any = b[sortBy as keyof typeof b];
+      let aValue: unknown = a[sortBy as keyof typeof a];
+      let bValue: unknown = b[sortBy as keyof typeof b];
       
       if (sortBy === 'timestamp') {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
+        aValue = new Date(aValue as string).getTime();
+        bValue = new Date(bValue as string).getTime();
       }
       
       if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
+        return (aValue as number) > (bValue as number) ? 1 : -1;
       } else {
-        return aValue < bValue ? 1 : -1;
+        return (aValue as number) < (bValue as number) ? 1 : -1;
       }
     });
     
@@ -92,16 +75,9 @@ function AuditTrailsContent() {
     setSortOrder('desc');
   };
 
-  const handleSort = (field: string) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('desc');
-    }
-  };
 
-  const handleViewDetails = (log: any) => {
+
+  const handleViewDetails = (log: AuditLog) => {
     setSelectedLog(log);
     setIsViewModalOpen(true);
   };

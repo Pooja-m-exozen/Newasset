@@ -10,18 +10,11 @@ import {
   BarChart3,
   PieChart,
   RefreshCw,
-  TrendingUp,
-  TrendingDown,
-  Activity,
   Calendar,
-  Clock,
   Target,
   AlertTriangle,
-  CheckCircle,
   Building2,
-  Users,
   Gauge,
-  Zap,
   Info,
   Eye,
   Filter
@@ -105,7 +98,7 @@ export function AIPredictionsChart({
     }
   }, [predictionsData])
 
-  const renderPieChart = (data: Record<string, number>, title: string) => {
+  const renderPieChart = (data: Record<string, number>) => {
     const total = Object.values(data).reduce((sum: number, value: number) => sum + value, 0)
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
     
@@ -182,7 +175,7 @@ export function AIPredictionsChart({
     )
   }
 
-  const renderBarChart = (data: Record<string, number>, title: string) => {
+  const renderBarChart = (data: Record<string, number>) => {
     const maxValue = Math.max(...Object.values(data))
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
     
@@ -198,8 +191,8 @@ export function AIPredictionsChart({
     return (
       <div className="space-y-4">
         <div className="text-center">
-          <h4 className="text-lg font-bold text-foreground mb-1">{title}</h4>
-          <p className="text-xs text-muted-foreground">Comparative analysis</p>
+          <h4 className="text-lg font-bold text-foreground mb-1">Comparative Analysis</h4>
+          <p className="text-xs text-muted-foreground">Data visualization</p>
         </div>
         
         <div className="flex items-start space-x-6">
@@ -209,7 +202,7 @@ export function AIPredictionsChart({
               <div className="h-64 relative">
                 {/* Y-axis with refined styling */}
                 <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted-foreground font-medium">
-                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
+                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value, index) => (
                     <div key={value} className="flex items-center">
                       <span className="w-8 text-right font-semibold">{value}</span>
                       <div className="w-2 h-px bg-border ml-2"></div>
@@ -298,38 +291,18 @@ export function AIPredictionsChart({
     if (!chartData) return null
 
     const data = chartData[selectedMetric as keyof ChartData]
-    const titles = {
-      confidence: 'Confidence Distribution',
-      assetType: 'Asset Type Distribution',
-      maintenance: 'Maintenance Timeline'
-    }
 
     switch (selectedChartType) {
       case 'pie':
-        return renderPieChart(data, titles[selectedMetric as keyof typeof titles])
+        return renderPieChart(data)
       case 'bar':
-        return renderBarChart(data, titles[selectedMetric as keyof typeof titles])
+        return renderBarChart(data)
       default:
-        return renderPieChart(data, titles[selectedMetric as keyof typeof titles])
+        return renderPieChart(data)
     }
   }
 
-  const getMetricIcon = (metric: string) => {
-    switch (metric) {
-      case 'confidence': return Gauge
-      case 'assetType': return Building2
-      case 'maintenance': return Calendar
-      default: return Target
-    }
-  }
 
-  const getChartIcon = (chartType: string) => {
-    switch (chartType) {
-      case 'pie': return PieChart
-      case 'bar': return BarChart3
-      default: return PieChart
-    }
-  }
 
   // Loading state
   if (isLoading) {

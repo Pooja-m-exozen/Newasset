@@ -9,7 +9,7 @@ import {
   createLocation,
   updateLocation,
   deleteLocation,
-  getLocationById
+  // getLocationById
 } from '../lib/location';
 
 interface ManageLocationContextType {

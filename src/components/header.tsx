@@ -12,7 +12,7 @@ import {
   User,
   LogOut,
   ChevronDown,
-  Search
+  // Search
 } from "lucide-react"
 
 export default function Header() {

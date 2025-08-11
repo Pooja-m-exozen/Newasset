@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Badge } from './badge'
-import { generateAllDigitalAssets, type BulkDigitalAssetsGenerationResponse } from '@/lib/DigitalAssets'
+import { generateAllDigitalAssets} from '@/lib/DigitalAssets'
 import { Package, CheckCircle, XCircle } from 'lucide-react'
 
 export function BulkTest() {

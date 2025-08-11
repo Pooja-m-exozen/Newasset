@@ -4,16 +4,29 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../../components/ui/error-display';
-import { EmptyState } from '../../../../components/ui/empty-state';
-import { PageHeader } from '../../../../components/ui/page-header';
 import { AssetTable } from '../../../../components/ui/asset-table';
 import { AssetGrid } from '../../../../components/ui/asset-grid';
-import { FilterBar } from '../../../../components/ui/filter-bar';
-import { ViewModeToggle } from '../../../../components/ui/view-mode-toggle';
-import { ExportButtons } from '../../../../components/ui/export-buttons';
 import { AssetPDFDownload, AssetExcelDownload } from '../../../../components/ui/asset-pdf-download';
 import { ReportProvider, useReportContext } from '../../../../contexts/ReportContext';
 import { filterAssets } from '../../../../lib/Report';
+
+// Define asset interface for type safety
+interface Asset {
+  _id?: string;
+  tagId?: string;
+  assetId?: string;
+  assetType?: string;
+  type?: string;
+  brand?: string;
+  status?: string;
+  priority?: string;
+  description?: string;
+  location?: string | { building?: string; floor?: string; room?: string };
+  assignedTo?: string | { name?: string; email?: string };
+  userEmail?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 import { SuccessToast } from '../../../../components/ui/success-toast';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
@@ -21,17 +34,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
 import { 
-  Download, 
   Activity,
   MapPin,
   Search,
-  Filter,
   RefreshCw,
   FileText,
   BarChart3,
-  Eye,
   Edit,
-  Trash2,
   Plus,
   Calendar,
   Clock,
@@ -39,16 +48,8 @@ import {
   CheckCircle,
   XCircle,
   TrendingUp,
-  Users,
   Building2,
-  Settings,
-  MoreHorizontal,
-  FileSpreadsheet,
-  FileDown,
-  Printer,
-  FilterX,
   User,
-  Tag,
   Building,
   Smartphone,
   Monitor,
@@ -61,30 +62,30 @@ function AssetsLogsContent() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterType, setFilterType] = useState('all');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode] = useState<'table' | 'grid'>('table');
   const [sortBy, setSortBy] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [showFilters] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const filteredAssets = useMemo(() => {
-    let filtered = filterAssets(assets, searchTerm, filterStatus, filterPriority, filterType);
+    const filtered = filterAssets(assets, searchTerm, filterStatus, filterPriority, filterType);
     
     // Sort assets
     filtered.sort((a, b) => {
-      let aValue: any = a[sortBy as keyof typeof a];
-      let bValue: any = b[sortBy as keyof typeof b];
+      let aValue: unknown = a[sortBy as keyof typeof a];
+      let bValue: unknown = b[sortBy as keyof typeof b];
       
       if (sortBy === 'updatedAt' || sortBy === 'createdAt') {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
+        aValue = new Date(aValue as string).getTime();
+        bValue = new Date(bValue as string).getTime();
       }
       
       if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
+        return (aValue as number) > (bValue as number) ? 1 : -1;
       } else {
-        return aValue < bValue ? 1 : -1;
+        return (aValue as number) < (bValue as number) ? 1 : -1;
       }
     });
     
@@ -109,7 +110,7 @@ function AssetsLogsContent() {
     }
   };
 
-  const handleViewDetails = (asset: any) => {
+  const handleViewDetails = (asset: Asset) => {
     setSelectedAsset(asset);
     setIsViewModalOpen(true);
   };
@@ -189,7 +190,7 @@ function AssetsLogsContent() {
     );
   };
 
-  const formatLocation = (location: any) => {
+  const formatLocation = (location: Asset['location']) => {
     if (!location) return 'No location specified';
     
     if (typeof location === 'string') {
@@ -459,7 +460,7 @@ function AssetsLogsContent() {
                   {/* Asset Header */}
                   <div className="flex items-center gap-4 p-4 bg-card/50 rounded-lg border border-border">
                     <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                      {React.createElement(getAssetTypeIcon(selectedAsset.assetType || selectedAsset.type), {
+                      {React.createElement(getAssetTypeIcon(selectedAsset.assetType || selectedAsset.type || 'unknown'), {
                         className: "w-6 h-6 text-white"
                       })}
                     </div>

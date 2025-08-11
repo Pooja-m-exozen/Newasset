@@ -6,50 +6,28 @@ import { Button } from './button'
 import { Badge } from './badge'
 import { Switch } from './switch'
 import { Label } from './label'
-import { Input } from './input'
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog'
 import { 
   Shield, 
   Users, 
   Building2, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Plus, 
   Save, 
-  X, 
   CheckCircle, 
   AlertTriangle,
-  Lock,
-  Unlock,
   Settings,
-  UserCheck,
-  UserX,
   Key,
   Database,
   FileText,
   BarChart3,
   Activity,
-  Zap,
   RefreshCw,
-  Download,
-  Upload,
-  Camera,
   MapPin,
-  Bell,
   CreditCard,
   Workflow,
   Smartphone,
-  Info,
-  Search,
-  Sparkles,
-  TrendingUp,
-  Clock,
-  Star,
-  ArrowLeft,
-  Filter,
-  MoreHorizontal
+  Filter
 } from 'lucide-react'
 
 interface PermissionCategory {
@@ -127,18 +105,7 @@ interface RolesResponse {
   roles: Role[]
 }
 
-interface PermissionRequest {
-  role: string
-  permissions: {
-    view?: boolean
-    create?: boolean
-    edit?: boolean
-    delete?: boolean
-    export?: boolean
-    sync?: boolean
-    [key: string]: boolean | undefined
-  }
-}
+
 
 interface AccessControl {
   timeRestrictions: {
@@ -176,96 +143,23 @@ interface SecuritySettings {
   ipRestrictions: string[]
 }
 
-interface PermissionResponse {
-  success: boolean
-  message: string
-  data: {
-    accessControl: AccessControl
-    advancedFeatures: AdvancedFeatures
-    securitySettings: SecuritySettings
-    _id: string
-    role: string
-    __v: number
-    createdAt: string
-    updatedAt: string
-    isActive: boolean
-    version: number
-  }
-}
 
-interface User {
-  workSchedule: {
-    workingDays: string[]
-  }
-  permissions: Permissions
-  specialization: string[]
-  _id: string
-  name: string
-  email: string
-  role: string
-  projectName: string
-  isVerified: boolean
-  verificationToken: string | null
-  status: string
-  resetPasswordExpires: string
-  createdAt: string
-  updatedAt: string
-  __v: number
-  resetPasswordToken: string
-  facilities: string[]
-  certifications: string[]
-  loginHistory: any[]
-  activityLog: any[]
-}
 
-interface ApiResponse {
-  success: boolean
-  user: {
-    permissions: Permissions
-    deviceAccess: {
-      web: boolean
-      mobile: boolean
-      tablet: boolean
-    }
-    performanceMetrics: {
-      tasksCompleted: number
-    }
-    specialization: string[]
-    _id: string
-    name: string
-    email: string
-    role: string
-    projectName: string
-    isVerified: boolean
-    verificationToken: string | null
-    status: string
-    resetPasswordExpires: string
-    createdAt: string
-    updatedAt: string
-    __v: number
-    resetPasswordToken: string
-    facilities: string[]
-    certifications: string[]
-    loginHistory: any[]
-    activityLog: any[]
-  }
-}
+
+
+
 
 interface PermissionsUIProps {
-  permissions?: Permissions
   loading?: boolean
   error?: string | null
-  onUpdatePermissions?: (permissions: Permissions) => void
   onClearError?: () => void
   bearerToken?: string
   role?: string
 }
 
 export function PermissionsUI({
-  permissions,
   loading = false,
   error = null,
-  onUpdatePermissions,
   onClearError,
   bearerToken,
   role = ''
@@ -506,13 +400,13 @@ export function PermissionsUI({
     if (!isSaving && selectedRole && roles.length > 0) {
       fetchPermissions()
     }
-  }, [bearerToken, selectedRole, roles]) // Fetch when bearerToken, selectedRole, or roles change
+  }, [bearerToken, selectedRole, roles, isSaving]) // Fetch when bearerToken, selectedRole, roles, or isSaving change
 
   useEffect(() => {
     if (bearerToken) {
       fetchRoles()
     }
-  }, [bearerToken]) // Fetch roles when bearerToken changes
+  }, [bearerToken, fetchRoles]) // Fetch roles when bearerToken or fetchRoles changes
 
   // Handle save success without any refetch
   const handleSaveSuccess = () => {
@@ -560,24 +454,7 @@ export function PermissionsUI({
     return <Settings className="h-4 w-4" />
   }
 
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      assetManagement: 'bg-blue-100 text-blue-800 border-blue-200',
-      digitalAssets: 'bg-green-100 text-green-800 border-green-200',
-      maintenance: 'bg-orange-100 text-orange-800 border-orange-200',
-      compliance: 'bg-purple-100 text-purple-800 border-purple-200',
-      analytics: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      userManagement: 'bg-pink-100 text-pink-800 border-pink-200',
-      systemAdmin: 'bg-red-100 text-red-800 border-red-200',
-      admin: 'bg-gray-100 text-gray-800 border-gray-200',
-      locationManagement: 'bg-teal-100 text-teal-800 border-teal-200',
-      documentManagement: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-      financialManagement: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      workflowManagement: 'bg-violet-100 text-violet-800 border-violet-200',
-      mobileFeatures: 'bg-amber-100 text-amber-800 border-amber-200'
-    }
-    return colors[category] || 'bg-gray-100 text-gray-800 border-gray-200'
-  }
+
 
   const handlePermissionToggle = (category: string, permission: string, enabled: boolean) => {
     if (!apiPermissions) return
@@ -599,68 +476,7 @@ export function PermissionsUI({
     }
   }
 
-  // Helper function to convert flattened permissions to structured format
-  const convertFlattenedToStructured = (flattenedPermissions: { [key: string]: boolean }): Permissions => {
-    const structuredPermissions: Permissions = {
-      assetManagement: {},
-      digitalAssets: {},
-      maintenance: {},
-      compliance: {},
-      analytics: {},
-      userManagement: {},
-      systemAdmin: {},
-      admin: {},
-      locationManagement: {},
-      documentManagement: {},
-      financialManagement: {},
-      workflowManagement: {},
-      mobileFeatures: {}
-    }
 
-    // Map permissions to their respective categories
-    const permissionMapping: { [key: string]: keyof Permissions } = {
-      view: 'assetManagement',
-      create: 'assetManagement',
-      edit: 'assetManagement',
-      delete: 'assetManagement',
-      assign: 'assetManagement',
-      bulkOperations: 'assetManagement',
-      import: 'assetManagement',
-      export: 'assetManagement',
-      generate: 'digitalAssets',
-      scan: 'digitalAssets',
-      bulkGenerate: 'digitalAssets',
-      download: 'digitalAssets',
-      customize: 'digitalAssets',
-      approve: 'maintenance',
-      schedule: 'maintenance',
-      complete: 'maintenance',
-      audit: 'compliance',
-      report: 'analytics',
-      share: 'documentManagement',
-      assignRoles: 'userManagement',
-      managePermissions: 'userManagement',
-      configure: 'systemAdmin',
-      backup: 'systemAdmin',
-      restore: 'systemAdmin',
-      monitor: 'systemAdmin',
-      upload: 'documentManagement',
-      offline: 'mobileFeatures',
-      sync: 'mobileFeatures',
-      location: 'locationManagement',
-      camera: 'mobileFeatures',
-      notifications: 'mobileFeatures'
-    }
-
-    Object.entries(flattenedPermissions).forEach(([permission, value]) => {
-      const category = permissionMapping[permission]
-      if (category && structuredPermissions[category]) {
-        (structuredPermissions[category] as any)[permission] = value
-      }
-    })
-
-    return structuredPermissions
-  }
 
   const getPermissionLabel = (permission: string) => {
     const labels: { [key: string]: string } = {
@@ -794,7 +610,7 @@ export function PermissionsUI({
                 Permissions Updated Successfully!
               </h4>
               <p className="text-green-600 dark:text-green-400 text-xs">
-                The permissions for role "{selectedRole}" have been saved.
+                The permissions for role &quot;{selectedRole}&quot; have been saved.
               </p>
             </div>
           </div>

@@ -7,7 +7,7 @@ import { Button } from './button'
 import { Badge } from './badge'
 import { Progress } from './progress'
 import { LoadingSpinner } from './loading-spinner'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog'
 import { Input } from './input'
 import { Label } from './label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
@@ -15,58 +15,101 @@ import { Textarea } from './textarea'
 import { AIPredictionsChart } from './ai-predictions-chart'
 import { 
   TrendingUp, 
-  TrendingDown, 
   Activity,
   AlertCircle,
   CheckCircle,
-  Clock,
   DollarSign,
-  Target,
   Zap,
   RefreshCw,
   Brain,
-  BarChart3,
   Settings,
-  Bell,
   Gauge,
   Thermometer,
-  Wrench,
   AlertTriangle,
-  Eye,
-  PieChart,
-  LineChart,
-  AreaChart,
-  UserCheck,
   FileText,
   Building2,
   Users,
   MapPin,
   Plus,
-  Search,
-  Filter,
   X,
   Calendar,
   Clock as ClockIcon
 } from 'lucide-react'
 
 interface EnhancedDashboardProps {
-  dashboardData: any
+  dashboardData: {
+    data?: {
+      assetStats?: {
+        totalAssets?: number
+        activeAssets?: number
+        criticalAssets?: number
+        highPriorityAssets?: number
+        underMaintenance?: number
+      }
+      performanceData?: {
+        insights?: {
+          overallEfficiency?: number
+        }
+        healthScore?: number
+      }
+    }
+  } | null
   isLoading: boolean
   error: string | null
   onRefresh: () => void
-  predictionsData?: any
+  predictionsData?: {
+    success: boolean
+    count: number
+    predictions: Array<{
+      assetId: string
+      assetType: string
+      prediction: {
+        confidence: number
+        nextMaintenanceDate: string
+        predictedIssues: string[]
+      }
+    }>
+  } | null
   isPredictionsLoading?: boolean
   predictionsError?: string | null
   onRefreshPredictions?: () => void
-  healthData?: any
+  healthData?: {
+    success?: boolean
+    statistics?: {
+      excellent?: number
+      good?: number
+      fair?: number
+      poor?: number
+      critical?: number
+    }
+  } | null
   isHealthLoading?: boolean
   healthError?: string | null
   onRefreshHealth?: () => void
-  costData?: any
+  costData?: {
+    success?: boolean
+    statistics?: {
+      totalPurchaseCost: number
+      totalCurrentValue: number
+      totalDepreciation: number
+      avgDepreciationRate: number
+      assetCount: number
+    }
+  } | null
   isCostLoading?: boolean
   costError?: string | null
   onRefreshCost?: () => void
-  trendsData?: any
+  trendsData?: {
+    success?: boolean
+    period?: string
+    totalRecords?: number
+    trendData?: Array<{
+      maintenanceCount: number
+      pendingCount: number
+      completedCount: number
+      emergencyCount: number
+    }>
+  } | null
   isTrendsLoading?: boolean
   trendsError?: string | null
   onRefreshTrends?: () => void
@@ -173,8 +216,8 @@ export function EnhancedDashboard({
         }
       }
       
-      const data = await response.json()
-      setAlertsData(data)
+      const responseData = await response.json()
+      setAlertsData(responseData)
     } catch (error) {
       setAlertsError(error instanceof Error ? error.message : 'An error occurred while fetching alerts data')
     } finally {
@@ -361,8 +404,8 @@ export function EnhancedDashboard({
       color: "bg-gradient-to-r from-indigo-500 to-indigo-600",
       trend: "up",
       description: "AI-powered maintenance predictions",
-      subValue: `${predictionsData?.predictions?.filter((p: any) => p.prediction.confidence > 0.7).length || 0} High Confidence`,
-      health: predictionsData?.predictions?.length ? Math.round((predictionsData.predictions.filter((p: any) => p.prediction.confidence > 0.7).length / predictionsData.predictions.length) * 100) : 0,
+      subValue: `${predictionsData?.predictions?.filter((p) => p.prediction.confidence > 0.7).length || 0} High Confidence`,
+      health: predictionsData?.predictions?.length ? Math.round((predictionsData.predictions.filter((p) => p.prediction.confidence > 0.7).length / predictionsData.predictions.length) * 100) : 0,
       priority: "normal"
     },
     {
@@ -384,40 +427,40 @@ export function EnhancedDashboard({
     { 
       name: "Excellent", 
       status: "excellent", 
-      count: healthData.statistics.excellent || 0, 
-      percentage: healthData.statistics.excellent > 0 ? Math.round((healthData.statistics.excellent / (healthData.statistics.excellent + healthData.statistics.good + healthData.statistics.fair + healthData.statistics.poor + healthData.statistics.critical)) * 100) : 0,
+      count: healthData.statistics.excellent ?? 0, 
+      percentage: (healthData.statistics.excellent ?? 0) > 0 ? Math.round(((healthData.statistics.excellent ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
       color: "bg-green-500",
       icon: CheckCircle
     },
     { 
       name: "Good", 
       status: "good", 
-      count: healthData.statistics.good || 0, 
-      percentage: healthData.statistics.good > 0 ? Math.round((healthData.statistics.good / (healthData.statistics.excellent + healthData.statistics.good + healthData.statistics.fair + healthData.statistics.poor + healthData.statistics.critical)) * 100) : 0,
+      count: healthData.statistics.good ?? 0, 
+      percentage: (healthData.statistics.good ?? 0) > 0 ? Math.round(((healthData.statistics.good ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
       color: "bg-blue-500",
       icon: Activity
     },
     { 
       name: "Fair", 
       status: "fair", 
-      count: healthData.statistics.fair || 0, 
-      percentage: healthData.statistics.fair > 0 ? Math.round((healthData.statistics.fair / (healthData.statistics.excellent + healthData.statistics.good + healthData.statistics.fair + healthData.statistics.poor + healthData.statistics.critical)) * 100) : 0,
+      count: healthData.statistics.fair ?? 0, 
+      percentage: (healthData.statistics.fair ?? 0) > 0 ? Math.round(((healthData.statistics.fair ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
       color: "bg-yellow-500",
       icon: AlertTriangle
     },
     { 
       name: "Poor", 
       status: "poor", 
-      count: healthData.statistics.poor || 0, 
-      percentage: healthData.statistics.poor > 0 ? Math.round((healthData.statistics.poor / (healthData.statistics.excellent + healthData.statistics.good + healthData.statistics.fair + healthData.statistics.poor + healthData.statistics.critical)) * 100) : 0,
+      count: healthData.statistics.poor ?? 0, 
+      percentage: (healthData.statistics.poor ?? 0) > 0 ? Math.round(((healthData.statistics.poor ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
       color: "bg-orange-500",
       icon: AlertTriangle
     },
     { 
       name: "Critical", 
       status: "critical", 
-      count: healthData.statistics.critical || 0, 
-      percentage: healthData.statistics.critical > 0 ? Math.round((healthData.statistics.critical / (healthData.statistics.excellent + healthData.statistics.good + healthData.statistics.fair + healthData.statistics.poor + healthData.statistics.critical)) * 100) : 0,
+      count: healthData.statistics.critical ?? 0, 
+      percentage: (healthData.statistics.critical ?? 0) > 0 ? Math.round(((healthData.statistics.critical ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
       color: "bg-red-500",
       icon: AlertCircle
     }
@@ -465,7 +508,7 @@ export function EnhancedDashboard({
   ]
 
   // Cost Analysis Data - Using real API data
-  const costAnalysisData = costData?.success ? {
+  const costAnalysisData = costData?.success && costData?.statistics ? {
     totalPurchaseCost: costData.statistics.totalPurchaseCost,
     totalCurrentValue: costData.statistics.totalCurrentValue,
     totalDepreciation: costData.statistics.totalDepreciation,
@@ -489,12 +532,12 @@ export function EnhancedDashboard({
 
   // Trend Analysis - Using real API data
   const trendAnalysis = trendsData?.success ? {
-    scheduled: trendsData.trendData.reduce((sum: number, item: any) => sum + item.maintenanceCount, 0),
-    inProgress: trendsData.trendData.reduce((sum: number, item: any) => sum + item.pendingCount, 0),
-    completed: trendsData.trendData.reduce((sum: number, item: any) => sum + item.completedCount, 0),
-    overdue: trendsData.trendData.reduce((sum: number, item: any) => sum + item.emergencyCount, 0),
-    total: trendsData.totalRecords,
-    efficiency: trendsData.trendData.length > 0 ? Math.round((trendsData.trendData.reduce((sum: number, item: any) => sum + item.completedCount, 0) / trendsData.totalRecords) * 100) : 0,
+    scheduled: trendsData.trendData?.reduce((sum: number, item) => sum + item.maintenanceCount, 0) || 0,
+    inProgress: trendsData.trendData?.reduce((sum: number, item) => sum + item.pendingCount, 0) || 0,
+    completed: trendsData.trendData?.reduce((sum: number, item) => sum + item.completedCount, 0) || 0,
+    overdue: trendsData.trendData?.reduce((sum: number, item) => sum + item.emergencyCount, 0) || 0,
+    total: trendsData.totalRecords || 0,
+    efficiency: trendsData.trendData && trendsData.trendData.length > 0 ? Math.round((trendsData.trendData.reduce((sum: number, item) => sum + item.completedCount, 0) / (trendsData.totalRecords || 1)) * 100) : 0,
     avgCompletionTime: "2.3 days", // This could be calculated from the API data if available
     costSavings: "$12,500" // This could be calculated from the API data if available
   } : {
@@ -508,15 +551,7 @@ export function EnhancedDashboard({
     costSavings: "$0"
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800'
-      case 'low': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800'
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
-      default: return 'bg-muted text-muted-foreground border-border'
-    }
-  }
+
 
 
 
@@ -936,7 +971,7 @@ export function EnhancedDashboard({
             {/* AI Predictions Chart Section - Reduced Width */}
             <div className="lg:col-span-2">
               <AIPredictionsChart
-                predictionsData={predictionsData}
+                predictionsData={predictionsData || null}
                 isLoading={isPredictionsLoading}
                 error={predictionsError}
                 onRefresh={onRefreshPredictions || (() => {})}

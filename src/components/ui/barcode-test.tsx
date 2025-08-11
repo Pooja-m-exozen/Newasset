@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Badge } from './badge'
-import { generateBarcode, type BarcodeGenerationResponse } from '@/lib/DigitalAssets'
+import { generateBarcode,} from '@/lib/DigitalAssets'
 import { Barcode, CheckCircle, XCircle } from 'lucide-react'
 
 export function BarcodeTest() {

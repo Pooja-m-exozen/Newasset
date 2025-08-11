@@ -2,7 +2,7 @@ import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Badge } from './badge'
 import { Button } from './button'
-import { Progress } from './progress'
+// import { Progress } from './progress'
 import { Prediction } from '@/lib/AdminDashboard'
 import { 
   Calendar, 
@@ -132,7 +132,7 @@ export const PredictionsCard: React.FC<PredictionsCardProps> = ({
 
           {/* Predictions List */}
           <div className="space-y-3">
-            {predictions.map((prediction, index) => {
+            {predictions.map((prediction,) => {
               const daysUntil = getDaysUntilMaintenance(prediction.prediction.nextMaintenanceDate)
               const UrgencyIcon = getUrgencyIcon(daysUntil)
               

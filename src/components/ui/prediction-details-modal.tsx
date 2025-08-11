@@ -13,7 +13,7 @@ import {
   BarChart3,
   X,
   Download,
-  FileText,
+  // FileText,
   Settings,
   Wrench
 } from 'lucide-react'

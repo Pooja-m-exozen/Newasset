@@ -1,20 +1,51 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
 import { Badge } from './badge'
 import { Separator } from './separator'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './dialog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from './dialog'
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { generateAllDigitalAssets, type BulkDigitalAssetsGenerationResponse } from '@/lib/DigitalAssets'
 import { cn } from '@/lib/utils'
-import { Search, Building, MapPin, User, Calendar, Hash, AlertCircle, CheckCircle, Clock, Package, Eye, EyeOff, QrCode, Barcode, Wifi, X, Download, Share2, Copy, Scan } from 'lucide-react'
+import { Search, Building, MapPin, User, Calendar, Hash, AlertCircle, Package, Eye, EyeOff, QrCode, Barcode, Wifi, X, Download, Share2, Copy, Scan } from 'lucide-react'
 
 // API Base URL constant
 const API_BASE_URL = 'http://192.168.0.5:5021'
+
+interface Asset {
+  _id: string;
+  tagId: string;
+  assetType: string;
+  subcategory?: string;
+  brand: string;
+  model?: string;
+  serialNumber?: string;
+  capacity?: string;
+  status?: string;
+  priority?: string;
+  digitalTagType?: string;
+  projectName?: string;
+  yearOfInstallation?: string;
+  notes?: string;
+  location: {
+    latitude: string;
+    longitude: string;
+    building?: string;
+    floor?: string;
+    room?: string;
+  };
+  createdBy: {
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface AssetsViewerProps {
   className?: string;
@@ -37,7 +68,7 @@ export function AssetsViewer({ className }: AssetsViewerProps) {
   const [searchTagId, setSearchTagId] = useState('')
   const [showAssetDetails, setShowAssetDetails] = useState(false)
   const [showDigitalAssetsModal, setShowDigitalAssetsModal] = useState(false)
-  const [selectedAssetForDigitalAssets, setSelectedAssetForDigitalAssets] = useState<any>(null)
+  const [selectedAssetForDigitalAssets, setSelectedAssetForDigitalAssets] = useState<Asset | null>(null)
   const [digitalAssets, setDigitalAssets] = useState<BulkDigitalAssetsGenerationResponse | null>(null)
   const [isGeneratingDigitalAssets, setIsGeneratingDigitalAssets] = useState(false)
   const [digitalAssetsError, setDigitalAssetsError] = useState<string | null>(null)
@@ -46,9 +77,13 @@ export function AssetsViewer({ className }: AssetsViewerProps) {
   const [isScanning, setIsScanning] = useState(false)
 
   // Load assets on component mount
-  useEffect(() => {
+  const loadAssets = useCallback(() => {
     fetchAssets()
-  }, []) // Remove fetchAssets from dependencies to prevent infinite loop
+  }, [fetchAssets])
+
+  useEffect(() => {
+    loadAssets()
+  }, [loadAssets])
 
   const handleSearchByTagId = async () => {
     if (!searchTagId.trim()) {
@@ -60,7 +95,7 @@ export function AssetsViewer({ className }: AssetsViewerProps) {
       // First try to get the specific asset
       await fetchAssetByTagId(searchTagId.trim())
       setShowAssetDetails(true)
-    } catch (err) {
+    } catch {
       // If specific asset not found, search for similar assets
       await searchAssets(searchTagId.trim())
       setShowAssetDetails(false)
@@ -74,7 +109,7 @@ export function AssetsViewer({ className }: AssetsViewerProps) {
     fetchAssets()
   }
 
-  const handleViewDigitalAssets = async (asset: any) => {
+  const handleViewDigitalAssets = async (asset: Asset) => {
     setSelectedAssetForDigitalAssets(asset)
     setShowDigitalAssetsModal(true)
     setDigitalAssets(null)
@@ -717,11 +752,12 @@ export function AssetsViewer({ className }: AssetsViewerProps) {
                       <div className="flex justify-center">
                         <div className="relative bg-white rounded-2xl shadow-2xl p-8 border-8 border-white">
                           <div className="w-64 h-64 bg-white rounded-xl overflow-hidden">
-                            <img
+                            <Image
                               src={`${API_BASE_URL}${digitalAssets.digitalAssets.qrCode.url}`}
                               alt={`QR Code for ${digitalAssets.digitalAssets.qrCode.data.tagId}`}
+                              width={256}
+                              height={256}
                               className="w-full h-full object-contain p-4"
-                              crossOrigin="anonymous"
                             />
                           </div>
                         </div>
@@ -797,11 +833,12 @@ export function AssetsViewer({ className }: AssetsViewerProps) {
                       <div className="flex justify-center">
                         <div className="relative bg-white rounded-2xl shadow-2xl p-8 border-8 border-white">
                           <div className="w-80 h-40 bg-white rounded-xl overflow-hidden">
-                            <img
+                            <Image
                               src={`${API_BASE_URL}${digitalAssets.digitalAssets.barcode.url}`}
                               alt={`Barcode for ${digitalAssets.digitalAssets.barcode.data}`}
+                              width={320}
+                              height={160}
                               className="w-full h-full object-contain p-4"
-                              crossOrigin="anonymous"
                             />
                           </div>
                         </div>

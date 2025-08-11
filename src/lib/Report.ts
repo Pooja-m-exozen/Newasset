@@ -146,7 +146,7 @@ export interface AuditLog {
     };
     photos?: string[];
     projectName?: string;
-    [key: string]: any; // For other dynamic properties
+    [key: string]: string | number | boolean | object | null | undefined; // For other dynamic properties
   };
   timestamp: string;
   __v: number;

@@ -47,13 +47,25 @@ import { useAutomation } from '@/contexts/AutomationContext'
 import { DecisionRequest, DecisionLearningRequest } from '@/lib/automation'
 
 // Define types for Decision Rule and Analytics Data
+interface Condition {
+  field: string
+  operator: string
+  value: string | number | boolean
+}
+
+interface Action {
+  type: string
+  target: string
+  message: string
+}
+
 interface DecisionRule {
   id: string
   name: string
   description: string
   type: string
-  conditions: any[]
-  actions: any[]
+  conditions: Condition[]
+  actions: Action[]
   isActive: boolean
   accuracy: number
   lastExecuted: string
@@ -281,15 +293,15 @@ export function AutomationDecisions() {
     }
   }
 
-  const formatConditions = (conditions: any[]) => {
+  const formatConditions = (conditions: Condition[]) => {
     return conditions.map(condition => 
       `${condition.field} ${condition.operator} ${condition.value}`
     ).join(', ')
   }
 
-  const formatActions = (actions: any[]) => {
+  const formatActions = (actions: Action[]) => {
     return actions.map(action => 
-      `${action.type}: ${action.action || action.message}`
+      `${action.type}: ${action.message}`
     ).join(', ')
   }
 

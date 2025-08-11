@@ -50,7 +50,7 @@ export const PDFDownload: React.FC<PDFDownloadProps> = ({
       doc.setFont('helvetica', 'normal');
       let currentY = startY + 10;
       
-      logs.forEach((log, index) => {
+      logs.forEach((log,) => {
         if (currentY > 250) {
           doc.addPage();
           currentY = 20;

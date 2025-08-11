@@ -50,7 +50,7 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
       doc.setFont('helvetica', 'normal');
       let currentY = startY + 10;
       
-      assets.forEach((asset, index) => {
+      assets.forEach((asset) => {
         if (currentY > 250) {
           doc.addPage();
           currentY = 20;
@@ -106,7 +106,6 @@ export const AssetExcelDownload: React.FC<{
   const downloadExcel = async () => {
     try {
       // Dynamic import to avoid SSR issues
-      // @ts-ignore - xlsx library might not be installed
       const XLSX = await import('xlsx');
       
       // Prepare data for Excel

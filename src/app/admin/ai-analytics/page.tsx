@@ -1,16 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { PageHeader } from '@/components/ui/page-header'
 import { AIAnalyticsDashboard } from '@/components/ui/ai-analytics-dashboard'
 import { Brain } from 'lucide-react'
 import { 
   getSystemInsights, 
-  getPerformanceMetrics, 
-  getPredictiveInsights,
   convertApiResponseToInsights,
   type SystemInsight,
-  type SystemPerformance,
   type AIInsightsResponse,
   type Recommendation,
   type RecommendationRequest
@@ -18,7 +15,6 @@ import {
 
 export default function AIAnalyticsPage() {
   const [insights, setInsights] = useState<SystemInsight[]>([])
-  const [performance, setPerformance] = useState<SystemPerformance | null>(null)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [aiInsights, setAiInsights] = useState<AIInsightsResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -26,7 +22,7 @@ export default function AIAnalyticsPage() {
   const [selectedTimeRange, setSelectedTimeRange] = useState('30_days')
   const [selectedInsightType, setSelectedInsightType] = useState('performance')
   const [bearerToken, setBearerToken] = useState('')
-  const [anomalies, setAnomalies] = useState<any[]>([])
+  const [anomalies, setAnomalies] = useState<unknown[]>([])
   const [totalAnomalies, setTotalAnomalies] = useState(0)
   const [anomaliesLoading, setAnomaliesLoading] = useState(false)
   const [anomaliesError, setAnomaliesError] = useState<string | null>(null)
@@ -45,7 +41,7 @@ export default function AIAnalyticsPage() {
     }
   }, [])
 
-  const fetchInsights = async (insightType: string = selectedInsightType, timeRange: string = selectedTimeRange) => {
+  const fetchInsights = useCallback(async (insightType: string = selectedInsightType, timeRange: string = selectedTimeRange) => {
     if (!bearerToken) {
       setError('Bearer token is required')
       return
@@ -72,9 +68,9 @@ export default function AIAnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [bearerToken, selectedInsightType, selectedTimeRange])
 
-  const fetchRecommendations = async (request: RecommendationRequest) => {
+  const fetchRecommendations = useCallback(async (request: RecommendationRequest) => {
     if (!bearerToken) {
       setError('Bearer token is required')
       return
@@ -98,9 +94,9 @@ export default function AIAnalyticsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [bearerToken])
 
-  const fetchPerformanceAnomalies = async (assetIds?: string, timeWindow?: string) => {
+  const fetchPerformanceAnomalies = useCallback(async () => {
     if (!bearerToken) {
       setAnomaliesError('Bearer token is required')
       return
@@ -110,15 +106,6 @@ export default function AIAnalyticsPage() {
     setAnomaliesError(null)
     
     try {
-      const requestBody = {
-        assetIds: assetIds || "688c4937d60a8def2a6cd5dc",
-        optimizationCriteria: {
-          minimizeCost: true,
-          maximizeEfficiency: true,
-          timeWindow: timeWindow || "30_days"
-        }
-      }
-
       const response = await fetch('http://192.168.0.5:5021/api/ai/anomalies/performance', {
         method: 'GET',
         headers: {
@@ -153,30 +140,30 @@ export default function AIAnalyticsPage() {
     } finally {
       setAnomaliesLoading(false)
     }
-  }
+  }, [bearerToken])
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     fetchInsights()
     fetchPerformanceAnomalies()
-  }
+  }, [fetchInsights, fetchPerformanceAnomalies])
 
-  const handleAnomaliesRefresh = () => {
+  const handleAnomaliesRefresh = useCallback(() => {
     fetchPerformanceAnomalies()
-  }
+  }, [fetchPerformanceAnomalies])
 
-  const handleTimeRangeChange = (timeRange: string) => {
+  const handleTimeRangeChange = useCallback((timeRange: string) => {
     setSelectedTimeRange(timeRange)
     fetchInsights(selectedInsightType, timeRange)
-  }
+  }, [selectedInsightType, fetchInsights])
 
-  const handleInsightTypeChange = (insightType: string) => {
+  const handleInsightTypeChange = useCallback((insightType: string) => {
     setSelectedInsightType(insightType)
     fetchInsights(insightType, selectedTimeRange)
-  }
+  }, [selectedTimeRange, fetchInsights])
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null)
-  }
+  }, [])
 
   // Load initial data
   useEffect(() => {
@@ -184,7 +171,7 @@ export default function AIAnalyticsPage() {
       fetchInsights()
       fetchPerformanceAnomalies()
     }
-  }, [bearerToken])
+  }, [bearerToken, fetchInsights, fetchPerformanceAnomalies])
 
   return (
     <div className="min-h-screen bg-background">

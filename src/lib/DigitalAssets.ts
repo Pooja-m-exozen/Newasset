@@ -136,6 +136,7 @@ export interface BarcodeGenerationResponse {
 export interface NFCDataRequest {
   // NFC generation doesn't require specific parameters like QR/barcode
   // but we'll keep the interface for consistency
+  _placeholder?: never; // Prevent empty interface lint error
 }
 
 export interface NFCLocation {
@@ -158,8 +159,8 @@ export interface NFCData {
   location: NFCLocation;
   assignedTo: string;
   projectName: string;
-  maintenanceSchedule: Record<string, any>;
-  performanceMetrics: Record<string, any>;
+  maintenanceSchedule: Record<string, string | number | boolean | object | null | undefined>;
+  performanceMetrics: Record<string, string | number | boolean | object | null | undefined>;
   timestamp: string;
   checksum: string;
   signature: string;
@@ -230,15 +231,15 @@ export interface Asset {
   status: string;
   priority: string;
   digitalTagType: string;
-  alerts: any[];
-  documents: any[];
+  alerts: Array<{ message: string; type: string; timestamp: string; [key: string]: string | number | boolean | object | null | undefined }>;
+  documents: Array<{ name: string; url: string; type: string; [key: string]: string | number | boolean | object | null | undefined }>;
   tags: string[];
   notes: string;
   createdBy: AssetCreatedBy;
   location: AssetLocation;
   compliance: AssetCompliance;
-  photos: any[];
-  scanHistory: any[];
+  photos: Array<{ url: string; caption?: string; [key: string]: string | number | boolean | object | null | undefined }>;
+  scanHistory: Array<{ timestamp: string; user: string; action: string; [key: string]: string | number | boolean | object | null | undefined }>;
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -514,8 +515,7 @@ export const generateBarcode = async (
 
 // Generate NFC data for an asset
 export const generateNFCData = async (
-  assetId: string, 
-  options: NFCDataRequest = {}
+  assetId: string
 ): Promise<NFCGenerationResponse> => {
   try {
     // Validate inputs
@@ -951,11 +951,12 @@ export const downloadAllDigitalAssets = async (
     console.log('📥 Downloading all digital assets for asset:', assetId);
 
     // Try to import JSZip, with fallback if not available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let JSZip: any;
     try {
       const jszipModule = await import('jszip');
       JSZip = jszipModule.default;
-    } catch (error) {
+    } catch {
       console.warn('JSZip not available, falling back to individual downloads');
       // Fallback: download files individually
       await downloadAllAssetsIndividually(digitalAssets, assetId, token);

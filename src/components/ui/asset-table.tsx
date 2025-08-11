@@ -2,13 +2,9 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { Button } from './button';
 import { Badge } from './badge';
-import { Asset, getStatusBadge, getPriorityBadge, formatDate, formatDateTime } from '../../lib/Report';
+import { Asset, getStatusBadge, getPriorityBadge } from '../../lib/Report';
 import { 
-  Calendar,
   Building2,
-  User,
-  Clock,
-  MoreHorizontal,
   ChevronDown,
   ChevronUp,
   Eye

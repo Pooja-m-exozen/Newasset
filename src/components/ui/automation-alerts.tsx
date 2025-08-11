@@ -66,7 +66,7 @@ export function AutomationAlerts({
       status: alertStatus,
       condition: alertCondition,
       channels: Object.entries(channels)
-        .filter(([_, enabled]) => enabled)
+        .filter(([ enabled]) => enabled)
         .map(([key]) => key)
     }
 

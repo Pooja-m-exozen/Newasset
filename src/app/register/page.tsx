@@ -73,7 +73,7 @@ export default function RegisterPage() {
     setSuccessMessage("")
 
     try {
-      const response = await apiService.register({
+      await apiService.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,

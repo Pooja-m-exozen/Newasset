@@ -88,6 +88,7 @@ export function DigitalAssetsProvider({ children }: { children: ReactNode }) {
     } else {
       clearAuthToken()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const clearAuthToken = useCallback(() => {
@@ -213,7 +214,7 @@ export function DigitalAssetsProvider({ children }: { children: ReactNode }) {
   const testAPIConnection = useCallback(async (): Promise<boolean> => {
     try {
       console.log('🔍 Testing API connection...')
-      const isConnected = await getAssets()
+      await getAssets()
       console.log('✅ API connection test successful')
       return true
     } catch (error) {

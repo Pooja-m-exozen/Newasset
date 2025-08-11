@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Badge } from './badge'
-import { generateNFCData, type NFCGenerationResponse } from '@/lib/DigitalAssets'
+import { generateNFCData, } from '@/lib/DigitalAssets'
 import { Wifi, CheckCircle, XCircle } from 'lucide-react'
 
 export function NFCTest() {

@@ -14,6 +14,18 @@ import { Bot, Plus, Edit, Workflow, Trash2, Play, Pause, Clock, Bell, Settings, 
 import { useAutomation } from '@/contexts/AutomationContext'
 import { WorkflowRequest, WorkflowTrigger, WorkflowAction, WorkflowCondition, WorkflowExecutionRequest } from '@/lib/automation'
 
+interface Workflow {
+  id: string
+  name: string
+  description: string
+  triggers: WorkflowTrigger[]
+  actions: WorkflowAction[]
+  conditions: WorkflowCondition[]
+  isActive: boolean
+  createdBy: string
+  createdAt: string
+}
+
 export function AutomationWorkflows() {
   const { 
     workflows, 
@@ -162,7 +174,7 @@ export function AutomationWorkflows() {
     }
   }
 
-  const handleExecuteWorkflow = (workflow: any) => {
+  const handleExecuteWorkflow = (workflow: Workflow) => {
     setSelectedWorkflow(workflow)
     setExecutionContext({
       assetId: '',

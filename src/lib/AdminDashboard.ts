@@ -15,8 +15,8 @@ export interface Prediction {
     factors: string[]
     recommendations: string[]
   }
-  performanceMetrics: any
-  maintenanceSchedule: any
+  performanceMetrics: Record<string, string | number | boolean | object | null | undefined>
+  maintenanceSchedule: Record<string, string | number | boolean | object | null | undefined>
 }
 
 export interface PredictionsResponse {
@@ -37,10 +37,10 @@ export interface DashboardData {
       criticalAssets: number
       highPriorityAssets: number
     }
-    maintenanceStats: any
-    iotStats: any
-    performanceStats: any
-    alertStats: any
+    maintenanceStats: Record<string, string | number | boolean | object | null | undefined>
+    iotStats: Record<string, string | number | boolean | object | null | undefined>
+    performanceStats: Record<string, string | number | boolean | object | null | undefined>
+    alertStats: Record<string, string | number | boolean | object | null | undefined>
   }
 }
 
@@ -117,8 +117,8 @@ export interface AssetHealth {
     score: number
     factors: string[]
   }
-  performanceMetrics: any
-  alerts: any[]
+  performanceMetrics: Record<string, string | number | boolean | object | null | undefined>
+  alerts: Array<{ message: string; type: string; timestamp: string; [key: string]: string | number | boolean | object | null | undefined }>
 }
 
 export interface HealthStatistics {
@@ -220,9 +220,9 @@ export interface MaintenanceLog {
   remarks: string
   estimatedCost: number
   actualCost: number
-  partsUsed: any[]
-  tags: any[]
-  attachments: any[]
+  partsUsed: Array<{ name: string; quantity: number; cost: number; [key: string]: string | number | boolean | object | null | undefined }>
+  tags: Array<{ name: string; color: string; [key: string]: string | number | boolean | object | null | undefined }>
+  attachments: Array<{ name: string; url: string; type: string; [key: string]: string | number | boolean | object | null | undefined }>
   createdAt: string
   updatedAt: string
   workCompletedAt?: string

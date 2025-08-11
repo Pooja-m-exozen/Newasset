@@ -13,6 +13,23 @@ import { Clock, Plus, Edit, Timer, Calendar, Users, Target, Settings, Play, Paus
 import { useAutomation } from '@/contexts/AutomationContext'
 import { ScheduleRequest, ScheduleOptimizationRequest, AutoRescheduleRequest } from '@/lib/automation'
 
+interface Schedule {
+  schedule: {
+    frequency: string
+    time: string
+    timezone: string
+  }
+}
+
+interface Criteria {
+  priority?: string
+  status?: string
+  lastMaintenance?: {
+    operator: string
+    days: number
+  }
+}
+
 export function AutomationScheduling() {
   const { 
     schedules, 
@@ -205,12 +222,12 @@ export function AutomationScheduling() {
     }
   }
 
-  const formatSchedule = (schedule: any) => {
+  const formatSchedule = (schedule: Schedule) => {
     const { schedule: scheduleConfig } = schedule
     return `${scheduleConfig.frequency} at ${scheduleConfig.time} (${scheduleConfig.timezone})`
   }
 
-  const formatCriteria = (criteria: any) => {
+  const formatCriteria = (criteria: Criteria) => {
     const parts = []
     if (criteria.priority) parts.push(`Priority: ${criteria.priority}`)
     if (criteria.status) parts.push(`Status: ${criteria.status}`)

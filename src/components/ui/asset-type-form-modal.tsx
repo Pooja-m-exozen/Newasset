@@ -13,8 +13,14 @@ interface AssetTypeFormModalProps {
   onClose: () => void;
   mode: 'create' | 'edit';
   assetType?: AssetType | null;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: AssetTypeFormData) => Promise<void>;
   loading?: boolean;
+}
+
+interface AssetTypeFormData {
+  name: string;
+  description: string;
+  fields: Field[];
 }
 
 interface Field {
@@ -68,14 +74,7 @@ export const AssetTypeFormModal: React.FC<AssetTypeFormModalProps> = ({
     }));
   };
 
-  const handleFieldChange = (index: number, field: string, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      fields: prev.fields.map((f, i) => 
-        i === index ? { ...f, [field]: value } : f
-      )
-    }));
-  };
+
 
   const addField = () => {
     if (newField.label.trim()) {

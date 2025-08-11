@@ -17,8 +17,32 @@ interface AssetFormModalProps {
   mode: 'create' | 'edit';
   asset?: Asset | null;
   assetTypes: AssetType[];
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: AssetFormData) => Promise<void>;
   loading?: boolean;
+}
+
+interface AssetFormData {
+  tagId: string;
+  assetType: string;
+  subcategory: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  capacity: string;
+  yearOfInstallation: string;
+  projectName: string;
+  priority: string;
+  status: string;
+  digitalTagType: string;
+  tags: string[];
+  notes: string;
+  location: {
+    latitude: string;
+    longitude: string;
+    building: string;
+    floor: string;
+    room: string;
+  };
 }
 
 export const AssetFormModal: React.FC<AssetFormModalProps> = ({
@@ -124,7 +148,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       setFormData(prev => ({
         ...prev,
         [parent]: {
-          ...(prev[parent as keyof typeof prev] as any),
+          ...(prev[parent as keyof typeof prev] as Record<string, string>),
           [child]: value
         }
       }));
@@ -153,8 +177,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           }
         }));
         setCoordinatesFound(true);
-      } catch (error) {
-        setGeocodingError(error instanceof Error ? error.message : 'Failed to geocode address');
+      } catch (err) {
+        setGeocodingError(err instanceof Error ? err.message : 'Failed to geocode address');
         setCoordinatesFound(false);
       } finally {
         setGeocodingLoading(false);
@@ -205,7 +229,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           }
         }));
         setCoordinatesFound(true);
-      } catch (error) {
+      } catch {
         // If reverse geocoding fails, still use the coordinates
         setAddressInput('Current Location');
         setFormData(prev => ({

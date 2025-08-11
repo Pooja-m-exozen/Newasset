@@ -1,11 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { 
   assetApi, 
   Asset, 
   AssetsResponse, 
-  ApiError, 
   AssetType, 
   AssetTypesResponse, 
   CreateAssetTypeRequest, 
@@ -143,7 +142,7 @@ interface AssetContextType {
   }) => Promise<void>;
   setSelectedAsset: (asset: Asset | null) => void;
   clearError: () => void;
-  getCurrentPermissions: (role: string) => Promise<void>;
+  getCurrentPermissions: () => Promise<void>;
 }
 
 // Create context
@@ -674,7 +673,7 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
   };
 
   // Get current permissions for a role
-  const getCurrentPermissions = async (role: string) => {
+  const getCurrentPermissions = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });

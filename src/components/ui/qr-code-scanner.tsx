@@ -15,11 +15,6 @@ import {
   CameraOff, 
   Search, 
   Download, 
-  MapPin, 
-  Building, 
-  Calendar, 
-  Hash, 
-  CheckCircle, 
   X,
   AlertCircle,
   Loader2
@@ -36,7 +31,7 @@ interface ScannedAsset {
 }
 
 export function QRCodeScanner({ className }: QRCodeScannerProps) {
-  const { fetchAssetById, clearError, error } = useDigitalAssets()
+  const { clearError, error } = useDigitalAssets()
   const [isScanning, setIsScanning] = useState(false)
   const [scannedAssets, setScannedAssets] = useState<ScannedAsset[]>([])
   const [currentScannedAsset, setCurrentScannedAsset] = useState<ScannedAsset | null>(null)
@@ -78,14 +73,14 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
   }
 
   // Placeholder QR detection function
-  const detectQRCodeFromImageData = (imageData: ImageData) => {
+  const detectQRCodeFromImageData = (_imageData: ImageData) => {
     // This is a placeholder - in a real implementation, you would use a QR library
     // For now, we'll simulate detection for testing purposes
     console.log('🔍 Scanning for QR codes...')
     
     // You can integrate jsQR library here:
     // import jsQR from 'jsqr'
-    // const code = jsQR(imageData.data, imageData.width, imageData.height)
+    // const code = jsQR(_imageData.data, _imageData.width, _imageData.height)
     // if (code) {
     //   processScannedCode(code.data)
     // }
@@ -556,6 +551,7 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
                 </div>
                 <div className="flex justify-center">
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={currentScannedAsset.qrCodeUrl}
                       alt={`QR Code for ${currentScannedAsset.asset.tagId}`}
@@ -594,7 +590,7 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {scannedAssets.map((scannedAsset, index) => (
+              {scannedAssets.map((scannedAsset) => (
                 <div 
                   key={`${scannedAsset.asset._id}-${scannedAsset.scannedAt.getTime()}`}
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer"

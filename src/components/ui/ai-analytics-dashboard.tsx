@@ -20,8 +20,7 @@ import {
   Filter,
   RefreshCw,
   Zap,
-  Lightbulb,
-  Settings
+  Lightbulb
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { 
@@ -47,11 +46,6 @@ interface AIAnalyticsDashboardProps {
   onTimeRangeChange: (timeRange: string) => void
   onInsightTypeChange: (insightType: string) => void
   onFetchRecommendations: (request: RecommendationRequest) => void
-  anomalies?: any[]
-  totalAnomalies?: number
-  anomaliesLoading?: boolean
-  anomaliesError?: string | null
-  onAnomaliesRefresh?: () => void
 }
 
 export function AIAnalyticsDashboard({
@@ -66,12 +60,7 @@ export function AIAnalyticsDashboard({
   onClearError,
   onTimeRangeChange,
   onInsightTypeChange,
-  onFetchRecommendations,
-  anomalies = [],
-  totalAnomalies = 0,
-  anomaliesLoading = false,
-  anomaliesError = null,
-  onAnomaliesRefresh
+  onFetchRecommendations
 }: AIAnalyticsDashboardProps) {
   const [recommendationType, setRecommendationType] = useState('cost_optimization')
   const [budgetLimit, setBudgetLimit] = useState('100000')

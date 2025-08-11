@@ -129,7 +129,7 @@ export const manageUserService = {
     }
   },
 
-  async updateUser(userId: string, userData: Partial<User>): Promise<any> {
+  async updateUser(userId: string, userData: Partial<User>): Promise<{ success: boolean; message: string; user?: User }> {
     try {
       const token = localStorage.getItem('authToken')
       if (!token) {
@@ -240,7 +240,7 @@ export const manageUserService = {
     }
   },
 
-  async deleteRole(roleId: string): Promise<any> {
+  async deleteRole(roleId: string): Promise<{ success: boolean; message: string }> {
     try {
       const token = localStorage.getItem('authToken')
       if (!token) {

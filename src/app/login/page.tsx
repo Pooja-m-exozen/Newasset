@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Eye, EyeOff, ArrowRight, Tag, History, Calendar, BarChart3, Lock, Mail, Shield, Zap, Building2, Users, Settings, TrendingUp, AlertCircle, CheckCircle } from "lucide-react"
+import { Eye, EyeOff, ArrowRight, History, Calendar, Lock, Mail, Shield, Zap, Building2, Users, Settings, TrendingUp, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
 import { useToast, ToastContainer } from "@/components/ui/toast"
@@ -383,7 +383,7 @@ export default function LoginPage() {
                 {/* Register Link */}
                 <div className="text-center">
                   <p className="text-xs lg:text-sm text-gray-600">
-                    Don't have an account?{" "}
+                    Don&apos;t have an account?{" "}
                     <Link href="/register" className="text-blue-600 hover:text-blue-800 font-semibold transition-colors">
                       Create account
                     </Link>

@@ -11,8 +11,8 @@ interface SelectProps {
 const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [selectedValue, setSelectedValue] = React.useState(value || '')
-  const triggerRef = React.useRef<HTMLButtonElement>(null)
-  const contentRef = React.useRef<HTMLDivElement>(null)
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null)
+  const contentRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
     setSelectedValue(value || '')
@@ -49,7 +49,7 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
     handleSelect,
     triggerRef,
     contentRef
-  }), [isOpen, selectedValue])
+  }), [isOpen, selectedValue, handleSelect])
 
   return (
     <SelectContext.Provider value={contextValue}>
@@ -65,8 +65,8 @@ interface SelectContextType {
   setIsOpen: (open: boolean) => void
   selectedValue: string
   handleSelect: (value: string) => void
-  triggerRef: React.RefObject<HTMLButtonElement>
-  contentRef: React.RefObject<HTMLDivElement>
+  triggerRef: React.RefObject<HTMLButtonElement | null>
+  contentRef: React.RefObject<HTMLDivElement | null>
 }
 
 const SelectContext = React.createContext<SelectContextType | null>(null)
@@ -138,11 +138,10 @@ SelectScrollDownButton.displayName = "SelectScrollDownButton"
 
 interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
-  position?: "popper"
 }
 
 const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ className, children, position = "popper", ...props }, ref) => {
+  ({ className, children, ...props }, ref) => {
     const { isOpen, contentRef } = useSelectContext()
     
     if (!isOpen) return null

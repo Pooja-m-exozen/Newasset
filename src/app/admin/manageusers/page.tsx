@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { Button } from "@/components/ui/button"
@@ -9,17 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useAuth } from "@/contexts/AuthContext"
 import { useUserManagement } from "@/contexts/UserManagementContext"
 import { useToast, ToastContainer } from "@/components/ui/toast"
-import { PermissionsUI } from "@/components/ui/permissions-ui"
 import { User } from "@/lib/manageuser"
 import { 
   Users, 
   Plus,
   Search,
-  Filter,
-  MoreHorizontal,
   Eye,
   Edit,
   Trash2,
@@ -31,12 +27,6 @@ import {
   X,
   EyeOff,
   Eye as EyeIcon,
-  Download,
-  Upload,
-  Settings,
-  Calendar,
-  ChevronDown,
-  Star,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -49,8 +39,10 @@ import {
 export default function AdminManageUsersPage() {
   const { users, roles, fetchUsers, fetchRoles, createRole, createUser, updateRole, updateUserRole, deleteUser } = useUserManagement()
   const { addToast, toasts, removeToast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const hasMounted = useRef(false)
   const [showRoleModal, setShowRoleModal] = useState(false)
   const [showRolesModal, setShowRolesModal] = useState(false)
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
@@ -81,31 +73,37 @@ export default function AdminManageUsersPage() {
     projectName: ""
   })
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true)
+    setError(null)
     try {
       await Promise.all([fetchUsers(), fetchRoles()])
       addToast({
         type: "success",
         title: "Data Loaded",
-        message: `Successfully loaded ${users.length} users and ${roles.length} roles`,
+        message: "Data loaded successfully",
         duration: 3000
       })
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to load data"
+      setError(errorMessage)
       addToast({
         type: "error",
         title: "Error Loading Data",
-        message: error instanceof Error ? error.message : "Failed to load data",
+        message: errorMessage,
         duration: 5000
       })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [fetchUsers, fetchRoles, addToast])
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true
+      loadData()
+    }
+  }, [loadData])
 
   const handleCreateRole = async () => {
     if (!newRoleName.trim()) {
@@ -124,11 +122,13 @@ export default function AdminManageUsersPage() {
       addToast({
         type: "success",
         title: "Role Created",
-        message: `Role "${newRoleName}" created successfully`,
+        message: `Role &quot;${newRoleName}&quot; created successfully`,
         duration: 3000
       })
       setNewRoleName("")
       setShowRoleModal(false)
+      // Refresh data after successful creation
+      Promise.all([fetchUsers(), fetchRoles()])
     } catch (error) {
       addToast({
         type: "error",
@@ -160,11 +160,13 @@ export default function AdminManageUsersPage() {
       addToast({
         type: "success",
         title: "Role Updated",
-        message: `Role updated to "${editingRole.name}" successfully`,
+        message: `Role updated to &quot;${editingRole.name}&quot; successfully`,
         duration: 3000
       })
       setEditingRole(null)
       setShowEditRoleModal(false)
+      // Refresh data after successful update
+      Promise.all([fetchUsers(), fetchRoles()])
     } catch (error) {
       console.error('Error updating role:', error)
       addToast({
@@ -209,11 +211,13 @@ export default function AdminManageUsersPage() {
       addToast({
         type: "success",
         title: "User Role Updated",
-        message: `Role for "${editingUser.name}" updated to "${editingUser.currentRole}" successfully`,
+        message: `Role for &quot;${editingUser.name}&quot; updated to &quot;${editingUser.currentRole}&quot; successfully`,
         duration: 3000
       })
       setEditingUser(null)
       setShowEditUserRoleModal(false)
+      // Refresh data after successful update
+      Promise.all([fetchUsers(), fetchRoles()])
     } catch (error) {
       console.error('Error updating user role:', error)
       addToast({
@@ -258,11 +262,13 @@ export default function AdminManageUsersPage() {
       addToast({
         type: "success",
         title: "User Deleted",
-        message: `User "${deletingUser.name}" deleted successfully`,
+        message: `User &quot;${deletingUser.name}&quot; deleted successfully`,
         duration: 3000
       })
       setDeletingUser(null)
       setShowDeleteUserModal(false)
+      // Refresh data after successful deletion
+      Promise.all([fetchUsers(), fetchRoles()])
     } catch (error) {
       console.error('Error deleting user:', error)
       addToast({
@@ -309,7 +315,7 @@ export default function AdminManageUsersPage() {
       addToast({
         type: "success",
         title: "User Created",
-        message: `User "${newUserData.name}" created successfully`,
+        message: `User &quot;${newUserData.name}&quot; created successfully`,
         duration: 3000
       })
       setNewUserData({
@@ -320,6 +326,8 @@ export default function AdminManageUsersPage() {
         projectName: ""
       })
       setShowCreateUserModal(false)
+      // Refresh data after successful creation
+      Promise.all([fetchUsers(), fetchRoles()])
     } catch (error) {
       addToast({
         type: "error",
@@ -434,7 +442,21 @@ export default function AdminManageUsersPage() {
 
           {/* Main Content */}
           <main className="p-4 sm:p-8 space-y-6 sm:space-y-8">
-            {/* Enhanced Header Section */}
+            {isLoading && users.length === 0 && roles.length === 0 ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <RefreshCw className="w-8 h-8 animate-spin text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-foreground">Loading User Management</h2>
+                    <p className="text-sm text-muted-foreground">Please wait while we fetch your data...</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Enhanced Header Section */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
@@ -459,7 +481,10 @@ export default function AdminManageUsersPage() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={loadData}
+                  onClick={() => {
+                    setIsLoading(true)
+                    Promise.all([fetchUsers(), fetchRoles()]).finally(() => setIsLoading(false))
+                  }}
                   disabled={isLoading}
                   className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
                 >
@@ -526,7 +551,7 @@ export default function AdminManageUsersPage() {
                       <Users className="w-4 h-4" />
                       <span>
                         Showing {paginatedUsers.length} of {sortedUsers.length} users
-                        {searchTerm && ` matching "${searchTerm}"`}
+                        {searchTerm && ` matching &quot;${searchTerm}&quot;`}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -568,6 +593,23 @@ export default function AdminManageUsersPage() {
                         <div className="flex items-center gap-3">
                           <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
                           <span className="text-muted-foreground">Loading users...</span>
+                        </div>
+                      </div>
+                    ) : error ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="flex flex-col items-center gap-3 text-center">
+                          <AlertCircle className="w-12 h-12 text-red-500" />
+                          <div>
+                            <p className="text-lg font-semibold text-foreground">Failed to load data</p>
+                            <p className="text-sm text-muted-foreground">{error}</p>
+                            <Button 
+                              onClick={loadData}
+                              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Try Again
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -767,8 +809,8 @@ export default function AdminManageUsersPage() {
                     </div>
                   </CardContent>
                 </Card>
-
-
+              </>
+            )}
             </main>
         </div>
 
@@ -1042,7 +1084,7 @@ export default function AdminManageUsersPage() {
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-foreground">Edit User Role</h3>
-                    <p className="text-sm text-muted-foreground">Update user's role assignment</p>
+                    <p className="text-sm text-muted-foreground">Update user&apos;s role assignment</p>
                   </div>
                 </div>
                 <Button
@@ -1141,7 +1183,7 @@ export default function AdminManageUsersPage() {
                     <AlertCircle className="w-5 h-5 text-red-600" />
                     <div>
                       <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                        Are you sure you want to delete user "{deletingUser?.name || 'Unknown'}"?
+                        Are you sure you want to delete user &quot;{deletingUser?.name || 'Unknown'}&quot;?
                       </p>
                       <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                         This action cannot be undone and will permanently remove the user from the system.
@@ -1217,7 +1259,7 @@ export default function AdminManageUsersPage() {
                   <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
                       <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-2xl shadow-lg">
-                    {getInitials(viewingUser?.name || '')}
+                    {getInitials(viewingUser?.name || 'Unknown')}
                   </div>
                       <div className="flex-1">
                         <h4 className="text-xl font-semibold text-foreground">{viewingUser?.name || 'Unknown User'}</h4>
@@ -1298,7 +1340,7 @@ export default function AdminManageUsersPage() {
                         <Label className="text-sm font-medium text-muted-foreground">Created</Label>
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                           <Clock className="w-4 h-4 text-green-600" />
-                          <span className="text-foreground font-medium">{formatDate(viewingUser?.createdAt || '')}</span>
+                          <span className="text-foreground font-medium">{formatDate(viewingUser?.createdAt || new Date().toISOString())}</span>
                       </div>
                     </div>
 
@@ -1306,7 +1348,7 @@ export default function AdminManageUsersPage() {
                         <Label className="text-sm font-medium text-muted-foreground">Last Updated</Label>
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                           <Clock className="w-4 h-4 text-orange-600" />
-                          <span className="text-foreground font-medium">{formatDate(viewingUser?.updatedAt || '')}</span>
+                          <span className="text-foreground font-medium">{formatDate(viewingUser?.updatedAt || new Date().toISOString())}</span>
                       </div>
                     </div>
                     </CardContent>

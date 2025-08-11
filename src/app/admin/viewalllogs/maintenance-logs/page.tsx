@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
 import { Button } from '../../../../components/ui/button';
@@ -9,56 +9,29 @@ import { Badge } from '../../../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../../components/ui/error-display';
-import { EmptyState } from '../../../../components/ui/empty-state';
-import { PageHeader } from '../../../../components/ui/page-header';
+
 import { Label } from '../../../../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
 
 import { 
   Search, 
   Filter, 
-  Download, 
   Calendar,
   Building2,
   User,
   Clock,
   Wrench,
-  AlertTriangle,
   CheckCircle,
-  XCircle,
-  FileText,
   FileSpreadsheet,
   PauseCircle,
   RefreshCw,
   Activity,
   MapPin,
-  X,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Eye,
-  Edit,
-  MoreHorizontal,
   TrendingUp,
   BarChart3,
-  Settings,
   FilterX,
-  Mail,
-  Shield,
-  UserCheck,
-  UserPlus,
-  EyeOff,
-  Eye as EyeIcon,
-  Upload,
-  Star,
-  CheckCircle as CheckCircleIcon,
-  AlertCircle,
-  Trash2,
-  Edit as EditIcon,
   FileDown,
-  FileUp,
-  Printer,
-  Settings2,
+  Eye,
   ArrowUpDown,
   ArrowUp,
   ArrowDown
@@ -83,8 +56,8 @@ interface MaintenanceLog {
   priority: 'low' | 'medium' | 'high' | 'critical';
   location: string | { building?: string; floor?: string; room?: string };
   cost?: number;
-  partsUsed: any[];
-  attachments: any[];
+  partsUsed: unknown[];
+  attachments: unknown[];
   __v: number;
 }
 
@@ -115,7 +88,7 @@ export default function MaintenanceLogsPage() {
     }, 3000);
   };
 
-  const fetchMaintenanceLogs = async () => {
+  const fetchMaintenanceLogs = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -162,7 +135,7 @@ export default function MaintenanceLogsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -180,7 +153,7 @@ export default function MaintenanceLogsPage() {
     }
     
     fetchMaintenanceLogs();
-  }, []);
+  }, [fetchMaintenanceLogs]);
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.assetName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -192,19 +165,19 @@ export default function MaintenanceLogsPage() {
     
     return matchesSearch && matchesStatus && matchesPriority;
   }).sort((a, b) => {
-    let aValue: any = a[sortBy as keyof typeof a];
-    let bValue: any = b[sortBy as keyof typeof b];
+    let aValue: unknown = a[sortBy as keyof typeof a];
+    let bValue: unknown = b[sortBy as keyof typeof b];
     
     if (sortBy === 'date' || sortBy === 'createdAt' || sortBy === 'updatedAt' || 
         sortBy === 'workStartedAt' || sortBy === 'workCompletedAt') {
-      aValue = new Date(aValue || 0).getTime();
-      bValue = new Date(bValue || 0).getTime();
+      aValue = new Date(aValue as string || '0').getTime();
+      bValue = new Date(bValue as string || '0').getTime();
     }
     
     if (sortOrder === 'asc') {
-      return aValue > bValue ? 1 : -1;
+      return (aValue as number) > (bValue as number) ? 1 : -1;
     } else {
-      return aValue < bValue ? 1 : -1;
+      return (aValue as number) < (bValue as number) ? 1 : -1;
     }
   });
 

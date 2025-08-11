@@ -5,7 +5,6 @@ import { BarcodeGenerator } from '@/components/ui/barcode-generator'
 import { NFCGenerator } from '@/components/ui/nfc-generator'
 import { BulkDigitalAssetsGenerator } from '@/components/ui/bulk-digital-assets-generator'
 import { AssetsViewer } from '@/components/ui/assets-viewer'
-import { QRCodeScanner } from '@/components/ui/qr-code-scanner'
 import {
   Tabs,
   TabsContent,
@@ -14,15 +13,9 @@ import {
 } from '@/components/ui/tabs'
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
+  CardContent
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { PageHeader } from '@/components/ui/page-header'
 import {
   QrCode,
   Barcode,
@@ -30,24 +23,9 @@ import {
   Package,
   Database,
   Sparkles,
-  Zap,
-  TrendingUp,
   Users,
-  Shield,
   Activity,
-  BarChart3,
-  Settings,
-  ArrowRight,
-  CheckCircle,
-  Clock,
-  Star,
-  Download,
-  Scan,
-  Plus,
-  Eye,
-  BarChart,
-  Target,
-  Layers
+  BarChart
 } from 'lucide-react'
 import { useState } from 'react'
 

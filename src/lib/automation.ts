@@ -268,7 +268,7 @@ export interface WorkflowExecutionContext {
   parameters?: {
     maintenanceType?: string
     priority?: string
-    [key: string]: any
+    [key: string]: string | number | boolean | object | null | undefined
   }
 }
 

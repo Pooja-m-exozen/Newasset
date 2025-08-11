@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { 
   getSystemInsights, 
   getPerformanceMetrics, 
@@ -65,7 +65,7 @@ export function AIAnalyticsProvider({ children }: AIAnalyticsProviderProps) {
   const [selectedInsightType, setSelectedInsightType] = useState('performance')
   const [selectedRecommendationType, setSelectedRecommendationType] = useState('cost_optimization')
 
-  const fetchInsights = async (insightType: string = selectedInsightType, timeRange: string = selectedTimeRange) => {
+  const fetchInsights = useCallback(async (insightType: string = selectedInsightType, timeRange: string = selectedTimeRange) => {
     setLoading(true)
     setError(null)
     
@@ -87,7 +87,7 @@ export function AIAnalyticsProvider({ children }: AIAnalyticsProviderProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedInsightType, selectedTimeRange])
 
   const fetchPerformance = async (timeRange: string = selectedTimeRange) => {
     setLoading(true)
@@ -155,7 +155,7 @@ export function AIAnalyticsProvider({ children }: AIAnalyticsProviderProps) {
   // Load initial data
   useEffect(() => {
     fetchInsights()
-  }, [])
+  }, [fetchInsights])
 
   const value: AIAnalyticsContextType = {
     insights,

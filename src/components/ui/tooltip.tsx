@@ -39,7 +39,7 @@ interface TooltipContentProps {
 
 const TooltipContent: React.FC<TooltipContentProps> = ({ 
   children, 
-  side = "top",
+  // side = "top",
   className 
 }) => {
   return (

@@ -48,10 +48,10 @@ interface Asset {
   };
 }
 
-interface ApiResponse {
-  success: boolean;
-  assets: Asset[];
-}
+// interface ApiResponse {
+//   success: boolean;
+//   assets: Asset[];
+// }
 
 interface ReportContextType {
   assets: Asset[];

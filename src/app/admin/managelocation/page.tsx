@@ -12,11 +12,8 @@ import {
   Download,
   RefreshCw,
   Search,
-  Filter,
   MapPin,
   Building,
-  FileText,
-  X,
   Eye,
   Edit,
   Trash2,
@@ -24,7 +21,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { Location } from '../../../lib/location';
+import { Location, CreateLocationRequest, UpdateLocationRequest } from '../../../lib/location';
 import { Input } from '../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
@@ -41,7 +38,6 @@ const LocationManagementContent = () => {
   const {
     locations,
     loading,
-    error,
     selectedLocation,
     isModalOpen,
     modalMode,
@@ -51,7 +47,6 @@ const LocationManagementContent = () => {
     removeLocation,
     openModal,
     closeModal,
-    clearError,
   } = useManageLocation();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -77,11 +72,11 @@ const LocationManagementContent = () => {
     }
   };
 
-  const handleModalSubmit = async (data: any) => {
+  const handleModalSubmit = async (data: CreateLocationRequest | UpdateLocationRequest) => {
     if (modalMode === 'create') {
-      await addLocation(data);
+      await addLocation(data as CreateLocationRequest);
     } else if (modalMode === 'edit' && selectedLocation) {
-      await editLocation(selectedLocation._id, data);
+      await editLocation(selectedLocation._id, data as UpdateLocationRequest);
     }
   };
 
@@ -421,7 +416,7 @@ const LocationManagementContent = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {paginatedLocations.map((location, index) => (
+                          {paginatedLocations.map((location) => (
                             <TableRow key={location._id} className="hover:bg-accent/50 transition-colors">
                               <TableCell>
                                 <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">

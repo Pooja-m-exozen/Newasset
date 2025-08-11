@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './button';
-import { Badge } from './badge';
+// import { Badge } from './badge';
 import { StatusBadge } from './status-badge';
 import { PriorityBadge } from './priority-badge';
 import { Edit, Trash2, Eye, Calendar, MapPin, Tag } from 'lucide-react';

@@ -1,24 +1,23 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
 import { Badge } from './badge'
-import { Separator } from './separator'
 import { generateAllDigitalAssets, type BulkDigitalAssetsGenerationResponse } from '@/lib/DigitalAssets'
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, Barcode, Wifi, Info, Hash, MapPin, Building, Calendar, User, Settings, Shield, Activity, Package, CheckCircle, X, Search } from 'lucide-react'
+import { QrCode, Barcode, Wifi, Info, Hash, MapPin, Building, Settings, Package, CheckCircle, Search } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 // API Base URL constant
 const API_BASE_URL = 'http://192.168.0.5:5021'
 
 interface BulkDigitalAssetsGeneratorProps {
-  assetId?: string;
   className?: string;
 }
 
@@ -31,8 +30,8 @@ const BARCODE_FORMATS = [
   { value: 'upce', label: 'UPC-E', description: 'Universal Product Code, 8 digits' },
 ]
 
-export function BulkDigitalAssetsGenerator({ assetId, className }: BulkDigitalAssetsGeneratorProps) {
-  const { assets, fetchAssets, fetchAssetByTagId, getAssetIdFromTagId, loading: assetsLoading } = useDigitalAssets()
+export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGeneratorProps) {
+  const { assets, fetchAssets, loading: assetsLoading } = useDigitalAssets()
   const [qrSize, setQrSize] = useState(300)
   const [barcodeFormat, setBarcodeFormat] = useState('code128')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -44,15 +43,14 @@ export function BulkDigitalAssetsGenerator({ assetId, className }: BulkDigitalAs
   const [mappedAssetId, setMappedAssetId] = useState<string>('')
   const [selectedAssetFromDropdown, setSelectedAssetFromDropdown] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [imageLoading, setImageLoading] = useState(false)
 
   // Load assets on component mount
   useEffect(() => {
     fetchAssets()
-  }, []) // Remove fetchAssets from dependencies to prevent infinite loop
+  }, [fetchAssets])
 
   // Handle asset selection from dropdown
-  const handleAssetSelect = async (assetTagId: string) => {
+  const handleAssetSelect = useCallback(async (assetTagId: string) => {
     setSelectedAssetFromDropdown(assetTagId)
     setSelectedAssetId(assetTagId)
     setError(null) // Clear any previous errors
@@ -73,17 +71,9 @@ export function BulkDigitalAssetsGenerator({ assetId, className }: BulkDigitalAs
       setError(err instanceof Error ? err.message : 'Failed to process selected asset')
       console.error('Error processing selected asset:', err)
     }
-  }
+  }, [assets])
 
-  const handleClearAsset = () => {
-    setSelectedAssetId('')
-    setMappedAssetId('')
-    setSelectedAssetFromDropdown('')
-    setDigitalAssets(null)
-    setError(null)
-  }
-
-  const handleGenerateAllDigitalAssets = async (assetIdToUse?: string) => {
+  const handleGenerateAllDigitalAssets = useCallback(async (assetIdToUse?: string) => {
     const assetId = assetIdToUse || mappedAssetId
     
     if (!assetId) {
@@ -100,7 +90,6 @@ export function BulkDigitalAssetsGenerator({ assetId, className }: BulkDigitalAs
         barcodeFormat
       })
       setDigitalAssets(result)
-      setImageLoading(true) // Start loading the images
       setSuccessMessage('All digital assets generated successfully!')
       setShowSuccessToast(true)
     } catch (err) {
@@ -108,11 +97,11 @@ export function BulkDigitalAssetsGenerator({ assetId, className }: BulkDigitalAs
     } finally {
       setIsGenerating(false)
     }
-  }
+  }, [mappedAssetId, qrSize, barcodeFormat])
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     await handleGenerateAllDigitalAssets()
-  }
+  }, [handleGenerateAllDigitalAssets])
 
   // Filter assets based on search term
   const filteredAssets = assets.filter(asset => 
@@ -223,7 +212,7 @@ export function BulkDigitalAssetsGenerator({ assetId, className }: BulkDigitalAs
                 <span>
                   {assetsLoading ? 'Loading...' : `${filteredAssets.length} of ${assets.length} assets shown`}
                 </span>
-                <span>Select an asset and click "Generate All Digital Assets"</span>
+                <span>Select an asset and click &quot;Generate All Digital Assets&quot;</span>
               </div>
             </div>
           </div>
@@ -403,11 +392,13 @@ export function BulkDigitalAssetsGenerator({ assetId, className }: BulkDigitalAs
               <div className="flex justify-center">
                 <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
                   <div className="relative w-64 h-64 bg-white rounded-lg shadow-sm overflow-hidden border border-border">
-                    <img
+                    <Image
                       src={`${API_BASE_URL}${digitalAssets.digitalAssets.qrCode.url}`}
                       alt={`QR Code for ${digitalAssets.digitalAssets.qrCode.data.tagId}`}
+                      width={256}
+                      height={256}
                       className="w-full h-full object-contain p-4"
-                      crossOrigin="anonymous"
+                      unoptimized
                     />
                   </div>
                 </div>
@@ -434,11 +425,13 @@ export function BulkDigitalAssetsGenerator({ assetId, className }: BulkDigitalAs
               <div className="flex justify-center">
                 <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
                   <div className="relative w-80 h-40 bg-white rounded-lg shadow-sm overflow-hidden border border-border">
-                    <img
+                    <Image
                       src={`${API_BASE_URL}${digitalAssets.digitalAssets.barcode.url}`}
                       alt={`Barcode for ${digitalAssets.digitalAssets.barcode.data}`}
+                      width={320}
+                      height={160}
                       className="w-full h-full object-contain p-4"
-                      crossOrigin="anonymous"
+                      unoptimized
                     />
                   </div>
                 </div>

@@ -135,7 +135,7 @@ export default function ForgotPasswordPage() {
               </span>
             </h1>
             <p className="text-base text-orange-100 mb-8 leading-relaxed">
-              Don't worry! Enter your email address and we'll send you a link to reset your password.
+              Don&apos;t worry! Enter your email address and we&apos;ll send you a link to reset your password.
             </p>
           </div>
           
@@ -285,7 +285,7 @@ export default function ForgotPasswordPage() {
                 <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100">
                   <p className="text-xs text-orange-800 font-medium mb-1">Need help?</p>
                   <p className="text-xs text-orange-700">
-                    If you don't receive the email within a few minutes, check your spam folder or contact our support team.
+                    If you don&apos;t receive the email within a few minutes, check your spam folder or contact our support team.
                   </p>
                 </div>
               </form>

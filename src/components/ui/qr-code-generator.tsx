@@ -13,18 +13,17 @@ import { generateQRCode, type QRCodeGenerationResponse } from '@/lib/DigitalAsse
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, Settings, Info, MapPin, Building, Calendar, Hash, CheckCircle, X, Search } from 'lucide-react'
+import { QrCode, MapPin, Building, Hash, CheckCircle, X, Search } from 'lucide-react'
 
 // API Base URL constant
 const API_BASE_URL = 'http://192.168.0.5:5021'
 
 interface QRCodeGeneratorProps {
-  assetId?: string;
   className?: string;
 }
 
-export function QRCodeGenerator({ assetId, className }: QRCodeGeneratorProps) {
-  const { assets, fetchAssets, fetchAssetByTagId, getAssetIdFromTagId, loading: assetsLoading } = useDigitalAssets()
+export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
+  const { assets, fetchAssets, loading: assetsLoading } = useDigitalAssets()
   const [size, setSize] = useState(300)
   const [includeUrl, setIncludeUrl] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -341,6 +340,7 @@ export function QRCodeGenerator({ assetId, className }: QRCodeGeneratorProps) {
                         </div>
                       </div>
                     )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`${API_BASE_URL}${qrCodeData.qrCode.url}`}
                       alt={`QR Code Scanner for ${qrCodeData.qrCode.data.tagId}`}

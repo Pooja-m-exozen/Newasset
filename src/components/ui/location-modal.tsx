@@ -7,7 +7,7 @@ import { Badge } from './badge';
 import { Checkbox } from './checkbox';
 import { ScrollArea } from './scroll-area';
 import { Location, CreateLocationRequest, geocodeAddress } from '../../lib/location';
-import { MapPin, Loader2, Navigation, Globe, Info, CheckCircle, X, Building, Map } from 'lucide-react';
+import { MapPin, Loader2, Navigation, Globe, Info, CheckCircle, Building, } from 'lucide-react';
 
 interface LocationModalProps {
   isOpen: boolean;
@@ -121,7 +121,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({
           coordinates: { latitude, longitude }
         }));
         setCoordinatesFound(true);
-      } catch (error) {
+      } catch {
         // If reverse geocoding fails, still use the coordinates
         setFormData(prev => ({
           ...prev,
@@ -130,7 +130,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({
         }));
         setCoordinatesFound(true);
       }
-    } catch (error) {
+    } catch  {
       setLocationError('Failed to get current location. Please check your browser permissions.');
       setCoordinatesFound(false);
     } finally {

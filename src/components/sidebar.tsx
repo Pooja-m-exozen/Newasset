@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
@@ -17,24 +17,25 @@ import {
   ChevronDown,
   ChevronUp,
   FileDigit,
-  Brain,
-  BarChart3,
-  Activity,
-  Settings,
-  Shield,
-  Database,
-  QrCode,
-  Barcode,
-  Wifi,
-  Scan,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Star,
   Bot
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+interface SubmenuItem {
+  id: string
+  label: string
+  href: string
+  description: string
+}
+
+interface NavigationItem {
+  id: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  href: string
+  description: string
+  submenu?: SubmenuItem[]
+}
 
 interface SidebarProps {
   className?: string
@@ -43,25 +44,18 @@ interface SidebarProps {
 export default function Sidebar({ className }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [activeItem, setActiveItem] = useState("dashboard")
   const [expandedSubmenu, setExpandedSubmenu] = useState<string | null>(null)
 
-  // Update active item based on current pathname
-  useEffect(() => {
-    const currentItem = navigationItems.find(item => item.href === pathname)
-    if (currentItem) {
-      setActiveItem(currentItem.id)
-    }
-  }, [pathname])
-
-  const navigationItems = [
+  const navigationItems: NavigationItem[] = useMemo(() => [
     {
       id: "dashboard",
       label: "Dashboard",
       icon: Home,
-      href: "/admin/dashboard"
+      href: "/admin/dashboard",
+      description: "Main dashboard and overview"
     },
     {
       id: "users",
@@ -91,7 +85,6 @@ export default function Sidebar({ className }: SidebarProps) {
       href: "/admin/digital-assets/generate",
       description: "Create and generate digital assets"
     },
-
     {
       id: "automation",
       label: "Automation",
@@ -126,9 +119,17 @@ export default function Sidebar({ className }: SidebarProps) {
         }
       ]
     }
-  ]
+  ], [])
 
-  const handleItemClick = (itemId: string) => {
+  // Update active item based on current pathname
+  useEffect(() => {
+    const currentItem = navigationItems.find(item => item.href === pathname)
+    if (currentItem) {
+      setActiveItem(currentItem.id)
+    }
+  }, [pathname, navigationItems])
+
+  const handleItemClick = useCallback((itemId: string) => {
     setActiveItem(itemId)
     
     // Find the navigation item to get the href
@@ -136,16 +137,16 @@ export default function Sidebar({ className }: SidebarProps) {
     if (navigationItem && navigationItem.href) {
       router.push(navigationItem.href)
     }
-  }
+  }, [navigationItems, router])
 
-  const handleSubmenuToggle = (itemId: string) => {
+  const handleSubmenuToggle = useCallback((itemId: string) => {
     setExpandedSubmenu(expandedSubmenu === itemId ? null : itemId)
-  }
+  }, [expandedSubmenu])
 
-  const handleSubmenuItemClick = (parentId: string, submenuItem: any) => {
+  const handleSubmenuItemClick = useCallback((parentId: string, submenuItem: SubmenuItem) => {
     setActiveItem(submenuItem.id)
     router.push(submenuItem.href)
-  }
+  }, [router])
 
   return (
     <div className={cn(
@@ -230,7 +231,7 @@ export default function Sidebar({ className }: SidebarProps) {
             {/* Submenu */}
             {!isCollapsed && item.submenu && expandedSubmenu === item.id && (
               <div className="ml-4 mt-1 space-y-1">
-                {item.submenu.map((submenuItem: any) => (
+                {item.submenu.map((submenuItem: SubmenuItem) => (
                   <Button
                     key={submenuItem.id}
                     variant="ghost"

@@ -2,59 +2,97 @@
 
 import React, { useEffect, useState } from 'react';
 import { AssetProvider, useAssetContext } from '../../../contexts/AdminAssetContext';
-import { useAuth } from '../../../contexts/AuthContext';
-import { Asset, AssetType } from '../../../lib/adminasset';
+import { Asset, AssetType, AdminPermissions } from '../../../lib/adminasset';
 import { Button } from '../../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/dialog';
 import { Input } from '../../../components/ui/input';
-import { Badge } from '../../../components/ui/badge';
-import { Separator } from '../../../components/ui/separator';
 import { AssetCard } from '../../../components/ui/asset-card';
 import { AssetViewModal } from '../../../components/ui/asset-view-modal';
 import { AssetFormModal } from '../../../components/ui/asset-form-modal';
 import { AssetTypeFormModal } from '../../../components/ui/asset-type-form-modal';
-import { DeleteConfirmationDialog } from '../../../components/ui/delete-confirmation-dialog';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import { PriorityBadge } from '../../../components/ui/priority-badge';
 import { SuccessToast } from '../../../components/ui/success-toast';
-import { LoadingSpinner } from '../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../components/ui/error-display';
 import { EmptyState } from '../../../components/ui/empty-state';
-import { PageHeader } from '../../../components/ui/page-header';
 import { PermissionsUI } from '../../../components/ui/permissions-ui';
 
 import { useToast, ToastContainer } from '../../../components/ui/toast';
+
+// Define the Permissions type to match what PermissionsUI expects
+interface PermissionCategory {
+  view?: boolean
+  create?: boolean
+  edit?: boolean
+  delete?: boolean
+  assign?: boolean
+  bulkOperations?: boolean
+  import?: boolean
+  export?: boolean
+  generate?: boolean
+  scan?: boolean
+  bulkGenerate?: boolean
+  download?: boolean
+  customize?: boolean
+  approve?: boolean
+  schedule?: boolean
+  complete?: boolean
+  audit?: boolean
+  report?: boolean
+  share?: boolean
+  assignRoles?: boolean
+  managePermissions?: boolean
+  configure?: boolean
+  backup?: boolean
+  restore?: boolean
+  monitor?: boolean
+  upload?: boolean
+  offline?: boolean
+  sync?: boolean
+  location?: boolean
+  camera?: boolean
+  notifications?: boolean
+}
+
+interface Permissions {
+  assetManagement: PermissionCategory
+  digitalAssets: PermissionCategory
+  maintenance: PermissionCategory
+  compliance: PermissionCategory
+  analytics: PermissionCategory
+  userManagement: PermissionCategory
+  systemAdmin: PermissionCategory
+  admin: PermissionCategory
+  locationManagement: PermissionCategory
+  documentManagement: PermissionCategory
+  financialManagement: PermissionCategory
+  workflowManagement: PermissionCategory
+  mobileFeatures: PermissionCategory
+}
 
 // Permissions Display Component
 const PermissionsDisplay: React.FC = () => {
   const { 
     state, 
     fetchAdminPermissions, 
-    refreshAdminPermissions,
     updateAdminPermissions, 
     clearError 
   } = useAssetContext();
   const { addToast, toasts, removeToast } = useToast();
-  const { user } = useAuth();
 
   useEffect(() => {
     // Fetch permissions when component mounts (only if not already loaded)
     if (!state.adminPermissions && !state.loading) {
       fetchAdminPermissions();
     }
-  }, [state.adminPermissions, state.loading]);
+  }, [state.adminPermissions, state.loading, fetchAdminPermissions]);
 
-  // Add a refetch function for better error handling
-  const handleRefetch = () => {
-    refreshAdminPermissions();
-  };
-
-  const handleUpdatePermissions = async (permissions: any) => {
+  const handleUpdatePermissions = async (permissions: Permissions) => {
     try {
-      await updateAdminPermissions(permissions);
+      // Convert the permissions to the format expected by updateAdminPermissions
+      // For now, we'll use any to avoid type conflicts between the two permission systems
+      await updateAdminPermissions(permissions as AdminPermissions);
       addToast({
         type: "success",
         title: "Success",
@@ -111,7 +149,7 @@ const AssetsList: React.FC = () => {
   useEffect(() => {
       fetchAssets();
     fetchAssetTypes();
-  }, []);
+  }, [fetchAssets, fetchAssetTypes]);
 
   const handleDelete = async (assetId: string) => {
     if (window.confirm('Are you sure you want to delete this asset?')) {
@@ -140,10 +178,7 @@ const AssetsList: React.FC = () => {
     setSelectedAsset(null);
   };
 
-  const closeEditModal = () => {
-    setIsEditModalOpen(false);
-    setEditingAsset(null);
-  };
+
 
   const handleCreateSuccess = () => {
     setSuccessMessage('Asset created successfully!');
@@ -464,7 +499,7 @@ const AssetTypeManagement: React.FC = () => {
     if (!state.loading && state.assetTypes.length === 0) {
       fetchAssetTypes();
     }
-  }, [state.loading, state.assetTypes.length]);
+  }, [state.loading, state.assetTypes.length, fetchAssetTypes]);
 
   const handleEdit = (assetType: AssetType) => {
     setEditingAssetType(assetType);

@@ -5,9 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './car
 import { Badge } from './badge'
 import { Button } from './button'
 import { 
-  TrendingUp, 
   TrendingDown, 
-  Minus, 
   Activity, 
   DollarSign,
   Brain,
@@ -18,7 +16,20 @@ import {
 } from 'lucide-react'
 
 interface PerformanceChartProps {
-  aiInsightsData: any
+  aiInsightsData: {
+    success: boolean
+    insights: {
+      overallEfficiency: number
+      assetUtilization: number
+      maintenanceCosts: number
+      recommendations?: string[]
+    }
+    summary: {
+      totalAssets: number
+      totalMaintenanceLogs: number
+      totalUsers: number
+    }
+  } | null
   isLoading: boolean
   error: string | null
   onRefresh: () => void

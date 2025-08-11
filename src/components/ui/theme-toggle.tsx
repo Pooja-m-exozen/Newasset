@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme, } = useTheme();
 
   const getThemeIcon = () => {
     switch (theme) {
@@ -27,18 +27,18 @@ export function ThemeToggle() {
     }
   };
 
-  const getThemeLabel = () => {
-    switch (theme) {
-      case 'light':
-        return 'Light';
-      case 'dark':
-        return 'Dark';
-      case 'system':
-        return 'System';
-      default:
-        return 'Light';
-    }
-  };
+  // const getThemeLabel = () => {
+  //   switch (theme) {
+  //     case 'light':
+  //       return 'Light';
+  //     case 'dark':
+  //       return 'Dark';
+  //     case 'system':
+  //       return 'System';
+  //     default:
+  //       return 'Light';
+  //   }
+  // };
 
   return (
     <DropdownMenu>

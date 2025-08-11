@@ -6,24 +6,22 @@ import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
 import { Badge } from './badge'
-import { Separator } from './separator'
+
 import { generateNFCData, type NFCGenerationResponse } from '@/lib/DigitalAssets'
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { Wifi, Info, Hash, MapPin, Building, Calendar, User, Settings, Shield, Activity, CheckCircle, X, Search, Sparkles, Zap, TrendingUp, ArrowRight } from 'lucide-react'
+import { Wifi, Info, Hash, MapPin, Building, User, Shield, CheckCircle, Search } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
-// API Base URL constant
-const API_BASE_URL = 'http://192.168.0.5:5021'
+
 
 interface NFCGeneratorProps {
-  assetId?: string;
   className?: string;
 }
 
-export function NFCGenerator({ assetId, className }: NFCGeneratorProps) {
-  const { assets, fetchAssets, fetchAssetByTagId, getAssetIdFromTagId, loading: assetsLoading } = useDigitalAssets()
+export function NFCGenerator({ className }: NFCGeneratorProps) {
+  const { assets, fetchAssets, loading: assetsLoading } = useDigitalAssets()
   const [isGenerating, setIsGenerating] = useState(false)
   const [nfcData, setNfcData] = useState<NFCGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +35,7 @@ export function NFCGenerator({ assetId, className }: NFCGeneratorProps) {
   // Load assets on component mount
   useEffect(() => {
     fetchAssets()
-  }, []) // Remove fetchAssets from dependencies to prevent infinite loop
+  }, [fetchAssets]) // Include fetchAssets in dependencies
 
   // Handle asset selection from dropdown
   const handleAssetSelect = async (assetTagId: string) => {
@@ -63,13 +61,7 @@ export function NFCGenerator({ assetId, className }: NFCGeneratorProps) {
     }
   }
 
-  const handleClearAsset = () => {
-    setSelectedAssetId('')
-    setMappedAssetId('')
-    setSelectedAssetFromDropdown('')
-    setNfcData(null)
-    setError(null)
-  }
+
 
   const handleGenerateNFCData = async (assetIdToUse?: string) => {
     const assetId = assetIdToUse || mappedAssetId
@@ -209,7 +201,7 @@ export function NFCGenerator({ assetId, className }: NFCGeneratorProps) {
                 <span>
                   {assetsLoading ? 'Loading...' : `${filteredAssets.length} of ${assets.length} assets shown`}
                 </span>
-                <span>Select an asset and click "Generate NFC Data"</span>
+                <span>Select an asset and click &quot;Generate NFC Data&quot;</span>
               </div>
             </div>
           </div>

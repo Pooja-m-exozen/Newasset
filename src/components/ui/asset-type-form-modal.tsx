@@ -25,9 +25,10 @@ interface AssetTypeFormData {
 
 interface Field {
   label: string;
-  fieldType: string;
+  fieldType: 'text' | 'dropdown';
   required?: boolean;
   description?: string;
+  options?: string[];
 }
 
 export const AssetTypeFormModal: React.FC<AssetTypeFormModalProps> = ({
@@ -46,9 +47,10 @@ export const AssetTypeFormModal: React.FC<AssetTypeFormModalProps> = ({
 
   const [newField, setNewField] = useState({
     label: '',
-    fieldType: 'text',
+    fieldType: 'text' as 'text' | 'dropdown',
     required: false,
-    description: ''
+    description: '',
+    options: [] as string[]
   });
 
   useEffect(() => {
@@ -84,9 +86,10 @@ export const AssetTypeFormModal: React.FC<AssetTypeFormModalProps> = ({
       }));
       setNewField({
         label: '',
-        fieldType: 'text',
+        fieldType: 'text' as 'text' | 'dropdown',
         required: false,
-        description: ''
+        description: '',
+        options: []
       });
     }
   };
@@ -196,7 +199,7 @@ export const AssetTypeFormModal: React.FC<AssetTypeFormModalProps> = ({
                     <Label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Field Type</Label>
                     <select
                       value={newField.fieldType}
-                      onChange={(e) => setNewField(prev => ({ ...prev, fieldType: e.target.value }))}
+                      onChange={(e) => setNewField(prev => ({ ...prev, fieldType: e.target.value as 'text' | 'dropdown' }))}
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-green-500 dark:focus:border-green-400 focus:ring-green-500 dark:focus:ring-green-400"
                     >
                       <option value="text">Text</option>

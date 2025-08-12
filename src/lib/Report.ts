@@ -75,9 +75,47 @@ export interface Asset {
   status?: string;
   priority?: string;
   digitalTagType?: string;
+  digitalAssets?: {
+    qrCode?: {
+      url: string;
+      data: {
+        t: string;
+        a: string;
+        s: string;
+        b: string;
+        m: string;
+        st: string;
+        p: string;
+        l: {
+          latitude: string;
+          longitude: string;
+          floor?: string;
+          room?: string;
+          building?: string;
+        };
+        u: string;
+        pr: string;
+        lm: string | null;
+        nm: string | null;
+        url: string;
+        ts: number;
+        c: string;
+      };
+      generatedAt: string;
+    };
+  };
+  compliance?: {
+    certifications: string[];
+    expiryDates: string[];
+    regulatoryRequirements: string[];
+  };
   tags?: string[];
   notes?: string;
-  createdBy?: string;
+  createdBy?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
   location: {
     latitude: string;
     longitude: string;

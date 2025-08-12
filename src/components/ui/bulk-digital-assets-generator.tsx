@@ -43,6 +43,8 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
   const [mappedAssetId, setMappedAssetId] = useState<string>('')
   const [selectedAssetFromDropdown, setSelectedAssetFromDropdown] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [qrImageLoading, setQrImageLoading] = useState(false)
+  const [barcodeImageLoading, setBarcodeImageLoading] = useState(false)
 
   // Load assets on component mount
   useEffect(() => {
@@ -90,6 +92,8 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
         barcodeFormat
       })
       setDigitalAssets(result)
+      setQrImageLoading(true) // Start loading QR code image
+      setBarcodeImageLoading(true) // Start loading barcode image
       setSuccessMessage('All digital assets generated successfully!')
       setShowSuccessToast(true)
     } catch (err) {
@@ -392,14 +396,72 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
               <div className="flex justify-center">
                 <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
                   <div className="relative w-64 h-64 bg-white rounded-lg shadow-sm overflow-hidden border border-border">
-                    <Image
-                      src={`${API_BASE_URL}${digitalAssets.digitalAssets.qrCode.url}`}
-                      alt={`QR Code for ${digitalAssets.digitalAssets.qrCode.data.tagId}`}
-                      width={256}
-                      height={256}
-                      className="w-full h-full object-contain p-4"
-                      unoptimized
-                    />
+                    {/* QR Code Image with Loading State */}
+                    <div className="flex items-center justify-center w-full h-full p-4">
+                      {qrImageLoading && (
+                        <div className="flex items-center justify-center w-56 h-56 bg-muted/50 rounded-lg">
+                          <div className="text-center text-muted-foreground">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                            <p className="text-sm font-medium">Loading QR Code...</p>
+                          </div>
+                        </div>
+                      )}
+                      <img
+                        src={`${API_BASE_URL}${digitalAssets.digitalAssets.qrCode.url}`}
+                        alt={`QR Code for ${digitalAssets.digitalAssets.qrCode.data.tagId}`}
+                        className={`w-56 h-56 object-contain ${qrImageLoading ? 'hidden' : ''}`}
+                        crossOrigin="anonymous"
+                        onLoad={() => setQrImageLoading(false)}
+                        onError={(e) => {
+                          console.error('Failed to load QR code image:', e.currentTarget.src)
+                          setQrImageLoading(false)
+                          // Try alternative approach - fetch the image as blob
+                          fetch(`${API_BASE_URL}${digitalAssets.digitalAssets.qrCode.url}`, {
+                            method: 'GET',
+                            headers: {
+                              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                            },
+                          })
+                          .then(response => {
+                            if (response.ok) {
+                              return response.blob()
+                            }
+                            throw new Error('Failed to fetch image')
+                          })
+                          .then(blob => {
+                            const url = URL.createObjectURL(blob)
+                            e.currentTarget.src = url
+                            e.currentTarget.style.display = 'block'
+                            setQrImageLoading(false)
+                          })
+                          .catch(err => {
+                            console.error('Failed to fetch QR code image:', err)
+                            setQrImageLoading(false)
+                            // Fallback to a placeholder
+                            e.currentTarget.style.display = 'none'
+                            if (e.currentTarget.parentElement) {
+                              e.currentTarget.parentElement.innerHTML = `
+                                <div class="flex items-center justify-center w-56 h-56 bg-muted/50 rounded-lg">
+                                  <div class="text-center text-muted-foreground">
+                                    <p class="text-sm font-medium">QR Code Image</p>
+                                    <p class="text-xs">Failed to load</p>
+                                    <p class="text-xs mt-2">URL: ${API_BASE_URL}${digitalAssets.digitalAssets.qrCode.url}</p>
+                                  </div>
+                                </div>
+                              `
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Tag ID Display */}
+                  <div className="mt-6 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/50 text-foreground rounded-full text-sm font-semibold shadow-sm">
+                      <QrCode className="h-4 w-4" />
+                      Tag ID: {digitalAssets.digitalAssets.qrCode.data.tagId}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -425,14 +487,72 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
               <div className="flex justify-center">
                 <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
                   <div className="relative w-80 h-40 bg-white rounded-lg shadow-sm overflow-hidden border border-border">
-                    <Image
-                      src={`${API_BASE_URL}${digitalAssets.digitalAssets.barcode.url}`}
-                      alt={`Barcode for ${digitalAssets.digitalAssets.barcode.data}`}
-                      width={320}
-                      height={160}
-                      className="w-full h-full object-contain p-4"
-                      unoptimized
-                    />
+                    {/* Barcode Image with Loading State */}
+                    <div className="flex items-center justify-center w-full h-full p-6">
+                      {barcodeImageLoading && (
+                        <div className="flex items-center justify-center w-64 h-32 bg-muted/50 rounded-lg">
+                          <div className="text-center text-muted-foreground">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                            <p className="text-sm font-medium">Loading Barcode...</p>
+                          </div>
+                        </div>
+                      )}
+                      <img
+                        src={`${API_BASE_URL}${digitalAssets.digitalAssets.barcode.url}`}
+                        alt={`Barcode for ${digitalAssets.digitalAssets.barcode.data}`}
+                        className={`w-64 h-32 object-contain ${barcodeImageLoading ? 'hidden' : ''}`}
+                        crossOrigin="anonymous"
+                        onLoad={() => setBarcodeImageLoading(false)}
+                        onError={(e) => {
+                          console.error('Failed to load barcode image:', e.currentTarget.src)
+                          setBarcodeImageLoading(false)
+                          // Try alternative approach - fetch the image as blob
+                          fetch(`${API_BASE_URL}${digitalAssets.digitalAssets.barcode.url}`, {
+                            method: 'GET',
+                            headers: {
+                              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                            },
+                          })
+                          .then(response => {
+                            if (response.ok) {
+                              return response.blob()
+                            }
+                            throw new Error('Failed to fetch image')
+                          })
+                          .then(blob => {
+                            const url = URL.createObjectURL(blob)
+                            e.currentTarget.src = url
+                            e.currentTarget.style.display = 'block'
+                            setBarcodeImageLoading(false)
+                          })
+                          .catch(err => {
+                            console.error('Failed to fetch barcode image:', err)
+                            setBarcodeImageLoading(false)
+                            // Fallback to a placeholder
+                            e.currentTarget.style.display = 'none'
+                            if (e.currentTarget.parentElement) {
+                              e.currentTarget.parentElement.innerHTML = `
+                                <div class="flex items-center justify-center w-64 h-32 bg-muted/50 rounded-lg">
+                                  <div class="text-center text-muted-foreground">
+                                    <p class="text-sm font-medium">Barcode Image</p>
+                                    <p class="text-xs">Failed to load</p>
+                                    <p class="text-xs mt-2">URL: ${API_BASE_URL}${digitalAssets.digitalAssets.barcode.url}</p>
+                                  </div>
+                                </div>
+                              `
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Tag ID Display */}
+                  <div className="mt-6 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/50 text-foreground rounded-full text-sm font-semibold shadow-sm">
+                      <Barcode className="h-4 w-4" />
+                      Tag ID: {digitalAssets.digitalAssets.barcode.data}
+                    </div>
                   </div>
                 </div>
               </div>

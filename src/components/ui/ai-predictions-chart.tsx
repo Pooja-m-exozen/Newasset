@@ -10,11 +10,8 @@ import {
   BarChart3,
   PieChart,
   RefreshCw,
-  Calendar,
   Target,
   AlertTriangle,
-  Building2,
-  Gauge,
   Info,
   Eye,
   Filter
@@ -123,7 +120,7 @@ export function AIPredictionsChart({
                 const circumference = 2 * Math.PI * radius
                 const strokeDasharray = (percentage / 100) * circumference
                 const strokeDashoffset = index === 0 ? 0 : 
-                  Object.entries(data).slice(0, index).reduce((sum: number, [_, val]: [string, number]) => 
+                  Object.entries(data).slice(0, index).reduce((sum: number, [, val]: [string, number]) => 
                     sum + ((val / total) * circumference), 0)
                 
                 return (
@@ -202,7 +199,7 @@ export function AIPredictionsChart({
               <div className="h-64 relative">
                 {/* Y-axis with refined styling */}
                 <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted-foreground font-medium">
-                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value, index) => (
+                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value,) => (
                     <div key={value} className="flex items-center">
                       <span className="w-8 text-right font-semibold">{value}</span>
                       <div className="w-2 h-px bg-border ml-2"></div>
@@ -301,8 +298,6 @@ export function AIPredictionsChart({
         return renderPieChart(data)
     }
   }
-
-
 
   // Loading state
   if (isLoading) {

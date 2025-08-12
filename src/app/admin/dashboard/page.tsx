@@ -31,6 +31,21 @@ export default function AdminDashboardPage() {
     refreshTrends
   } = useAdminDashboard()
 
+  // Transform predictionsData to match the expected format
+  const transformedPredictionsData = predictionsData ? {
+    success: predictionsData.success,
+    count: predictionsData.count,
+    predictions: predictionsData.predictions.map(prediction => ({
+      assetId: prediction.assetId,
+      assetType: prediction.assetType,
+      prediction: {
+        confidence: prediction.prediction.confidence,
+        nextMaintenanceDate: prediction.prediction.nextMaintenanceDate,
+        predictedIssues: prediction.prediction.factors // Map factors to predictedIssues
+      }
+    }))
+  } : null
+
   if (isLoading) {
     return (
       <ProtectedRoute>
@@ -79,7 +94,7 @@ export default function AdminDashboardPage() {
         isLoading={isLoading}
         error={error}
         onRefresh={refreshDashboard}
-        predictionsData={predictionsData}
+        predictionsData={transformedPredictionsData}
         isPredictionsLoading={isPredictionsLoading}
         predictionsError={predictionsError}
         onRefreshPredictions={refreshPredictions}

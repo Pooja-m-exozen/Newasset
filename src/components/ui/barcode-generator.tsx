@@ -1,24 +1,24 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
 import { Badge } from './badge'
-import { Separator } from './separator'
+
 import { generateBarcode, type BarcodeGenerationResponse } from '@/lib/DigitalAssets'
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { Barcode, Settings, Info, Hash, CheckCircle, X, Search, MapPin, Building } from 'lucide-react'
+import { Barcode, Settings, Info, Hash, CheckCircle, Search, Building } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
+import Image from 'next/image'
 
 // API Base URL constant
 const API_BASE_URL = 'http://192.168.0.5:5021'
 
 interface BarcodeGeneratorProps {
-  assetId?: string;
   className?: string;
 }
 
@@ -31,8 +31,8 @@ const BARCODE_FORMATS = [
   { value: 'upce', label: 'UPC-E', description: 'Universal Product Code, 8 digits' },
 ]
 
-export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) {
-  const { assets, fetchAssets, fetchAssetByTagId, getAssetIdFromTagId, loading: assetsLoading } = useDigitalAssets()
+export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
+  const { assets, fetchAssets, loading: assetsLoading } = useDigitalAssets()
   const [format, setFormat] = useState('code128')
   const [height, setHeight] = useState(10)
   const [scale, setScale] = useState(3)
@@ -47,13 +47,32 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
   const [searchTerm, setSearchTerm] = useState('')
   const [imageLoading, setImageLoading] = useState(false)
 
-  // Load assets on component mount
-  useEffect(() => {
+  // Load assets on component mount - optimized with useCallback
+  const loadAssets = useCallback(() => {
     fetchAssets()
-  }, []) // Remove fetchAssets from dependencies to prevent infinite loop
+  }, [fetchAssets])
 
-  // Handle asset selection from dropdown
-  const handleAssetSelect = async (assetTagId: string) => {
+  useEffect(() => {
+    loadAssets()
+  }, [loadAssets])
+
+  // Memoized filtered assets for better performance
+  const filteredAssets = useMemo(() => 
+    assets.filter(asset => 
+      asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.model.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [assets, searchTerm]
+  )
+
+  // Memoized selected format for better performance
+  const selectedFormat = useMemo(() => 
+    BARCODE_FORMATS.find(f => f.value === format), [format]
+  )
+
+  // Handle asset selection from dropdown - optimized with useCallback
+  const handleAssetSelect = useCallback(async (assetTagId: string) => {
     setSelectedAssetFromDropdown(assetTagId)
     setSelectedAssetId(assetTagId)
     setError(null) // Clear any previous errors
@@ -74,17 +93,9 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
       setError(err instanceof Error ? err.message : 'Failed to process selected asset')
       console.error('Error processing selected asset:', err)
     }
-  }
+  }, [assets])
 
-  const handleClearAsset = () => {
-    setSelectedAssetId('')
-    setMappedAssetId('')
-    setSelectedAssetFromDropdown('')
-    setBarcodeData(null)
-    setError(null)
-  }
-
-  const handleGenerateBarcode = async (assetIdToUse?: string) => {
+  const handleGenerateBarcode = useCallback(async (assetIdToUse?: string) => {
     const assetId = assetIdToUse || mappedAssetId
     
     if (!assetId) {
@@ -110,21 +121,35 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
     } finally {
       setIsGenerating(false)
     }
-  }
+  }, [mappedAssetId, format, height, scale])
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     await handleGenerateBarcode()
-  }
+  }, [handleGenerateBarcode])
 
-  // Filter assets based on search term
-  const filteredAssets = assets.filter(asset => 
-    asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.model.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Optimized image error handling
+  const handleImageError = useCallback(() => {
+    console.error('Failed to load barcode image')
+    setImageLoading(false)
+    // Fallback to a placeholder
+    const parentElement = document.querySelector('.barcode-image-container')
+    if (parentElement) {
+      parentElement.innerHTML = `
+        <div class="flex items-center justify-center w-64 h-32 bg-muted/50 rounded-lg">
+          <div class="text-center text-muted-foreground">
+            <p class="text-sm font-medium">Barcode Image</p>
+            <p class="text-xs">Failed to load</p>
+            <p class="text-xs mt-2">URL: ${API_BASE_URL}${barcodeData?.barcode.url}</p>
+          </div>
+        </div>
+      `
+    }
+  }, [barcodeData?.barcode.url])
 
-  const selectedFormat = BARCODE_FORMATS.find(f => f.value === format)
+  // Optimized image load handling
+  const handleImageLoad = useCallback(() => {
+    setImageLoading(false)
+  }, [])
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -179,7 +204,7 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
               </div>
               <Select value={selectedAssetFromDropdown} onValueChange={handleAssetSelect}>
                 <SelectTrigger className="h-11 text-sm">
-                  <SelectValue placeholder={assetsLoading ? "⏳ Loading assets..." : "📋 Choose an asset from the list"} />
+                  <SelectValue placeholder={assetsLoading ? '⏳ Loading assets...' : '📋 Choose an asset from the list'} />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
                   {assetsLoading ? (
@@ -225,7 +250,7 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                 <span>
                   {assetsLoading ? 'Loading...' : `${filteredAssets.length} of ${assets.length} assets shown`}
                 </span>
-                <span>Select an asset and click "Generate Barcode"</span>
+                <span>Select an asset and click &apos;Generate Barcode&apos;</span>
               </div>
             </div>
           </div>
@@ -372,7 +397,7 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                 {/* Barcode Display */}
                 <div className="relative w-80 h-40 bg-white rounded-lg shadow-sm overflow-hidden border border-border">
                   {/* Barcode Image */}
-                  <div className="flex items-center justify-center w-full h-full p-6">
+                  <div className="flex items-center justify-center w-full h-full p-6 barcode-image-container">
                     {imageLoading && (
                       <div className="flex items-center justify-center w-64 h-32 bg-muted/50 rounded-lg">
                         <div className="text-center text-muted-foreground">
@@ -381,52 +406,16 @@ export function BarcodeGenerator({ assetId, className }: BarcodeGeneratorProps) 
                         </div>
                       </div>
                     )}
-                    <img
+                    <Image
                       src={`${API_BASE_URL}${barcodeData.barcode.url}`}
                       alt={`Barcode for ${barcodeData.barcode.data}`}
-                      className={`w-64 h-32 object-contain ${imageLoading ? 'hidden' : ''}`}
-                      crossOrigin="anonymous"
-                      onLoad={() => setImageLoading(false)}
-                      onError={(e) => {
-                        console.error('Failed to load barcode image:', e.currentTarget.src)
-                        setImageLoading(false)
-                        // Try alternative approach - fetch the image as blob
-                        fetch(`${API_BASE_URL}${barcodeData.barcode.url}`, {
-                          method: 'GET',
-                          headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                          },
-                        })
-                        .then(response => {
-                          if (response.ok) {
-                            return response.blob()
-                          }
-                          throw new Error('Failed to fetch image')
-                        })
-                        .then(blob => {
-                          const url = URL.createObjectURL(blob)
-                          e.currentTarget.src = url
-                          e.currentTarget.style.display = 'block'
-                          setImageLoading(false)
-                        })
-                        .catch(err => {
-                          console.error('Failed to fetch barcode image:', err)
-                          setImageLoading(false)
-                          // Fallback to a placeholder
-                          e.currentTarget.style.display = 'none'
-                          if (e.currentTarget.parentElement) {
-                            e.currentTarget.parentElement.innerHTML = `
-                              <div class="flex items-center justify-center w-64 h-32 bg-muted/50 rounded-lg">
-                                <div class="text-center text-muted-foreground">
-                                  <p class="text-sm font-medium">Barcode Image</p>
-                                  <p class="text-xs">Failed to load</p>
-                                  <p class="text-xs mt-2">URL: ${API_BASE_URL}${barcodeData.barcode.url}</p>
-                                </div>
-                              </div>
-                            `
-                          }
-                        })
-                      }}
+                      width={256}
+                      height={128}
+                      className={`object-contain ${imageLoading ? 'hidden' : ''}`}
+                      onLoad={handleImageLoad}
+                      onError={handleImageError}
+                      priority={true}
+                      loading="eager"
                     />
                   </div>
                 </div>

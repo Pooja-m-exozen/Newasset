@@ -1,19 +1,19 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
 import { Checkbox } from './checkbox'
 import { Badge } from './badge'
-import { Separator } from './separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { generateQRCode, type QRCodeGenerationResponse } from '@/lib/DigitalAssets'
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, MapPin, Building, Hash, CheckCircle, X, Search } from 'lucide-react'
+import { QrCode, MapPin, Building, Hash, CheckCircle, Search, Scan, Download, Share2, Copy, Eye, Clock, Globe, Smartphone, Zap } from 'lucide-react'
+import Image from 'next/image'
 
 // API Base URL constant
 const API_BASE_URL = 'http://192.168.0.5:5021'
@@ -27,6 +27,8 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
   const [size, setSize] = useState(300)
   const [includeUrl, setIncludeUrl] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  const [scannedData, setScannedData] = useState<any>(null)
 
   const [qrCodeData, setQrCodeData] = useState<QRCodeGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -38,13 +40,27 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [imageLoading, setImageLoading] = useState(false)
 
-  // Load assets on component mount
-  useEffect(() => {
+  // Load assets on component mount - optimized with useCallback
+  const loadAssets = useCallback(() => {
     fetchAssets()
-  }, []) // Remove fetchAssets from dependencies to prevent infinite loop
+  }, [fetchAssets])
 
-  // Handle asset selection from dropdown
-  const handleAssetSelect = async (assetTagId: string) => {
+  useEffect(() => {
+    loadAssets()
+  }, [loadAssets])
+
+  // Memoized filtered assets for better performance
+  const filteredAssets = useMemo(() => 
+    assets.filter(asset => 
+      asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.model.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [assets, searchTerm]
+  )
+
+  // Handle asset selection from dropdown - optimized with useCallback
+  const handleAssetSelect = useCallback(async (assetTagId: string) => {
     setSelectedAssetFromDropdown(assetTagId)
     setSelectedAssetId(assetTagId)
     setError(null) // Clear any previous errors
@@ -65,17 +81,9 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
       setError(err instanceof Error ? err.message : 'Failed to process selected asset')
       console.error('Error processing selected asset:', err)
     }
-  }
+  }, [assets])
 
-  const handleClearAsset = () => {
-    setSelectedAssetId('')
-    setMappedAssetId('')
-    setSelectedAssetFromDropdown('')
-    setQrCodeData(null)
-    setError(null)
-  }
-
-  const handleGenerateQRCode = async (assetIdToUse?: string) => {
+  const handleGenerateQRCode = useCallback(async (assetIdToUse?: string) => {
     const assetId = assetIdToUse || mappedAssetId
     
     if (!assetId) {
@@ -100,19 +108,89 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
     } finally {
       setIsGenerating(false)
     }
-  }
+  }, [mappedAssetId, size, includeUrl])
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     await handleGenerateQRCode()
-  }
+  }, [handleGenerateQRCode])
 
-  // Filter assets based on search term
-  const filteredAssets = assets.filter(asset => 
-    asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.model.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Fast Scanner Simulation
+  const handleFastScan = useCallback(() => {
+    if (!qrCodeData) return
+    
+    setIsScanning(true)
+    
+    // Simulate fast scanning with the generated QR data
+    setTimeout(() => {
+      setScannedData(qrCodeData.qrCode.data)
+      setIsScanning(false)
+      setSuccessMessage('QR Code scanned successfully! Asset details loaded.')
+      setShowSuccessToast(true)
+    }, 800) // Fast scan simulation
+  }, [qrCodeData])
+
+  // Copy to clipboard functionality
+  const handleCopyToClipboard = useCallback(async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setSuccessMessage(`${label} copied to clipboard!`)
+      setShowSuccessToast(true)
+    } catch (err) {
+      setError('Failed to copy to clipboard')
+    }
+  }, [])
+
+  // Download QR Code
+  const handleDownloadQR = useCallback(async () => {
+    if (!qrCodeData) return
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}${qrCodeData.qrCode.url}`)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `QR_${qrCodeData.qrCode.data.t || 'ASSET'}_${Date.now()}.png`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      setSuccessMessage('QR Code downloaded successfully!')
+      setShowSuccessToast(true)
+    } catch (err) {
+      setError('Failed to download QR Code')
+    }
+  }, [qrCodeData])
+
+  // Optimized image error handling
+  const handleImageError = useCallback(() => {
+    console.error('Failed to load QR code image')
+    setImageLoading(false)
+    // Fallback to a placeholder
+    const parentElement = document.querySelector('.qr-code-image-container')
+    if (parentElement) {
+      parentElement.innerHTML = `
+        <div class="flex items-center justify-center w-64 h-64 bg-muted/50 rounded-lg">
+          <div class="text-center text-muted-foreground">
+            <p class="text-sm font-medium">QR Code Image</p>
+            <p class="text-xs">Failed to load</p>
+            <p class="text-xs mt-2">URL: ${API_BASE_URL}${qrCodeData?.qrCode.url}</p>
+          </div>
+        </div>
+      `
+    }
+  }, [qrCodeData?.qrCode.url])
+
+  // Optimized image load handling
+  const handleImageLoad = useCallback(() => {
+    setImageLoading(false)
+  }, [])
+
+  // Format timestamp to readable date
+  const formatTimestamp = useCallback((timestamp: number) => {
+    return new Date(timestamp).toLocaleString()
+  }, [])
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -131,10 +209,10 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
             </div>
             <div>
               <CardTitle className="text-xl font-semibold">
-                QR Code Generator
+                QR Code Generator & Scanner
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-1">
-                Select an asset and generate a professional QR code for digital asset tracking
+                Select an asset, generate a professional QR code, and scan it for instant asset details
               </CardDescription>
             </div>
           </div>
@@ -167,7 +245,9 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
               </div>
               <Select value={selectedAssetFromDropdown} onValueChange={handleAssetSelect}>
                 <SelectTrigger className="h-11 text-sm">
-                  <SelectValue placeholder={assetsLoading ? "⏳ Loading assets..." : "📋 Choose an asset from the list"} />
+                  <SelectTrigger className="h-11 text-sm">
+                    <SelectValue placeholder={assetsLoading ? '⏳ Loading assets...' : '📋 Choose an asset from the list'} />
+                  </SelectTrigger>
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
                   {assetsLoading ? (
@@ -213,7 +293,7 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                 <span>
                   {assetsLoading ? 'Loading...' : `${filteredAssets.length} of ${assets.length} assets shown`}
                 </span>
-                <span>Select an asset and click "Generate QR Code"</span>
+                <span>Select an asset and click &apos;Generate QR Code&apos;</span>
               </div>
             </div>
           </div>
@@ -310,16 +390,28 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                     Generated QR Code
                   </CardTitle>
                   <CardDescription className="text-muted-foreground mt-1">
-                    QR code generated successfully for asset {qrCodeData.qrCode.data.tagId}
+                    QR code generated successfully for asset {qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId}
                   </CardDescription>
                 </div>
               </div>
-              <Badge variant="secondary" className="text-sm px-3 py-1">
-                {qrCodeData.qrCode.data.tagId}
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <Badge variant="secondary" className="text-sm px-3 py-1">
+                  {qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFastScan}
+                  disabled={isScanning}
+                  className="flex items-center space-x-2"
+                >
+                  <Scan className="h-4 w-4" />
+                  <span>{isScanning ? 'Scanning...' : 'Fast Scan'}</span>
+                </Button>
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="flex justify-center">
               <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
                 {/* QR Code Scanner Frame */}
@@ -331,7 +423,7 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-r-4 border-b-4 border-green-500 rounded-br-lg"></div>
                   
                   {/* QR Code Image */}
-                  <div className="flex items-center justify-center w-full h-full p-6">
+                  <div className="flex items-center justify-center w-full h-full p-6 qr-code-image-container">
                     {imageLoading && (
                       <div className="flex items-center justify-center w-64 h-64 bg-muted/50 rounded-lg">
                         <div className="text-center text-muted-foreground">
@@ -340,53 +432,16 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                         </div>
                       </div>
                     )}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={`${API_BASE_URL}${qrCodeData.qrCode.url}`}
-                      alt={`QR Code Scanner for ${qrCodeData.qrCode.data.tagId}`}
-                      className={`w-64 h-64 object-contain ${imageLoading ? 'hidden' : ''}`}
-                      crossOrigin="anonymous"
-                      onLoad={() => setImageLoading(false)}
-                      onError={(e) => {
-                        console.error('Failed to load QR code image:', e.currentTarget.src)
-                        setImageLoading(false)
-                        // Try alternative approach - fetch the image as blob
-                        fetch(`${API_BASE_URL}${qrCodeData.qrCode.url}`, {
-                          method: 'GET',
-                          headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                          },
-                        })
-                        .then(response => {
-                          if (response.ok) {
-                            return response.blob()
-                          }
-                          throw new Error('Failed to fetch image')
-                        })
-                        .then(blob => {
-                          const url = URL.createObjectURL(blob)
-                          e.currentTarget.src = url
-                          e.currentTarget.style.display = 'block'
-                          setImageLoading(false)
-                        })
-                        .catch(err => {
-                          console.error('Failed to fetch QR code image:', err)
-                          setImageLoading(false)
-                          // Fallback to a placeholder
-                          e.currentTarget.style.display = 'none'
-                          if (e.currentTarget.parentElement) {
-                            e.currentTarget.parentElement.innerHTML = `
-                              <div class="flex items-center justify-center w-64 h-64 bg-muted/50 rounded-lg">
-                                <div class="text-center text-muted-foreground">
-                                  <p class="text-sm font-medium">QR Code Image</p>
-                                  <p class="text-xs">Failed to load</p>
-                                  <p class="text-xs mt-2">URL: ${API_BASE_URL}${qrCodeData.qrCode.url}</p>
-                                </div>
-                              </div>
-                            `
-                          }
-                        })
-                      }}
+                      alt={`QR Code Scanner for ${qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId}`}
+                      width={256}
+                      height={256}
+                      className={`object-contain ${imageLoading ? 'hidden' : ''}`}
+                      onLoad={handleImageLoad}
+                      onError={handleImageError}
+                      priority={true}
+                      loading="eager"
                     />
                   </div>
                   
@@ -398,14 +453,42 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                 <div className="mt-6 text-center">
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/50 text-foreground rounded-full text-sm font-semibold shadow-sm">
                     <QrCode className="h-4 w-4" />
-                    Tag ID: {qrCodeData.qrCode.data.tagId}
+                    Tag ID: {qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Asset Information Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Action Buttons */}
+            <div className="flex justify-center space-x-4">
+              <Button
+                variant="outline"
+                onClick={handleDownloadQR}
+                className="flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>Download QR</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleCopyToClipboard(qrCodeData.qrCode.shortUrl, 'Asset URL')}
+                className="flex items-center space-x-2"
+              >
+                <Copy className="h-4 w-4" />
+                <span>Copy URL</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleCopyToClipboard(qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId, 'Tag ID')}
+                className="flex items-center space-x-2"
+              >
+                <Copy className="h-4 w-4" />
+                <span>Copy Tag ID</span>
+              </Button>
+            </div>
+
+            {/* Enhanced Asset Information Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Asset Information Card */}
               <Card className="shadow-sm">
                 <CardHeader className="pb-4">
@@ -413,39 +496,53 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                     <div className="p-1.5 rounded-md bg-blue-100">
                       <Hash className="h-4 w-4 text-blue-600" />
                     </div>
-                    <CardTitle className="text-lg font-semibold">Asset Information</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Asset Details</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tag ID</Label>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm font-medium font-mono">{qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyToClipboard(qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId, 'Tag ID')}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Type</Label>
-                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.assetType || 'N/A'}</p>
+                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.a || qrCodeData.qrCode.data.assetType || 'N/A'}</p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Brand</Label>
-                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.brand}</p>
+                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.b || qrCodeData.qrCode.data.brand}</p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Model</Label>
-                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.model}</p>
+                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.m || qrCodeData.qrCode.data.model}</p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</Label>
                       <Badge 
-                        variant={qrCodeData.qrCode.data.status === 'active' ? 'default' : 'secondary'}
+                        variant={qrCodeData.qrCode.data.st === 'active' ? 'default' : 'secondary'}
                         className="text-xs px-2 py-1"
                       >
-                        {qrCodeData.qrCode.data.status}
+                        {qrCodeData.qrCode.data.st || qrCodeData.qrCode.data.status}
                       </Badge>
                     </div>
-                    <div className="space-y-1 col-span-2">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Priority</Label>
                       <Badge 
-                        variant={qrCodeData.qrCode.data.priority === 'high' ? 'destructive' : 'secondary'}
+                        variant={qrCodeData.qrCode.data.p === 'high' ? 'destructive' : 'secondary'}
                         className="text-xs px-2 py-1"
                       >
-                        {qrCodeData.qrCode.data.priority}
+                        {qrCodeData.qrCode.data.p || qrCodeData.qrCode.data.priority}
                       </Badge>
                     </div>
                   </div>
@@ -459,26 +556,99 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                     <div className="p-1.5 rounded-md bg-green-100">
                       <MapPin className="h-4 w-4 text-green-600" />
                     </div>
-                    <CardTitle className="text-lg font-semibold">Location Details</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Location & Project</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Building</Label>
-                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.location.building}</p>
+                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.l?.building || qrCodeData.qrCode.data.location?.building || 'N/A'}</p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Floor</Label>
-                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.location.floor}</p>
+                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.l?.floor || qrCodeData.qrCode.data.location?.floor || 'N/A'}</p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Room</Label>
-                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.location.room}</p>
+                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.l?.room || qrCodeData.qrCode.data.location?.room || 'N/A'}</p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Project</Label>
-                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.projectName}</p>
+                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.pr || qrCodeData.qrCode.data.projectName || 'N/A'}</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Coordinates</Label>
+                      <div className="text-right">
+                        <p className="text-xs font-mono">
+                          {qrCodeData.qrCode.data.l?.latitude && qrCodeData.qrCode.data.l?.longitude 
+                            ? `${qrCodeData.qrCode.data.l.latitude}, ${qrCodeData.qrCode.data.l.longitude}`
+                            : 'N/A'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Technical Details Card */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-1.5 rounded-md bg-purple-100">
+                      <Zap className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold">Technical Info</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Generated</Label>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-xs font-mono">
+                          {qrCodeData.qrCode.data.ts ? formatTimestamp(qrCodeData.qrCode.data.ts) : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Checksum</Label>
+                      <div className="flex items-center space-x-1">
+                        <Hash className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-xs font-mono">
+                          {qrCodeData.qrCode.data.c || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">URL</Label>
+                      <div className="flex items-center space-x-1">
+                        <Globe className="h-3 w-3 text-muted-foreground" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyToClipboard(qrCodeData.qrCode.data.url || qrCodeData.qrCode.data.u, 'Asset URL')}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Short URL</Label>
+                      <div className="flex items-center space-x-1">
+                        <Smartphone className="h-3 w-3 text-muted-foreground" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyToClipboard(qrCodeData.qrCode.shortUrl, 'Short URL')}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -494,8 +664,53 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                     QR Code Generated Successfully!
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    The QR code is ready for use. You can scan it to access asset information.
+                    The QR code is ready for use. You can scan it to access asset information or use the Fast Scan button above.
                   </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Scanned Data Display */}
+      {scannedData && (
+        <Card className="shadow-sm border-green-200 bg-green-50/30">
+          <CardHeader className="pb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-lg bg-green-500">
+                <Scan className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold text-green-800">
+                  QR Code Scanned Successfully!
+                </CardTitle>
+                <CardDescription className="text-green-700 mt-1">
+                  Asset details loaded from scanned QR code
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-white rounded-lg border border-green-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-green-800">Asset Information</Label>
+                  <div className="space-y-1 text-sm">
+                    <p><span className="font-medium">Tag ID:</span> {scannedData.t || scannedData.tagId}</p>
+                    <p><span className="font-medium">Type:</span> {scannedData.a || scannedData.assetType}</p>
+                    <p><span className="font-medium">Brand:</span> {scannedData.b || scannedData.brand}</p>
+                    <p><span className="font-medium">Model:</span> {scannedData.m || scannedData.model}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-green-800">Status & Location</Label>
+                  <div className="space-y-1 text-sm">
+                    <p><span className="font-medium">Status:</span> {scannedData.st || scannedData.status}</p>
+                    <p><span className="font-medium">Priority:</span> {scannedData.p || scannedData.priority}</p>
+                    <p><span className="font-medium">Building:</span> {scannedData.l?.building || scannedData.location?.building || 'N/A'}</p>
+                    <p><span className="font-medium">Project:</span> {scannedData.pr || scannedData.projectName}</p>
+                  </div>
                 </div>
               </div>
             </div>

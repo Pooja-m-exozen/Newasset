@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { AssetProvider, useAssetContext } from '../../../contexts/AdminAssetContext';
-import { Asset, AssetType, AdminPermissions } from '../../../lib/adminasset';
+import { Asset, AssetType,  } from '../../../lib/adminasset';
 import { Button } from '../../../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { Input } from '../../../components/ui/input';
 import { AssetCard } from '../../../components/ui/asset-card';
 import { AssetViewModal } from '../../../components/ui/asset-view-modal';
+
 import { AssetFormModal } from '../../../components/ui/asset-form-modal';
 import { AssetTypeFormModal } from '../../../components/ui/asset-type-form-modal';
 import { StatusBadge } from '../../../components/ui/status-badge';
@@ -21,65 +22,64 @@ import { PermissionsUI } from '../../../components/ui/permissions-ui';
 import { useToast, ToastContainer } from '../../../components/ui/toast';
 
 // Define the Permissions type to match what PermissionsUI expects
-interface PermissionCategory {
-  view?: boolean
-  create?: boolean
-  edit?: boolean
-  delete?: boolean
-  assign?: boolean
-  bulkOperations?: boolean
-  import?: boolean
-  export?: boolean
-  generate?: boolean
-  scan?: boolean
-  bulkGenerate?: boolean
-  download?: boolean
-  customize?: boolean
-  approve?: boolean
-  schedule?: boolean
-  complete?: boolean
-  audit?: boolean
-  report?: boolean
-  share?: boolean
-  assignRoles?: boolean
-  managePermissions?: boolean
-  configure?: boolean
-  backup?: boolean
-  restore?: boolean
-  monitor?: boolean
-  upload?: boolean
-  offline?: boolean
-  sync?: boolean
-  location?: boolean
-  camera?: boolean
-  notifications?: boolean
-}
+// interface PermissionCategory {
+//   view?: boolean
+//   create?: boolean
+//   edit?: boolean
+//   delete?: boolean
+//   assign?: boolean
+//   bulkOperations?: boolean
+//   import?: boolean
+//   export?: boolean
+//   generate?: boolean
+//   scan?: boolean
+//   bulkGenerate?: boolean
+//   download?: boolean
+//   customize?: boolean
+//   approve?: boolean
+//   schedule?: boolean
+//   complete?: boolean
+//   audit?: boolean
+//   report?: boolean
+//   share?: boolean
+//   assignRoles?: boolean
+//   managePermissions?: boolean
+//   configure?: boolean
+//   backup?: boolean
+//   restore?: boolean
+//   monitor?: boolean
+//   upload?: boolean
+//   offline?: boolean
+//   sync?: boolean
+//   location?: boolean
+//   camera?: boolean
+//   notifications?: boolean
+// }
 
-interface Permissions {
-  assetManagement: PermissionCategory
-  digitalAssets: PermissionCategory
-  maintenance: PermissionCategory
-  compliance: PermissionCategory
-  analytics: PermissionCategory
-  userManagement: PermissionCategory
-  systemAdmin: PermissionCategory
-  admin: PermissionCategory
-  locationManagement: PermissionCategory
-  documentManagement: PermissionCategory
-  financialManagement: PermissionCategory
-  workflowManagement: PermissionCategory
-  mobileFeatures: PermissionCategory
-}
+// interface Permissions {
+//   assetManagement: PermissionCategory
+//   digitalAssets: PermissionCategory
+//   maintenance: PermissionCategory
+//   compliance: PermissionCategory
+//   analytics: PermissionCategory
+//   userManagement: PermissionCategory
+//   systemAdmin: PermissionCategory
+//   admin: PermissionCategory
+//   locationManagement: PermissionCategory
+//   documentManagement: PermissionCategory
+//   financialManagement: PermissionCategory
+//   workflowManagement: PermissionCategory
+//   mobileFeatures: PermissionCategory
+// }
 
 // Permissions Display Component
 const PermissionsDisplay: React.FC = () => {
   const { 
     state, 
     fetchAdminPermissions, 
-    updateAdminPermissions, 
     clearError 
   } = useAssetContext();
-  const { addToast, toasts, removeToast } = useToast();
+  const { toasts, removeToast } = useToast();
 
   useEffect(() => {
     // Fetch permissions when component mounts (only if not already loaded)
@@ -88,33 +88,11 @@ const PermissionsDisplay: React.FC = () => {
     }
   }, [state.adminPermissions, state.loading, fetchAdminPermissions]);
 
-  const handleUpdatePermissions = async (permissions: Permissions) => {
-    try {
-      // Convert the permissions to the format expected by updateAdminPermissions
-      // For now, we'll use any to avoid type conflicts between the two permission systems
-      await updateAdminPermissions(permissions as AdminPermissions);
-      addToast({
-        type: "success",
-        title: "Success",
-        message: "Permissions updated successfully on server",
-      });
-    } catch (error) {
-      console.error('Error updating permissions:', error);
-      addToast({
-        type: "error",
-        title: "Error",
-        message: "Failed to update permissions. Please check your connection and try again.",
-      });
-    }
-  };
-
   return (
     <>
       <PermissionsUI
-        permissions={undefined}
         loading={state.loading}
         error={state.error}
-        onUpdatePermissions={handleUpdatePermissions}
         onClearError={clearError}
         bearerToken={localStorage.getItem('authToken') || undefined}
         role="viewer"
@@ -133,13 +111,15 @@ const AssetsList: React.FC = () => {
     updateAsset, 
     deleteAsset, 
     fetchAssetTypes, 
-    clearError 
+    clearError,
+    updateAssetInState
   } = useAssetContext();
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -178,6 +158,20 @@ const AssetsList: React.FC = () => {
     setSelectedAsset(null);
   };
 
+  const handleAssetUpdated = (updatedAsset: Asset) => {
+    // Update the asset in the state
+    updateAssetInState(updatedAsset);
+    
+    // Update the selected asset if it's the one being viewed
+    if (selectedAsset?._id === updatedAsset._id) {
+      setSelectedAsset(updatedAsset);
+    }
+    
+    // Show success message
+    setSuccessMessage('Asset updated successfully!');
+    setShowSuccess(true);
+  };
+
 
 
   const handleCreateSuccess = () => {
@@ -189,6 +183,8 @@ const AssetsList: React.FC = () => {
     setSuccessMessage('Asset updated successfully!');
     setShowSuccess(true);
   };
+
+
 
   const filteredAssets = state.assets.filter(asset => {
     const matchesSearch = asset.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -356,7 +352,12 @@ const AssetsList: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                               </svg>
                             </div>
-                            <span className="text-sm font-medium">{asset.tagId}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{asset.tagId}</span>
+                              {asset.digitalAssets?.qrCode && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full" title="Has QR Code"></div>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="py-4 px-6">
@@ -398,6 +399,7 @@ const AssetsList: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </Button>
+
                             <Button 
                               size="sm" 
                               variant="ghost" 
@@ -433,6 +435,7 @@ const AssetsList: React.FC = () => {
                 onView={handleView}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+
                 className="mb-4"
               />
             ))}
@@ -445,6 +448,7 @@ const AssetsList: React.FC = () => {
         asset={selectedAsset}
         isOpen={isModalOpen}
         onClose={closeModal}
+        onAssetUpdated={handleAssetUpdated}
       />
 
       {/* Create/Edit Asset Modal */}
@@ -460,11 +464,22 @@ const AssetsList: React.FC = () => {
         assetTypes={state.assetTypes}
         onSubmit={async (data) => {
           if (isCreateModalOpen) {
-            await createAsset(data);
-            setIsCreateModalOpen(false);
-            handleCreateSuccess();
+            // Create asset and get the response
+            const createdAsset = await createAsset(data as any);
+            
+            // If the asset has a digital tag type of QR, don't close the modal yet
+            // The asset form modal will handle showing the QR generation interface
+            if (data.digitalTagType === 'qr' && createdAsset) {
+              console.log('Asset created successfully, ready for QR generation:', createdAsset);
+              // Return the created asset so the modal can show QR generation
+              return createdAsset;
+            } else {
+              // For non-QR assets, close the modal and show success message
+              setIsCreateModalOpen(false);
+              handleCreateSuccess();
+            }
           } else if (isEditModalOpen && editingAsset) {
-            await updateAsset(editingAsset._id!, data);
+            await updateAsset(editingAsset._id!, data as any);
             setIsEditModalOpen(false);
             setEditingAsset(null);
             handleUpdateSuccess();
@@ -472,6 +487,8 @@ const AssetsList: React.FC = () => {
         }}
         loading={state.loading}
       />
+
+
 
       {/* Success Toast */}
       {showSuccess && (
@@ -709,12 +726,22 @@ const AssetTypeManagement: React.FC = () => {
         mode={isCreateModalOpen ? 'create' : 'edit'}
           assetType={editingAssetType}
         onSubmit={async (data) => {
+          // Transform the data to match CreateAssetTypeRequest format
+          const transformedData = {
+            name: data.name,
+            fields: data.fields.map(field => ({
+              label: field.label,
+              fieldType: field.fieldType as 'text' | 'dropdown',
+              options: field.fieldType === 'dropdown' ? (field.options || []) : undefined
+            }))
+          };
+          
           if (isCreateModalOpen) {
-            await createAssetType(data);
+            await createAssetType(transformedData);
             setIsCreateModalOpen(false);
             handleCreateSuccess();
           } else if (isEditModalOpen && editingAssetType) {
-            await updateAssetType(editingAssetType._id, data);
+            await updateAssetType(editingAssetType._id, transformedData);
             setIsEditModalOpen(false);
             setEditingAssetType(null);
             handleUpdateSuccess();

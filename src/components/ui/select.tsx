@@ -36,11 +36,11 @@ const Select: React.FC<SelectProps> = ({ value, onValueChange, children }) => {
     }
   }, [isOpen])
 
-  const handleSelect = (newValue: string) => {
+  const handleSelect = React.useCallback((newValue: string) => {
     setSelectedValue(newValue)
     setIsOpen(false)
     onValueChange?.(newValue)
-  }
+  }, [onValueChange])
 
   const contextValue = React.useMemo(() => ({
     isOpen,

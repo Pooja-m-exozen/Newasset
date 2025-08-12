@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,36 +12,20 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { 
   Brain, 
   Plus, 
-  Edit, 
   Target, 
   BarChart3, 
   Zap, 
-  Settings, 
   Play, 
   Pause, 
   Trash2, 
-  AlertTriangle, 
   TrendingUp, 
   Lightbulb, 
   Activity, 
-  CheckCircle, 
-  XCircle, 
   Star, 
-  BookOpen, 
   GraduationCap,
   RefreshCw,
   Search,
-  Filter,
-  Download,
-  MoreHorizontal,
-  Eye,
-  Clock,
-  DollarSign,
-  Shield,
-  Wifi,
-  Battery,
-  Thermometer,
-  Gauge
+  Filter
 } from 'lucide-react'
 import { useAutomation } from '@/contexts/AutomationContext'
 import { DecisionRequest, DecisionLearningRequest } from '@/lib/automation'
@@ -85,16 +69,13 @@ export function AutomationDecisions() {
     isAuthenticated,
     decisionResult,
     decisionLoading,
-    decisionError,
     makeDecision,
     clearDecisionResult,
     decisionAnalytics,
     analyticsLoading,
-    analyticsError,
     fetchDecisionAnalytics,
     learningResult,
     learningLoading,
-    learningError,
     learnFromDecision,
     clearLearningResult
   } = useAutomation()
@@ -103,7 +84,7 @@ export function AutomationDecisions() {
   const [decisionRules, setDecisionRules] = useState<DecisionRule[]>([])
 
   // Recent decisions state
-  const [recentDecisions, setRecentDecisions] = useState<RecentDecision[]>([])
+  const [recentDecisions] = useState<RecentDecision[]>([])
 
   // Modal states
   const [createRuleModalOpen, setCreateRuleModalOpen] = useState(false)
@@ -149,7 +130,7 @@ export function AutomationDecisions() {
       
       return () => clearTimeout(timer)
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, fetchDecisionAnalytics])
 
   // Show loading state during initial load
   if (analyticsLoading && !decisionAnalytics) {
@@ -696,7 +677,7 @@ export function AutomationDecisions() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="decisionType" className="text-sm font-medium">Decision Type</Label>
-                <Select value={decisionType} onValueChange={(value: any) => setDecisionType(value)}>
+                <Select value={decisionType} onValueChange={(value: string) => setDecisionType(value as typeof decisionType)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -880,7 +861,7 @@ export function AutomationDecisions() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="learningOutcome" className="text-sm font-medium">Outcome</Label>
-                <Select value={learningOutcome} onValueChange={(value: any) => setLearningOutcome(value)}>
+                <Select value={learningOutcome} onValueChange={(value: string) => setLearningOutcome(value as 'success' | 'partial' | 'failed')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -998,7 +979,7 @@ export function AutomationDecisions() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ruleType" className="text-sm font-medium">Rule Type</Label>
-                <Select value={ruleType} onValueChange={(value: any) => setRuleType(value)}>
+                <Select value={ruleType} onValueChange={(value: string) => setRuleType(value as 'asset_failure' | 'resource_allocation' | 'predictive_maintenance' | 'custom')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

@@ -74,9 +74,9 @@ export interface QRCodeRequest {
 export interface Location {
   latitude: string;
   longitude: string;
-  floor: string;
-  room: string;
-  building: string;
+  floor?: string;
+  room?: string;
+  building?: string;
 }
 
 export interface QRCodeData {
@@ -95,16 +95,49 @@ export interface QRCodeData {
   checksum: string;
 }
 
+// Interface that matches the Asset's DigitalAsset structure
+export interface AssetQRCodeData {
+  t: string;        // tagId
+  a: string;        // assetType
+  s: string;        // subcategory
+  b: string;        // brand
+  m: string;        // model
+  st: string;       // status
+  p: string;        // priority
+  l: Location;      // location
+  u: string;        // url
+  pr: string;       // projectName
+  lm: string | null; // location metadata
+  nm: string | null; // notes metadata
+  url: string;      // asset url
+  ts: number;       // timestamp
+  c: string;        // checksum
+}
+
 export interface QRCodeResponse {
   url: string;
   shortUrl: string;
   data: QRCodeData;
 }
 
+// Response that matches the Asset's structure
+export interface AssetQRCodeResponse {
+  url: string;
+  shortUrl: string;
+  data: AssetQRCodeData;
+}
+
 export interface QRCodeGenerationResponse {
   success: boolean;
   message: string;
   qrCode: QRCodeResponse;
+}
+
+// Response that matches the Asset's structure
+export interface AssetQRCodeGenerationResponse {
+  success: boolean;
+  message: string;
+  qrCode: AssetQRCodeResponse;
 }
 
 // Types for Barcode generation
@@ -318,7 +351,7 @@ const validateBarcodeOptions = (options: BarcodeRequest): void => {
 export const generateQRCode = async (
   assetId: string, 
   options: QRCodeRequest = { size: 300, includeUrl: true }
-): Promise<QRCodeGenerationResponse> => {
+): Promise<AssetQRCodeGenerationResponse> => {
   try {
     // Validate inputs
     validateAuthToken();
@@ -389,7 +422,7 @@ export const generateQRCode = async (
       }
     }
 
-    const data: QRCodeGenerationResponse = await response.json();
+    const data: AssetQRCodeGenerationResponse = await response.json();
     console.log('✅ QR Code generation response:', JSON.stringify(data, null, 2));
 
     if (!data.success) {

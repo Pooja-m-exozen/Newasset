@@ -33,6 +33,30 @@ export interface ScanHistory {
   notes?: string;
 }
 
+export interface DigitalAsset {
+  qrCode?: {
+    url: string;
+    data: {
+      t: string;        // tagId
+      a: string;        // assetType
+      s: string;        // subcategory
+      b: string;        // brand
+      m: string;        // model
+      st: string;       // status
+      p: string;        // priority
+      l: Location;      // location
+      u: string;        // url
+      pr: string;       // projectName
+      lm: string | null; // location metadata
+      nm: string | null; // notes metadata
+      url: string;      // asset url
+      ts: number;       // timestamp
+      c: string;        // checksum
+    };
+    generatedAt: string;
+  };
+}
+
 export interface Asset {
   _id?: string;
   tagId: string;
@@ -49,11 +73,12 @@ export interface Asset {
   priority?: string;
   compliance?: Compliance;
   digitalTagType?: string;
+  digitalAssets?: DigitalAsset;
   alerts?: Array<{ message: string; type: string; timestamp: string; [key: string]: string | number | boolean | object | null | undefined }>;
   documents?: Array<{ name: string; url: string; type: string; [key: string]: string | number | boolean | object | null | undefined }>;
   tags?: string[];
   notes?: string;
-  createdBy?: string;
+  createdBy?: AssignedTo;
   photos?: Array<{ url: string; caption?: string; [key: string]: string | number | boolean | object | null | undefined }>;
   scanHistory?: ScanHistory[];
   location: Location;

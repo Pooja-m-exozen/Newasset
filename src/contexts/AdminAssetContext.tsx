@@ -132,8 +132,8 @@ interface AssetContextType {
   updatePermission: (permissionId: string, permissionData: UpdateAssetPermissionRequest) => Promise<void>;
   deletePermission: (permissionId: string) => Promise<void>;
   fetchAssetById: (assetId: string) => Promise<void>;
-  createAsset: (assetData: Partial<Asset> | FormData) => Promise<void>;
-  updateAsset: (assetId: string, assetData: Partial<Asset> | FormData) => Promise<void>;
+  createAsset: (assetData: Partial<Asset> | FormData) => Promise<Asset>;
+  updateAsset: (assetId: string, assetData: Partial<Asset> | FormData) => Promise<Asset>;
   deleteAsset: (assetId: string) => Promise<void>;
   scanAsset: (assetId: string, scanData: {
     location: { latitude: string; longitude: string };
@@ -141,6 +141,7 @@ interface AssetContextType {
     notes?: string;
   }) => Promise<void>;
   setSelectedAsset: (asset: Asset | null) => void;
+  updateAssetInState: (updatedAsset: Asset) => void;
   clearError: () => void;
   getCurrentPermissions: () => Promise<void>;
 }
@@ -339,7 +340,7 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
   };
 
   // Create new asset
-  const createAsset = async (assetData: Partial<Asset> | FormData) => {
+  const createAsset = async (assetData: Partial<Asset> | FormData): Promise<Asset> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
@@ -348,17 +349,20 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
       
       if (response.success) {
         dispatch({ type: 'ADD_ASSET', payload: response.asset });
+        return response.asset;
       } else {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to create asset' });
+        throw new Error('Failed to create asset');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred while creating asset';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      throw new Error(errorMessage);
     }
   };
 
   // Update asset
-  const updateAsset = async (assetId: string, assetData: Partial<Asset> | FormData) => {
+  const updateAsset = async (assetId: string, assetData: Partial<Asset> | FormData): Promise<Asset> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
@@ -367,12 +371,15 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
       
       if (response.success) {
         dispatch({ type: 'UPDATE_ASSET', payload: response.asset });
+        return response.asset;
       } else {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to update asset' });
+        throw new Error('Failed to update asset');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred while updating asset';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
+      throw new Error(errorMessage);
     }
   };
 
@@ -421,6 +428,11 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
   // Set selected asset
   const setSelectedAsset = (asset: Asset | null) => {
     dispatch({ type: 'SET_SELECTED_ASSET', payload: asset });
+  };
+
+  // Update asset in state (without API call)
+  const updateAssetInState = (updatedAsset: Asset) => {
+    dispatch({ type: 'UPDATE_ASSET', payload: updatedAsset });
   };
 
   // Clear error
@@ -715,6 +727,7 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
     deleteAsset,
     scanAsset,
     setSelectedAsset,
+    updateAssetInState,
     clearError,
     getCurrentPermissions,
   };

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Badge } from './badge'
@@ -105,50 +105,6 @@ interface RolesResponse {
   roles: Role[]
 }
 
-
-
-interface AccessControl {
-  timeRestrictions: {
-    startTime: string
-    endTime: string
-    daysOfWeek: string[]
-  }
-  locationRestrictions: {
-    enabled: boolean
-    allowedLocations: string[]
-  }
-  facilityAccess: string
-  assetAccess: string
-  dataAccess: string
-}
-
-interface AdvancedFeatures {
-  predictiveAnalytics: boolean
-  machineLearning: boolean
-  apiAccess: boolean
-  thirdPartyIntegrations: boolean
-  customWorkflows: boolean
-  advancedReporting: boolean
-}
-
-interface SecuritySettings {
-  deviceRestrictions: {
-    web: boolean
-    mobile: boolean
-    tablet: boolean
-  }
-  mfaRequired: boolean
-  sessionTimeout: number
-  maxConcurrentSessions: number
-  ipRestrictions: string[]
-}
-
-
-
-
-
-
-
 interface PermissionsUIProps {
   loading?: boolean
   error?: string | null
@@ -177,7 +133,7 @@ export function PermissionsUI({
   const [rolesError, setRolesError] = useState<string | null>(null)
 
   // Fetch roles from API
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     if (!bearerToken) return
 
     setRolesLoading(true)
@@ -217,10 +173,10 @@ export function PermissionsUI({
     } finally {
       setRolesLoading(false)
     }
-  }
+  }, [bearerToken, selectedRole])
 
   // Fetch permissions from API
-  const fetchPermissions = async () => {
+  const fetchPermissions = useCallback(async () => {
     if (!bearerToken || !selectedRole) return
 
     setApiLoading(true)
@@ -306,7 +262,7 @@ export function PermissionsUI({
     } finally {
       setApiLoading(false)
     }
-  }
+  }, [bearerToken, selectedRole, roles])
 
   const setDefaultPermissions = () => {
     setApiPermissions({
@@ -400,7 +356,7 @@ export function PermissionsUI({
     if (!isSaving && selectedRole && roles.length > 0) {
       fetchPermissions()
     }
-  }, [bearerToken, selectedRole, roles, isSaving]) // Fetch when bearerToken, selectedRole, roles, or isSaving change
+  }, [bearerToken, selectedRole, roles, isSaving, fetchPermissions]) // Added fetchPermissions to dependencies
 
   useEffect(() => {
     if (bearerToken) {
@@ -454,8 +410,6 @@ export function PermissionsUI({
     return <Settings className="h-4 w-4" />
   }
 
-
-
   const handlePermissionToggle = (category: string, permission: string, enabled: boolean) => {
     if (!apiPermissions) return
 
@@ -475,8 +429,6 @@ export function PermissionsUI({
       updatePermissions(apiPermissions)
     }
   }
-
-
 
   const getPermissionLabel = (permission: string) => {
     const labels: { [key: string]: string } = {
@@ -622,7 +574,7 @@ export function PermissionsUI({
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 rounded-lg flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
+              <Shield className="w-4 w-4 text-white" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -662,7 +614,7 @@ export function PermissionsUI({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Users className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+              <Users className="w-3 w-3 text-purple-600 dark:text-purple-400" />
             </div>
             <Label htmlFor="role-select" className="text-xs font-medium text-gray-700 dark:text-gray-300">Select Role</Label>
           </div>
@@ -691,7 +643,7 @@ export function PermissionsUI({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Filter className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+              <Filter className="h-3 w-3 text-blue-600 dark:text-blue-400" />
             </div>
             <Label htmlFor="category-filter" className="text-xs font-medium text-gray-700 dark:text-gray-300">Filter by Category</Label>
           </div>

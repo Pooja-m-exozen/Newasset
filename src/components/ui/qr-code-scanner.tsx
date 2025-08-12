@@ -63,24 +63,21 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
 
     // Draw video frame to canvas
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // Get image data for QR detection
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
     
     // Simple QR code detection (you can integrate a proper QR library here)
     // For now, we'll use a placeholder that can be enhanced with jsQR or similar
-    detectQRCodeFromImageData(imageData)
+    detectQRCodeFromImageData()
   }
 
   // Placeholder QR detection function
-  const detectQRCodeFromImageData = (_imageData: ImageData) => {
+  const detectQRCodeFromImageData = () => {
     // This is a placeholder - in a real implementation, you would use a QR library
     // For now, we'll simulate detection for testing purposes
     console.log('🔍 Scanning for QR codes...')
     
     // You can integrate jsQR library here:
     // import jsQR from 'jsqr'
-    // const code = jsQR(_imageData.data, _imageData.width, _imageData.height)
+    // const code = jsQR(imageData.data, imageData.width, imageData.height)
     // if (code) {
     //   processScannedCode(code.data)
     // }

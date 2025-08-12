@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
@@ -35,6 +35,15 @@ import {
   Calendar,
   Clock as ClockIcon
 } from 'lucide-react'
+
+interface AlertsData {
+  success: boolean
+  statistics?: {
+    totalAlerts: number
+    criticalAlerts: number
+    averageResponseTime: string
+  }
+}
 
 interface EnhancedDashboardProps {
   dashboardData: {
@@ -139,7 +148,7 @@ export function EnhancedDashboard({
 }: EnhancedDashboardProps) {
   const router = useRouter()
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false)
-  const [alertsData, setAlertsData] = useState<any>(null)
+  const [alertsData, setAlertsData] = useState<AlertsData | null>(null)
   const [isAlertsLoading, setIsAlertsLoading] = useState(false)
   const [alertsError, setAlertsError] = useState<string | null>(null)
   
@@ -158,6 +167,165 @@ export function EnhancedDashboard({
     isActive: true,
     cooldown: 3600
   })
+
+  // Memoized computed datasets for performance and smoother UI
+  const advancedStats = useMemo(() => [
+    {
+      title: "Total Assets",
+      value: dashboardData?.data?.assetStats?.totalAssets?.toString() || "0",
+      change: "+12%",
+      icon: Building2,
+      color: "bg-gradient-to-r from-blue-500 to-blue-600",
+      trend: "up",
+      description: "Total registered assets in the system",
+      subValue: `${dashboardData?.data?.assetStats?.activeAssets || 0} Active`,
+      health: 85,
+      priority: "normal"
+    },
+    {
+      title: "Active Assets",
+      value: dashboardData?.data?.assetStats?.activeAssets?.toString() || "0",
+      change: "+8%",
+      icon: CheckCircle,
+      color: "bg-gradient-to-r from-green-500 to-green-600",
+      trend: "up",
+      description: "Currently operational assets",
+      subValue: `${dashboardData?.data?.assetStats?.underMaintenance || 0} Under Maintenance`,
+      health: 92,
+      priority: "normal"
+    },
+    {
+      title: "Critical Assets",
+      value: dashboardData?.data?.assetStats?.criticalAssets?.toString() || "0",
+      change: "+15%",
+      icon: AlertCircle,
+      color: "bg-gradient-to-r from-red-500 to-red-600",
+      trend: "up",
+      description: "Assets requiring immediate attention",
+      subValue: `${dashboardData?.data?.assetStats?.highPriorityAssets || 0} High Priority`,
+      health: 45,
+      priority: "high"
+    },
+    {
+      title: "AI Predictions",
+      value: predictionsData?.count?.toString() || "0",
+      change: "+25%",
+      icon: Brain,
+      color: "bg-gradient-to-r from-indigo-500 to-indigo-600",
+      trend: "up",
+      description: "AI-powered maintenance predictions",
+      subValue: `${predictionsData?.predictions?.filter((p) => p.prediction.confidence > 0.7).length || 0} High Confidence`,
+      health: predictionsData?.predictions?.length ? Math.round((predictionsData.predictions.filter((p) => p.prediction.confidence > 0.7).length / predictionsData.predictions.length) * 100) : 0,
+      priority: "normal"
+    },
+    {
+      title: "System Health",
+      value: `${dashboardData?.data?.performanceData?.insights?.overallEfficiency ? Math.round(dashboardData.data.performanceData.insights.overallEfficiency * 100) : 85}%`,
+      change: "+5%",
+      icon: Gauge,
+      color: "bg-gradient-to-r from-purple-500 to-purple-600",
+      trend: "up",
+      description: "Overall system efficiency score",
+      subValue: `${dashboardData?.data?.performanceData?.healthScore || 78}/100 Health Score`,
+      health: dashboardData?.data?.performanceData?.insights?.overallEfficiency ? Math.round(dashboardData.data.performanceData.insights.overallEfficiency * 100) : 85,
+      priority: "normal"
+    }
+  ], [dashboardData, predictionsData])
+
+  const assetHealthData = useMemo(() => (
+    healthData?.success && healthData?.statistics ? [
+      { 
+        name: "Excellent", 
+        status: "excellent", 
+        count: healthData.statistics.excellent ?? 0, 
+        percentage: (healthData.statistics.excellent ?? 0) > 0 ? Math.round(((healthData.statistics.excellent ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
+        color: "bg-green-500",
+        icon: CheckCircle
+      },
+      { 
+        name: "Good", 
+        status: "good", 
+        count: healthData.statistics.good ?? 0, 
+        percentage: (healthData.statistics.good ?? 0) > 0 ? Math.round(((healthData.statistics.good ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
+        color: "bg-blue-500",
+        icon: Activity
+      },
+      { 
+        name: "Fair", 
+        status: "fair", 
+        count: healthData.statistics.fair ?? 0, 
+        percentage: (healthData.statistics.fair ?? 0) > 0 ? Math.round(((healthData.statistics.fair ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
+        color: "bg-yellow-500",
+        icon: AlertTriangle
+      },
+      { 
+        name: "Poor", 
+        status: "poor", 
+        count: healthData.statistics.poor ?? 0, 
+        percentage: (healthData.statistics.poor ?? 0) > 0 ? Math.round(((healthData.statistics.poor ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
+        color: "bg-orange-500",
+        icon: AlertTriangle
+      },
+      { 
+        name: "Critical", 
+        status: "critical", 
+        count: healthData.statistics.critical ?? 0, 
+        percentage: (healthData.statistics.critical ?? 0) > 0 ? Math.round(((healthData.statistics.critical ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
+        color: "bg-red-500",
+        icon: AlertCircle
+      }
+    ] : [
+      { name: "Excellent", status: "excellent", count: 0, percentage: 0, color: "bg-green-500", icon: CheckCircle },
+      { name: "Good", status: "good", count: 0, percentage: 0, color: "bg-blue-500", icon: Activity },
+      { name: "Fair", status: "fair", count: 0, percentage: 0, color: "bg-yellow-500", icon: AlertTriangle },
+      { name: "Poor", status: "poor", count: 0, percentage: 0, color: "bg-orange-500", icon: AlertTriangle },
+      { name: "Critical", status: "critical", count: 0, percentage: 0, color: "bg-red-500", icon: AlertCircle }
+    ]
+  ), [healthData])
+
+  const costAnalysisData = useMemo(() => (
+    costData?.success && costData?.statistics ? {
+      totalPurchaseCost: costData.statistics.totalPurchaseCost,
+      totalCurrentValue: costData.statistics.totalCurrentValue,
+      totalDepreciation: costData.statistics.totalDepreciation,
+      avgDepreciationRate: costData.statistics.avgDepreciationRate,
+      assetCount: costData.statistics.assetCount,
+      breakdown: [
+        { category: "Purchase Cost", amount: costData.statistics.totalPurchaseCost, percentage: costData.statistics.totalPurchaseCost > 0 ? 100 : 0 },
+        { category: "Current Value", amount: costData.statistics.totalCurrentValue, percentage: costData.statistics.totalCurrentValue > 0 ? 100 : 0 },
+        { category: "Depreciation", amount: costData.statistics.totalDepreciation, percentage: costData.statistics.totalDepreciation > 0 ? 100 : 0 }
+      ]
+    } : {
+      totalPurchaseCost: 0,
+      totalCurrentValue: 0,
+      totalDepreciation: 0,
+      avgDepreciationRate: 0,
+      assetCount: 0,
+      breakdown: [] as { category: string; amount: number; percentage: number }[]
+    }
+  ), [costData])
+
+  const trendAnalysis = useMemo(() => (
+    trendsData?.success ? {
+      scheduled: trendsData.trendData?.reduce((sum: number, item) => sum + item.maintenanceCount, 0) || 0,
+      inProgress: trendsData.trendData?.reduce((sum: number, item) => sum + item.pendingCount, 0) || 0,
+      completed: trendsData.trendData?.reduce((sum: number, item) => sum + item.completedCount, 0) || 0,
+      overdue: trendsData.trendData?.reduce((sum: number, item) => sum + item.emergencyCount, 0) || 0,
+      total: trendsData.totalRecords || 0,
+      efficiency: trendsData.trendData && trendsData.trendData.length > 0 ? Math.round((trendsData.trendData.reduce((sum: number, item) => sum + item.completedCount, 0) / (trendsData.totalRecords || 1)) * 100) : 0,
+      avgCompletionTime: "2.3 days",
+      costSavings: "$12,500"
+    } : {
+      scheduled: 0,
+      inProgress: 0,
+      completed: 0,
+      overdue: 0,
+      total: 0,
+      efficiency: 0,
+      avgCompletionTime: "0 days",
+      costSavings: "$0"
+    }
+  ), [trendsData])
 
   const handleAIAnalyticsClick = () => {
     router.push('/admin/ai-analytics')
@@ -288,7 +456,7 @@ export function EnhancedDashboard({
         }
       }
       
-      const data = await response.json()
+      await response.json()
       setRuleCreationSuccess(true)
       
              // Reset form after successful creation
@@ -358,208 +526,11 @@ export function EnhancedDashboard({
     }))
   }
 
-  // Advanced Stats Cards with Real-time Data
-  const advancedStats = [
-    {
-      title: "Total Assets",
-      value: dashboardData?.data?.assetStats?.totalAssets?.toString() || "0",
-      change: "+12%",
-      icon: Building2,
-      color: "bg-gradient-to-r from-blue-500 to-blue-600",
-      trend: "up",
-      description: "Total registered assets in the system",
-      subValue: `${dashboardData?.data?.assetStats?.activeAssets || 0} Active`,
-      health: 85,
-      priority: "normal"
-    },
-    {
-      title: "Active Assets",
-      value: dashboardData?.data?.assetStats?.activeAssets?.toString() || "0",
-      change: "+8%",
-      icon: CheckCircle,
-      color: "bg-gradient-to-r from-green-500 to-green-600",
-      trend: "up",
-      description: "Currently operational assets",
-      subValue: `${dashboardData?.data?.assetStats?.underMaintenance || 0} Under Maintenance`,
-      health: 92,
-      priority: "normal"
-    },
-    {
-      title: "Critical Assets",
-      value: dashboardData?.data?.assetStats?.criticalAssets?.toString() || "0",
-      change: "+15%",
-      icon: AlertCircle,
-      color: "bg-gradient-to-r from-red-500 to-red-600",
-      trend: "up",
-      description: "Assets requiring immediate attention",
-      subValue: `${dashboardData?.data?.assetStats?.highPriorityAssets || 0} High Priority`,
-      health: 45,
-      priority: "high"
-    },
-    {
-      title: "AI Predictions",
-      value: predictionsData?.count?.toString() || "0",
-      change: "+25%",
-      icon: Brain,
-      color: "bg-gradient-to-r from-indigo-500 to-indigo-600",
-      trend: "up",
-      description: "AI-powered maintenance predictions",
-      subValue: `${predictionsData?.predictions?.filter((p) => p.prediction.confidence > 0.7).length || 0} High Confidence`,
-      health: predictionsData?.predictions?.length ? Math.round((predictionsData.predictions.filter((p) => p.prediction.confidence > 0.7).length / predictionsData.predictions.length) * 100) : 0,
-      priority: "normal"
-    },
-    {
-      title: "System Health",
-      value: `${dashboardData?.data?.performanceData?.insights?.overallEfficiency ? Math.round(dashboardData.data.performanceData.insights.overallEfficiency * 100) : 85}%`,
-      change: "+5%",
-      icon: Gauge,
-      color: "bg-gradient-to-r from-purple-500 to-purple-600",
-      trend: "up",
-      description: "Overall system efficiency score",
-      subValue: `${dashboardData?.data?.performanceData?.healthScore || 78}/100 Health Score`,
-      health: dashboardData?.data?.performanceData?.insights?.overallEfficiency ? Math.round(dashboardData.data.performanceData.insights.overallEfficiency * 100) : 85,
-      priority: "normal"
-    }
-  ]
-
-  // Asset Health Monitoring - Using real API data
-  const assetHealthData = healthData?.success && healthData?.statistics ? [
-    { 
-      name: "Excellent", 
-      status: "excellent", 
-      count: healthData.statistics.excellent ?? 0, 
-      percentage: (healthData.statistics.excellent ?? 0) > 0 ? Math.round(((healthData.statistics.excellent ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
-      color: "bg-green-500",
-      icon: CheckCircle
-    },
-    { 
-      name: "Good", 
-      status: "good", 
-      count: healthData.statistics.good ?? 0, 
-      percentage: (healthData.statistics.good ?? 0) > 0 ? Math.round(((healthData.statistics.good ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
-      color: "bg-blue-500",
-      icon: Activity
-    },
-    { 
-      name: "Fair", 
-      status: "fair", 
-      count: healthData.statistics.fair ?? 0, 
-      percentage: (healthData.statistics.fair ?? 0) > 0 ? Math.round(((healthData.statistics.fair ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
-      color: "bg-yellow-500",
-      icon: AlertTriangle
-    },
-    { 
-      name: "Poor", 
-      status: "poor", 
-      count: healthData.statistics.poor ?? 0, 
-      percentage: (healthData.statistics.poor ?? 0) > 0 ? Math.round(((healthData.statistics.poor ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
-      color: "bg-orange-500",
-      icon: AlertTriangle
-    },
-    { 
-      name: "Critical", 
-      status: "critical", 
-      count: healthData.statistics.critical ?? 0, 
-      percentage: (healthData.statistics.critical ?? 0) > 0 ? Math.round(((healthData.statistics.critical ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
-      color: "bg-red-500",
-      icon: AlertCircle
-    }
-  ] : [
-    { 
-      name: "Excellent", 
-      status: "excellent", 
-      count: 0, 
-      percentage: 0,
-      color: "bg-green-500",
-      icon: CheckCircle
-    },
-    { 
-      name: "Good", 
-      status: "good", 
-      count: 0, 
-      percentage: 0,
-      color: "bg-blue-500",
-      icon: Activity
-    },
-    { 
-      name: "Fair", 
-      status: "fair", 
-      count: 0, 
-      percentage: 0,
-      color: "bg-yellow-500",
-      icon: AlertTriangle
-    },
-    { 
-      name: "Poor", 
-      status: "poor", 
-      count: 0, 
-      percentage: 0,
-      color: "bg-orange-500",
-      icon: AlertTriangle
-    },
-    { 
-      name: "Critical", 
-      status: "critical", 
-      count: 0, 
-      percentage: 0,
-      color: "bg-red-500",
-      icon: AlertCircle
-    }
-  ]
-
-  // Cost Analysis Data - Using real API data
-  const costAnalysisData = costData?.success && costData?.statistics ? {
-    totalPurchaseCost: costData.statistics.totalPurchaseCost,
-    totalCurrentValue: costData.statistics.totalCurrentValue,
-    totalDepreciation: costData.statistics.totalDepreciation,
-    avgDepreciationRate: costData.statistics.avgDepreciationRate,
-    assetCount: costData.statistics.assetCount,
-    breakdown: [
-      { category: "Purchase Cost", amount: costData.statistics.totalPurchaseCost, percentage: costData.statistics.totalPurchaseCost > 0 ? 100 : 0 },
-      { category: "Current Value", amount: costData.statistics.totalCurrentValue, percentage: costData.statistics.totalCurrentValue > 0 ? 100 : 0 },
-      { category: "Depreciation", amount: costData.statistics.totalDepreciation, percentage: costData.statistics.totalDepreciation > 0 ? 100 : 0 }
-    ]
-  } : {
-    totalPurchaseCost: 0,
-    totalCurrentValue: 0,
-    totalDepreciation: 0,
-    avgDepreciationRate: 0,
-    assetCount: 0,
-    breakdown: []
-  }
-
-
-
-  // Trend Analysis - Using real API data
-  const trendAnalysis = trendsData?.success ? {
-    scheduled: trendsData.trendData?.reduce((sum: number, item) => sum + item.maintenanceCount, 0) || 0,
-    inProgress: trendsData.trendData?.reduce((sum: number, item) => sum + item.pendingCount, 0) || 0,
-    completed: trendsData.trendData?.reduce((sum: number, item) => sum + item.completedCount, 0) || 0,
-    overdue: trendsData.trendData?.reduce((sum: number, item) => sum + item.emergencyCount, 0) || 0,
-    total: trendsData.totalRecords || 0,
-    efficiency: trendsData.trendData && trendsData.trendData.length > 0 ? Math.round((trendsData.trendData.reduce((sum: number, item) => sum + item.completedCount, 0) / (trendsData.totalRecords || 1)) * 100) : 0,
-    avgCompletionTime: "2.3 days", // This could be calculated from the API data if available
-    costSavings: "$12,500" // This could be calculated from the API data if available
-  } : {
-    scheduled: 0,
-    inProgress: 0,
-    completed: 0,
-    overdue: 0,
-    total: 0,
-    efficiency: 0,
-    avgCompletionTime: "0 days",
-    costSavings: "$0"
-  }
-
-
-
-
-
   if (isLoading) {
     return (
       <div className="flex h-screen bg-gradient-to-br from-background to-muted">
         <div className="flex-1 overflow-auto">
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full" aria-busy="true" aria-live="polite">
             <div className="text-center">
               <LoadingSpinner size="lg" />
               <p className="mt-4 text-muted-foreground">Loading advanced dashboard...</p>
@@ -631,8 +602,8 @@ export function EnhancedDashboard({
         <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           {/* Advanced Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-            {advancedStats.map((stat, index) => (
-              <Card key={index} className="hover:shadow-lg transition-all duration-300 hover:scale-105 border-0 shadow-sm">
+            {advancedStats.map((stat,) => (
+              <Card key={stat.title} className="hover:shadow-lg transition-all duration-300 hover:scale-105 border-0 shadow-sm">
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
                     <div className={`w-8 h-8 sm:w-10 sm:h-10 ${stat.color} rounded-lg flex items-center justify-center shadow-sm`}>
@@ -683,11 +654,11 @@ export function EnhancedDashboard({
               </CardHeader>
               <CardContent className="pt-0">
                 {isHealthLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                                          <div className="text-center">
-                        <LoadingSpinner size="lg" />
-                        <p className="mt-3 text-muted-foreground text-sm">Loading health data...</p>
-                      </div>
+                  <div className="flex items-center justify-center py-6" aria-busy="true" aria-live="polite">
+                    <div className="text-center">
+                      <LoadingSpinner size="lg" />
+                      <p className="mt-3 text-muted-foreground text-sm">Loading health data...</p>
+                    </div>
                   </div>
                 ) : healthError ? (
                   <div className="text-center py-6">
@@ -773,11 +744,11 @@ export function EnhancedDashboard({
               </CardHeader>
               <CardContent className="pt-0">
                 {isCostLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                                          <div className="text-center">
-                        <LoadingSpinner size="lg" />
-                        <p className="mt-3 text-muted-foreground text-sm">Loading cost data...</p>
-                      </div>
+                  <div className="flex items-center justify-center py-6" aria-busy="true" aria-live="polite">
+                    <div className="text-center">
+                      <LoadingSpinner size="lg" />
+                      <p className="mt-3 text-muted-foreground text-sm">Loading cost data...</p>
+                    </div>
                   </div>
                 ) : costError ? (
                   <div className="text-center py-6">
@@ -885,11 +856,11 @@ export function EnhancedDashboard({
               </CardHeader>
               <CardContent className="pt-0">
                 {isTrendsLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                                          <div className="text-center">
-                        <LoadingSpinner size="lg" />
-                        <p className="mt-3 text-muted-foreground text-sm">Loading trends data...</p>
-                      </div>
+                  <div className="flex items-center justify-center py-6" aria-busy="true" aria-live="polite">
+                    <div className="text-center">
+                      <LoadingSpinner size="lg" />
+                      <p className="mt-3 text-muted-foreground text-sm">Loading trends data...</p>
+                    </div>
                   </div>
                 ) : trendsError ? (
                   <div className="text-center py-6">
@@ -994,6 +965,7 @@ export function EnhancedDashboard({
                       variant="outline" 
                       className="h-14 sm:h-16 flex-col hover:bg-blue-50 transition-colors justify-start"
                       onClick={handleAddUserClick}
+                      aria-label="Add a new user"
                     >
                       <Users className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-blue-600" />
                       <span className="text-xs sm:text-sm font-medium">Add User</span>
@@ -1002,6 +974,7 @@ export function EnhancedDashboard({
                       variant="outline" 
                       className="h-14 sm:h-16 flex-col hover:bg-green-50 transition-colors justify-start"
                       onClick={handleAddAssetClick}
+                      aria-label="Add a new asset"
                     >
                       <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-green-600" />
                       <span className="text-xs sm:text-sm font-medium">Add Asset</span>
@@ -1010,6 +983,7 @@ export function EnhancedDashboard({
                       variant="outline" 
                       className="h-14 sm:h-16 flex-col hover:bg-purple-50 transition-colors justify-start"
                       onClick={handleAddLocationClick}
+                      aria-label="Add a new location"
                     >
                       <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-purple-600" />
                       <span className="text-xs sm:text-sm font-medium">Add Location</span>
@@ -1018,6 +992,7 @@ export function EnhancedDashboard({
                       variant="outline" 
                       className="h-14 sm:h-16 flex-col hover:bg-orange-50 transition-colors justify-start"
                       onClick={handleGenerateReportClick}
+                      aria-label="Generate report"
                     >
                       <FileText className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-orange-600" />
                       <span className="text-xs sm:text-sm font-medium">Generate Report</span>
@@ -1026,6 +1001,7 @@ export function EnhancedDashboard({
                       variant="outline" 
                       className="h-14 sm:h-16 flex-col hover:bg-red-50 transition-colors justify-start"
                       onClick={handleViewAlertsClick}
+                      aria-label="View system alerts"
                     >
                       <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-red-600" />
                       <span className="text-xs sm:text-sm font-medium">View Alerts</span>
@@ -1049,11 +1025,16 @@ export function EnhancedDashboard({
              <DialogDescription>
                Performance threshold alerts and system statistics for the current month
              </DialogDescription>
+             <div className="absolute right-4 top-4">
+               <Button variant="ghost" size="icon" aria-label="Close" onClick={() => setIsAlertsModalOpen(false)}>
+                 <X className="w-4 h-4" />
+               </Button>
+             </div>
            </DialogHeader>
            
            <div className="space-y-6">
              {isAlertsLoading ? (
-               <div className="flex items-center justify-center py-8">
+               <div className="flex items-center justify-center py-8" aria-busy="true" aria-live="polite">
                  <div className="text-center">
                    <LoadingSpinner size="lg" />
                    <p className="mt-4 text-gray-600">Loading alerts data...</p>
@@ -1162,6 +1143,11 @@ export function EnhancedDashboard({
              <DialogDescription>
                Define conditions and actions for automated alerts
              </DialogDescription>
+             <div className="absolute right-4 top-4">
+               <Button variant="ghost" size="icon" aria-label="Close" onClick={() => setIsAlertRulesModalOpen(false)}>
+                 <X className="w-4 h-4" />
+               </Button>
+             </div>
            </DialogHeader>
            
            <div className="space-y-6">

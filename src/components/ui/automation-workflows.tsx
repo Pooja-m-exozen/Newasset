@@ -5,12 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Bot, Plus, Edit, Workflow, Trash2, Play, Pause, Clock, Bell, Settings, Zap, CheckCircle, AlertCircle } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Bot, Plus, Workflow, Trash2, Play, Pause, Clock, Bell, Settings, Zap, CheckCircle, AlertCircle } from 'lucide-react'
 import { useAutomation } from '@/contexts/AutomationContext'
 import { WorkflowRequest, WorkflowTrigger, WorkflowAction, WorkflowCondition, WorkflowExecutionRequest } from '@/lib/automation'
 
@@ -30,16 +28,13 @@ export function AutomationWorkflows() {
   const { 
     workflows, 
     loading, 
-    error, 
     isAuthenticated,
     executingWorkflow,
     executionResult,
     createNewWorkflow, 
-    updateExistingWorkflow, 
     deleteExistingWorkflow,
     toggleWorkflowActiveStatus,
-    executeWorkflow,
-    clearExecutionResult
+    executeWorkflow
   } = useAutomation()
 
   // Create workflow modal state
@@ -63,7 +58,7 @@ export function AutomationWorkflows() {
 
   // Execute workflow modal state
   const [executeModalOpen, setExecuteModalOpen] = useState(false)
-  const [selectedWorkflow, setSelectedWorkflow] = useState<any>(null)
+  const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null)
   const [executionContext, setExecutionContext] = useState({
     assetId: '',
     userId: '',
@@ -146,7 +141,7 @@ export function AutomationWorkflows() {
     if (conditionField && conditionOperator && conditionValue) {
       conditions.push({
         field: conditionField,
-        operator: conditionOperator as any,
+        operator: conditionOperator as 'equals' | 'in' | 'greater_than' | 'less_than' | 'contains',
         value: conditionValue
       })
     }
@@ -455,7 +450,7 @@ export function AutomationWorkflows() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-600">Trigger Type</Label>
-                  <Select value={selectedTriggerType} onValueChange={(value: any) => setSelectedTriggerType(value)}>
+                  <Select value={selectedTriggerType} onValueChange={(value: string) => setSelectedTriggerType(value as 'schedule' | 'condition' | 'event')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -530,7 +525,7 @@ export function AutomationWorkflows() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-600">Action Type</Label>
-                  <Select value={selectedActionType} onValueChange={(value: any) => setSelectedActionType(value)}>
+                  <Select value={selectedActionType} onValueChange={(value: string) => setSelectedActionType(value as 'notification' | 'update' | 'email' | 'sms')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -651,7 +646,7 @@ export function AutomationWorkflows() {
               Execute Workflow
             </DialogTitle>
             <DialogDescription>
-              Configure the execution context for "{selectedWorkflow?.name}"
+              Configure the execution context for &quot;{selectedWorkflow?.name}&quot;
             </DialogDescription>
           </DialogHeader>
           

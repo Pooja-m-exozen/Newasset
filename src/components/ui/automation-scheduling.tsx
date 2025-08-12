@@ -5,11 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Clock, Plus, Edit, Timer, Calendar, Users, Target, Settings, Play, Pause, Trash2, Zap, TrendingUp, DollarSign, AlertTriangle, MapPin } from 'lucide-react'
+import { Clock, Plus, Timer, Calendar, Users, Target, Settings, Play, Pause, Trash2, Zap, TrendingUp, DollarSign, AlertTriangle } from 'lucide-react'
 import { useAutomation } from '@/contexts/AutomationContext'
 import { ScheduleRequest, ScheduleOptimizationRequest, AutoRescheduleRequest } from '@/lib/automation'
 
@@ -34,15 +33,11 @@ export function AutomationScheduling() {
   const { 
     schedules, 
     schedulesLoading, 
-    schedulesError,
     optimizationResult,
     optimizationLoading,
-    optimizationError,
     rescheduleResult,
     rescheduleLoading,
-    rescheduleError,
     createNewSchedule,
-    updateExistingSchedule,
     deleteExistingSchedule,
     toggleScheduleActiveStatus,
     optimizeSchedules,
@@ -115,27 +110,6 @@ export function AutomationScheduling() {
     setScheduleTimezone('UTC')
     setScheduleDuration('')
     setScheduleTechnicians('')
-  }
-
-  const resetOptimizeForm = () => {
-    setOptimizeAssets('')
-    setMaxWorkHours('8')
-    setTechnicianSkills('')
-    setOptimizationPriority('efficiency')
-    setBudget('5000')
-    setTimeWindowStart('')
-    setTimeWindowEnd('')
-  }
-
-  const resetRescheduleForm = () => {
-    setEventType('asset_failure')
-    setAssetId('')
-    setFailureType('critical')
-    setEstimatedRepairTime('')
-    setEventPriority('urgent')
-    setLatitude('')
-    setLongitude('')
-    setAffectedSchedule('')
   }
 
   const handleCreateSchedule = async () => {
@@ -595,7 +569,7 @@ export function AutomationScheduling() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="scheduleType" className="text-sm font-medium">Type</Label>
-                <Select value={scheduleType} onValueChange={(value: any) => setScheduleType(value)}>
+                <Select value={scheduleType} onValueChange={(value: string) => setScheduleType(value as 'maintenance' | 'inspection' | 'cleaning' | 'custom')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -654,7 +628,7 @@ export function AutomationScheduling() {
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-600">Last Maintenance</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    <Select value={maintenanceOperator} onValueChange={(value: any) => setMaintenanceOperator(value)}>
+                    <Select value={maintenanceOperator} onValueChange={(value: string) => setMaintenanceOperator(value as 'older_than' | 'newer_than')}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -679,7 +653,7 @@ export function AutomationScheduling() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-600">Frequency</Label>
-                  <Select value={scheduleFrequency} onValueChange={(value: any) => setScheduleFrequency(value)}>
+                  <Select value={scheduleFrequency} onValueChange={(value: string) => setScheduleFrequency(value as 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -868,7 +842,7 @@ export function AutomationScheduling() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-600">Optimization Priority</Label>
-                  <Select value={optimizationPriority} onValueChange={(value: any) => setOptimizationPriority(value)}>
+                  <Select value={optimizationPriority} onValueChange={(value: string) => setOptimizationPriority(value as 'efficiency' | 'cost' | 'quality' | 'speed')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -917,7 +891,7 @@ export function AutomationScheduling() {
             {/* Event Type */}
             <div className="space-y-2">
               <Label htmlFor="eventType" className="text-sm font-medium">Event Type</Label>
-              <Select value={eventType} onValueChange={(value: any) => setEventType(value)}>
+                              <Select value={eventType} onValueChange={(value: string) => setEventType(value as 'asset_failure' | 'technician_unavailable' | 'weather_delay' | 'emergency')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -944,7 +918,7 @@ export function AutomationScheduling() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-600">Failure Type</Label>
-                  <Select value={failureType} onValueChange={(value: any) => setFailureType(value)}>
+                  <Select value={failureType} onValueChange={(value: string) => setFailureType(value as 'critical' | 'minor' | 'moderate')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -969,7 +943,7 @@ export function AutomationScheduling() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-600">Priority</Label>
-                  <Select value={eventPriority} onValueChange={(value: any) => setEventPriority(value)}>
+                  <Select value={eventPriority} onValueChange={(value: string) => setEventPriority(value as 'urgent' | 'high' | 'medium' | 'low')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

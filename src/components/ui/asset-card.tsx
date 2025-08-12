@@ -3,7 +3,7 @@ import { Button } from './button';
 // import { Badge } from './badge';
 import { StatusBadge } from './status-badge';
 import { PriorityBadge } from './priority-badge';
-import { Edit, Trash2, Eye, Calendar, MapPin, Tag } from 'lucide-react';
+import { Edit, Trash2, Eye, Calendar, MapPin, Tag, QrCode } from 'lucide-react';
 import { Asset } from '../../lib/adminasset';
 
 interface AssetCardProps {
@@ -11,6 +11,7 @@ interface AssetCardProps {
   onView: (asset: Asset) => void;
   onEdit: (asset: Asset) => void;
   onDelete: (assetId: string) => void;
+  onGenerateQR?: (asset: Asset) => void;
   className?: string;
 }
 
@@ -27,6 +28,7 @@ export const AssetCard: React.FC<AssetCardProps> = ({
   onView,
   onEdit,
   onDelete,
+  onGenerateQR,
   className = ''
 }) => {
   return (
@@ -37,6 +39,9 @@ export const AssetCard: React.FC<AssetCardProps> = ({
             <h4 className="font-semibold text-gray-900">{asset.tagId}</h4>
             <StatusBadge status={asset.status || 'active'} />
             <PriorityBadge priority={asset.priority || 'medium'} />
+            {asset.digitalAssets?.qrCode && (
+              <div className="w-2 h-2 bg-green-500 rounded-full" title="Has QR Code"></div>
+            )}
           </div>
           
           <div className="space-y-1 text-sm text-gray-600">
@@ -69,6 +74,7 @@ export const AssetCard: React.FC<AssetCardProps> = ({
             size="sm" 
             className="h-8 w-8 p-0 hover:bg-blue-50"
             onClick={() => onView(asset)}
+            title="View Details"
           >
             <Eye className="w-4 h-4 text-blue-600" />
           </Button>
@@ -77,14 +83,27 @@ export const AssetCard: React.FC<AssetCardProps> = ({
             size="sm" 
             className="h-8 w-8 p-0 hover:bg-green-50"
             onClick={() => onEdit(asset)}
+            title="Edit Asset"
           >
             <Edit className="w-4 h-4 text-green-600" />
           </Button>
+          {onGenerateQR && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 hover:bg-purple-50"
+              onClick={() => onGenerateQR(asset)}
+              title="Generate QR Code"
+            >
+              <QrCode className="w-4 h-4 text-purple-600" />
+            </Button>
+          )}
           <Button 
             variant="ghost" 
             size="sm" 
             className="h-8 w-8 p-0 hover:bg-red-50"
             onClick={() => onDelete(asset._id || '')}
+            title="Delete Asset"
           >
             <Trash2 className="w-4 h-4 text-red-600" />
           </Button>

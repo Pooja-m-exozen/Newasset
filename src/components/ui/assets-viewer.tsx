@@ -1,1022 +1,766 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import Image from 'next/image'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
+import { Card, CardContent, CardHeader, CardTitle } from './card'
 import { Button } from './button'
-import { Input } from './input'
-import { Label } from './label'
 import { Badge } from './badge'
-import { Separator } from './separator'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from './dialog'
-import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
-import { generateAllDigitalAssets, type BulkDigitalAssetsGenerationResponse } from '@/lib/DigitalAssets'
-import { cn } from '@/lib/utils'
-import { Search, Building, MapPin, User, Calendar, Hash, AlertCircle, Package, Eye, EyeOff, QrCode, Barcode, Wifi, X, Download, Share2, Copy, Scan } from 'lucide-react'
+import { LoadingSpinner } from './loading-spinner'
+import { ErrorDisplay } from './error-display'
+import { AssetTable } from './asset-table'
+
+import { ExportButtons } from './export-buttons'
+import { Input } from './input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
+import { 
+  QrCode,
+  Barcode,
+  Smartphone,
+  Search,
+  RefreshCw,
+  Package,
+  Download,
+  Copy
+} from 'lucide-react'
 
 // API Base URL constant
-const API_BASE_URL = 'http://192.168.0.5:5021'
+const API_BASE_URL = 'http://192.168.0.5:5021/api'
 
-interface Asset {
-  _id: string;
-  tagId: string;
-  assetType: string;
-  subcategory?: string;
-  brand: string;
-  model?: string;
-  serialNumber?: string;
-  capacity?: string;
-  status?: string;
-  priority?: string;
-  digitalTagType?: string;
-  projectName?: string;
-  yearOfInstallation?: string;
-  notes?: string;
-  location: {
-    latitude: string;
-    longitude: string;
-    building?: string;
-    floor?: string;
-    room?: string;
-  };
-  createdBy: {
-    name: string;
-    email: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+// Use any type to accept whatever response comes from the API
+type Asset = any
+type AssetsResponse = any
 
 interface AssetsViewerProps {
-  className?: string;
+  className?: string
 }
 
-export function AssetsViewer({ className }: AssetsViewerProps) {
-  const { 
-    assets, 
-    selectedAsset, 
-    loading, 
-    error, 
-    fetchAssets, 
-    fetchAssetByTagId, 
-    searchAssets, 
-    clearSelectedAsset,
-    clearError,
-    setSelectedAsset
-  } = useDigitalAssets()
+export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) => {
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [nfcViewData, setNfcViewData] = useState<any | null>(null)
+  const [nfcLoading, setNfcLoading] = useState(false)
+  const [nfcError, setNfcError] = useState<string | null>(null)
+  const [qrImgSrc, setQrImgSrc] = useState<string | null>(null)
+  const [barcodeImgSrc, setBarcodeImgSrc] = useState<string | null>(null)
+  const [qrLoading, setQrLoading] = useState(false)
+  const [barcodeLoading, setBarcodeLoading] = useState(false)
+  const [filters, setFilters] = useState({
+    search: '',
+    assetType: '',
+    status: '',
+    priority: '',
+    location: ''
+  })
 
-  const [searchTagId, setSearchTagId] = useState('')
-  const [showAssetDetails, setShowAssetDetails] = useState(false)
-  const [showDigitalAssetsModal, setShowDigitalAssetsModal] = useState(false)
-  const [selectedAssetForDigitalAssets, setSelectedAssetForDigitalAssets] = useState<Asset | null>(null)
-  const [digitalAssets, setDigitalAssets] = useState<BulkDigitalAssetsGenerationResponse | null>(null)
-  const [isGeneratingDigitalAssets, setIsGeneratingDigitalAssets] = useState(false)
-  const [digitalAssetsError, setDigitalAssetsError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'qr' | 'barcode' | 'nfc' | 'scanner'>('qr')
-  const [scannedData, setScannedData] = useState<string>('')
-  const [isScanning, setIsScanning] = useState(false)
+  // Fetch assets from API
+  const fetchAssets = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const token = localStorage.getItem('authToken')
+      if (!token) {
+        throw new Error('Authentication token not found')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/assets`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assets: ${response.status}`)
+      }
+
+      const data: AssetsResponse = await response.json()
+      
+      // Just set whatever response comes from the API
+      if (data.success && data.assets) {
+        setAssets(data.assets)
+        setFilteredAssets(data.assets)
+      } else if (data.assets) {
+        // If no success flag but assets exist, use them anyway
+        setAssets(data.assets)
+        setFilteredAssets(data.assets)
+      } else if (Array.isArray(data)) {
+        // If response is directly an array
+        setAssets(data)
+        setFilteredAssets(data)
+      } else {
+        // If response has different structure, try to extract assets
+        const possibleAssets = data.data || data.items || data.results || []
+        if (Array.isArray(possibleAssets)) {
+          setAssets(possibleAssets)
+          setFilteredAssets(possibleAssets)
+        } else {
+          // Just set the entire response as assets
+          setAssets([data])
+          setFilteredAssets([data])
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while fetching assets')
+      console.error('Error fetching assets:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  // Helper to extract safely stored digital asset URLs for display
+  const getQrUrl = (asset: Asset): string | null => asset?.digitalAssets?.qrCode?.url ? `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}` : null
+  const getBarcodeUrl = (asset: Asset): string | null => asset?.digitalAssets?.barcode?.url ? `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}` : null
+  const getNfcUrl = (asset: Asset): string | null => asset?.digitalAssets?.nfcData?.url ? `http://192.168.0.5:5021${asset.digitalAssets.nfcData.url}` : null
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch (e) {
+      console.warn('Copy failed:', e)
+    }
+  }
+
+  const downloadFile = async (url: string, filename: string) => {
+    try {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch (e) {
+      console.warn('Download failed:', e)
+      window.open(url, '_blank')
+    }
+  }
+
+  // Load NFC JSON (pretty view) when modal opens
+  useEffect(() => {
+    const url = selectedAsset ? getNfcUrl(selectedAsset) : null
+    if (!isViewModalOpen || !url) {
+      setNfcViewData(null)
+      setNfcLoading(false)
+      setNfcError(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setNfcLoading(true)
+        setNfcError(null)
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = await res.json()
+        if (!cancelled) {
+          // Some files may wrap data under "data"
+          setNfcViewData(json?.data ?? json)
+        }
+      } catch (e) {
+        if (!cancelled) setNfcError('Failed to load NFC data')
+      } finally {
+        if (!cancelled) setNfcLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isViewModalOpen, selectedAsset])
+
+  // Prepare QR/Barcode images when modal opens
+  useEffect(() => {
+    if (!selectedAsset) {
+      setQrImgSrc(null)
+      setBarcodeImgSrc(null)
+      setQrLoading(false)
+      setBarcodeLoading(false)
+      return
+    }
+    const qrUrl = getQrUrl(selectedAsset)
+    const barcodeUrl = getBarcodeUrl(selectedAsset)
+    if (qrUrl) {
+      setQrLoading(true)
+      setQrImgSrc(qrUrl)
+    }
+    if (barcodeUrl) {
+      setBarcodeLoading(true)
+      setBarcodeImgSrc(barcodeUrl)
+    }
+  }, [selectedAsset])
+
+  const handleQrError = async () => {
+    try {
+      const url = selectedAsset ? getQrUrl(selectedAsset) : null
+      if (!url) return
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('fetch failed')
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      setQrImgSrc(objectUrl)
+    } catch {
+      setQrImgSrc(null)
+    } finally {
+      setQrLoading(false)
+    }
+  }
+
+  const handleBarcodeError = async () => {
+    try {
+      const url = selectedAsset ? getBarcodeUrl(selectedAsset) : null
+      if (!url) return
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('fetch failed')
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      setBarcodeImgSrc(objectUrl)
+    } catch {
+      setBarcodeImgSrc(null)
+    } finally {
+      setBarcodeLoading(false)
+    }
+  }
+
+  // Apply filters - handle any property structure
+  useEffect(() => {
+    let filtered = [...assets]
+    
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase()
+      filtered = filtered.filter(asset => {
+        // Try to search in common properties, handle undefined safely
+        const tagId = asset?.tagId || asset?.id || asset?.tag || ''
+        const assetType = asset?.assetType || asset?.type || ''
+        const brand = asset?.brand || ''
+        const model = asset?.model || ''
+        const assignedTo = asset?.assignedTo?.name || asset?.assignedTo || ''
+        const location = asset?.location?.building || asset?.location || asset?.building || ''
+        
+        return (
+          tagId.toLowerCase().includes(searchLower) ||
+          assetType.toLowerCase().includes(searchLower) ||
+          brand.toLowerCase().includes(searchLower) ||
+          model.toLowerCase().includes(searchLower) ||
+          assignedTo.toLowerCase().includes(searchLower) ||
+          location.toLowerCase().includes(searchLower)
+        )
+      })
+    }
+    
+    if (filters.assetType) {
+      filtered = filtered.filter(asset => 
+        (asset?.assetType || asset?.type) === filters.assetType
+      )
+    }
+    
+    if (filters.status) {
+      filtered = filtered.filter(asset => 
+        (asset?.status || asset?.state) === filters.status
+      )
+    }
+    
+    if (filters.priority) {
+      filtered = filtered.filter(asset => 
+        (asset?.priority || asset?.importance) === filters.priority
+      )
+    }
+    
+    if (filters.location) {
+      filtered = filtered.filter(asset => {
+        const building = asset?.location?.building || asset?.location || asset?.building || ''
+        const floor = asset?.location?.floor || ''
+        const room = asset?.location?.room || ''
+        
+        return (
+          building.includes(filters.location) ||
+          floor.includes(filters.location) ||
+          room.includes(filters.location)
+        )
+      })
+    }
+    
+    setFilteredAssets(filtered)
+  }, [assets, filters])
+
+  // Handle asset view
+  const handleViewAsset = (asset: Asset) => {
+    setSelectedAsset(asset)
+    setIsViewModalOpen(true)
+  }
+
+  // Handle asset edit
+  const handleEditAsset = (asset: Asset) => {
+    // TODO: Implement edit functionality
+    console.log('Edit asset:', asset)
+  }
+
+  // Handle asset delete
+  const handleDeleteAsset = (assetId: string) => {
+    // TODO: Implement delete functionality
+    console.log('Delete asset:', assetId)
+  }
+
+  // Handle QR generation
+  const handleGenerateQR = (asset: Asset) => {
+    // TODO: Implement QR generation
+    console.log('Generate QR for asset:', asset)
+  }
 
   // Load assets on component mount
-  const loadAssets = useCallback(() => {
+  useEffect(() => {
     fetchAssets()
   }, [fetchAssets])
 
-  useEffect(() => {
-    loadAssets()
-  }, [loadAssets])
+  // Get unique values for filter options - handle any property structure
+  const assetTypes = [...new Set(assets.map(asset => asset?.assetType || asset?.type || '').filter(Boolean))]
+  const statuses = [...new Set(assets.map(asset => asset?.status || asset?.state || '').filter(Boolean))]
+  const priorities = [...new Set(assets.map(asset => asset?.priority || asset?.importance || '').filter(Boolean))]
+  const locations = [...new Set(assets.map(asset => 
+    asset?.location?.building || asset?.location || asset?.building || ''
+  ).filter(Boolean))]
 
-  const handleSearchByTagId = async () => {
-    if (!searchTagId.trim()) {
-      await fetchAssets()
-      return
-    }
-
-    try {
-      // First try to get the specific asset
-      await fetchAssetByTagId(searchTagId.trim())
-      setShowAssetDetails(true)
-    } catch {
-      // If specific asset not found, search for similar assets
-      await searchAssets(searchTagId.trim())
-      setShowAssetDetails(false)
-    }
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
-  const handleClearSearch = () => {
-    setSearchTagId('')
-    clearSelectedAsset()
-    setShowAssetDetails(false)
-    fetchAssets()
-  }
-
-  const handleViewDigitalAssets = async (asset: Asset) => {
-    setSelectedAssetForDigitalAssets(asset)
-    setShowDigitalAssetsModal(true)
-    setDigitalAssets(null)
-    setDigitalAssetsError(null)
-  }
-
-  const handleGenerateDigitalAssets = async () => {
-    if (!selectedAssetForDigitalAssets) return
-
-    setIsGeneratingDigitalAssets(true)
-    setDigitalAssetsError(null)
-
-    try {
-      const result = await generateAllDigitalAssets(selectedAssetForDigitalAssets._id, {
-        qrSize: 300,
-        barcodeFormat: 'code128'
-      })
-      setDigitalAssets(result)
-    } catch (err) {
-      setDigitalAssetsError(err instanceof Error ? err.message : 'Failed to generate digital assets')
-    } finally {
-      setIsGeneratingDigitalAssets(false)
-    }
-  }
-
-  const handleScan = () => {
-    setIsScanning(true)
-    // Simulate scanning - in real implementation, this would use camera API
-    setTimeout(() => {
-      setScannedData('Scanned QR Code Data: ASSET123')
-      setIsScanning(false)
-    }, 2000)
-  }
-
-  const handleDownload = (type: 'qr' | 'barcode' | 'nfc' | 'scanner') => {
-    if (!digitalAssets) return
-    
-    const link = document.createElement('a')
-    let url = ''
-    let filename = ''
-    
-    switch (type) {
-      case 'qr':
-        url = `${API_BASE_URL}${digitalAssets.digitalAssets.qrCode.url}`
-        filename = `qr-${digitalAssets.digitalAssets.qrCode.data.tagId}.png`
-        break
-      case 'barcode':
-        url = `${API_BASE_URL}${digitalAssets.digitalAssets.barcode.url}`
-        filename = `barcode-${digitalAssets.digitalAssets.barcode.data}.png`
-        break
-      case 'nfc':
-        // For NFC, we'll create a text file with the data
-        const nfcData = JSON.stringify(digitalAssets.digitalAssets.nfcData.data, null, 2)
-        const blob = new Blob([nfcData], { type: 'application/json' })
-        url = URL.createObjectURL(blob)
-        filename = `nfc-${digitalAssets.digitalAssets.nfcData.data.id}.json`
-        break
-      case 'scanner':
-        // For scanner, we'll create a text file with scanned data
-        const scannedDataBlob = new Blob([scannedData || 'No scanned data available'], { type: 'text/plain' })
-        url = URL.createObjectURL(scannedDataBlob)
-        filename = `scanned-data-${selectedAssetForDigitalAssets?.tagId || 'unknown'}.txt`
-        break
-    }
-    
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  const handleCopyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    // You could add a toast notification here
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString()
-  }
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return 'default'
-      case 'inactive':
-        return 'secondary'
-      case 'maintenance':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
-
-  const getPriorityBadgeVariant = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return 'destructive'
-      case 'medium':
-        return 'default'
-      case 'low':
-        return 'secondary'
-      default:
-        return 'outline'
-    }
+  if (error) {
+    return (
+      <ErrorDisplay 
+        error={error} 
+        onClearError={() => setError(null)}
+      />
+    )
   }
 
   return (
-    <div className={cn("space-y-6", className)}>
-      {/* Search Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Search className="h-5 w-5" />
-            Search Assets
-          </CardTitle>
-          <CardDescription>
-            Search assets by tag ID or view all assets
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label htmlFor="searchTagId">Tag ID</Label>
-              <Input
-                id="searchTagId"
-                placeholder="Enter Tag ID (e.g., ASSET555)"
-                value={searchTagId}
-                onChange={(e) => setSearchTagId(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearchByTagId()}
-              />
-            </div>
-            <div className="flex items-end gap-2">
-              <Button 
-                onClick={handleSearchByTagId}
-                disabled={loading}
-              >
-                {loading ? 'Searching...' : 'Search'}
-              </Button>
-              <Button 
-                onClick={handleClearSearch}
-                variant="outline"
-                disabled={loading}
-              >
-                Clear
-              </Button>
-            </div>
-          </div>
+    <div className={`space-y-6 ${className}`}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Assets</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage and view all your digital assets
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <ExportButtons 
+            onExportPDF={() => {
+              // TODO: Implement PDF export
+              console.log('Export PDF')
+            }}
+            onExportExcel={() => {
+              // TODO: Implement Excel export
+              console.log('Export Excel')
+            }}
+          />
+        </div>
+      </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <p className="text-sm text-red-600">{error}</p>
+      {/* Removed generator cards for a focused viewer */}
+      {/*
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <QrCode className="h-6 w-6 text-white" />
               </div>
-              <Button 
-                onClick={clearError}
-                variant="ghost"
-                size="sm"
-                className="mt-2"
-              >
-                Dismiss
-              </Button>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">QR Code Generator</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Generate QR codes for assets</p>
+              </div>
             </div>
-          )}
+            <Button 
+              onClick={() => {
+                // TODO: Open QR code generator modal
+                console.log('Open QR Code Generator')
+              }}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Generate QR Code
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-green-500 rounded-lg">
+                <Barcode className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Barcode Generator</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Generate barcodes for assets</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => {
+                // TODO: Open barcode generator modal
+                console.log('Open Barcode Generator')
+              }}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              Generate Barcode
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <Smartphone className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">NFC Generator</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Generate NFC data for assets</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => {
+                // TODO: Open NFC generator modal
+                console.log('Open NFC Generator')
+              }}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              Generate NFC
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+      */}
+
+      {/* Filters */}
+      <Card className="bg-white shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col lg:flex-row gap-4 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search assets, tags, locations..."
+                  value={filters.search}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    setFilters(prev => ({ ...prev, search: e.target.value }))
+                  }
+                  className="pl-10"
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Select value={filters.assetType} onValueChange={(value) => 
+                  setFilters(prev => ({ ...prev, assetType: value }))
+                }>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Asset Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Types</SelectItem>
+                    {assetTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.status} onValueChange={(value) => 
+                  setFilters(prev => ({ ...prev, status: value }))
+                }>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Status</SelectItem>
+                    {statuses.map(status => (
+                      <SelectItem key={status || ''} value={status || ''}>{status || ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filters.priority} onValueChange={(value) => 
+                  setFilters(prev => ({ ...prev, priority: value }))
+                }>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Priorities</SelectItem>
+                    {priorities.map(priority => (
+                      <SelectItem key={priority || ''} value={priority || ''}>{priority || ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <Button 
+              variant="outline" 
+              onClick={() => setFilters({
+                search: '',
+                assetType: '',
+                status: '',
+                priority: '',
+                location: ''
+              })}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Clear Filters
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Asset Details */}
-      {selectedAsset && showAssetDetails && (
+      {/* Assets Display - Table Only */}
+      {filteredAssets.length === 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Asset Details
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">{selectedAsset.tagId}</Badge>
-                <Button
-                  onClick={() => setShowAssetDetails(false)}
-                  variant="ghost"
-                  size="sm"
-                >
-                  <EyeOff className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardTitle>
-            <CardDescription>
-              Detailed information for asset {selectedAsset.tagId}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="font-medium flex items-center space-x-2">
-                  <Hash className="h-4 w-4" />
-                  Basic Information
-                </h4>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Type:</span>
-                    <Badge variant="outline">{selectedAsset.assetType}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Subcategory:</span>
-                    <span>{selectedAsset.subcategory}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Brand:</span>
-                    <span>{selectedAsset.brand}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Model:</span>
-                    <span>{selectedAsset.model}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Serial Number:</span>
-                    <span>{selectedAsset.serialNumber}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Capacity:</span>
-                    <span>{selectedAsset.capacity}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-medium flex items-center space-x-2">
-                  <Package className="h-4 w-4" />
-                  Status & Priority
-                </h4>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Status:</span>
-                    <Badge variant={getStatusBadgeVariant(selectedAsset.status)}>
-                      {selectedAsset.status}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Priority:</span>
-                    <Badge variant={getPriorityBadgeVariant(selectedAsset.priority)}>
-                      {selectedAsset.priority}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Digital Tag Type:</span>
-                    <Badge variant="outline">{selectedAsset.digitalTagType}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Project:</span>
-                    <span>{selectedAsset.projectName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Year of Installation:</span>
-                    <span>{selectedAsset.yearOfInstallation}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Location Information */}
-            <div className="space-y-4">
-              <h4 className="font-medium flex items-center space-x-2">
-                <MapPin className="h-4 w-4" />
-                Location Information
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="font-medium">Building:</span>
-                  <span>{selectedAsset.location.building}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Floor:</span>
-                  <span>{selectedAsset.location.floor}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Room:</span>
-                  <span>{selectedAsset.location.room}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-medium">Coordinates:</span>
-                  <span className="text-xs">
-                    {selectedAsset.location.latitude}, {selectedAsset.location.longitude}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Additional Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="font-medium flex items-center space-x-2">
-                  <User className="h-4 w-4" />
-                  Created By
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Name:</span>
-                    <span>{selectedAsset.createdBy.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Email:</span>
-                    <span className="text-xs">{selectedAsset.createdBy.email}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-medium flex items-center space-x-2">
-                  <Calendar className="h-4 w-4" />
-                  Timestamps
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Created:</span>
-                    <span>{formatDate(selectedAsset.createdAt)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Updated:</span>
-                    <span>{formatDate(selectedAsset.updatedAt)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {selectedAsset.notes && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <h4 className="font-medium">Notes</h4>
-                  <p className="text-sm text-muted-foreground">{selectedAsset.notes}</p>
-                </div>
-              </>
-            )}
+          <CardContent className="p-8 text-center">
+            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              No assets found
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              {filters.search || filters.assetType || filters.status || filters.priority || filters.location
+                ? 'Try adjusting your filters'
+                : 'No assets have been created yet'
+              }
+            </p>
           </CardContent>
         </Card>
+      ) : (
+        <AssetTable
+          assets={filteredAssets.map(a => ({
+            ...a,
+            previewImages: {
+              qr: getQrUrl(a),
+              barcode: getBarcodeUrl(a)
+            },
+            nfcUrl: getNfcUrl(a)
+          }))}
+          sortBy="createdAt"
+          sortOrder="desc"
+          onSort={() => {}}
+          onViewDetails={handleViewAsset}
+        />
       )}
 
-      {/* Assets List */}
-      {!showAssetDetails && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Assets List
-              <Badge variant="secondary">{assets.length} assets</Badge>
-            </CardTitle>
-            <CardDescription>
-              {searchTagId ? `Search results for "${searchTagId}"` : 'All available assets'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                  <span className="text-sm text-muted-foreground">Loading assets...</span>
-                </div>
-              </div>
-            ) : assets.length === 0 ? (
-              <div className="text-center py-8">
-                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No assets found</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {assets.map((asset) => (
-                  <div
-                    key={asset._id}
-                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => {
-                      setSelectedAsset(asset)
-                      setShowAssetDetails(true)
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">{asset.tagId}</Badge>
-                          <Badge variant={getStatusBadgeVariant(asset.status)}>
-                            {asset.status}
-                          </Badge>
-                          <Badge variant={getPriorityBadgeVariant(asset.priority)}>
-                            {asset.priority}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          onClick={() => handleViewDigitalAssets(asset)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                        >
-                          <QrCode className="h-4 w-4" />
-                        </Button>
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                    <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                      <div className="flex items-center space-x-1">
-                        <Building className="h-3 w-3" />
-                        <span>{asset.location.building}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Hash className="h-3 w-3" />
-                        <span>{asset.assetType}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <User className="h-3 w-3" />
-                        <span>{asset.createdBy.name}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Digital Assets Modal */}
-      <Dialog open={showDigitalAssetsModal} onOpenChange={setShowDigitalAssetsModal}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-white/20 backdrop-blur-sm">
-                  <QrCode className="h-6 w-6" />
-                </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold">
-                    Digital Assets for {selectedAssetForDigitalAssets?.tagId}
-                  </DialogTitle>
-                  <DialogDescription className="text-blue-100">
-                    View, generate, and manage QR codes, barcodes, and NFC data
-                  </DialogDescription>
-                </div>
-              </div>
+      {/* Simple Asset View Modal */}
+      {isViewModalOpen && selectedAsset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Asset Details - {selectedAsset?.tagId || selectedAsset?.id || 'Asset'}
+              </h2>
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDigitalAssetsModal(false)}
-                className="text-white hover:bg-white/20"
+                variant="outline"
+                onClick={() => {
+                  setIsViewModalOpen(false)
+                  setSelectedAsset(null)
+                }}
               >
-                <X className="h-5 w-5" />
+                Close
               </Button>
             </div>
-          </div>
+            
+            <div className="space-y-5">
+              {/* Simple key info */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Tag ID</div>
+                  <div className="text-sm font-semibold">{selectedAsset?.tagId || selectedAsset?.id || 'N/A'}</div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Type</div>
+                  <div className="text-sm font-semibold">{selectedAsset?.assetType || selectedAsset?.type || 'N/A'}</div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Brand</div>
+                  <div className="text-sm font-semibold">{selectedAsset?.brand || 'N/A'}</div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Model</div>
+                  <div className="text-sm font-semibold">{selectedAsset?.model || 'N/A'}</div>
+                </div>
+              </div>
 
-          <div className="flex h-[calc(95vh-120px)]">
-            {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 bg-gray-50 p-6 space-y-4">
-              {/* Generate Button */}
-              {!digitalAssets && (
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Package className="h-8 w-8 text-white" />
+              {/* Three cards: QR, Barcode, NFC */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* QR */}
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded bg-blue-100 text-blue-700"><QrCode className="w-4 h-4" /></div>
+                      <div className="text-sm font-semibold">QR Code</div>
                     </div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Generate Digital Assets</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Create QR code, barcode, and NFC data for this asset
-                    </p>
-                    <Button 
-                      onClick={handleGenerateDigitalAssets}
-                      disabled={isGeneratingDigitalAssets}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    >
-                      {isGeneratingDigitalAssets ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>Generating...</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" disabled={!getQrUrl(selectedAsset)} onClick={() => getQrUrl(selectedAsset) && window.open(getQrUrl(selectedAsset)!, '_blank')}><span>Open</span></Button>
+                      <Button variant="outline" size="sm" disabled={!getQrUrl(selectedAsset)} onClick={() => getQrUrl(selectedAsset) && copyToClipboard(getQrUrl(selectedAsset)!)}><Copy className="w-4 h-4" /></Button>
+                      <Button variant="outline" size="sm" disabled={!getQrUrl(selectedAsset)} onClick={() => getQrUrl(selectedAsset) && downloadFile(getQrUrl(selectedAsset)!, `qr_${selectedAsset?.tagId || 'asset'}.png`)}><Download className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                  <div className="relative flex items-center justify-center min-h-[180px] bg-gray-50 dark:bg-gray-700 rounded">
+                    {qrImgSrc ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={qrImgSrc}
+                          alt="QR"
+                          className="w-40 h-40 object-contain"
+                          onLoad={() => setQrLoading(false)}
+                          onError={handleQrError}
+                        />
+                        {qrLoading && (
+                          <div className="absolute text-xs text-gray-500">Loading...</div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-xs text-gray-500">No QR available</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Barcode */}
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded bg-green-100 text-green-700"><Barcode className="w-4 h-4" /></div>
+                      <div className="text-sm font-semibold">Barcode</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" disabled={!getBarcodeUrl(selectedAsset)} onClick={() => getBarcodeUrl(selectedAsset) && window.open(getBarcodeUrl(selectedAsset)!, '_blank')}><span>Open</span></Button>
+                      <Button variant="outline" size="sm" disabled={!getBarcodeUrl(selectedAsset)} onClick={() => getBarcodeUrl(selectedAsset) && copyToClipboard(getBarcodeUrl(selectedAsset)!)}><Copy className="w-4 h-4" /></Button>
+                      <Button variant="outline" size="sm" disabled={!getBarcodeUrl(selectedAsset)} onClick={() => getBarcodeUrl(selectedAsset) && downloadFile(getBarcodeUrl(selectedAsset)!, `barcode_${selectedAsset?.tagId || 'asset'}.png`)}><Download className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                  <div className="relative flex items-center justify-center min-h-[180px] bg-gray-50 dark:bg-gray-700 rounded">
+                    {barcodeImgSrc ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={barcodeImgSrc}
+                          alt="Barcode"
+                          className="w-56 h-24 object-contain"
+                          onLoad={() => setBarcodeLoading(false)}
+                          onError={handleBarcodeError}
+                        />
+                        {barcodeLoading && (
+                          <div className="absolute text-xs text-gray-500">Loading...</div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-xs text-gray-500">No Barcode available</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* NFC */}
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded bg-purple-100 text-purple-700"><Smartphone className="w-4 h-4" /></div>
+                      <div className="text-sm font-semibold">NFC Data</div>
+                    </div>
+                    {getNfcUrl(selectedAsset) && (
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => window.open(getNfcUrl(selectedAsset)!, '_blank')}><span>Open</span></Button>
+                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(getNfcUrl(selectedAsset)!)}><Copy className="w-4 h-4" /></Button>
+                        <Button variant="outline" size="sm" onClick={() => downloadFile(getNfcUrl(selectedAsset)!, `nfc_${selectedAsset?.tagId || 'asset'}.json`)}><Download className="w-4 h-4" /></Button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs p-3 bg-gray-50 dark:bg-gray-700 rounded min-h-[180px]">
+                    {!getNfcUrl(selectedAsset) && <div className="text-gray-500">No NFC data</div>}
+                    {getNfcUrl(selectedAsset) && (
+                      nfcLoading ? (
+                        <div className="text-gray-500">Loading NFC data...</div>
+                      ) : nfcError ? (
+                        <div className="text-red-600">{nfcError}</div>
+                      ) : nfcViewData ? (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <div className="text-[10px] text-gray-500">Type</div>
+                              <div className="text-xs font-semibold">{nfcViewData.type}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-500">ID</div>
+                              <div className="text-xs font-mono">{nfcViewData.id}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-500">Asset Type</div>
+                              <div className="text-xs font-semibold">{nfcViewData.assetType}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-500">Brand</div>
+                              <div className="text-xs">{nfcViewData.brand}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-500">Model</div>
+                              <div className="text-xs">{nfcViewData.model}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-500">Priority</div>
+                              <div className="text-xs">{nfcViewData.priority}</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <div className="text-[10px] text-gray-500">Building</div>
+                              <div className="text-xs">{nfcViewData.location?.building}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-500">Floor</div>
+                              <div className="text-xs">{nfcViewData.location?.floor}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-500">Room</div>
+                              <div className="text-xs">{nfcViewData.location?.room}</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <div className="text-[10px] text-gray-500">Timestamp</div>
+                              <div className="text-xs">{nfcViewData.timestamp ? new Date(nfcViewData.timestamp).toLocaleString() : ''}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-500">Checksum</div>
+                              <div className="text-[10px] font-mono">{nfcViewData.checksum}</div>
+                            </div>
+                          </div>
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-2">
-                          <Package className="h-5 w-5" />
-                          <span>Generate Assets</span>
-                        </div>
-                      )}
-                    </Button>
+                        <div className="text-gray-500">NFC data not available</div>
+                      )
+                    )}
                   </div>
                 </div>
-              )}
-
-              {digitalAssetsError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <p className="text-sm text-red-600">{digitalAssetsError}</p>
-                  </div>
-                </div>
-              )}
-
-              {digitalAssets && (
-                <div className="space-y-4">
-                  {/* Navigation Tabs */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-gray-900 mb-3">Digital Assets</h4>
-                    <button
-                      onClick={() => setActiveTab('qr')}
-                      className={cn(
-                        "w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-all",
-                        activeTab === 'qr' 
-                          ? "bg-blue-100 text-blue-900 border border-blue-200" 
-                          : "hover:bg-gray-100 text-gray-700"
-                      )}
-                    >
-                      <div className="p-2 rounded-md bg-green-100">
-                        <QrCode className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">QR Code</p>
-                        <p className="text-xs text-gray-500">Quick response code</p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => setActiveTab('barcode')}
-                      className={cn(
-                        "w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-all",
-                        activeTab === 'barcode' 
-                          ? "bg-blue-100 text-blue-900 border border-blue-200" 
-                          : "hover:bg-gray-100 text-gray-700"
-                      )}
-                    >
-                      <div className="p-2 rounded-md bg-orange-100">
-                        <Barcode className="h-4 w-4 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Barcode</p>
-                        <p className="text-xs text-gray-500">Linear code format</p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => setActiveTab('nfc')}
-                      className={cn(
-                        "w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-all",
-                        activeTab === 'nfc' 
-                          ? "bg-blue-100 text-blue-900 border border-blue-200" 
-                          : "hover:bg-gray-100 text-gray-700"
-                      )}
-                    >
-                      <div className="p-2 rounded-md bg-purple-100">
-                        <Wifi className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">NFC Data</p>
-                        <p className="text-xs text-gray-500">Contactless data</p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => setActiveTab('scanner')}
-                      className={cn(
-                        "w-full flex items-center space-x-3 p-3 rounded-lg text-left transition-all",
-                        activeTab === 'scanner' 
-                          ? "bg-blue-100 text-blue-900 border border-blue-200" 
-                          : "hover:bg-gray-100 text-gray-700"
-                      )}
-                    >
-                      <div className="p-2 rounded-md bg-yellow-100">
-                        <Scan className="h-4 w-4 text-yellow-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Scanner</p>
-                        <p className="text-xs text-gray-500">Scan QR codes</p>
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="space-y-2 pt-4 border-t border-gray-200">
-                    <h4 className="font-semibold text-gray-900 mb-3">Actions</h4>
-                                         <Button
-                       onClick={() => handleDownload(activeTab)}
-                       variant="outline"
-                       size="sm"
-                       className="w-full"
-                     >
-                       <Download className="h-4 w-4 mr-2" />
-                       Download {activeTab === 'qr' ? 'QR Code' : activeTab === 'barcode' ? 'Barcode' : activeTab === 'nfc' ? 'NFC Data' : 'Scanned Data'}
-                     </Button>
-                    <Button
-                      onClick={() => handleCopyToClipboard('Asset data copied')}
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Data
-                    </Button>
-                    <Button
-                      onClick={() => {/* Share functionality */}}
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                    >
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share
-                    </Button>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 p-6 overflow-y-auto">
-              {!digitalAssets ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <QrCode className="h-12 w-12 text-blue-600" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Ready to Generate</h3>
-                    <p className="text-gray-600 mb-6">
-                      Click the generate button in the sidebar to create digital assets for this asset.
-                    </p>
-                  </div>
+            {/* Raw Data Toggle */}
+            <div className="mt-6 pt-4 border-t">
+              <details className="group">
+                <summary className="cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  Show Raw JSON Data
+                </summary>
+                <div className="mt-3 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <pre className="text-xs overflow-x-auto text-gray-700 dark:text-gray-300">
+                    {JSON.stringify(selectedAsset, null, 2)}
+                  </pre>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* QR Code Tab */}
-                  {activeTab === 'qr' && (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-2xl font-bold text-gray-900">QR Code</h2>
-                          <p className="text-gray-600">Scan this QR code to access asset information</p>
-                        </div>
-                        <Badge variant="secondary" className="text-sm">
-                          {digitalAssets.digitalAssets.qrCode.data.tagId}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <div className="relative bg-white rounded-2xl shadow-2xl p-8 border-8 border-white">
-                          <div className="w-64 h-64 bg-white rounded-xl overflow-hidden">
-                            <Image
-                              src={`${API_BASE_URL}${digitalAssets.digitalAssets.qrCode.url}`}
-                              alt={`QR Code for ${digitalAssets.digitalAssets.qrCode.data.tagId}`}
-                              width={256}
-                              height={256}
-                              className="w-full h-full object-contain p-4"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="border-0 shadow-sm">
-                          <CardHeader>
-                            <CardTitle className="text-lg">Asset Information</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Type:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.qrCode.data.assetType}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Brand:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.qrCode.data.brand}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Model:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.qrCode.data.model}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Status:</span>
-                              <Badge variant={digitalAssets.digitalAssets.qrCode.data.status === 'active' ? 'default' : 'secondary'}>
-                                {digitalAssets.digitalAssets.qrCode.data.status}
-                              </Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="border-0 shadow-sm">
-                          <CardHeader>
-                            <CardTitle className="text-lg">Location Details</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Building:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.qrCode.data.location.building}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Floor:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.qrCode.data.location.floor}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Room:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.qrCode.data.location.room}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Project:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.qrCode.data.projectName}</span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Barcode Tab */}
-                  {activeTab === 'barcode' && (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-2xl font-bold text-gray-900">Barcode</h2>
-                          <p className="text-gray-600">Industrial barcode for asset tracking</p>
-                        </div>
-                        <Badge variant="secondary" className="text-sm">
-                          {digitalAssets.digitalAssets.barcode.data}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <div className="relative bg-white rounded-2xl shadow-2xl p-8 border-8 border-white">
-                          <div className="w-80 h-40 bg-white rounded-xl overflow-hidden">
-                            <Image
-                              src={`${API_BASE_URL}${digitalAssets.digitalAssets.barcode.url}`}
-                              alt={`Barcode for ${digitalAssets.digitalAssets.barcode.data}`}
-                              width={320}
-                              height={160}
-                              className="w-full h-full object-contain p-4"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <Card className="border-0 shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="text-lg">Barcode Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Format:</span>
-                            <span className="font-medium">Code 128</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Data:</span>
-                            <span className="font-medium font-mono">{digitalAssets.digitalAssets.barcode.data}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Asset ID:</span>
-                            <span className="font-medium">{digitalAssets.digitalAssets.qrCode.data.tagId}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* NFC Tab */}
-                  {activeTab === 'nfc' && (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-2xl font-bold text-gray-900">NFC Data</h2>
-                          <p className="text-gray-600">Contactless asset identification</p>
-                        </div>
-                        <Badge variant="secondary" className="text-sm">
-                          {digitalAssets.digitalAssets.nfcData.data.id}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <div className="relative bg-white rounded-2xl shadow-2xl p-8 border-8 border-white">
-                          <div className="w-80 h-48 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border-4 border-purple-200 p-6">
-                            <div className="text-center">
-                              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Wifi className="h-8 w-8 text-white" />
-                              </div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">NFC Data Ready</h3>
-                              <p className="text-sm text-gray-600 mb-4">Tap to read asset information</p>
-                              <div className="space-y-2 text-sm text-gray-700">
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Asset ID:</span>
-                                  <span className="font-mono">{digitalAssets.digitalAssets.nfcData.data.id}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Type:</span>
-                                  <span>{digitalAssets.digitalAssets.nfcData.data.type}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="font-medium">Format:</span>
-                                  <span>NFC-A</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="border-0 shadow-sm">
-                          <CardHeader>
-                            <CardTitle className="text-lg">NFC Information</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Type:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.nfcData.data.type}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Brand:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.nfcData.data.brand}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Model:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.nfcData.data.model}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Status:</span>
-                              <Badge variant={digitalAssets.digitalAssets.nfcData.data.status === 'active' ? 'default' : 'secondary'}>
-                                {digitalAssets.digitalAssets.nfcData.data.status}
-                              </Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="border-0 shadow-sm">
-                          <CardHeader>
-                            <CardTitle className="text-lg">Technical Details</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Timestamp:</span>
-                              <span className="font-medium text-sm">
-                                {new Date(digitalAssets.digitalAssets.nfcData.data.timestamp).toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Checksum:</span>
-                              <span className="font-medium font-mono text-sm">
-                                {digitalAssets.digitalAssets.nfcData.data.checksum.substring(0, 8)}...
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Assigned To:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.nfcData.data.assignedTo}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Project:</span>
-                              <span className="font-medium">{digitalAssets.digitalAssets.nfcData.data.projectName}</span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Scanner Tab */}
-                  {activeTab === 'scanner' && (
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-2xl font-bold text-gray-900">QR Code Scanner</h2>
-                          <p className="text-gray-600">Scan QR codes to access asset information</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <div className="relative bg-white rounded-2xl shadow-2xl p-8 border-8 border-white">
-                          <div className="w-80 h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-4 border-gray-200 flex items-center justify-center">
-                            {isScanning ? (
-                              <div className="text-center">
-                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                <p className="text-gray-600">Scanning...</p>
-                              </div>
-                            ) : (
-                              <div className="text-center">
-                                <Scan className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-600 mb-4">Camera scanner</p>
-                                <Button onClick={handleScan} className="bg-blue-600 hover:bg-blue-700">
-                                  <Scan className="h-4 w-4 mr-2" />
-                                  Start Scanning
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {scannedData && (
-                        <Card className="border-0 shadow-sm">
-                          <CardHeader>
-                            <CardTitle className="text-lg">Scanned Data</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                              <p className="font-mono text-sm">{scannedData}</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+              </details>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   )
 } 

@@ -55,6 +55,48 @@ export interface DigitalAsset {
     };
     generatedAt: string;
   };
+  barcode?: {
+    url: string;
+    data: {
+      t: string;        // tagId
+      a: string;        // assetType
+      s: string;        // subcategory
+      b: string;        // brand
+      m: string;        // model
+      st: string;       // status
+      p: string;        // priority
+      l: Location;      // location
+      u: string;        // url
+      pr: string;       // projectName
+      lm: string | null; // location metadata
+      nm: string | null; // notes metadata
+      url: string;      // asset url
+      ts: number;       // timestamp
+      c: string;        // checksum
+    };
+    generatedAt: string;
+  };
+  nfc?: {
+    url: string;
+    data: {
+      t: string;        // tagId
+      a: string;        // assetType
+      s: string;        // subcategory
+      b: string;        // brand
+      m: string;        // model
+      st: string;       // status
+      p: string;        // priority
+      l: Location;      // location
+      u: string;        // url
+      pr: string;       // projectName
+      lm: string | null; // location metadata
+      nm: string | null; // notes metadata
+      url: string;      // asset url
+      ts: number;       // timestamp
+      c: string;        // checksum
+    };
+    generatedAt: string;
+  };
 }
 
 export interface Asset {

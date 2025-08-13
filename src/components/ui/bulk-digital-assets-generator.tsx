@@ -96,6 +96,12 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
       setBarcodeImageLoading(true) // Start loading barcode image
       setSuccessMessage('All digital assets generated successfully!')
       setShowSuccessToast(true)
+      // Refresh global assets so other views (e.g., AssetsViewer) reflect newly stored digital assets
+      try {
+        await fetchAssets()
+      } catch (e) {
+        console.warn('Failed to refresh assets after generation:', e)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate digital assets')
     } finally {
@@ -108,12 +114,14 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
   }, [handleGenerateAllDigitalAssets])
 
   // Filter assets based on search term
-  const filteredAssets = assets.filter(asset => 
-    asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.model.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredAssets = assets.filter(asset => {
+    const term = (searchTerm || '').toLowerCase()
+    const tagId = (asset.tagId || '').toLowerCase()
+    const type = (asset.assetType || '').toLowerCase()
+    const brand = (asset.brand || '').toLowerCase()
+    const model = (asset.model || '').toLowerCase()
+    return tagId.includes(term) || type.includes(term) || brand.includes(term) || model.includes(term)
+  })
 
   const selectedFormat = BARCODE_FORMATS.find(f => f.value === barcodeFormat)
 
@@ -169,7 +177,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               </div>
               <Select value={selectedAssetFromDropdown} onValueChange={handleAssetSelect}>
-                <SelectTrigger className="h-11 text-sm">
+                <SelectTrigger className="h-11 text-sm w-full items-center justify-between">
                   <SelectValue placeholder={assetsLoading ? "⏳ Loading assets..." : "📋 Choose an asset from the list"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
@@ -195,7 +203,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                             <p className="font-medium">{asset.assetType} - {asset.brand} {asset.model}</p>
                             <p className="flex items-center space-x-1">
                               <Building className="h-3 w-3" />
-                              <span>{asset.location.building}, {asset.location.floor}</span>
+                              <span>{asset.location?.building || 'N/A'}, {asset.location?.floor || 'N/A'}</span>
                             </p>
                             <p className="text-primary font-mono text-xs">ID: {asset._id}</p>
                           </div>
@@ -759,19 +767,19 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Building</Label>
-                    <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.location.building}</p>
+                    <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.location?.building || 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Floor</Label>
-                    <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.location.floor}</p>
+                    <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.location?.floor || 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Room</Label>
-                    <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.location.room}</p>
+                    <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.location?.room || 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Project</Label>
-                    <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.projectName}</p>
+                      <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.projectName || 'N/A'}</p>
                   </div>
                 </div>
               </CardContent>

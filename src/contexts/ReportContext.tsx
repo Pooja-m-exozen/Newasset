@@ -91,7 +91,7 @@ export const ReportProvider: React.FC<ReportProviderProps> = ({ children }) => {
       setError(null);
       
       const assets = await fetchAssetsFromAPI();
-      setAssets(assets);
+      setAssets(assets as Asset[]);
     } catch (err) {
       console.error('Error fetching assets:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch assets');

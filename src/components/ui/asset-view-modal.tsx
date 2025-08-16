@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
 import { Badge } from './badge';
 import { StatusBadge } from './status-badge';
 import { PriorityBadge } from './priority-badge';
-import { Calendar, MapPin, Tag, Package, X, QrCode, Download, Copy, Hash, Clock, Info, Building, Database, Activity, Scan, Loader2, Camera, CameraOff, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Tag, Package, X, QrCode, Download, Copy, Hash, Clock, Info, Building, Database, Scan, Loader2, Camera, Save, AlertCircle, CheckCircle, User, Shield, FileText } from 'lucide-react';
 import { Asset } from '../../lib/adminasset';
 import { Button } from './button';
 import Image from 'next/image';
@@ -80,9 +80,36 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
   const [qrGenerationError, setQrGenerationError] = useState<string | null>(null);
   const [qrGenerationSuccess, setQrGenerationSuccess] = useState(false);
   const [scanningQR, setScanningQR] = useState(false);
-  const [scannedData, setScannedData] = useState<any>(null);
+  const [scannedData, setScannedData] = useState<{ t: string; a: string; b: string; m: string } | null>(null);
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [savingScannedData, setSavingScannedData] = useState(false);
+  const [reverseGeocodedAddress, setReverseGeocodedAddress] = useState<string>('');
+  const [geocodingLoading, setGeocodingLoading] = useState(false);
+
+  // Function to reverse geocode coordinates to address
+  const reverseGeocode = useCallback(async (latitude: string, longitude: string) => {
+    if (!latitude || !longitude || latitude === '0' || longitude === '0') return;
+    
+    setGeocodingLoading(true);
+    try {
+      const GOOGLE_MAPS_API_KEY = 'AIzaSyCqvcEKoqwRG5PBDIVp-MjHyjXKT3s4KY4';
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.results.length > 0) {
+        setReverseGeocodedAddress(data.results[0].formatted_address);
+      } else {
+        setReverseGeocodedAddress('Address not found');
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      setReverseGeocodedAddress('Failed to get address');
+    } finally {
+      setGeocodingLoading(false);
+    }
+  }, []);
 
   // Refs for video and canvas
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -301,12 +328,12 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
         // Draw video frame to canvas
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Get image data for QR detection
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        // Get image data for QR detection (commented out until proper QR library integration)
+        // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
         // Simple QR code detection (you can integrate a proper QR library here)
         // For now, we'll simulate detection for testing purposes
-        detectQRCode(imageData);
+        detectQRCode();
         
         // Continue scanning
         requestAnimationFrame(scanFrame);
@@ -320,13 +347,11 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
   };
 
   // Disable simulated detection; real scanning integration can be added later
-  const detectQRCode = (_imageData: ImageData) => {
+  const detectQRCode = () => {
     // Intentionally left blank to avoid mock scans
   };
 
-  const simulateQRScan = () => {
-    // Disabled mock scanning
-  };
+
 
   const saveScannedData = async () => {
     if (!scannedData || !asset?._id) return;
@@ -411,6 +436,13 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
     }
   }, [isOpen, asset?._id, asset?.digitalAssets?.qrCode, refreshAssetData]);
 
+  // Trigger reverse geocoding when asset location changes
+  useEffect(() => {
+    if (asset?.location?.latitude && asset?.location?.longitude) {
+      reverseGeocode(asset.location.latitude, asset.location.longitude);
+    }
+  }, [asset?.location?.latitude, asset?.location?.longitude, reverseGeocode]);
+
   if (!asset) return null;
 
   return (
@@ -464,8 +496,23 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                   {asset?.brand && (
                     <InfoCard icon={Package} title="Brand" value={asset.brand} bgColor="from-green-500 to-emerald-600" />
                   )}
+                  {asset?.model && (
+                    <InfoCard icon={Package} title="Model" value={asset.model} bgColor="from-purple-500 to-violet-600" />
+                  )}
                   <InfoCard icon={Building} title="Location" value={asset?.location?.building || asset?.location?.floor || asset?.location?.room || 'N/A'} bgColor="from-indigo-500 to-purple-600" />
+                </div>
+                
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
                   <InfoCard icon={Calendar} title="Created" value={asset?.createdAt ? formatDate(asset.createdAt) : 'N/A'} bgColor="from-orange-500 to-red-600" />
+                  {asset?.yearOfInstallation && (
+                    <InfoCard icon={Calendar} title="Installation Year" value={asset.yearOfInstallation} bgColor="from-teal-500 to-cyan-600" />
+                  )}
+                  {asset?.serialNumber && (
+                    <InfoCard icon={Hash} title="Serial Number" value={asset.serialNumber} bgColor="from-rose-500 to-pink-600" />
+                  )}
+                  {asset?.capacity && (
+                    <InfoCard icon={Database} title="Capacity" value={asset.capacity} bgColor="from-emerald-500 to-green-600" />
+                  )}
                 </div>
                 
                 {asset?.notes && (
@@ -476,7 +523,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">Notes</p>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 italic line-clamp-2">"{asset.notes}"</p>
+                        <p className="text-xs text-slate-700 dark:text-slate-300 italic line-clamp-2">&quot;{asset.notes}&quot;</p>
                       </div>
                     </div>
                   </div>
@@ -504,6 +551,81 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                     {asset?.model && (
                       <DetailRow label="Model" value={asset.model} bgColor="from-slate-50 to-purple-50" />
                     )}
+                    {asset?.subcategory && (
+                      <DetailRow label="Subcategory" value={asset.subcategory} bgColor="from-slate-50 to-blue-50" />
+                    )}
+                    {asset?.capacity && (
+                      <DetailRow label="Capacity" value={asset.capacity} bgColor="from-slate-50 to-emerald-50" />
+                    )}
+                    {asset?.yearOfInstallation && (
+                      <DetailRow label="Installation Year" value={asset.yearOfInstallation} bgColor="from-slate-50 to-orange-50" />
+                    )}
+                    {asset?.projectName && (
+                      <DetailRow label="Project Name" value={asset.projectName} bgColor="from-slate-50 to-purple-50" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Location Information Card */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600">
+                      <MapPin className="w-4 h-4 text-white" />
+                    </div>
+                    Location Information
+                  </h4>
+                  <div className="space-y-2">
+                    {asset?.location?.building && (
+                      <DetailRow label="Building" value={asset.location.building} bgColor="from-slate-50 to-blue-50" />
+                    )}
+                    {asset?.location?.floor && (
+                      <DetailRow label="Floor" value={asset.location.floor} bgColor="from-slate-50 to-green-50" />
+                    )}
+                    {asset?.location?.room && (
+                      <DetailRow label="Room" value={asset.location.room} bgColor="from-slate-50 to-purple-50" />
+                    )}
+                    {asset?.location?.latitude && asset?.location?.longitude && (
+                      <DetailRow label="Coordinates" value={`${asset.location.latitude}, ${asset.location.longitude}`} bgColor="from-slate-50 to-orange-50" />
+                    )}
+                    {reverseGeocodedAddress && (
+                      <div className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-700 dark:to-blue-900/20 rounded-lg p-3 border border-slate-200/60 dark:border-slate-600/60">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Full Address</span>
+                          {geocodingLoading ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                          ) : (
+                            <MapPin className="w-3 h-3 text-blue-500" />
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-900 dark:text-white font-medium mt-1 line-clamp-2">{reverseGeocodedAddress}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Assignment Information Card */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    Assignment Information
+                  </h4>
+                  <div className="space-y-2">
+                    {asset?.assignedTo && typeof asset.assignedTo === 'object' ? (
+                      <>
+                        <DetailRow label="Assigned To" value={asset.assignedTo.name || 'N/A'} bgColor="from-slate-50 to-blue-50" />
+                        <DetailRow label="Email" value={asset.assignedTo.email || 'N/A'} bgColor="from-slate-50 to-green-50" />
+                      </>
+                    ) : (
+                      <DetailRow label="Assigned To" value="Not Assigned" bgColor="from-slate-50 to-gray-50" />
+                    )}
+                    {asset?.createdBy && (
+                      <>
+                        <DetailRow label="Created By" value={asset.createdBy.name || 'N/A'} bgColor="from-slate-50 to-emerald-50" />
+                        <DetailRow label="Creator Email" value={asset.createdBy.email || 'N/A'} bgColor="from-slate-50 to-teal-50" />
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -523,6 +645,70 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                       ))}
                     </div>
                   </div>
+                )}
+
+                {/* Compliance & Metadata Card */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
+                      <Shield className="w-4 h-4 text-white" />
+                    </div>
+                    Compliance & Metadata
+                  </h4>
+                  <div className="space-y-2">
+                    <DetailRow label="Digital Tag Type" value={asset?.digitalTagType || 'N/A'} bgColor="from-slate-50 to-blue-50" />
+                    <DetailRow label="Status" value={asset?.status || 'N/A'} bgColor="from-slate-50 to-green-50" />
+                    <DetailRow label="Priority" value={asset?.priority || 'N/A'} bgColor="from-slate-50 to-purple-50" />
+                    {asset?.updatedAt && (
+                      <DetailRow label="Last Updated" value={formatDate(asset.updatedAt)} bgColor="from-slate-50 to-orange-50" />
+                    )}
+                    {asset?.__v !== undefined && (
+                      <DetailRow label="Version" value={asset.__v.toString()} bgColor="from-slate-50 to-teal-50" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Compliance Details */}
+                {asset?.compliance && (
+                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
+                        <FileText className="w-4 h-4 text-white" />
+                      </div>
+                      Compliance Details
+                    </h4>
+                  <div className="space-y-2">
+                    {asset.compliance.certifications && asset.compliance.certifications.length > 0 ? (
+                      <div className="bg-gradient-to-r from-slate-50 to-emerald-50 dark:from-slate-700 dark:to-emerald-900/20 rounded-lg p-3 border border-slate-200/60 dark:border-slate-600/60">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Certifications</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {asset.compliance.certifications.map((cert, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                              {cert}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <DetailRow label="Certifications" value="None" bgColor="from-slate-50 to-gray-50" />
+                    )}
+                    
+                    {asset.compliance.regulatoryRequirements && asset.compliance.regulatoryRequirements.length > 0 ? (
+                      <div className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-700 dark:to-blue-900/20 rounded-lg p-3 border border-slate-200/60 dark:border-slate-600/60">
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Regulatory Requirements</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {asset.compliance.regulatoryRequirements.map((req, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                              {req}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <DetailRow label="Regulatory Requirements" value="None" bgColor="from-slate-50 to-gray-50" />
+                    )}
+                  </div>
+                </div>
                 )}
               </div>
 

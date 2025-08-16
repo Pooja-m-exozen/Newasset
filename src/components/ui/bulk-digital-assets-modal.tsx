@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog'
 import { Button } from './button'
-import { Badge } from './badge'
+
 import { Card, CardContent, CardHeader, CardTitle } from './card'
 import { Progress } from './progress'
 import { 
@@ -18,7 +18,7 @@ import {
   RefreshCw,
   FileText,
   Smartphone,
-  Printer
+
 } from 'lucide-react'
 import { type Asset } from '../../lib/adminasset'
 import { SuccessToast } from './success-toast'
@@ -35,7 +35,23 @@ const API_BASE_URL = 'http://192.168.0.5:5021'
 interface DigitalAssetResult {
   type: 'qr' | 'barcode' | 'nfc'
   success: boolean
-  data?: any
+  data?: {
+    tagId?: string
+    url?: string
+    shortUrl?: string
+    format?: string
+    id?: string
+    type?: string
+    brand?: string
+    model?: string
+    status?: string
+    priority?: string
+    timestamp?: string
+    checksum?: string
+    signature?: string
+    assignedTo?: string
+    projectName?: string
+  }
   error?: string
   url?: string
   shortUrl?: string
@@ -77,111 +93,11 @@ export const BulkDigitalAssetsModal: React.FC<BulkDigitalAssetsModalProps> = ({
     setSelectedTypes(newSelected)
   }, [selectedTypes])
 
-  const generateQRCode = useCallback(async (): Promise<DigitalAssetResult> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/digital-assets/qr/${asset._id}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          size: 300,
-          includeUrl: true
-        })
-      })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to generate QR code')
-      }
 
-      const data = await response.json()
-      return {
-        type: 'qr',
-        success: true,
-        data: data.qrCode,
-        url: data.qrCode.url,
-        shortUrl: data.qrCode.shortUrl
-      }
-    } catch (error) {
-      return {
-        type: 'qr',
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }
-  }, [asset._id])
 
-  const generateBarcode = useCallback(async (): Promise<DigitalAssetResult> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/digital-assets/barcode/${asset._id}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          format: 'code128',
-          height: 10,
-          scale: 3
-        })
-      })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to generate barcode')
-      }
 
-      const data = await response.json()
-      return {
-        type: 'barcode',
-        success: true,
-        data: data.barcode,
-        url: data.barcode.url
-      }
-    } catch (error) {
-      return {
-        type: 'barcode',
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }
-  }, [asset._id])
-
-  const generateNFC = useCallback(async (): Promise<DigitalAssetResult> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/digital-assets/nfc/${asset._id}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          includeUrl: true
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to generate NFC data')
-      }
-
-      const data = await response.json()
-      return {
-        type: 'nfc',
-        success: true,
-        data: data.nfc,
-        url: data.nfc.url
-      }
-    } catch (error) {
-      return {
-        type: 'nfc',
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
-    }
-  }, [asset._id])
 
   const handleBulkGenerate = useCallback(async () => {
     if (selectedTypes.size === 0) {
@@ -270,13 +186,14 @@ export const BulkDigitalAssetsModal: React.FC<BulkDigitalAssetsModalProps> = ({
         
         onGenerated(updatedAsset)
       }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An unexpected error occurred')
+    } catch (err) {
+      console.error('Bulk generation error:', err)
+      setError('An unexpected error occurred')
     } finally {
       setIsGenerating(false)
       setGenerationProgress({ qr: false, barcode: false, nfc: false })
     }
-  }, [selectedTypes, asset._id, asset.digitalAssets, onGenerated])
+  }, [selectedTypes, asset, onGenerated])
 
   const handleDownload = useCallback((result: DigitalAssetResult) => {
     if (!result.url) return
@@ -296,7 +213,7 @@ export const BulkDigitalAssetsModal: React.FC<BulkDigitalAssetsModalProps> = ({
       await navigator.clipboard.writeText(result.url)
       setSuccessMessage(`${result.type.toUpperCase()} URL copied to clipboard!`)
       setShowSuccessToast(true)
-    } catch (error) {
+    } catch  {
       setError('Failed to copy to clipboard')
     }
   }, [])

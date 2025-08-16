@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog'
 import { Button } from './button'
 import { Label } from './label'
 import { Badge } from './badge'
-import { Wifi, Download, Copy, Hash, Clock, CheckCircle, Shield, MapPin, User } from 'lucide-react'
+import { Wifi,  Copy, Hash, Clock, CheckCircle,  } from 'lucide-react'
 import { type Asset, assetApi } from '../../lib/adminasset'
 import { generateNFCData, type NFCGenerationResponse } from '@/lib/DigitalAssets'
 

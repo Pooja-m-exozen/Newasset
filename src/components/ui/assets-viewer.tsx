@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from './card'
+import { Card, CardContent } from './card'
 import { Button } from './button'
 import { LoadingSpinner } from './loading-spinner'
 import { ErrorDisplay } from './error-display'
 import { AssetTable } from './asset-table'
+import { Asset } from '../../lib/Report'
 
 import { ExportButtons } from './export-buttons'
 import { Input } from './input'
@@ -31,9 +32,37 @@ import { ScrollArea } from './scroll-area'
 // API Base URL constant
 const API_BASE_URL = 'http://192.168.0.5:5021/api'
 
-// Use any type to accept whatever response comes from the API
-type Asset = any
-type AssetsResponse = any
+// Define proper types for assets
+interface NFCData {
+  type: string
+  id: string
+  assetType: string
+  subcategory: string
+  brand: string
+  model: string
+  status: string
+  priority: string
+  location: {
+    building?: string
+    floor?: string
+    room?: string
+  }
+  assignedTo: string
+  projectName: string
+  timestamp: string
+  checksum: string
+  signature: string
+}
+
+
+
+interface AssetsResponse {
+  success?: boolean
+  assets?: Asset[]
+  data?: Asset[]
+  items?: Asset[]
+  results?: Asset[]
+}
 
 interface AssetsViewerProps {
   className?: string
@@ -46,7 +75,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
   const [error, setError] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-  const [nfcViewData, setNfcViewData] = useState<any | null>(null)
+  const [nfcViewData, setNfcViewData] = useState<NFCData | null>(null)
   const [nfcLoading, setNfcLoading] = useState(false)
   const [nfcError, setNfcError] = useState<string | null>(null)
   const [qrImgSrc, setQrImgSrc] = useState<string | null>(null)
@@ -102,12 +131,12 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
         // If response has different structure, try to extract assets
         const possibleAssets = data.data || data.items || data.results || []
         if (Array.isArray(possibleAssets)) {
-          setAssets(possibleAssets)
-          setFilteredAssets(possibleAssets)
+          setAssets(possibleAssets as Asset[])
+          setFilteredAssets(possibleAssets as Asset[])
         } else {
           // Just set the entire response as assets
-          setAssets([data])
-          setFilteredAssets([data])
+          setAssets([data as Asset])
+          setFilteredAssets([data as Asset])
         }
       }
     } catch (err) {
@@ -126,8 +155,8 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-    } catch (e) {
-      console.warn('Copy failed:', e)
+    } catch {
+      console.warn('Copy failed')
     }
   }
 
@@ -166,7 +195,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
           // Some files may wrap data under "data"
           setNfcViewData(json?.data ?? json)
         }
-      } catch (e) {
+      } catch {
         if (!cancelled) setNfcError('Failed to load NFC data')
       } finally {
         if (!cancelled) setNfcLoading(false)
@@ -238,12 +267,12 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
       const searchLower = filters.search.toLowerCase()
       filtered = filtered.filter(asset => {
         // Try to search in common properties, handle undefined safely
-        const tagId = asset?.tagId || asset?.id || asset?.tag || ''
-        const assetType = asset?.assetType || asset?.type || ''
+        const tagId = asset?.tagId || ''
+        const assetType = asset?.assetType || ''
         const brand = asset?.brand || ''
         const model = asset?.model || ''
-        const assignedTo = asset?.assignedTo?.name || asset?.assignedTo || ''
-        const location = asset?.location?.building || asset?.location || asset?.building || ''
+        const assignedTo = typeof asset?.assignedTo === 'object' ? asset.assignedTo.name : asset?.assignedTo || ''
+        const location = typeof asset?.location === 'object' ? asset.location.building : asset?.location || ''
         
         return (
           tagId.toLowerCase().includes(searchLower) ||
@@ -251,39 +280,39 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
           brand.toLowerCase().includes(searchLower) ||
           model.toLowerCase().includes(searchLower) ||
           assignedTo.toLowerCase().includes(searchLower) ||
-          location.toLowerCase().includes(searchLower)
+          (location || '').toLowerCase().includes(searchLower)
         )
       })
     }
     
     if (filters.assetType) {
       filtered = filtered.filter(asset => 
-        (asset?.assetType || asset?.type) === filters.assetType
+        asset?.assetType === filters.assetType
       )
     }
     
     if (filters.status) {
       filtered = filtered.filter(asset => 
-        (asset?.status || asset?.state) === filters.status
+        asset?.status === filters.status
       )
     }
     
     if (filters.priority) {
       filtered = filtered.filter(asset => 
-        (asset?.priority || asset?.importance) === filters.priority
+        asset?.priority === filters.priority
       )
     }
     
     if (filters.location) {
       filtered = filtered.filter(asset => {
-        const building = asset?.location?.building || asset?.location || asset?.building || ''
-        const floor = asset?.location?.floor || ''
-        const room = asset?.location?.room || ''
+        const building = typeof asset?.location === 'object' ? asset.location.building || '' : asset?.location || ''
+        const floor = typeof asset?.location === 'object' ? asset.location.floor || '' : ''
+        const room = typeof asset?.location === 'object' ? asset.location.room || '' : ''
         
         return (
-          building.includes(filters.location) ||
-          floor.includes(filters.location) ||
-          room.includes(filters.location)
+          (building || '').includes(filters.location) ||
+          (floor || '').includes(filters.location) ||
+          (room || '').includes(filters.location)
         )
       })
     }
@@ -298,35 +327,41 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
   }
 
   // Handle asset edit
-  const handleEditAsset = (asset: Asset) => {
-    // TODO: Implement edit functionality
-    console.log('Edit asset:', asset)
-  }
+  // const handleEditAsset = (asset: Asset) => {
+  //   // TODO: Implement edit functionality
+  //   console.log('Edit asset:', asset)
+  // }
 
   // Handle asset delete
-  const handleDeleteAsset = (assetId: string) => {
-    // TODO: Implement delete functionality
-    console.log('Delete asset:', assetId)
-  }
+  // const handleDeleteAsset = (assetId: string) => {
+  //   // TODO: Implement delete functionality
+  //   console.log('Delete asset:', assetId)
+  // }
 
   // Handle QR generation
-  const handleGenerateQR = (asset: Asset) => {
-    // TODO: Implement QR generation
-    console.log('Generate QR for asset:', asset)
-  }
+  // const handleGenerateQR = (asset: Asset) => {
+  //   // TODO: Implement QR generation
+  //   console.log('Generate QR for asset:', asset)
+  // }
 
   // Load assets on component mount
   useEffect(() => {
     fetchAssets()
   }, [fetchAssets])
 
-  // Get unique values for filter options - handle any property structure
-  const assetTypes = [...new Set(assets.map(asset => asset?.assetType || asset?.type || '').filter(Boolean))]
-  const statuses = [...new Set(assets.map(asset => asset?.status || asset?.state || '').filter(Boolean))]
-  const priorities = [...new Set(assets.map(asset => asset?.priority || asset?.importance || '').filter(Boolean))]
-  const locations = [...new Set(assets.map(asset => 
-    asset?.location?.building || asset?.location || asset?.building || ''
-  ).filter(Boolean))]
+  // Get unique values for filter options
+  const assetTypes = [...new Set(assets.map(asset => asset?.assetType || '').filter(Boolean))]
+  const statuses = [...new Set(assets.map(asset => asset?.status || '').filter(Boolean))]
+  const priorities = [...new Set(assets.map(asset => asset?.priority || '').filter(Boolean))]
+  // const locations = [...new Set(assets.map(asset => {
+  //   if (typeof asset?.location === 'object' && asset.location?.building) {
+  //     return asset.location.building
+  //   }
+  //   if (typeof asset?.location === 'string') {
+  //     return asset.location
+  //   }
+  //   return asset?.building || ''
+  // }).filter(Boolean))]
 
   if (isLoading) {
     return (
@@ -542,14 +577,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
         </Card>
       ) : (
         <AssetTable
-          assets={filteredAssets.map(a => ({
-            ...a,
-            previewImages: {
-              qr: getQrUrl(a),
-              barcode: getBarcodeUrl(a)
-            },
-            nfcUrl: getNfcUrl(a)
-          }))}
+          assets={filteredAssets}
           sortBy="createdAt"
           sortOrder="desc"
           onSort={() => {}}
@@ -570,15 +598,15 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">Asset Details</h2>
-                    {Boolean(selectedAsset?.status || selectedAsset?.state) && (
-                      <StatusBadge status={selectedAsset?.status || selectedAsset?.state} />
-                    )}
-                    {Boolean(selectedAsset?.priority || selectedAsset?.importance) && (
-                      <PriorityBadge priority={selectedAsset?.priority || selectedAsset?.importance} />
-                    )}
+                                         {selectedAsset?.status && (
+                       <StatusBadge status={selectedAsset.status} />
+                     )}
+                     {selectedAsset?.priority && (
+                       <PriorityBadge priority={selectedAsset.priority} />
+                     )}
                   </div>
                   <div className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-800/60 px-2 py-1 rounded-full inline-block border border-slate-200/60 dark:border-slate-600/60">
-                    {selectedAsset?.tagId || selectedAsset?.id || 'Unknown Asset'}
+                    {selectedAsset?.tagId || 'Unknown Asset'}
                   </div>
                 </div>
               </div>
@@ -608,7 +636,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Type</p>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.assetType || selectedAsset?.type || 'N/A'}</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.assetType || 'N/A'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
@@ -626,7 +654,13 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Location</p>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.location?.building || selectedAsset?.location || selectedAsset?.building || 'N/A'}</p>
+                                                 <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                           {typeof selectedAsset?.location === 'object' && selectedAsset.location?.building 
+                             ? selectedAsset.location.building 
+                             : typeof selectedAsset?.location === 'string' 
+                               ? selectedAsset.location 
+                               : 'N/A'}
+                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
@@ -800,7 +834,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                   <Package className="w-3.5 h-3.5" />
-                  Asset ID: {selectedAsset?._id || selectedAsset?.id || 'N/A'}
+                  Asset ID: {selectedAsset?._id || 'N/A'}
                 </div>
                 <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
                 <div className="text-xs text-slate-500 dark:text-slate-500">

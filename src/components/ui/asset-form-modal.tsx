@@ -70,13 +70,13 @@ interface User {
   status: string;
   isVerified: boolean;
   workSchedule: {
-    workingDays: any[];
+    workingDays: string[];
   };
-  specialization: any[];
-  facilities: any[];
-  certifications: any[];
-  loginHistory: any[];
-  activityLog: any[];
+  specialization: string[];
+  facilities: string[];
+  certifications: string[];
+  loginHistory: string[];
+  activityLog: string[];
 }
 
 
@@ -123,8 +123,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const [locationError, setLocationError] = useState<string | null>(null);
   const [coordinatesFound, setCoordinatesFound] = useState(false);
   const [addressInput, setAddressInput] = useState('');
-  const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
   const [generatingTagId, setGeneratingTagId] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -133,17 +131,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const [assetCreationStatus, setAssetCreationStatus] = useState<'idle' | 'creating' | 'success' | 'ready-for-qr'>('idle');
 
 
-  // Function to get display name for selected user
-  const getSelectedUserName = (userId: string) => {
-    const user = users.find(u => u._id === userId);
-    return user ? user.name : userId;
-  };
 
-  // Function to get display email for selected user
-  const getSelectedUserEmail = (userId: string) => {
-    const user = users.find(u => u._id === userId);
-    return user ? user.email : userId;
-  };
 
   // Function to fetch all registered users from API
   const fetchUsers = async () => {
@@ -169,8 +157,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
         console.error('Failed to fetch users:', response.status);
         setUsers([]);
       }
-    } catch (error) {
-      console.error('Error fetching users:', error);
+    } catch {
+      console.error('Error fetching users');
       setUsers([]);
     } finally {
       setLoadingUsers(false);
@@ -231,7 +219,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       } else {
         console.log('Using fallback Tag ID (API not available)');
       }
-    } catch (error) {
+    } catch  {
       console.log('Using fallback Tag ID (API error)');
     } finally {
       setGeneratingTagId(false);
@@ -262,7 +250,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
         generateNextTagId();
       }, 100);
     }
-  }, [mode]);
+  }, [mode, asset]);
 
   // Handle asset data when editing or creating
   useEffect(() => {
@@ -312,17 +300,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
 
 
-  // Set current user ID when component mounts
-  useEffect(() => {
-    const userId = getCurrentUserId();
-    const userEmail = getCurrentUserEmail();
-    if (userId) {
-      setCurrentUserId(userId);
-    }
-    if (userEmail) {
-      setCurrentUserEmail(userEmail);
-    }
-  }, []);
+
 
   const handleInputChange = (field: string, value: string | string[]) => {
     if (field.includes('.')) {
@@ -368,35 +346,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     }
   };
 
-  // Get current user ID from auth token
-  const getCurrentUserId = () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        // Decode JWT token to get user ID
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.id;
-      }
-    } catch (error) {
-      console.error('Error decoding auth token:', error);
-    }
-    return null;
-  };
 
-  // Get current user email from auth token
-  const getCurrentUserEmail = () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        // Decode JWT token to get user email
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.email;
-      }
-    } catch (error) {
-      console.error('Error decoding auth token:', error);
-    }
-    return null;
-  };
 
 
 
@@ -509,7 +459,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     // Call onSubmit with the updated asset to trigger parent component state update
     // This ensures the view modal immediately shows the new QR code
     if (onSubmit && typeof onSubmit === 'function') {
-      onSubmit(completeUpdatedAsset as any).then(() => {
+      onSubmit(completeUpdatedAsset as unknown as AssetFormData).then(() => {
         console.log('Asset updated with QR code in parent component');
       }).catch((error) => {
         console.error('Error updating asset in parent component:', error);
@@ -535,12 +485,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     onClose();
   };
 
-  // Show digital tag generation options after asset creation
-  const showDigitalTagOptions = () => {
-    if (formData.digitalTagType === 'qr') {
-      setShowQRModal(true); // Set state to show QR modal
-    }
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -601,12 +546,12 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       setAssetCreationStatus('idle');
       onClose();
       
-    } catch (error) {
-      console.error('Error submitting asset:', error);
-      setAssetCreationStatus('idle');
-      // Re-throw the error so the parent component can handle it
-      throw error;
-    }
+          } catch {
+        console.error('Error submitting asset');
+        setAssetCreationStatus('idle');
+        // Re-throw the error so the parent component can handle it
+        throw new Error('Failed to submit asset');
+      }
   };
 
   const getModalTitle = () => {
@@ -744,7 +689,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     Asset Created Successfully!
                   </p>
                   <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                    Your asset "{createdAsset.tagId}" has been created and saved to the database.
+                    Your asset &quot;{createdAsset.tagId}&quot; has been created and saved to the database.
                   </p>
                 </div>
               </div>
@@ -761,7 +706,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                       Ready for QR Code Generation!
                     </p>
                     <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
-                      Your asset "{createdAsset.tagId}" is ready. You can now generate a QR code for it.
+                      Your asset &quot;{createdAsset.tagId}&quot; is ready. You can now generate a QR code for it.
                     </p>
                   </div>
                 </div>
@@ -1084,9 +1029,9 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Select a user from the dropdown. The system will submit the user's ID to the backend.
-                </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Select a user from the dropdown. The system will submit the user&apos;s ID to the backend.
+                  </p>
               </div>
             </div>
           </div>

@@ -8,11 +8,11 @@ import { Label } from './label'
 import { Checkbox } from './checkbox'
 import { Badge } from './badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
-import { generateQRCode, type QRCodeGenerationResponse } from '@/lib/DigitalAssets'
+import { generateQRCode } from '@/lib/DigitalAssets'
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, MapPin, Building, Hash, CheckCircle, Search, Scan, Download, Share2, Copy, Eye, Clock, Globe, Smartphone, Zap } from 'lucide-react'
+import { QrCode, MapPin, Building, Hash, CheckCircle, Search, Scan, Download, Copy, Clock, Globe, Smartphone, Zap } from 'lucide-react'
 import Image from 'next/image'
 
 // API Base URL constant
@@ -28,9 +28,77 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
   const [includeUrl, setIncludeUrl] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
-  const [scannedData, setScannedData] = useState<any>(null)
+  const [scannedData, setScannedData] = useState<{
+    t?: string
+    tagId?: string
+    a?: string
+    assetType?: string
+    b?: string
+    brand?: string
+    m?: string
+    model?: string
+    st?: string
+    status?: string
+    p?: string
+    priority?: string
+    l?: {
+      building?: string
+      floor?: string
+      room?: string
+      latitude?: string
+      longitude?: string
+    }
+    location?: {
+      building?: string
+      floor?: string
+      room?: string
+    }
+    pr?: string
+    projectName?: string
+    ts?: number
+    c?: string
+    u?: string
+    url?: string
+  } | null>(null)
 
-  const [qrCodeData, setQrCodeData] = useState<QRCodeGenerationResponse | null>(null)
+  const [qrCodeData, setQrCodeData] = useState<{
+    qrCode: {
+      data: {
+        t?: string
+        tagId?: string
+        a?: string
+        assetType?: string
+        b?: string
+        brand?: string
+        m?: string
+        model?: string
+        st?: string
+        status?: string
+        p?: string
+        priority?: string
+        l?: {
+          building?: string
+          floor?: string
+          room?: string
+          latitude?: string
+          longitude?: string
+        }
+        location?: {
+          building?: string
+          floor?: string
+          room?: string
+        }
+        pr?: string
+        projectName?: string
+        ts?: number
+        c?: string
+        u?: string
+        url?: string
+      }
+      url: string
+      shortUrl: string
+    }
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -77,9 +145,9 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
       setMappedAssetId(assetId)
       
       // Don't auto-generate QR code - user must click generate button
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process selected asset')
-      console.error('Error processing selected asset:', err)
+    } catch {
+      setError('Failed to process selected asset')
+      console.error('Error processing selected asset')
     }
   }, [assets])
 
@@ -103,8 +171,8 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
       setImageLoading(true) // Start loading the image
       setSuccessMessage('QR code generated successfully!')
       setShowSuccessToast(true)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate QR code')
+    } catch {
+      setError('Failed to generate QR code')
     } finally {
       setIsGenerating(false)
     }
@@ -135,7 +203,7 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
       await navigator.clipboard.writeText(text)
       setSuccessMessage(`${label} copied to clipboard!`)
       setShowSuccessToast(true)
-    } catch (err) {
+    } catch {
       setError('Failed to copy to clipboard')
     }
   }, [])
@@ -158,7 +226,7 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
       
       setSuccessMessage('QR Code downloaded successfully!')
       setShowSuccessToast(true)
-    } catch (err) {
+    } catch {
       setError('Failed to download QR Code')
     }
   }, [qrCodeData])
@@ -479,7 +547,10 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => handleCopyToClipboard(qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId, 'Tag ID')}
+                onClick={() => {
+                  const tagId = qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId
+                  if (tagId) handleCopyToClipboard(tagId, 'Tag ID')
+                }}
                 className="flex items-center space-x-2"
               >
                 <Copy className="h-4 w-4" />
@@ -508,7 +579,10 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleCopyToClipboard(qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId, 'Tag ID')}
+                          onClick={() => {
+                            const tagId = qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId
+                            if (tagId) handleCopyToClipboard(tagId, 'Tag ID')
+                          }}
                           className="h-6 w-6 p-0"
                         >
                           <Copy className="h-3 w-3" />
@@ -629,7 +703,10 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleCopyToClipboard(qrCodeData.qrCode.data.url || qrCodeData.qrCode.data.u, 'Asset URL')}
+                          onClick={() => {
+                            const url = qrCodeData.qrCode.data.url || qrCodeData.qrCode.data.u
+                            if (url) handleCopyToClipboard(url, 'Asset URL')
+                          }}
                           className="h-6 w-6 p-0"
                         >
                           <Copy className="h-3 w-3" />

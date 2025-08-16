@@ -171,7 +171,15 @@ export const QRGenerationModal: React.FC<QRGenerationModalProps> = ({ isOpen, as
           ...asset,
           digitalAssets: {
             ...asset.digitalAssets,
-            qrCode: qrResponse.qrCode as any
+            qrCode: {
+              url: qrResponse.qrCode.url,
+              data: {
+                ...qrResponse.qrCode.data,
+                lm: null, // Add missing location metadata
+                nm: null  // Add missing notes metadata
+              },
+              generatedAt: new Date().toISOString() // Add the required generatedAt field
+            }
           }
         }
         onGenerated(updatedAsset)

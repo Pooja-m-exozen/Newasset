@@ -8,25 +8,7 @@ import { AssetTable } from '../../../../components/ui/asset-table';
 import { AssetGrid } from '../../../../components/ui/asset-grid';
 import { AssetPDFDownload, AssetExcelDownload } from '../../../../components/ui/asset-pdf-download';
 import { ReportProvider, useReportContext } from '../../../../contexts/ReportContext';
-import { filterAssets } from '../../../../lib/Report';
-
-// Define asset interface for type safety
-interface Asset {
-  _id?: string;
-  tagId?: string;
-  assetId?: string;
-  assetType?: string;
-  type?: string;
-  brand?: string;
-  status?: string;
-  priority?: string;
-  description?: string;
-  location?: string | { building?: string; floor?: string; room?: string };
-  assignedTo?: string | { name?: string; email?: string };
-  userEmail?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { filterAssets, type Asset } from '../../../../lib/Report';
 import { SuccessToast } from '../../../../components/ui/success-toast';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
@@ -70,7 +52,17 @@ function AssetsLogsContent() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const filteredAssets = useMemo(() => {
-    const filtered = filterAssets(assets, searchTerm, filterStatus, filterPriority, filterType);
+    // Transform assets to match Report library's Asset interface
+    const transformedAssets = assets.map(asset => ({
+      ...asset,
+      createdBy: asset.createdBy ? {
+        _id: asset.createdBy,
+        name: asset.createdBy, // Use the string as both ID and name
+        email: '' // Default empty email
+      } : undefined
+    }));
+    
+    const filtered = filterAssets(transformedAssets as Asset[], searchTerm, filterStatus, filterPriority, filterType);
     
     // Sort assets
     filtered.sort((a, b) => {
@@ -460,16 +452,16 @@ function AssetsLogsContent() {
                   {/* Asset Header */}
                   <div className="flex items-center gap-4 p-4 bg-card/50 rounded-lg border border-border">
                     <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                      {React.createElement(getAssetTypeIcon(selectedAsset.assetType || selectedAsset.type || 'unknown'), {
+                      {React.createElement(getAssetTypeIcon(selectedAsset.assetType || 'unknown'), {
                         className: "w-6 h-6 text-white"
                       })}
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-foreground">
-                        {selectedAsset.tagId || selectedAsset.assetId || 'Unknown Asset'}
+                        {selectedAsset.tagId || 'Unknown Asset'}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {selectedAsset.assetType || selectedAsset.type || 'Unknown Type'} • {selectedAsset.brand || 'Unknown Brand'}
+                        {selectedAsset.assetType || 'Unknown Type'} • {selectedAsset.brand || 'Unknown Brand'}
                       </p>
                     </div>
                   </div>
@@ -488,7 +480,7 @@ function AssetsLogsContent() {
                             ? selectedAsset.assignedTo.name 
                             : typeof selectedAsset.assignedTo === 'string' 
                             ? selectedAsset.assignedTo 
-                            : selectedAsset.userEmail || 'Unassigned'}
+                            : 'Unassigned'}
                         </p>
                         {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.email && (
                           <p className="text-xs text-muted-foreground mt-1">
@@ -561,15 +553,15 @@ function AssetsLogsContent() {
                   </div>
 
                   {/* Additional Details */}
-                  {selectedAsset.description && (
+                  {selectedAsset.notes && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                         <FileText className="w-4 h-4" />
-                        Description
+                        Notes
                       </div>
                       <div className="p-3 bg-card/50 rounded-lg border border-border">
                         <p className="text-sm text-foreground">
-                          {selectedAsset.description}
+                          {selectedAsset.notes}
                         </p>
                       </div>
                     </div>

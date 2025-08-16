@@ -7,7 +7,7 @@ import { Label } from './label'
 import { Input } from './input'
 import { Badge } from './badge'
 import Image from 'next/image'
-import { Barcode, Download, Copy, Hash, Clock, CheckCircle, Settings } from 'lucide-react'
+import { Barcode, Download, Copy, CheckCircle, Settings } from 'lucide-react'
 import { type Asset, assetApi } from '../../lib/adminasset'
 import { generateBarcode, type BarcodeGenerationResponse } from '@/lib/DigitalAssets'
 

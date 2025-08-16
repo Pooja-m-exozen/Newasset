@@ -35,7 +35,7 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
   // Load assets on component mount
   useEffect(() => {
     fetchAssets()
-  }, [fetchAssets]) // Include fetchAssets in dependencies
+  }, [fetchAssets])
 
   // Handle asset selection from dropdown
   const handleAssetSelect = async (assetTagId: string) => {

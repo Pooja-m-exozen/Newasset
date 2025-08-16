@@ -67,6 +67,8 @@ export interface Asset {
   capacity?: string;
   yearOfInstallation?: string;
   projectName?: string;
+  alerts?: string[];
+  documents?: string[];
   assignedTo?: {
     _id: string;
     name: string;
@@ -103,6 +105,37 @@ export interface Asset {
       };
       generatedAt: string;
     };
+    barcode?: {
+      url: string;
+      data: string;
+      generatedAt: string;
+    };
+    nfcData?: {
+      url: string;
+      data: {
+        type: string;
+        id: string;
+        assetType: string;
+        subcategory: string;
+        brand: string;
+        model: string;
+        status: string;
+        priority: string;
+        location: {
+          latitude: string;
+          longitude: string;
+          floor?: string;
+          room?: string;
+          building?: string;
+        };
+        assignedTo: string;
+        projectName: string;
+        timestamp: string;
+        checksum: string;
+        signature: string;
+      };
+      generatedAt: string;
+    };
   };
   compliance?: {
     certifications: string[];
@@ -111,6 +144,13 @@ export interface Asset {
   };
   tags?: string[];
   notes?: string;
+  photos?: string[];
+  scanHistory?: {
+    timestamp: string;
+    action: string;
+    user: string;
+    details?: string;
+  }[];
   createdBy?: {
     _id: string;
     name: string;
@@ -125,6 +165,7 @@ export interface Asset {
   };
   createdAt: string;
   updatedAt: string;
+  __v?: number;
   maintenanceSchedule?: {
     lastMaintenance: string;
     nextMaintenance: string;

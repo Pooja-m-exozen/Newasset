@@ -463,9 +463,15 @@ const AssetsList: React.FC = () => {
           asset={editingAsset}
         assetTypes={state.assetTypes}
         onSubmit={async (data) => {
+          // Transform AssetFormData to match Asset interface structure
+          const transformedData: Partial<Asset> = {
+            ...data,
+            assignedTo: data.assignedTo ? { _id: data.assignedTo, name: '', email: '' } : undefined
+          };
+
           if (isCreateModalOpen) {
             // Create asset and get the response
-            const createdAsset = await createAsset(data as any);
+            const createdAsset = await createAsset(transformedData);
             
             // If the asset has a digital tag type of QR, don't close the modal yet
             // The asset form modal will handle showing the QR generation interface
@@ -479,7 +485,7 @@ const AssetsList: React.FC = () => {
               handleCreateSuccess();
             }
           } else if (isEditModalOpen && editingAsset) {
-            await updateAsset(editingAsset._id!, data as any);
+            await updateAsset(editingAsset._id!, transformedData);
             setIsEditModalOpen(false);
             setEditingAsset(null);
             handleUpdateSuccess();

@@ -537,21 +537,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
   // Show digital tag generation options after asset creation
   const showDigitalTagOptions = () => {
-    if (formData.digitalTagType) {
-      switch (formData.digitalTagType) {
-        case 'qr':
-          setShowQRModal(true); // Set state to show QR modal
-          break;
-        case 'barcode':
-          // setShowBarcodeModal(true); // Removed
-          break;
-        case 'nfc':
-          // setShowNFCModal(true); // Removed
-          break;
-        case 'rfid':
-          // RFID handled differently - just set the type
-          break;
-      }
+    if (formData.digitalTagType === 'qr') {
+      setShowQRModal(true); // Set state to show QR modal
     }
   };
 
@@ -1009,24 +996,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                           <span>QR Code</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="barcode" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <div className="flex items-center space-x-2">
-                          <Barcode className="w-4 h-4 text-orange-600" />
-                          <span>Barcode</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="rfid" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-4 h-4 bg-blue-600 rounded-sm"></div>
-                          <span>RFID</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="nfc" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <div className="flex items-center space-x-2">
-                          <Wifi className="w-4 h-4 text-purple-600" />
-                          <span>NFC</span>
-                        </div>
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                   
@@ -1038,20 +1007,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                           <div className="text-sm">
                             <p className="font-medium text-blue-800 dark:text-blue-200">Digital Tag Generation</p>
                             <p className="text-blue-700 dark:text-blue-300 mt-1">
-                              {(() => {
-                                switch (formData.digitalTagType) {
-                                  case 'qr':
-                                    return 'QR Code will be generated after asset creation.';
-                                  case 'barcode':
-                                    return 'Barcode will be generated after asset creation.';
-                                  case 'nfc':
-                                    return 'NFC data will be generated after asset creation.';
-                                  case 'rfid':
-                                    return 'RFID configuration is ready.';
-                                  default:
-                                    return 'Digital tag generation is ready.';
-                                }
-                              })()}
+                              QR Code will be generated after asset creation.
                             </p>
                           </div>
                         </div>

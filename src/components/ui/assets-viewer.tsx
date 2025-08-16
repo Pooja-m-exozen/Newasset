@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './card'
 import { Button } from './button'
-import { Badge } from './badge'
 import { LoadingSpinner } from './loading-spinner'
 import { ErrorDisplay } from './error-display'
 import { AssetTable } from './asset-table'
@@ -19,8 +18,15 @@ import {
   RefreshCw,
   Package,
   Download,
-  Copy
+  Copy,
+  X,
+  Building,
+  Calendar
 } from 'lucide-react'
+import { StatusBadge } from './status-badge'
+import { PriorityBadge } from './priority-badge'
+import { ScrollArea } from './scroll-area'
+ 
 
 // API Base URL constant
 const API_BASE_URL = 'http://192.168.0.5:5021/api'
@@ -554,40 +560,84 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
       {/* Simple Asset View Modal */}
       {isViewModalOpen && selectedAsset && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Asset Details - {selectedAsset?.tagId || selectedAsset?.id || 'Asset'}
-              </h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            {/* Themed Header */}
+            <div className="px-6 py-4 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-b border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                  <Package className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">Asset Details</h2>
+                    {Boolean(selectedAsset?.status || selectedAsset?.state) && (
+                      <StatusBadge status={selectedAsset?.status || selectedAsset?.state} />
+                    )}
+                    {Boolean(selectedAsset?.priority || selectedAsset?.importance) && (
+                      <PriorityBadge priority={selectedAsset?.priority || selectedAsset?.importance} />
+                    )}
+                  </div>
+                  <div className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-800/60 px-2 py-1 rounded-full inline-block border border-slate-200/60 dark:border-slate-600/60">
+                    {selectedAsset?.tagId || selectedAsset?.id || 'Unknown Asset'}
+                  </div>
+                </div>
+              </div>
               <Button
-                variant="outline"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setIsViewModalOpen(false)
                   setSelectedAsset(null)
                 }}
+                className="h-8 w-8 p-0 hover:bg-white/80 dark:hover:bg-slate-800/80 text-slate-600 dark:text-slate-400 rounded-lg"
               >
-                Close
+                <X className="w-4 h-4" />
               </Button>
             </div>
             
-            <div className="space-y-5">
-              {/* Simple key info */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <div className="text-xs text-gray-600 dark:text-gray-300">Tag ID</div>
-                  <div className="text-sm font-semibold">{selectedAsset?.tagId || selectedAsset?.id || 'N/A'}</div>
+            {/* Body */}
+            <ScrollArea className="max-h-[calc(90vh-60px)]">
+              <div className="p-6 space-y-6">
+                {/* Hero summary */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-slate-800 dark:via-slate-900 dark:to-blue-900/20 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700/60">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full -translate-y-12 translate-x-12"></div>
+                  <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600">
+                        <Package className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Type</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.assetType || selectedAsset?.type || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600">
+                        <Package className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Brand</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.brand || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
+                        <Building className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Location</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.location?.building || selectedAsset?.location || selectedAsset?.building || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-red-600">
+                        <Calendar className="w-4 h-4 text-white" />
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <div className="text-xs text-gray-600 dark:text-gray-300">Type</div>
-                  <div className="text-sm font-semibold">{selectedAsset?.assetType || selectedAsset?.type || 'N/A'}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Created</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.createdAt ? new Date(selectedAsset?.createdAt).toLocaleString() : 'N/A'}</p>
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <div className="text-xs text-gray-600 dark:text-gray-300">Brand</div>
-                  <div className="text-sm font-semibold">{selectedAsset?.brand || 'N/A'}</div>
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
-                  <div className="text-xs text-gray-600 dark:text-gray-300">Model</div>
-                  <div className="text-sm font-semibold">{selectedAsset?.model || 'N/A'}</div>
                 </div>
               </div>
 
@@ -744,19 +794,28 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                 </div>
               </div>
             </div>
-
-            {/* Raw Data Toggle */}
-            <div className="mt-6 pt-4 border-t">
-              <details className="group">
-                <summary className="cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                  Show Raw JSON Data
-                </summary>
-                <div className="mt-3 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                  <pre className="text-xs overflow-x-auto text-gray-700 dark:text-gray-300">
-                    {JSON.stringify(selectedAsset, null, 2)}
-                  </pre>
+            </ScrollArea>
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                  <Package className="w-3.5 h-3.5" />
+                  Asset ID: {selectedAsset?._id || selectedAsset?.id || 'N/A'}
                 </div>
-              </details>
+                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                <div className="text-xs text-slate-500 dark:text-slate-500">
+                  Last updated: {selectedAsset?.updatedAt ? new Date(selectedAsset?.updatedAt).toLocaleString() : 'Unknown'}
+                </div>
+                </div>
+              <Button 
+                onClick={() => {
+                  setIsViewModalOpen(false)
+                  setSelectedAsset(null)
+                }} 
+                className="bg-gradient-to-r from-slate-600 to-slate-700 dark:from-slate-700 dark:to-slate-800 hover:from-slate-700 hover:to-slate-800 dark:hover:from-slate-600 dark:hover:to-slate-700 text-white px-4 h-9 rounded-lg"
+              >
+                Close
+              </Button>
             </div>
           </div>
         </div>

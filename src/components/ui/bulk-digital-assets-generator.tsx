@@ -92,10 +92,26 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
         barcodeFormat
       })
       setDigitalAssets(result)
+      console.log('Digital assets generated:', result)
+      console.log('QR Code URL:', `${API_BASE_URL}${result.digitalAssets.qrCode.url}`)
+      console.log('Barcode URL:', `${API_BASE_URL}${result.digitalAssets.barcode.url}`)
+      
       setQrImageLoading(true) // Start loading QR code image
       setBarcodeImageLoading(true) // Start loading barcode image
       setSuccessMessage('All digital assets generated successfully!')
       setShowSuccessToast(true)
+      
+      // Add timeout to prevent infinite loading
+      setTimeout(() => {
+        if (qrImageLoading) {
+          console.warn('QR Code image loading timeout, forcing state update')
+          setQrImageLoading(false)
+        }
+        if (barcodeImageLoading) {
+          console.warn('Barcode image loading timeout, forcing state update')
+          setBarcodeImageLoading(false)
+        }
+      }, 10000) // 10 second timeout
       // Refresh global assets so other views (e.g., AssetsViewer) reflect newly stored digital assets
       try {
         await fetchAssets()
@@ -401,6 +417,27 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex justify-center mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('Manually refreshing QR code image...')
+                    setQrImageLoading(true)
+                    // Force a re-render by updating the src with a timestamp
+                    const imgElement = document.querySelector('.qr-code-container img') as HTMLImageElement
+                    if (imgElement) {
+                      const currentSrc = imgElement.src
+                      const separator = currentSrc.includes('?') ? '&' : '?'
+                      imgElement.src = `${currentSrc}${separator}t=${Date.now()}`
+                    }
+                  }}
+                  className="flex items-center space-x-2"
+                >
+                  <Search className="h-4 w-4" />
+                  <span>Refresh QR Code</span>
+                </Button>
+              </div>
               <div className="flex justify-center">
                 <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
                   <div className="relative w-64 h-64 bg-white rounded-lg shadow-sm overflow-hidden border border-border">
@@ -420,9 +457,12 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                         width={224}
                         height={224}
                         className={`object-contain ${qrImageLoading ? 'hidden' : ''}`}
-                        onLoad={() => setQrImageLoading(false)}
-                        onError={() => {
-                          console.error('Failed to load QR code image')
+                        onLoad={() => {
+                          console.log('QR Code image loaded successfully')
+                          setQrImageLoading(false)
+                        }}
+                        onError={(e) => {
+                          console.error('Failed to load QR code image:', e)
                           setQrImageLoading(false)
                           // Fallback to a placeholder
                           const parentElement = document.querySelector('.qr-code-container')
@@ -438,6 +478,8 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                             `
                           }
                         }}
+                        priority={true}
+                        loading="eager"
                       />
                     </div>
                   </div>
@@ -470,6 +512,27 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex justify-center mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('Manually refreshing barcode image...')
+                    setBarcodeImageLoading(true)
+                    // Force a re-render by updating the src with a timestamp
+                    const imgElement = document.querySelector('.barcode-image-container img') as HTMLImageElement
+                    if (imgElement) {
+                      const currentSrc = imgElement.src
+                      const separator = currentSrc.includes('?') ? '&' : '?'
+                      imgElement.src = `${currentSrc}${separator}t=${Date.now()}`
+                    }
+                  }}
+                  className="flex items-center space-x-2"
+                >
+                  <Search className="h-4 w-4" />
+                  <span>Refresh Barcode</span>
+                </Button>
+              </div>
               <div className="flex justify-center">
                 <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
                   <div className="relative w-80 h-40 bg-white rounded-lg shadow-sm overflow-hidden border border-border">
@@ -489,9 +552,12 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                         width={256}
                         height={128}
                         className={`object-contain ${barcodeImageLoading ? 'hidden' : ''}`}
-                        onLoad={() => setBarcodeImageLoading(false)}
-                        onError={() => {
-                          console.error('Failed to load barcode image')
+                        onLoad={() => {
+                          console.log('Barcode image loaded successfully')
+                          setBarcodeImageLoading(false)
+                        }}
+                        onError={(e) => {
+                          console.error('Failed to load barcode image:', e)
                           setBarcodeImageLoading(false)
                           // Fallback to a placeholder
                           const parentElement = document.querySelector('.barcode-image-container')
@@ -507,6 +573,8 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                           `
                           }
                         }}
+                        priority={true}
+                        loading="eager"
                       />
                     </div>
                   </div>

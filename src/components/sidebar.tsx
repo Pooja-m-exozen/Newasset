@@ -17,7 +17,8 @@ import {
   ChevronDown,
   ChevronUp,
   FileDigit,
-  Bot
+  Bot,
+  CheckSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -84,6 +85,13 @@ export default function Sidebar({ className }: SidebarProps) {
       icon: FileDigit,
       href: "/admin/digital-assets/generate",
       description: "Create and generate digital assets"
+    },
+    {
+      id: "checklist",
+      label: "Checklist",
+      icon: CheckSquare,
+      href: "/admin/checklist",
+      description: "Task checklists and inspections"
     },
     {
       id: "automation",

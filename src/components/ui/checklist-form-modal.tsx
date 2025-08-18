@@ -201,7 +201,7 @@ export default function ChecklistFormModal({
           // EDIT MODE: Use PUT method to update existing checklist
           console.log('Updating existing checklist:', editingChecklist._id)
           
-          // For edit, only send the fields that should be updated
+          // For edit, only send the specific fields that should be updated
           const updateData = {
             title: formData.title,
             description: formData.description,
@@ -291,6 +291,21 @@ export default function ChecklistFormModal({
       alert('Please enter a checklist title')
       return false
     }
+    
+    // For edit mode, only validate the fields that are being updated
+    if (mode === 'edit') {
+      if (!formData.status) {
+        alert('Please select a status')
+        return false
+      }
+      if (!formData.priority) {
+        alert('Please enter a priority')
+        return false
+      }
+      return true
+    }
+    
+    // For create mode, validate all required fields
     if (!formData.type) {
       alert('Please enter a checklist type')
       return false
@@ -373,37 +388,92 @@ export default function ChecklistFormModal({
     reader.readAsText(file)
   }
 
-  const importFromExcel = () => {
+  const importFromExcel = async () => {
     if (!excelFile || importPreview.length === 0) return
 
     setIsImporting(true)
     
-         // Create checklists from imported data
-                       const newChecklists: ChecklistFormData[] = importPreview.map((row) => ({
-         title: row.Title || 'Imported Checklist',
-         description: row.Description || 'Imported from Excel',
-         type: row.Type || 'Daily Checklist',
-         frequency: row.Frequency || 'daily',
-         priority: row.Priority || 'medium',
-         status: 'active', // Default status for imported checklists
-         location: {
-           building: row.Building || 'Building A',
-           floor: row.Floor || '1st Floor',
-           zone: row.Zone || 'Production Area'
-         },
-         items: [],
-         tags: row.Tags ? row.Tags.split(',').map((tag: string) => tag.trim()) : []
-       }))
+    try {
+      // Get bearer token from localStorage
+      const token = localStorage.getItem('authToken')
+      if (!token) {
+        alert('Authentication token not found. Please login again.')
+        setIsImporting(false)
+        return
+      }
 
-    // For now, just use the first one
-    if (newChecklists.length > 0) {
-      setFormData(newChecklists[0])
-      setActiveTab('manual')
+      // Create checklists from imported data
+      const newChecklists: ChecklistFormData[] = importPreview.map((row) => ({
+        title: row.Title || 'Imported Checklist',
+        description: row.Description || 'Imported from Excel',
+        type: row.Type || 'Daily Checklist',
+        frequency: row.Frequency || 'daily',
+        priority: row.Priority || 'medium',
+        status: 'active', // Default status for imported checklists
+        location: {
+          building: row.Building || 'Building A',
+          floor: row.Floor || '1st Floor',
+          zone: row.Zone || 'Production Area'
+        },
+        items: [],
+        tags: row.Tags ? row.Tags.split(',').map((tag: string) => tag.trim()) : []
+      }))
+
+      // Create all checklists from imported data
+      let successCount = 0
+      let errorCount = 0
+
+      for (const checklistData of newChecklists) {
+        try {
+          const apiData = {
+            ...checklistData,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+
+          const response = await fetch('http://192.168.0.5:5021/api/checklists', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(apiData)
+          })
+
+          if (response.ok) {
+            successCount++
+          } else {
+            errorCount++
+            console.error(`Failed to create checklist: ${checklistData.title}`)
+          }
+        } catch (error) {
+          errorCount++
+          console.error(`Error creating checklist: ${checklistData.title}`, error)
+        }
+      }
+
+      // Show results
+      if (successCount > 0) {
+        alert(`Successfully created ${successCount} checklist(s) from Excel import!${errorCount > 0 ? ` Failed to create ${errorCount} checklist(s).` : ''}`)
+        
+        // Call the onSubmit callback to refresh the parent component
+        onSubmit(newChecklists[0])
+        
+        // Close the modal after successful import
+        onClose()
+      } else {
+        alert(`Failed to create any checklists. Please check your data and try again.`)
+      }
+
+    } catch (error) {
+      console.error('Error during Excel import:', error)
+      alert('Network error: Unable to connect to the server. Please check your internet connection.')
+    } finally {
+      setIsImporting(false)
       setExcelFile(null)
       setImportPreview([])
     }
-    
-    setIsImporting(false)
   }
 
   // Check if user is authenticated
@@ -482,31 +552,35 @@ export default function ChecklistFormModal({
                     />
                   </div>
                   
-                                                                           <div className="space-y-2">
-                      <Label htmlFor="type" className="flex items-center gap-2">
-                        Checklist Type <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="type"
-                        value={formData.type}
-                        onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                        placeholder="Enter checklist type (e.g., Daily, Weekly, Monthly)"
-                        className="w-full"
-                      />
-                    </div>
+                                                                           {mode === 'create' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="type" className="flex items-center gap-2">
+                          Checklist Type <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="type"
+                          value={formData.type}
+                          onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                          placeholder="Enter checklist type (e.g., Daily, Weekly, Monthly)"
+                          className="w-full"
+                        />
+                      </div>
 
-                                       <div className="space-y-2">
-                      <Label htmlFor="frequency" className="flex items-center gap-2">
-                        Frequency <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="frequency"
-                        value={formData.frequency}
-                        onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value }))}
-                        placeholder="Enter frequency (e.g., daily, weekly, monthly)"
-                        className="w-full"
-                      />
-                    </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="frequency" className="flex items-center gap-2">
+                          Frequency <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="frequency"
+                          value={formData.frequency}
+                          onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value }))}
+                          placeholder="Enter frequency (e.g., daily, weekly, monthly)"
+                          className="w-full"
+                        />
+                      </div>
+                    </>
+                  )}
 
                                                                            <div className="space-y-2">
                       <Label htmlFor="priority" className="flex items-center gap-2">
@@ -540,53 +614,57 @@ export default function ChecklistFormModal({
 
                   
 
-                                     <div className="space-y-2">
-                     <Label htmlFor="building" className="flex items-center gap-2">
-                       Building <span className="text-red-500">*</span>
-                     </Label>
-                     <Input
-                       id="building"
-                       value={formData.location.building}
-                       onChange={(e) => setFormData(prev => ({ 
-                         ...prev, 
-                         location: { ...prev.location, building: e.target.value }
-                       }))}
-                       placeholder="Enter building name"
-                       className="w-full"
-                     />
-                   </div>
+                   {mode === 'create' && (
+                     <>
+                       <div className="space-y-2">
+                         <Label htmlFor="building" className="flex items-center gap-2">
+                           Building <span className="text-red-500">*</span>
+                         </Label>
+                         <Input
+                           id="building"
+                           value={formData.location.building}
+                           onChange={(e) => setFormData(prev => ({ 
+                             ...prev, 
+                             location: { ...prev.location, building: e.target.value }
+                           }))}
+                           placeholder="Enter building name"
+                           className="w-full"
+                         />
+                       </div>
 
-                   <div className="space-y-2">
-                     <Label htmlFor="floor" className="flex items-center gap-2">
-                       Floor <span className="text-red-500">*</span>
-                     </Label>
-                     <Input
-                       id="floor"
-                       value={formData.location.floor}
-                       onChange={(e) => setFormData(prev => ({ 
-                         ...prev, 
-                         location: { ...prev.location, floor: e.target.value }
-                       }))}
-                       placeholder="Enter floor (e.g., 1st Floor)"
-                       className="w-full"
-                     />
-                   </div>
+                       <div className="space-y-2">
+                         <Label htmlFor="floor" className="flex items-center gap-2">
+                           Floor <span className="text-red-500">*</span>
+                         </Label>
+                         <Input
+                           id="floor"
+                           value={formData.location.floor}
+                           onChange={(e) => setFormData(prev => ({ 
+                             ...prev, 
+                             location: { ...prev.location, floor: e.target.value }
+                           }))}
+                           placeholder="Enter floor (e.g., 1st Floor)"
+                           className="w-full"
+                         />
+                       </div>
 
-                   <div className="space-y-2">
-                     <Label htmlFor="zone" className="flex items-center gap-2">
-                       Zone <span className="text-red-500">*</span>
-                     </Label>
-                     <Input
-                       id="zone"
-                       value={formData.location.zone}
-                       onChange={(e) => setFormData(prev => ({ 
-                         ...prev, 
-                         location: { ...prev.location, zone: e.target.value }
-                       }))}
-                       placeholder="Enter zone (e.g., Production Area)"
-                       className="w-full"
-                     />
-                   </div>
+                       <div className="space-y-2">
+                         <Label htmlFor="zone" className="flex items-center gap-2">
+                           Zone <span className="text-red-500">*</span>
+                         </Label>
+                         <Input
+                           id="zone"
+                           value={formData.location.zone}
+                           onChange={(e) => setFormData(prev => ({ 
+                             ...prev, 
+                             location: { ...prev.location, zone: e.target.value }
+                           }))}
+                           placeholder="Enter zone (e.g., Production Area)"
+                           className="w-full"
+                         />
+                       </div>
+                     </>
+                   )}
                 </div>
 
                                  <div className="space-y-2">
@@ -601,104 +679,108 @@ export default function ChecklistFormModal({
                    />
                  </div>
 
-                 <div className="space-y-2">
-                   <Label htmlFor="tags">Tags</Label>
-                   <Input
-                     id="tags"
-                     value={formData.tags.join(', ')}
-                     onChange={(e) => setFormData(prev => ({ 
-                       ...prev, 
-                       tags: e.target.value.split(',').map((tag: string) => tag.trim()).filter(Boolean)
-                     }))}
-                     placeholder="Enter tags (comma separated)"
-                     className="w-full"
-                   />
-                 </div>
+                 {mode === 'create' && (
+                   <div className="space-y-2">
+                     <Label htmlFor="tags">Tags</Label>
+                     <Input
+                       id="tags"
+                       value={formData.tags.join(', ')}
+                       onChange={(e) => setFormData(prev => ({ 
+                         ...prev, 
+                         tags: e.target.value.split(',').map((tag: string) => tag.trim()).filter(Boolean)
+                       }))}
+                       placeholder="Enter tags (comma separated)"
+                       className="w-full"
+                     />
+                   </div>
+                 )}
               </CardContent>
             </Card>
 
-            {/* Checklist Items */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Checklist Items</CardTitle>
-                    <CardDescription>Add individual tasks and items to your checklist</CardDescription>
+            {/* Checklist Items - Only show in create mode */}
+            {mode === 'create' && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Checklist Items</CardTitle>
+                      <CardDescription>Add individual tasks and items to your checklist</CardDescription>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addChecklistItem}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Item
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addChecklistItem}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Item
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {formData.items.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <CheckSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p>No checklist items added yet</p>
-                    <p className="text-sm">Click "Add Item" to get started</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                                         {formData.items.map((item, index) => (
-                       <Card key={index} className="p-4 border-2 border-dashed border-gray-200">
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div className="space-y-2">
-                             <Label>Serial Number</Label>
-                             <Input
-                               value={item.serialNumber}
-                               onChange={(e) => updateChecklistItem(index, 'serialNumber', parseInt(e.target.value) || 1)}
-                               placeholder="Enter serial number"
-                               type="number"
-                               className="w-full"
-                             />
-                           </div>
-                           
-                           <div className="space-y-2">
-                             <Label>Inspection Item <span className="text-red-500">*</span></Label>
-                             <Input
-                               value={item.inspectionItem}
-                               onChange={(e) => updateChecklistItem(index, 'inspectionItem', e.target.value)}
-                               placeholder="Enter inspection item"
-                               className="w-full"
-                             />
-                           </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {formData.items.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <CheckSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p>No checklist items added yet</p>
+                      <p className="text-sm">Click "Add Item" to get started</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.items.map((item, index) => (
+                        <Card key={index} className="p-4 border-2 border-dashed border-gray-200">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Serial Number</Label>
+                              <Input
+                                value={item.serialNumber}
+                                onChange={(e) => updateChecklistItem(index, 'serialNumber', parseInt(e.target.value) || 1)}
+                                placeholder="Enter serial number"
+                                type="number"
+                                className="w-full"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label>Inspection Item <span className="text-red-500">*</span></Label>
+                              <Input
+                                value={item.inspectionItem}
+                                onChange={(e) => updateChecklistItem(index, 'inspectionItem', e.target.value)}
+                                placeholder="Enter inspection item"
+                                className="w-full"
+                              />
+                            </div>
 
-                           <div className="space-y-2 md:col-span-2">
-                             <Label>Details</Label>
-                             <Textarea
-                               value={item.details}
-                               onChange={(e) => updateChecklistItem(index, 'details', e.target.value)}
-                               placeholder="Enter inspection details"
-                               rows={2}
-                               className="w-full"
-                             />
-                           </div>
+                            <div className="space-y-2 md:col-span-2">
+                              <Label>Details</Label>
+                              <Textarea
+                                value={item.details}
+                                onChange={(e) => updateChecklistItem(index, 'details', e.target.value)}
+                                placeholder="Enter inspection details"
+                                rows={2}
+                                className="w-full"
+                              />
+                            </div>
 
-                           <div className="flex items-center space-x-2 md:col-span-2">
-                             <Button
-                               type="button"
-                               variant="outline"
-                               size="sm"
-                               onClick={() => removeChecklistItem(index)}
-                               className="ml-auto text-red-600 hover:text-red-700"
-                             >
-                               <Trash2 className="w-4 h-4" />
-                             </Button>
-                           </div>
-                         </div>
-                       </Card>
-                     ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                            <div className="flex items-center space-x-2 md:col-span-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeChecklistItem(index)}
+                                className="ml-auto text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
                          {/* Actions */}
              <div className="flex items-center justify-end pt-6 border-t">
@@ -711,7 +793,13 @@ export default function ChecklistFormModal({
                  </Button>
                                    <Button
                     onClick={handleSubmit}
-                    disabled={!formData.title || !formData.type || !formData.frequency || !formData.priority || !formData.status || !formData.location.building || !formData.location.floor || !formData.location.zone || isSubmitting}
+                    disabled={
+                      !formData.title || 
+                      (mode === 'create' && (!formData.type || !formData.frequency || !formData.location.building || !formData.location.floor || !formData.location.zone)) ||
+                      !formData.priority || 
+                      !formData.status || 
+                      isSubmitting
+                    }
                     className="flex items-center gap-2"
                   >
                    {isSubmitting ? (
@@ -742,7 +830,7 @@ export default function ChecklistFormModal({
               <CardHeader>
                 <CardTitle className="text-lg">Import from Excel/CSV</CardTitle>
                                  <CardDescription>
-                   Upload a CSV file to automatically create checklists. The file should have columns for Title, Description, Type, Frequency, Priority, Building, Floor, Zone, and Tags.
+                   Upload a CSV file to automatically create checklists. The file should have columns for Title, Description, Type, Frequency, Priority, Building, Floor, Zone, and Tags. All imported checklists will be created immediately.
                  </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -822,12 +910,12 @@ export default function ChecklistFormModal({
                         {isImporting ? (
                           <>
                             <RefreshCw className="w-4 h-4 animate-spin" />
-                            Importing...
+                            Creating {importPreview.length} Checklists...
                           </>
                         ) : (
                           <>
                             <Upload className="w-4 h-4" />
-                            Import {importPreview.length} Checklists
+                            Create {importPreview.length} Checklists
                           </>
                         )}
                       </Button>

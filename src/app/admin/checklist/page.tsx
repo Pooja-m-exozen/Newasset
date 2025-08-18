@@ -75,6 +75,22 @@ interface Checklist {
   progress?: number
 }
 
+interface AnalyticsSummary {
+  summary: {
+    totalChecklists: number
+    activeChecklists: number
+    totalResponses: number
+    completedResponses: number
+    failedResponses: number
+    completionRate: number
+  }
+  checklistsByType: Array<{
+    _id: string
+    count: number
+  }>
+  recentActivity: any[]
+}
+
 const PRIORITY_COLORS: Record<string, string> = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
   medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
@@ -121,6 +137,8 @@ export default function ChecklistPage() {
   const [filterType, setFilterType] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null)
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -183,6 +201,43 @@ export default function ChecklistPage() {
     fetchChecklists()
   }, [])
 
+  // Fetch analytics data
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setIsLoadingAnalytics(true)
+        const token = localStorage.getItem('authToken')
+        if (!token) {
+          console.log('No auth token found')
+          return
+        }
+
+        const response = await fetch('http://192.168.0.5:5021/api/checklists/analytics/summary', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            setAnalytics(result.data)
+          }
+        } else {
+          console.error('Failed to fetch analytics:', response.status)
+        }
+      } catch (error) {
+        console.error('Error fetching analytics:', error)
+      } finally {
+        setIsLoadingAnalytics(false)
+      }
+    }
+
+    fetchAnalytics()
+  }, [])
+
   const refreshChecklists = () => {
     const fetchChecklists = async () => {
       try {
@@ -222,6 +277,43 @@ export default function ChecklistPage() {
     }
 
     fetchChecklists()
+  }
+
+  const refreshAnalytics = async () => {
+    try {
+      setIsLoadingAnalytics(true)
+      const token = localStorage.getItem('authToken')
+      if (!token) {
+        console.log('No auth token found')
+        return
+      }
+
+      const response = await fetch('http://192.168.0.5:5021/api/checklists/analytics/summary', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          setAnalytics(result.data)
+        }
+      } else {
+        console.error('Failed to fetch analytics:', response.status)
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error)
+    } finally {
+      setIsLoadingAnalytics(false)
+    }
+  }
+
+  const refreshAll = () => {
+    refreshChecklists()
+    refreshAnalytics()
   }
 
   // Filter checklists based on search and filters
@@ -440,12 +532,12 @@ export default function ChecklistPage() {
           </div>
           <Button
             variant="outline"
-            onClick={refreshChecklists}
-            disabled={isLoading}
+            onClick={refreshAll}
+            disabled={isLoading || isLoadingAnalytics}
             className="flex items-center gap-2 border-slate-200/60 dark:border-slate-600/60 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Loading...' : 'Refresh'}
+            <RefreshCw className={`w-4 h-4 ${isLoading || isLoadingAnalytics ? 'animate-spin' : ''}`} />
+            {isLoading || isLoadingAnalytics ? 'Loading...' : 'Refresh'}
           </Button>
           <Button
             variant="outline"
@@ -464,6 +556,89 @@ export default function ChecklistPage() {
           </Button>
         </div>
       </div>
+
+      {/* Analytics Summary */}
+      {analytics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Checklists */}
+          <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Checklists</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{analytics.summary.totalChecklists}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                  <CheckSquare className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Checklists */}
+          <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Active Checklists</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{analytics.summary.activeChecklists}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
+                  <CheckSquare className="w-6 h-6 text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Completion Rate */}
+          <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Completion Rate</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{analytics.summary.completionRate}%</p>
+                </div>
+                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
+                  <CheckSquare className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Responses */}
+          <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Responses</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{analytics.summary.totalResponses}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/20">
+                  <CheckSquare className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Analytics Loading State */}
+      {isLoadingAnalytics && (
+        <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+          <CardContent className="p-8 text-center">
+            <div className="relative">
+              <RefreshCw className="w-12 h-12 text-blue-500 mx-auto mb-3 animate-spin" />
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full blur-xl opacity-50"></div>
+            </div>
+            <h3 className="text-base font-medium text-slate-900 dark:text-white mb-1">
+              Loading Analytics...
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Fetching checklist analytics data
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">

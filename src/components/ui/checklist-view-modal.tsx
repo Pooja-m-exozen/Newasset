@@ -332,21 +332,9 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
 
               {/* Enhanced QR Scanner */}
               <div className="text-center">
-                <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center justify-center gap-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg">
-                    <Scan className="w-4 h-4 text-white" />
-                  </div>
-                  Scanner
-                </h4>
+
                 
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowScanner(!showScanner)}
-                  className="mb-4 border-blue-200 dark:border-blue-600 text-blue-700 dark:text-blue-300 text-sm h-9 px-6 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
-                >
-                  {showScanner ? 'Hide Scanner' : 'Show Scanner'}
-                </Button>
+         
                 
                 {showScanner && (
                   <div className="border border-blue-200/60 dark:border-blue-600/60 rounded-xl p-4 bg-white/80 dark:bg-slate-800/80 shadow-lg">

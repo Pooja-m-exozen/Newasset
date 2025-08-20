@@ -117,7 +117,7 @@ const assetReducer = (state: AssetState, action: AssetAction): AssetState => {
 // Context interface
 interface AssetContextType {
   state: AssetState;
-  fetchAssets: () => Promise<void>;
+  fetchAssets: (projectName?: string) => Promise<void>;
   fetchAssetTypes: () => Promise<void>;
   fetchPermissions: () => Promise<void>;
   fetchPermissionsByAssetId: (assetId: string) => Promise<void>;
@@ -142,7 +142,7 @@ interface AssetContextType {
   }) => Promise<void>;
   setSelectedAsset: (asset: Asset | null) => void;
   updateAssetInState: (updatedAsset: Asset) => void;
-  clearError: () => void;
+  clearError: () => Promise<void>;
   getCurrentPermissions: () => Promise<void>;
 }
 
@@ -158,21 +158,33 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(assetReducer, initialState);
 
   // Fetch all assets
-  const fetchAssets = React.useCallback(async () => {
+  const fetchAssets = React.useCallback(async (projectName?: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
       
-      const response: AssetsResponse = await assetApi.getAllAssets();
+      console.log('Fetching assets with projectName:', projectName);
+      console.log('Note: We will fetch all assets and filter by project on frontend');
+      
+      // Always fetch all assets since we're doing project filtering on the frontend
+      // This ensures we have all the data needed for proper filtering
+      const response = await assetApi.getAllAssets();
+      console.log('getAllAssets response:', response);
       
       if (response.success) {
+        console.log('Setting all assets in state:', response.assets);
+        console.log('Assets will be filtered by project on the frontend');
         dispatch({ type: 'SET_ASSETS', payload: response.assets });
       } else {
+        console.error('Failed to fetch assets:', response);
         dispatch({ type: 'SET_ERROR', payload: 'Failed to fetch assets' });
       }
     } catch (error) {
+      console.error('Error in fetchAssets:', error);
       const errorMessage = error instanceof Error ? error.message : 'An error occurred while fetching assets';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   }, []);
 
@@ -436,7 +448,7 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
   };
 
   // Clear error
-  const clearError = React.useCallback(() => {
+  const clearError = React.useCallback(async () => {
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 

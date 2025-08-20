@@ -120,8 +120,6 @@ const CHECKLIST_TYPES = [
   'Custom Checklist'
 ]
 
-
-
 export default function ChecklistPage() {
   const { user, isAuthenticated } = useAuth()
   const { toasts, addToast, removeToast } = useToast()
@@ -147,7 +145,7 @@ export default function ChecklistPage() {
     type: '',
     frequency: '',
     priority: '',
-    status: 'active', // Added status field
+    status: 'active',
     location: {
       building: '',
       floor: '',
@@ -156,8 +154,6 @@ export default function ChecklistPage() {
     items: [],
     tags: []
   })
-
-
 
   // Fetch checklists from API
   useEffect(() => {
@@ -453,7 +449,7 @@ export default function ChecklistPage() {
       type: '',
       frequency: '',
       priority: '',
-      status: 'active', // Reset status field
+      status: 'active',
       location: {
         building: '',
         floor: '',
@@ -514,11 +510,11 @@ export default function ChecklistPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 bg-white dark:bg-gray-900 min-h-screen">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Checklist Management
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -527,14 +523,14 @@ export default function ChecklistPage() {
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-600 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-blue-900/20 px-4 py-2 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
+          <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
             <span className="font-medium">Logged in as:</span> {user?.name || user?.email || 'Unknown'}
           </div>
           <Button
             variant="outline"
             onClick={refreshAll}
             disabled={isLoading || isLoadingAnalytics}
-            className="flex items-center gap-2 border-slate-200/60 dark:border-slate-600/60 hover:bg-slate-50 dark:hover:bg-slate-800"
+            className="flex items-center gap-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading || isLoadingAnalytics ? 'animate-spin' : ''}`} />
             {isLoading || isLoadingAnalytics ? 'Loading...' : 'Refresh'}
@@ -542,14 +538,14 @@ export default function ChecklistPage() {
           <Button
             variant="outline"
             onClick={downloadToExcel}
-            className="flex items-center gap-2 border-blue-200/60 dark:border-blue-600/60 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className="flex items-center gap-2 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
           >
             <FileSpreadsheet className="w-4 h-4" />
             Export Excel
           </Button>
           <Button
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
           >
             <Plus className="w-4 h-4" />
             Create Checklist
@@ -561,12 +557,12 @@ export default function ChecklistPage() {
       {analytics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Checklists */}
-          <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Checklists</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{analytics.summary.totalChecklists}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Checklists</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.summary.totalChecklists}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
                   <CheckSquare className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -576,12 +572,12 @@ export default function ChecklistPage() {
           </Card>
 
           {/* Active Checklists */}
-          <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Active Checklists</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{analytics.summary.activeChecklists}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Checklists</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.summary.activeChecklists}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
                   <CheckSquare className="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -591,12 +587,12 @@ export default function ChecklistPage() {
           </Card>
 
           {/* Completion Rate */}
-          <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Completion Rate</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{analytics.summary.completionRate}%</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Rate</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.summary.completionRate}%</p>
                 </div>
                 <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
                   <CheckSquare className="w-6 h-6 text-purple-600 dark:text-purple-400" />
@@ -606,12 +602,12 @@ export default function ChecklistPage() {
           </Card>
 
           {/* Total Responses */}
-          <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+          <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Responses</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{analytics.summary.totalResponses}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Responses</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.summary.totalResponses}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/20">
                   <CheckSquare className="w-6 h-6 text-orange-600 dark:text-orange-400" />
@@ -624,16 +620,15 @@ export default function ChecklistPage() {
 
       {/* Analytics Loading State */}
       {isLoadingAnalytics && (
-        <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <CardContent className="p-8 text-center">
             <div className="relative">
               <RefreshCw className="w-12 h-12 text-blue-500 mx-auto mb-3 animate-spin" />
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full blur-xl opacity-50"></div>
             </div>
-            <h3 className="text-base font-medium text-slate-900 dark:text-white mb-1">
+            <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
               Loading Analytics...
             </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Fetching checklist analytics data
             </p>
           </CardContent>
@@ -641,7 +636,7 @@ export default function ChecklistPage() {
       )}
 
       {/* Filters */}
-      <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+      <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="relative">
@@ -650,12 +645,12 @@ export default function ChecklistPage() {
                 placeholder="Search checklists..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-slate-200/60 dark:border-slate-600/60 focus:border-blue-500 dark:focus:border-blue-400"
+                className="pl-10 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400"
               />
             </div>
             
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="border-slate-200/60 dark:border-slate-600/60">
+              <SelectTrigger className="border-gray-200 dark:border-gray-700">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
@@ -667,7 +662,7 @@ export default function ChecklistPage() {
             </Select>
 
             <Select value={filterPriority} onValueChange={setFilterPriority}>
-              <SelectTrigger className="border-slate-200/60 dark:border-slate-600/60">
+              <SelectTrigger className="border-gray-200 dark:border-gray-700">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
@@ -680,7 +675,7 @@ export default function ChecklistPage() {
             </Select>
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="border-slate-200/60 dark:border-slate-600/60">
+              <SelectTrigger className="border-gray-200 dark:border-gray-700">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -694,7 +689,7 @@ export default function ChecklistPage() {
             <Button
               variant="outline"
               onClick={clearFilters}
-              className="flex items-center gap-2 border-slate-200/60 dark:border-slate-600/60 hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="flex items-center gap-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <RefreshCw className="w-4 h-4" />
               Clear
@@ -705,11 +700,10 @@ export default function ChecklistPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <CardContent className="p-12 text-center">
             <div className="relative">
               <RefreshCw className="w-16 h-16 text-blue-500 mx-auto mb-4 animate-spin" />
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full blur-xl opacity-50"></div>
             </div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               Loading Checklists...
@@ -723,47 +717,47 @@ export default function ChecklistPage() {
 
       {/* Checklists Table */}
       {!isLoading && (
-        <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg overflow-hidden">
+        <Card className="overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-b border-slate-200/60 dark:border-slate-600/60">
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                  <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                       Title
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                       Priority
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                       Location
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-slate-900 divide-y divide-slate-200/60 dark:divide-slate-600/60">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredChecklists.map((checklist) => (
-                    <tr key={checklist._id} className="hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 dark:hover:from-slate-800 dark:hover:to-blue-900/20 transition-all duration-200">
+                    <tr key={checklist._id} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
                             {checklist.title}
                           </div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 max-w-xs mt-1">
+                          <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xs mt-1">
                             {checklist.description}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant="outline" className="text-xs border-slate-200/60 dark:border-slate-600/60 bg-slate-50 dark:bg-slate-800">
+                        <Badge variant="outline" className="text-xs">
                           {checklist.type}
                         </Badge>
                       </td>
@@ -778,12 +772,12 @@ export default function ChecklistPage() {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900 dark:text-white">
+                        <div className="text-sm text-gray-900 dark:text-white">
                           <div className="flex items-center gap-2 mb-1">
                             <Building className="w-4 h-4 text-blue-500" />
                             <span className="font-medium">{checklist.location.building}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                             <MapPin className="w-4 h-4 text-green-500" />
                             <span>{checklist.location.zone}</span>
                           </div>
@@ -795,7 +789,7 @@ export default function ChecklistPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleView(checklist)}
-                            className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg transition-all duration-200 hover:scale-105"
+                            className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
@@ -804,7 +798,7 @@ export default function ChecklistPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEdit(checklist)}
-                            className="h-8 w-8 p-0 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg transition-all duration-200 hover:scale-105"
+                            className="h-8 w-8 p-0 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
                             title="Edit Checklist"
                           >
                             <Edit className="w-4 h-4" />
@@ -814,7 +808,7 @@ export default function ChecklistPage() {
                             size="sm"
                             onClick={() => handleDeleteChecklist(checklist._id)}
                             disabled={isDeleting === checklist._id}
-                            className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg transition-all duration-200 hover:scale-105"
+                            className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
                             title="Delete Checklist"
                           >
                             {isDeleting === checklist._id ? (
@@ -836,16 +830,15 @@ export default function ChecklistPage() {
 
       {/* Empty State */}
       {!isLoading && filteredChecklists.length === 0 && (
-        <Card className="border-slate-200/60 dark:border-slate-600/60 shadow-lg">
+        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <CardContent className="p-12 text-center">
             <div className="relative">
-              <CheckSquare className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-100 to-blue-100 dark:from-slate-800 dark:to-blue-900/20 rounded-full blur-xl opacity-50"></div>
+              <CheckSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             </div>
-            <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               No checklists found
             </h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               {searchTerm || filterPriority || filterStatus || filterType
                 ? 'Try adjusting your filters'
                 : 'Create your first checklist to get started'
@@ -854,7 +847,7 @@ export default function ChecklistPage() {
             {!searchTerm && !filterPriority && !filterStatus && !filterType && (
               <Button 
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create Checklist

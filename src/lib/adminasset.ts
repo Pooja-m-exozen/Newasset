@@ -109,7 +109,10 @@ export interface Asset {
   serialNumber?: string;
   capacity?: string;
   yearOfInstallation?: string;
-  projectName?: string;
+  project?: {
+    projectId: string;
+    projectName: string;
+  };
   assignedTo?: AssignedTo;
   status?: string;
   priority?: string;
@@ -120,6 +123,7 @@ export interface Asset {
   documents?: Array<{ name: string; url: string; type: string; [key: string]: string | number | boolean | object | null | undefined }>;
   tags?: string[];
   notes?: string;
+  customFields?: Record<string, string>;
   createdBy?: AssignedTo;
   photos?: Array<{ url: string; caption?: string; [key: string]: string | number | boolean | object | null | undefined }>;
   scanHistory?: ScanHistory[];
@@ -132,6 +136,82 @@ export interface Asset {
 export interface AssetsResponse {
   success: boolean;
   assets: Asset[];
+}
+
+// Project interfaces
+export interface Project {
+  _id: string;
+  name: string;
+  code: string;
+  description: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  budget: {
+    amount: number;
+    currency: string;
+  };
+  location: {
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+  };
+  client: {
+    name: string;
+    contactPerson: string;
+    email: string;
+    phone: string;
+  };
+  settings: {
+    notificationSettings: {
+      email: boolean;
+      sms: boolean;
+      push: boolean;
+    };
+    allowAssetCreation: boolean;
+    requireApproval: boolean;
+    autoSync: boolean;
+  };
+  permissions: {
+    assetManagement: {
+      view: boolean;
+      create: boolean;
+      edit: boolean;
+      delete: boolean;
+      assign: boolean;
+    };
+    maintenance: {
+      view: boolean;
+      create: boolean;
+      edit: boolean;
+      approve: boolean;
+    };
+    analytics: {
+      view: boolean;
+      export: boolean;
+    };
+    userManagement: {
+      view: boolean;
+      create: boolean;
+      edit: boolean;
+      delete: boolean;
+    };
+  };
+  projectManager: string | null;
+  facilities: string[];
+  createdBy: string;
+  team: string[];
+  assets: string[];
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+export interface ProjectsResponse {
+  success: boolean;
+  projects: Project[];
+  count: number;
 }
 
 export interface ApiError {
@@ -451,9 +531,42 @@ const apiRequest = async <T>(
 
 // Asset API functions
 export const assetApi = {
+  // Get all projects
+  getProjects: async (): Promise<ProjectsResponse> => {
+    return apiRequest<ProjectsResponse>('/projects');
+  },
+
   // Get all assets
   getAllAssets: async (): Promise<AssetsResponse> => {
     return apiRequest<AssetsResponse>('/assets');
+  },
+
+  // Get assets by project
+  getAssetsByProject: async (projectIdentifier: string): Promise<AssetsResponse> => {
+    // Try to determine if this is a project ID (ObjectId format) or project name
+    const isProjectId = /^[0-9a-fA-F]{24}$/.test(projectIdentifier);
+    
+    if (isProjectId) {
+      // If it's a project ID, try the project ID endpoint first
+      try {
+        console.log('Trying project ID endpoint with:', projectIdentifier);
+        return await apiRequest<AssetsResponse>(`/assets/project/${projectIdentifier}`);
+      } catch (error) {
+        console.log('Project ID endpoint failed, trying project name endpoint');
+        // Fallback to project name endpoint
+        return await apiRequest<AssetsResponse>(`/assets/project/${encodeURIComponent(projectIdentifier)}`);
+      }
+    } else {
+      // If it's a project name, try the project name endpoint
+      try {
+        console.log('Trying project name endpoint with:', projectIdentifier);
+        return await apiRequest<AssetsResponse>(`/assets/project/${encodeURIComponent(projectIdentifier)}`);
+      } catch (error) {
+        console.log('Project name endpoint failed, trying project ID endpoint');
+        // Fallback to project ID endpoint
+        return await apiRequest<AssetsResponse>(`/assets/project/${projectIdentifier}`);
+      }
+    }
   },
 
   // Get asset by ID

@@ -8,7 +8,7 @@ import { Textarea } from './textarea';
 import { Checkbox } from './checkbox';
 import { Badge } from './badge';
 import { Asset, AssetType } from '../../lib/adminasset';
-import { geocodeAddress } from '../../lib/location';
+import { geocodeAddress, reverseGeocode } from '../../lib/location';
 import { 
   MapPin, 
   Loader2, 
@@ -25,6 +25,7 @@ import {
   Zap
 } from 'lucide-react';
 import { QRGenerationModal } from './qr-generation-modal';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AssetFormModalProps {
   isOpen: boolean;
@@ -45,13 +46,17 @@ interface AssetFormData {
   serialNumber: string;
   capacity: string;
   yearOfInstallation: string;
+  project: {
+    projectId: string;
   projectName: string;
+  };
   assignedTo: string;
   priority: string;
   status: string;
   digitalTagType: string;
   tags: string[];
   notes: string;
+  customFields: Record<string, string>;
   location: {
     latitude: string;
     longitude: string;
@@ -90,42 +95,46 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   onSubmit,
   loading = false
 }) => {
+  const { user } = useAuth();
+  // Form state
   const [formData, setFormData] = useState({
-    tagId: '',
-    assetType: '',
-    subcategory: '',
-    brand: '',
-    model: '',
-    serialNumber: '',
-    capacity: '',
-    yearOfInstallation: '',
-    projectName: '',
-    assignedTo: '',
-    priority: '',
-    status: '',
-    digitalTagType: '',
-    tags: [] as string[],
-    notes: '',
-    location: {
-      latitude: '0',
-      longitude: '0',
-      building: '',
-      floor: '',
-      room: ''
-    }
+    tagId: '', assetType: '', subcategory: '', brand: '', model: '', serialNumber: '', capacity: '', yearOfInstallation: '',
+    project: { projectId: '', projectName: '' }, assignedTo: '', priority: '', status: '', digitalTagType: '',
+    tags: [] as string[], notes: '', customFields: {} as Record<string, string>,
+    location: { latitude: '0', longitude: '0', building: '', floor: '', room: '' }
   });
 
+  // UI state
   const [tagInput, setTagInput] = useState('');
-  const [enableGeocoding, setEnableGeocoding] = useState(true);
-  const [geocodingLoading, setGeocodingLoading] = useState(false);
-  const [geocodingError, setGeocodingError] = useState<string | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [coordinatesFound, setCoordinatesFound] = useState(false);
+  const [customFieldName, setCustomFieldName] = useState('');
+  const [customFieldValue, setCustomFieldValue] = useState('');
   const [addressInput, setAddressInput] = useState('');
-  const [generatingTagId, setGeneratingTagId] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+  
+  // Loading states
+  const [generatingSerialNumber, setGeneratingSerialNumber] = useState(false);
+  const [geocodingLoading, setGeocodingLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usingFallbackFilter, setUsingFallbackFilter] = useState(false);
+  
+  // Feature toggles
+  const [enableGeocoding, setEnableGeocoding] = useState(true);
+  const [coordinatesFound, setCoordinatesFound] = useState(false);
+  
+  // Error states
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  
+  // Modal states
+  const [users, setUsers] = useState<User[]>([]);
+  const [projects, setProjects] = useState<Array<{
+    _id: string;
+    name: string;
+    code: string;
+    description: string;
+    status: string;
+  }>>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [createdAsset, setCreatedAsset] = useState<Asset | null>(null);
   const [assetCreationStatus, setAssetCreationStatus] = useState<'idle' | 'creating' | 'success' | 'ready-for-qr'>('idle');
@@ -133,11 +142,47 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
 
 
-  // Function to fetch all registered users from API
+  // Fetch data functions
+  const fetchProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const response = await fetch('http://192.168.0.5:5021/api/projects', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.projects) {
+          setProjects(data.projects);
+          console.log('Fetched projects:', data.projects);
+        } else {
+          setProjects([]);
+        }
+      } else {
+        setProjects([]);
+      }
+    } catch (error) {
+      setProjects([]);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const response = await fetch('http://192.168.0.5:5021/api/admin', {
+      // Only fetch users if we have a project name to filter by
+      if (!user?.projectName) {
+        console.warn('No project name available, skipping user fetch');
+        setUsers([]);
+        return;
+      }
+
+      // Try to fetch users with project filter first
+      let response = await fetch(`http://192.168.0.5:5021/api/admin?projectName=${encodeURIComponent(user.projectName)}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
@@ -147,156 +192,144 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.users) {
-          setUsers(data.users);
-          console.log('Users fetched successfully:', data.users);
+          // Filter users to only show those from the current user's project
+          const filteredUsers = data.users.filter((userItem: User) => 
+            userItem.projectName === user?.projectName
+          );
+          setUsers(filteredUsers);
+          console.log(`Filtered users for project "${user?.projectName}":`, filteredUsers);
         } else {
-          console.error('Failed to fetch users:', data);
           setUsers([]);
         }
       } else {
-        console.error('Failed to fetch users:', response.status);
-        setUsers([]);
+        // Fallback: fetch all users and filter client-side
+        console.log('Project filter query failed, falling back to client-side filtering');
+        setUsingFallbackFilter(true);
+        response = await fetch('http://192.168.0.5:5021/api/admin', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.users) {
+            // Filter users to only show those from the current user's project
+            const filteredUsers = data.users.filter((userItem: User) => 
+              userItem.projectName === user?.projectName
+            );
+            setUsers(filteredUsers);
+            console.log(`Client-side filtered users for project "${user?.projectName}":`, filteredUsers);
+          } else {
+            setUsers([]);
+          }
+        } else {
+          setUsers([]);
+        }
       }
-    } catch {
-      console.error('Error fetching users');
+    } catch (error) {
       setUsers([]);
     } finally {
       setLoadingUsers(false);
     }
   };
 
-  // Function to generate the next available Tag ID - Fast version
-  const generateNextTagId = async () => {
-    setGeneratingTagId(true);
-    
-    // Generate a fast fallback Tag ID immediately using timestamp
-    const timestamp = Date.now();
-    const fastFallbackTagId = `ASSET${timestamp.toString().slice(-6)}`;
-    
-    // Set the fast fallback immediately for better UX
-    setFormData(prev => ({
-      ...prev,
-      tagId: fastFallbackTagId
-    }));
-    
-    try {
-      // Try to get the next sequential number from API (non-blocking)
-      const response = await fetch('http://192.168.0.5:5021/api/admin/assets', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.assets && data.assets.length > 0) {
-          // Find the highest ASSET number
-          let highestNumber = 0;
-          data.assets.forEach((existingAsset: Asset) => {
-            if (existingAsset.tagId && existingAsset.tagId.startsWith('ASSET')) {
-              const numberPart = existingAsset.tagId.replace('ASSET', '');
-              const number = parseInt(numberPart, 10);
-              if (!isNaN(number) && number > highestNumber) {
-                highestNumber = number;
-              }
-            }
-          });
-          
-          // Generate next sequential Tag ID
-          const nextNumber = highestNumber + 1;
-          const sequentialTagId = `ASSET${nextNumber.toString().padStart(6, '0')}`;
-          
-          // Update with sequential ID if it's different from fallback
-          if (sequentialTagId !== fastFallbackTagId) {
-            setFormData(prev => ({
-              ...prev,
-              tagId: sequentialTagId
-            }));
-            console.log(`Updated to sequential Tag ID: ${sequentialTagId}`);
-          }
-        }
-      } else {
-        console.log('Using fallback Tag ID (API not available)');
-      }
-    } catch  {
-      console.log('Using fallback Tag ID (API error)');
-    } finally {
-      setGeneratingTagId(false);
-    }
-  };
 
-  // Function to generate Tag ID instantly (no API call)
-  const generateInstantTagId = () => {
+
+  // Generate unique IDs
+  const generateTagId = () => {
     const timestamp = Date.now();
     const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    const instantTagId = `ASSET${timestamp.toString().slice(-6)}${randomSuffix}`;
+    const tagId = `ASSET${timestamp.toString().slice(-6)}${randomSuffix}`;
     
-    setFormData(prev => ({
-      ...prev,
-      tagId: instantTagId
-    }));
-    
-    console.log(`Generated instant Tag ID: ${instantTagId}`);
+    setFormData(prev => ({ ...prev, tagId }));
   };
 
-  // Auto-generate Tag ID when component mounts for new assets
-  useEffect(() => {
-    if (mode === 'create' && !asset) {
-      // Generate Tag ID instantly first, then try to get sequential one
-      generateInstantTagId();
-      // Optionally try to get sequential ID in background (non-blocking)
-      setTimeout(() => {
-        generateNextTagId();
-      }, 100);
-    }
-  }, [mode, asset]);
+  const generateSerialNumber = () => {
+    setGeneratingSerialNumber(true);
+    
+    const timestamp = Date.now();
+    const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const serialNumber = `SN${timestamp.toString().slice(-8)}${randomSuffix}`;
+    
+    setFormData(prev => ({ ...prev, serialNumber }));
+    setGeneratingSerialNumber(false);
+  };
 
-  // Handle asset data when editing or creating
+  // Initialize form data
   useEffect(() => {
+    if (isOpen) {
+      setUsingFallbackFilter(false); // Reset fallback filter state
+      fetchProjects(); // Fetch available projects
+      fetchUsers();
+      
+      // Debug: Log user context to understand what's available
+      console.log('User context in AssetFormModal:', {
+        user,
+        projectId: user?.projectId,
+        projectName: user?.projectName,
+        hasProjectId: !!user?.projectId,
+        hasProjectName: !!user?.projectName
+      });
+      console.log('Note: If projectId is missing, the system will use projectName as the identifier');
+      console.log(`Will filter users by project: "${user?.projectName}"`);
+      
     if (asset && mode === 'edit') {
+        // Edit mode: populate with existing asset data
       setFormData({
-        tagId: asset.tagId || '',
-        assetType: asset.assetType || '',
-        subcategory: asset.subcategory || '',
-        brand: asset.brand || '',
-        model: asset.model || '',
-        serialNumber: asset.serialNumber || '',
-        capacity: asset.capacity || '',
-        yearOfInstallation: asset.yearOfInstallation || '',
-        projectName: asset.projectName || '',
-        assignedTo: typeof asset.assignedTo === 'string' ? asset.assignedTo : asset.assignedTo?._id || '', // Use asset's assignedTo ID for edit mode
-        notes: asset.notes || '',
-        priority: asset.priority || '',
-        status: asset.status || '',
-        digitalTagType: asset.digitalTagType || '',
-        tags: asset.tags || [],
+          tagId: asset.tagId || '', assetType: asset.assetType || '', subcategory: asset.subcategory || '',
+          brand: asset.brand || '', model: asset.model || '', serialNumber: asset.serialNumber || '',
+          capacity: asset.capacity || '', yearOfInstallation: asset.yearOfInstallation || '',
+          project: { projectId: asset.project?.projectId || '', projectName: asset.project?.projectName || '' },
+          assignedTo: typeof asset.assignedTo === 'string' ? asset.assignedTo : asset.assignedTo?._id || '',
+          notes: asset.notes || '', priority: asset.priority || '', status: asset.status || '',
+          digitalTagType: asset.digitalTagType || '', tags: asset.tags || [], customFields: asset.customFields || {},
         location: {
-          latitude: asset.location?.latitude || '0',
-          longitude: asset.location?.longitude || '0',
-          building: asset.location?.building || '',
-          floor: asset.location?.floor || '',
-          room: asset.location?.room || ''
+            latitude: asset.location?.latitude || '0', longitude: asset.location?.longitude || '0',
+            building: asset.location?.building || '', floor: asset.location?.floor || '', room: asset.location?.room || ''
         }
       });
       setCoordinatesFound((asset.location?.latitude || '0') !== '0' && (asset.location?.longitude || '0') !== '0');
+      
+      // Fetch users for the asset's project if it has one
+      if (asset.project?.projectName) {
+        fetchUsersForProject(asset.project.projectName);
+        console.log(`Editing asset for project: "${asset.project.projectName}"`);
+      }
     } else if (mode === 'create') {
-      // For new assets, leave assignedTo empty so user can select
+        // Create mode: set defaults and generate IDs
       setFormData(prev => ({
-        ...prev,
-        assignedTo: ''
+          ...prev, 
+          assignedTo: '', 
+          project: { 
+            projectId: user?.projectId || user?.projectName || '', // Use projectName as fallback if projectId is missing
+            projectName: user?.projectName || '' 
+          }
       }));
+      
+      // Ensure project is set from user context
+      if (user?.projectName) {
+        setFormData(prev => ({
+          ...prev,
+          project: {
+            projectId: user.projectId || user.projectName || '', // Use projectName as fallback if projectId is missing
+            projectName: user.projectName || ''
+          }
+        }));
+        
+        // Fetch users for the default project
+        fetchUsersForProject(user.projectName);
+        console.log(`Creating asset for project: "${user.projectName}"`);
+      }
+      
+      generateTagId();
+      generateSerialNumber();
       setCoordinatesFound(false);
       setAddressInput('');
     }
-  }, [asset, mode]);
-
-  // Fetch users when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchUsers();
     }
-  }, [isOpen]);
+  }, [isOpen, mode, asset, user]);
 
 
 
@@ -307,16 +340,29 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       const [parent, child] = field.split('.');
       setFormData(prev => ({
         ...prev,
-        [parent]: {
-          ...(prev[parent as keyof typeof prev] as Record<string, string>),
-          [child]: value
+        [parent]: { ...(prev[parent as keyof typeof prev] as Record<string, string>), [child]: value }
+      }));
+      
+      // Check if coordinates are valid when manually entered
+      if (parent === 'location' && (child === 'latitude' || child === 'longitude')) {
+        const lat = parent === 'location' && child === 'latitude' ? value : formData.location.latitude;
+        const lng = parent === 'location' && child === 'longitude' ? value : formData.location.longitude;
+        
+        if (lat && lng && lat !== '0' && lng !== '0') {
+          const latNum = parseFloat(lat as string);
+          const lngNum = parseFloat(lng as string);
+          
+          if (!isNaN(latNum) && !isNaN(lngNum) && latNum >= -90 && latNum <= 90 && lngNum >= -180 && lngNum <= 180) {
+            setCoordinatesFound(true);
+            setGeocodingError(null);
+            
+            // Get address name from coordinates
+            getAddressFromCoordinates(lat as string, lng as string);
+          }
         }
-      }));
+      }
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
+      setFormData(prev => ({ ...prev, [field]: value }));
     }
   };
 
@@ -330,16 +376,19 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
         const coordinates = await geocodeAddress(address);
         setFormData(prev => ({
           ...prev,
-          location: {
-            ...prev.location,
-            latitude: coordinates.latitude.toString(),
-            longitude: coordinates.longitude.toString()
-          }
+          location: { ...prev.location, latitude: coordinates.latitude.toString(), longitude: coordinates.longitude.toString() }
         }));
         setCoordinatesFound(true);
       } catch (err) {
-        setGeocodingError(err instanceof Error ? err.message : 'Failed to geocode address');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to geocode address';
+        setGeocodingError(errorMessage);
         setCoordinatesFound(false);
+        
+        // Clear the address input when geocoding fails to show it's not working
+        setAddressInput('');
+        
+        // If geocoding fails, still allow manual coordinate entry
+        console.warn('Geocoding failed, allowing manual coordinate entry:', errorMessage);
       } finally {
         setGeocodingLoading(false);
       }
@@ -370,44 +419,19 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
       const { latitude, longitude } = position.coords;
       
-      // Get address from coordinates (reverse geocoding)
-      try {
-        const GOOGLE_MAPS_API_KEY = 'AIzaSyCqvcEKoqwRG5PBDIVp-MjHyjXKT3s4KY4';
-        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        let address = 'Current Location';
-        if (data.status === 'OK' && data.results.length > 0) {
-          address = data.results[0].formatted_address;
-        }
-
-        setAddressInput(address);
+      // Update form data with coordinates
         setFormData(prev => ({
           ...prev,
-          location: {
-            ...prev.location,
-            latitude: latitude.toString(),
-            longitude: longitude.toString()
-          }
+        location: { ...prev.location, latitude: latitude.toString(), longitude: longitude.toString() }
         }));
         setCoordinatesFound(true);
-      } catch {
-        // If reverse geocoding fails, still use the coordinates
-        setAddressInput('Current Location');
-        setFormData(prev => ({
-          ...prev,
-          location: {
-            ...prev.location,
-            latitude: latitude.toString(),
-            longitude: longitude.toString()
-          }
-        }));
-        setCoordinatesFound(true);
-      }
-    } catch {
-      setLocationError('Failed to get current location. Please check your browser permissions.');
+      setGeocodingError(null); // Clear any previous geocoding errors
+      
+      // Get address name from coordinates
+      await getAddressFromCoordinates(latitude.toString(), longitude.toString());
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setLocationError(`Failed to get current location: ${errorMessage}. Please check your browser permissions or try manual entry.`);
       setCoordinatesFound(false);
     } finally {
       setLocationLoading(false);
@@ -431,12 +455,118 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     }));
   };
 
+  const handleCustomFieldAdd = () => {
+    if (customFieldName.trim() && customFieldValue.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        customFields: { ...prev.customFields, [customFieldName.trim()]: customFieldValue.trim() }
+      }));
+      setCustomFieldName('');
+      setCustomFieldValue('');
+    }
+  };
+
+
+
+  // Get address name from coordinates
+  const getAddressFromCoordinates = async (latitude: string, longitude: string) => {
+    if (latitude && longitude && latitude !== '0' && longitude !== '0') {
+      try {
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+        
+        if (!isNaN(lat) && !isNaN(lng)) {
+          const address = await reverseGeocode(lat, lng);
+          setAddressInput(address);
+          console.log('Address from coordinates:', address);
+        }
+      } catch (error) {
+        console.warn('Failed to get address from coordinates:', error);
+        // Keep the current address input if reverse geocoding fails
+      }
+    }
+  };
+
   // Handle digital tag type change and show generation modal
   const handleDigitalTagTypeChange = (value: string) => {
     handleInputChange('digitalTagType', value);
     
     // Don't open modals automatically - just set the type
     // Modals will be opened after asset creation or manually
+  };
+
+  const handleProjectChange = (projectId: string) => {
+    const selectedProject = projects.find(p => p._id === projectId);
+    if (selectedProject) {
+      setFormData(prev => ({
+        ...prev,
+        project: {
+          projectId: selectedProject._id,
+          projectName: selectedProject.name
+        }
+      }));
+      
+      // Fetch users for the selected project
+      fetchUsersForProject(selectedProject.name);
+      console.log(`Project changed to: "${selectedProject.name}" (ID: ${selectedProject._id})`);
+    }
+  };
+
+  const fetchUsersForProject = async (projectName: string) => {
+    setLoadingUsers(true);
+    try {
+      // Try to fetch users with project filter first
+      let response = await fetch(`http://192.168.0.5:5021/api/admin?projectName=${encodeURIComponent(projectName)}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.users) {
+          // Filter users to only show those from the selected project
+          const filteredUsers = data.users.filter((userItem: User) => 
+            userItem.projectName === projectName
+          );
+          setUsers(filteredUsers);
+          console.log(`Filtered users for project "${projectName}":`, filteredUsers);
+        } else {
+          setUsers([]);
+        }
+      } else {
+        // Fallback: fetch all users and filter client-side
+        console.log('Project filter query failed, falling back to client-side filtering');
+        setUsingFallbackFilter(true);
+        response = await fetch('http://192.168.0.5:5021/api/admin', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.users) {
+            // Filter users to only show those from the selected project
+            const filteredUsers = data.users.filter((userItem: User) => 
+              userItem.projectName === projectName
+            );
+            setUsers(filteredUsers);
+            console.log(`Client-side filtered users for project "${projectName}":`, filteredUsers);
+          } else {
+            setUsers([]);
+          }
+        } else {
+          setUsers([]);
+        }
+      }
+    } catch (error) {
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
   };
 
   const handleDigitalTagGenerated = (updatedAsset: Asset) => {
@@ -462,7 +592,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       onSubmit(completeUpdatedAsset as unknown as AssetFormData).then(() => {
         console.log('Asset updated with QR code in parent component');
       }).catch((error) => {
-        console.error('Error updating asset in parent component:', error);
+        // Handle error silently
       });
     }
     
@@ -490,66 +620,61 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate that assignedTo field has a valid user ID
-    if (!formData.assignedTo || !formData.assignedTo.trim()) {
-      console.error('No user ID available for assignment');
+    // Debug: Log current form data
+    console.log('Current form data:', formData);
+    console.log('Project data:', formData.project);
+    console.log('User project data:', { projectId: user?.projectId, projectName: user?.projectName });
+    console.log('Note: If projectId is missing, projectName will be used as the identifier');
+    
+    // Validate required fields
+    if (!formData.assignedTo?.trim()) {
+      alert('Please select a user to assign the asset to.');
       return;
     }
     
-    // assignedTo now contains the selected user's ID from the dropdown
-    // This allows users to assign assets to any registered user
+    // Validate project data is set from logged-in user
+    if (!formData.project.projectName) {
+      alert('Please select a project for this asset.');
+      return;
+    }
     
     try {
-      // Set status to creating
+      // Ensure project data is set from selected project
+      const formDataWithUserProject = {
+        ...formData,
+        project: {
+          projectId: formData.project.projectId, // This will be the ID for backend
+          projectName: formData.project.projectName // This will be the name for display
+        }
+      };
+      
+      console.log('Submitting asset with project:', {
+        projectId: formData.project.projectId, // ID for backend submission
+        projectName: formData.project.projectName // Name for UI display
+      });
+      console.log('Note: Project ID will be sent to backend, project name is for UI display only');
+      
       setAssetCreationStatus('creating');
+      const createdAsset = await onSubmit(formDataWithUserProject);
       
-      // Submit the asset and get the response
-      const createdAsset = await onSubmit(formData);
-      
-      // If digital tag type is QR and we have a created asset, show the QR generation modal
+      // Handle QR code generation if needed
       if (formData.digitalTagType === 'qr' && createdAsset && typeof createdAsset === 'object' && createdAsset._id) {
-        console.log('Asset created successfully, waiting before showing QR generation modal:', createdAsset);
-        
-        // Set status to success first
         setAssetCreationStatus('success');
+        setCreatedAsset(createdAsset as Asset);
         
-        // Create a proper asset object for the modal
-        const assetForModal: Asset = {
-          ...createdAsset,
-          // Ensure all required fields are present
-          tagId: createdAsset.tagId || formData.tagId,
-          assetType: createdAsset.assetType || formData.assetType,
-          brand: createdAsset.brand || formData.brand,
-          location: createdAsset.location || formData.location,
-          // Use the actual asset ID from the response
-          _id: createdAsset._id
-        };
-        
-        setCreatedAsset(assetForModal);
-        
-        // Wait for the asset to be fully processed and saved in the database
+        // Show QR generation modal after delay
         setTimeout(() => {
           setAssetCreationStatus('ready-for-qr');
-          
-          // Show QR modal after user has seen the success message
-          setTimeout(() => {
-            setShowQRModal(true);
-          }, 1000); // Wait 1 second after showing ready status
-          
-        }, 2000); // Wait 2 seconds for backend processing
-        
-        // Don't close the modal yet - let the user see the success message
+          setTimeout(() => setShowQRModal(true), 1000);
+        }, 2000);
         return;
       }
       
-      // For non-QR assets or if QR generation is not needed, close the modal
+      // Close modal for non-QR assets
       setAssetCreationStatus('idle');
       onClose();
-      
           } catch {
-        console.error('Error submitting asset');
         setAssetCreationStatus('idle');
-        // Re-throw the error so the parent component can handle it
         throw new Error('Failed to submit asset');
       }
   };
@@ -558,38 +683,32 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     return mode === 'create' ? 'Create New Asset' : 'Edit Asset';
   };
 
-  // Status and Priority Preview Components
+  // Preview Components
   const StatusPreview = ({ status }: { status: string }) => {
-    const getStatusColor = (status: string) => {
-      switch (status.toLowerCase()) {
-        case 'active': return 'bg-green-500 dark:bg-green-600 text-white';
-        case 'inactive': return 'bg-red-500 dark:bg-red-600 text-white';
-        case 'maintenance': return 'bg-yellow-500 dark:bg-yellow-600 text-white';
-        case 'retired': return 'bg-gray-500 dark:bg-gray-600 text-white';
-        default: return 'bg-gray-500 dark:bg-gray-600 text-white';
-      }
+    const colors = {
+      active: 'bg-green-500 dark:bg-green-600',
+      inactive: 'bg-red-500 dark:bg-red-600',
+      maintenance: 'bg-yellow-500 dark:bg-yellow-600',
+      retired: 'bg-gray-500 dark:bg-gray-600'
     };
 
     return (
-      <Badge className={`${getStatusColor(status)} font-medium text-xs px-2 py-1 rounded-full`}>
+      <Badge className={`${colors[status.toLowerCase() as keyof typeof colors] || colors.retired} text-white font-medium text-xs px-2 py-1 rounded-full`}>
         {status || 'Not Set'}
       </Badge>
     );
   };
 
   const PriorityPreview = ({ priority }: { priority: string }) => {
-    const getPriorityColor = (priority: string) => {
-      switch (priority.toLowerCase()) {
-        case 'high': return 'bg-red-500 dark:bg-red-600 text-white';
-        case 'medium': return 'bg-yellow-500 dark:bg-yellow-600 text-white';
-        case 'low': return 'bg-green-500 dark:bg-green-600 text-white';
-        case 'critical': return 'bg-red-700 dark:bg-red-800 text-white';
-        default: return 'bg-gray-500 dark:bg-gray-600 text-white';
-      }
+    const colors = {
+      high: 'bg-red-500 dark:bg-red-600',
+      medium: 'bg-yellow-500 dark:bg-yellow-600',
+      low: 'bg-green-500 dark:bg-green-600',
+      critical: 'bg-red-700 dark:bg-red-800'
     };
 
     return (
-      <Badge className={`${getPriorityColor(priority)} font-medium text-xs px-2 py-1 rounded-full`}>
+      <Badge className={`${colors[priority.toLowerCase() as keyof typeof colors] || 'bg-gray-500 dark:bg-gray-600'} text-white font-medium text-xs px-2 py-1 rounded-full`}>
         {priority || 'Not Set'}
       </Badge>
     );
@@ -762,21 +881,21 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={generateInstantTagId}
+                    onClick={generateTagId}
                     className="border-green-300 dark:border-green-600 hover:border-green-500 dark:hover:border-green-400 text-green-700 dark:text-green-300"
-                    title="Generate instant Tag ID (fast)"
+                    title="Generate new Tag ID"
                   >
                     <Zap className="w-4 h-4" />
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={generateNextTagId}
-                    disabled={generatingTagId}
+                    onClick={generateSerialNumber}
+                    disabled={generatingSerialNumber}
                     className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300"
-                    title="Generate sequential Tag ID (may take time)"
+                    title="Generate new Serial Number"
                   >
-                    {generatingTagId ? (
+                    {generatingSerialNumber ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <RefreshCw className="w-4 h-4" />
@@ -840,14 +959,35 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
               </div>
 
               <div>
-                <Label htmlFor="serialNumber" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Serial Number</Label>
+                <Label htmlFor="serialNumber" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  Serial Number
+                  <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-normal">
+                    Auto-generated
+                  </span>
+                </Label>
+                <div className="flex space-x-2">
                 <Input
                   id="serialNumber"
                   value={formData.serialNumber}
                   onChange={(e) => handleInputChange('serialNumber', e.target.value)}
                   placeholder="e.g., SN123456788888"
-                  className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                />
+                    className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={generateSerialNumber}
+                    disabled={generatingSerialNumber}
+                    className="border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-400 text-blue-700 dark:text-blue-300"
+                    title="Generate new Serial Number"
+                  >
+                    {generatingSerialNumber ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <div>
@@ -951,9 +1091,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                           <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div className="text-sm">
                             <p className="font-medium text-blue-800 dark:text-blue-200">Digital Tag Generation</p>
-                            <p className="text-blue-700 dark:text-blue-300 mt-1">
-                              QR Code will be generated after asset creation.
-                            </p>
                           </div>
                         </div>
                     </div>
@@ -962,21 +1099,85 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
               </div>
 
               <div className="md:col-span-2">
-                <Label htmlFor="projectName" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Project Name</Label>
-                <Input
-                  id="projectName"
-                  value={formData.projectName}
-                  onChange={(e) => handleInputChange('projectName', e.target.value)}
-                  placeholder="e.g., Digital Transformation"
-                  className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                />
+                <Label htmlFor="project" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  Project *
+                  <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-normal">
+                    Select project for this asset
+                  </span>
+                </Label>
+                <Select
+                  value={formData.project.projectId}
+                  onValueChange={handleProjectChange}
+                >
+                  {/* Custom trigger to show project name instead of ID */}
+                  <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                    <div className="flex items-center justify-between w-full">
+                      <span className={formData.project.projectId ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}>
+                        {formData.project.projectId ? formData.project.projectName : "Select project"}
+                      </span>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    {loadingProjects ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">Loading projects...</div>
+                    ) : projects.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">No projects available</div>
+                    ) : (
+                      projects.map(project => (
+                        <SelectItem key={project._id} value={project._id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>
+                            <div>
+                              <div className="font-medium">{project.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {project.code} • {project.status}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                
+                {formData.project.projectId && formData.project.projectName && (
+                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <div className="text-sm">
+                        <span className="text-green-700 dark:text-green-300 font-medium">Selected Project: </span>
+                        <span className="text-green-800 dark:text-green-200">
+                          {formData.project.projectName}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {!formData.project.projectId && (
+                  <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 text-yellow-600 dark:text-yellow-400">⚠️</div>
+                      <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                        <span className="font-medium">No Project Selected:</span> Please select a project to continue.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+
+
+
+
 
               <div className="md:col-span-2">
                 <Label htmlFor="assignedTo" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                   Assigned To
                   <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-normal">
-                    Select from registered users
+                    Select from users in project: {formData.project.projectName || 'Select a project first'}
                   </span>
                 </Label>
                 <Select
@@ -1000,7 +1201,9 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     {loadingUsers ? (
                       <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">Loading users...</div>
                     ) : users.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">No users found</div>
+                      <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
+                        No users found in project "{formData.project.projectName || 'Select a project first'}". Contact your administrator to add users to this project.
+                      </div>
                     ) : (
                       users.map(user => (
                         <SelectItem key={user._id} value={user._id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -1029,9 +1232,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     </div>
                   </div>
                 )}
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Select a user from the dropdown. The system will submit the user&apos;s ID to the backend.
-                  </p>
               </div>
             </div>
           </div>
@@ -1088,6 +1288,12 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                       Auto-geocode
                     </span>
                   )}
+                  {coordinatesFound && formData.location.latitude !== '0' && formData.location.longitude !== '0' && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400 flex items-center">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Auto-generated from coordinates
+                    </span>
+                  )}
                 </Label>
                 <div className="relative">
                   <Input
@@ -1095,7 +1301,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     value={addressInput}
                     onChange={(e) => handleAddressChange(e.target.value)}
                     placeholder="Enter address for automatic coordinate detection"
-                    className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 pr-10"
+                    className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 pr-10"
                   />
                   {geocodingLoading && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -1104,12 +1310,35 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   )}
                 </div>
                 {geocodingError && (
-                  <p className="text-sm text-red-600 dark:text-red-400 mt-1 flex items-center">
-                    <X className="w-4 h-4 mr-1" />
-                    {geocodingError}
-                  </p>
+                  <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-md">
+                    <div className="flex items-start space-x-2">
+                      <div className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0">⚠️</div>
+                      <div className="text-sm">
+                        <p className="font-medium text-yellow-800 dark:text-yellow-200">Geocoding Failed</p>
+                        <p className="text-yellow-700 dark:text-yellow-300 mt-1">{geocodingError}</p>
+                        <div className="mt-3 flex space-x-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAddressChange(addressInput)}
+                            disabled={geocodingLoading}
+                            className="border-yellow-300 dark:border-yellow-600 hover:border-yellow-400 dark:hover:border-yellow-500 text-yellow-700 dark:text-yellow-300"
+                          >
+                            {geocodingLoading ? (
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3 h-3 mr-1" />
+                            )}
+                            Retry Geocoding
+                          </Button>
+              </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
+
             </div>
 
             {/* Location Options */}
@@ -1121,7 +1350,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   onCheckedChange={(checked) => setEnableGeocoding(checked as boolean)}
                 />
                 <Label htmlFor="geocoding" className="text-sm text-gray-700 dark:text-gray-300 font-medium">
-                  Automatically get coordinates from address
+                  Enable geocoding
                 </Label>
               </div>
 
@@ -1164,7 +1393,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
               <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-700">
                 <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                 <span className="text-sm text-green-700 dark:text-green-400 font-medium">
-                  Coordinates found and ready to save
+                  Coordinates ready
                 </span>
               </div>
             )}
@@ -1193,34 +1422,22 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
             
             <div>
               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Tags</Label>
-              <div className="space-y-3">
                 <div className="flex space-x-2">
                   <Input
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     placeholder="Add a tag"
                     className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleTagAdd();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={handleTagAdd} variant="outline" className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300">
-                    Add
-                  </Button>
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleTagAdd())}
+                />
+                <Button type="button" onClick={handleTagAdd} variant="outline" className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300">Add</Button>
                 </div>
                 {formData.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mt-3">
                     {formData.tags.map((tag, index) => (
                       <div key={index} className="flex items-center space-x-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg border border-blue-200 dark:border-blue-700">
                         <span className="text-sm text-blue-700 dark:text-blue-400">{tag}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleTagRemove(tag)}
-                          className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                        >
+                      <button type="button" onClick={() => handleTagRemove(tag)} className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                           <X className="w-3 h-3" />
                         </button>
                       </div>
@@ -1228,6 +1445,42 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   </div>
                 )}
               </div>
+
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Custom Fields</Label>
+              <div className="flex space-x-2">
+                <Input
+                  value={customFieldName}
+                  onChange={(e) => setCustomFieldName(e.target.value)}
+                  placeholder="Field name (e.g., Vendor Name)"
+                  className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleCustomFieldAdd())}
+                />
+                <Input
+                  value={customFieldValue}
+                  onChange={(e) => setCustomFieldValue(e.target.value)}
+                  placeholder="Field value"
+                  className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleCustomFieldAdd())}
+                />
+                <Button type="button" variant="outline" onClick={handleCustomFieldAdd} className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300">Add</Button>
+              </div>
+              {Object.keys(formData.customFields).length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {Object.entries(formData.customFields).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+                      <span className="text-sm"><span className="font-medium">{key}:</span> {value}</span>
+                      <button type="button" onClick={() => {
+                        const newCustomFields = { ...formData.customFields };
+                        delete newCustomFields[key];
+                        setFormData(prev => ({ ...prev, customFields: newCustomFields }));
+                      }} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-2">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           

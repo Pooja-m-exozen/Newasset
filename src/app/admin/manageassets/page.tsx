@@ -20,6 +20,7 @@ import { EmptyState } from '../../../components/ui/empty-state';
 import { PermissionsUI } from '../../../components/ui/permissions-ui';
 
 import { useToast, ToastContainer } from '../../../components/ui/toast';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // Define the Permissions type to match what PermissionsUI expects
 // interface PermissionCategory {
@@ -79,6 +80,7 @@ const PermissionsDisplay: React.FC = () => {
     fetchAdminPermissions, 
     clearError 
   } = useAssetContext();
+  const { user } = useAuth();
   const { toasts, removeToast } = useToast();
 
   useEffect(() => {
@@ -114,6 +116,7 @@ const AssetsList: React.FC = () => {
     clearError,
     updateAssetInState
   } = useAssetContext();
+  const { user } = useAuth();
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -127,7 +130,9 @@ const AssetsList: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-      fetchAssets();
+    // Fetch all assets - filtering will be done on the frontend
+    console.log('Initial fetch for all assets - will filter by project on frontend');
+    fetchAssets();
     fetchAssetTypes();
   }, [fetchAssets, fetchAssetTypes]);
 
@@ -138,7 +143,7 @@ const AssetsList: React.FC = () => {
         setSuccessMessage('Asset deleted successfully!');
         setShowSuccess(true);
       } catch (error) {
-        console.error('Error deleting asset:', error);
+        // Handle error silently or show user-friendly message
       }
     }
   };
@@ -187,12 +192,46 @@ const AssetsList: React.FC = () => {
 
 
   const filteredAssets = state.assets.filter(asset => {
+    // First filter by project name/ID to show only assets for the current user's project
+    let matchesProject = true;
+    if (user?.projectName) {
+      // Check if asset belongs to the user's project
+      matchesProject = asset.project?.projectName === user.projectName || 
+                      asset.project?.projectId === user.projectId;
+      
+      // Debug logging for project filtering
+      if (!matchesProject) {
+        console.log('Asset filtered out by project:', {
+          assetProjectName: asset.project?.projectName,
+          assetProjectId: asset.project?.projectId,
+          userProjectName: user.projectName,
+          userProjectId: user.projectId,
+          assetTagId: asset.tagId
+        });
+      }
+    }
+    
+    // Then apply search and status filters
     const matchesSearch = asset.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || asset.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    
+    // Asset must match project AND search AND status
+    const finalResult = matchesProject && matchesSearch && matchesStatus;
+    
+    // Debug logging for final result
+    if (finalResult) {
+      console.log('Asset included in filtered results:', {
+        tagId: asset.tagId,
+        projectName: asset.project?.projectName,
+        projectId: asset.project?.projectId,
+        status: asset.status
+      });
+    }
+    
+    return finalResult;
   });
 
   if (state.loading) {
@@ -204,8 +243,15 @@ const AssetsList: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Loading assets...</h3>
-          <p className="text-gray-600 dark:text-gray-400">Please wait while we fetch your asset data</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            {user?.projectName ? `Loading assets for ${user.projectName}...` : 'Loading assets...'}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            {user?.projectName 
+              ? `Please wait while we fetch asset data for project: ${user.projectName}`
+              : 'Please wait while we fetch your asset data'
+            }
+          </p>
         </div>
       </div>
     );
@@ -230,9 +276,25 @@ const AssetsList: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Asset Management</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Manage and track all facility assets</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  {user?.projectName ? `Managing assets for project: ${user.projectName}` : 'Manage and track all facility assets'}
+                </p>
             </div>
           </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => {
+                console.log('Refresh all assets - will filter by project on frontend');
+                fetchAssets();
+              }}
+              variant="outline"
+              className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </Button>
           <Button 
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white hover:from-blue-700 hover:to-blue-800 dark:hover:from-blue-800 dark:hover:to-blue-900 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center gap-2"
@@ -242,6 +304,7 @@ const AssetsList: React.FC = () => {
             </svg>
             Add New Asset
           </Button>
+          </div>
         </div>
 
 
@@ -287,8 +350,23 @@ const AssetsList: React.FC = () => {
         </div>
 
         {/* Results Count */}
-        <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-          Showing {filteredAssets.length} of {state.assets.length} assets
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Showing {filteredAssets.length} of {state.assets.length} total assets
+            {user?.projectName && (
+              <span className="ml-2 text-blue-600 dark:text-blue-400">
+                (filtered by project: {user.projectName})
+              </span>
+            )}
+          </div>
+          {user?.projectName && (
+            <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md border border-blue-200 dark:border-blue-700">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+              </svg>
+              <span>Project Filter Active: {user.projectName}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -298,6 +376,8 @@ const AssetsList: React.FC = () => {
           title={searchTerm || filterStatus !== 'all' ? 'No matching assets' : 'No assets found'}
           description={searchTerm || filterStatus !== 'all' 
             ? 'Try adjusting your search or filters'
+            : user?.projectName 
+              ? `No assets found for project: ${user.projectName}. Get started by adding your first asset.`
             : 'Get started by adding your first asset to your facility'
           }
           actionText="Add First Asset"
@@ -313,6 +393,19 @@ const AssetsList: React.FC = () => {
           {/* Enhanced Desktop Table View */}
           <div className="hidden lg:block">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              {/* Project Header */}
+              {user?.projectName && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-700 px-6 py-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      Project: <span className="font-bold">{user.projectName}</span>
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -424,6 +517,19 @@ const AssetsList: React.FC = () => {
 
           {/* Enhanced Mobile Card View */}
           <div className="lg:hidden">
+            {/* Project Header for Mobile */}
+            {user?.projectName && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Project: <span className="font-bold">{user.projectName}</span>
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Asset Overview</h3>
               <p className="text-gray-600 dark:text-gray-400 text-sm">Showing {filteredAssets.length} assets</p>
@@ -463,32 +569,61 @@ const AssetsList: React.FC = () => {
           asset={editingAsset}
         assetTypes={state.assetTypes}
         onSubmit={async (data) => {
+          // Debug: Log the form data being submitted
+          console.log('Form data being submitted:', data);
+          console.log('User project info:', user);
+          
           // Transform AssetFormData to match Asset interface structure
           const transformedData: Partial<Asset> = {
             ...data,
-            assignedTo: data.assignedTo ? { _id: data.assignedTo, name: '', email: '' } : undefined
+            // Keep the project structure as is since it's already in the correct format
+            project: data.project,
+            assignedTo: data.assignedTo ? { _id: data.assignedTo, name: '', email: '' } : undefined,
+            // Ensure customFields are included
+            customFields: data.customFields || {}
           };
+          
+          console.log('Transformed data for API:', transformedData);
 
           if (isCreateModalOpen) {
-            // Create asset and get the response
-            const createdAsset = await createAsset(transformedData);
-            
-            // If the asset has a digital tag type of QR, don't close the modal yet
-            // The asset form modal will handle showing the QR generation interface
-            if (data.digitalTagType === 'qr' && createdAsset) {
-              console.log('Asset created successfully, ready for QR generation:', createdAsset);
-              // Return the created asset so the modal can show QR generation
-              return createdAsset;
-            } else {
-              // For non-QR assets, close the modal and show success message
-              setIsCreateModalOpen(false);
-              handleCreateSuccess();
+            try {
+              // Create asset and get the response
+              const createdAsset = await createAsset(transformedData);
+              console.log('Asset created successfully:', createdAsset);
+              
+              // Refresh the assets list to show the newly created asset
+              console.log('Refreshing all assets - will filter by project on frontend');
+              await fetchAssets();
+              
+              // If the asset has a digital tag type of QR, don't close the modal yet
+              // The asset form modal will handle showing the QR generation interface
+              if (data.digitalTagType === 'qr' && createdAsset) {
+                console.log('Asset created successfully, ready for QR generation:', createdAsset);
+                // Return the created asset so the modal can show QR generation
+                return createdAsset;
+              } else {
+                // For non-QR assets, close the modal and show success message
+                setIsCreateModalOpen(false);
+                handleCreateSuccess();
+              }
+            } catch (error) {
+              // Don't close the modal on error, let the user see the error
+              throw error;
             }
           } else if (isEditModalOpen && editingAsset) {
-            await updateAsset(editingAsset._id!, transformedData);
-            setIsEditModalOpen(false);
-            setEditingAsset(null);
-            handleUpdateSuccess();
+            try {
+              await updateAsset(editingAsset._id!, transformedData);
+              
+              // Refresh the assets list to show the updated asset
+              console.log('Refreshing all assets - will filter by project on frontend');
+              await fetchAssets();
+              
+              setIsEditModalOpen(false);
+              setEditingAsset(null);
+              handleUpdateSuccess();
+            } catch (error) {
+              throw error;
+            }
           }
         }}
         loading={state.loading}
@@ -510,6 +645,7 @@ const AssetsList: React.FC = () => {
 // Asset Type Management Component
 const AssetTypeManagement: React.FC = () => {
   const { state, fetchAssetTypes, createAssetType, updateAssetType, deleteAssetType, clearError } = useAssetContext();
+  const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAssetType, setEditingAssetType] = useState<AssetType | null>(null);
@@ -536,7 +672,7 @@ const AssetTypeManagement: React.FC = () => {
         setSuccessMessage('Asset type deleted successfully!');
         setShowSuccess(true);
       } catch (error) {
-        console.error('Error deleting asset type:', error);
+        // Handle error silently or show user-friendly message
       }
     }
   };
@@ -565,8 +701,15 @@ const AssetTypeManagement: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Loading asset types...</h3>
-          <p className="text-gray-600 dark:text-gray-400">Please wait while we fetch your asset type data</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            {user?.projectName ? `Loading asset types for ${user.projectName}...` : 'Loading asset types...'}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            {user?.projectName 
+              ? `Please wait while we fetch asset type data for project: ${user.projectName}`
+              : 'Please wait while we fetch your asset type data'
+            }
+          </p>
         </div>
       </div>
     );
@@ -587,13 +730,26 @@ const AssetTypeManagement: React.FC = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-lg flex items-center justify-center shadow-sm">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
+            </svg>
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Asset Type Management</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Define and manage asset types for your facility</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  {user?.projectName ? `Define and manage asset types for project: ${user.projectName}` : 'Define and manage asset types for your facility'}
+                </p>
             </div>
           </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => fetchAssetTypes()}
+              variant="outline"
+              className="border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-400 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </Button>
           <Button 
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-gradient-to-r from-green-600 to-green-700 dark:from-green-700 dark:to-green-800 text-white hover:from-green-700 hover:to-green-800 dark:hover:from-green-800 dark:hover:to-green-900 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center gap-2"
@@ -603,6 +759,7 @@ const AssetTypeManagement: React.FC = () => {
             </svg>
             Add New Asset Type
           </Button>
+          </div>
         </div>
 
         {/* Search and Filter Section */}
@@ -630,8 +787,18 @@ const AssetTypeManagement: React.FC = () => {
         </div>
 
         {/* Results Count */}
-        <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
           Showing {filteredAssetTypes.length} of {state.assetTypes.length} asset types
+          </div>
+          {user?.projectName && (
+            <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md border border-green-200 dark:border-green-700">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+              </svg>
+              <span>Managing for project: {user.projectName}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -641,6 +808,8 @@ const AssetTypeManagement: React.FC = () => {
           title={searchTerm ? 'No matching asset types' : 'No asset types found'}
           description={searchTerm 
             ? 'Try adjusting your search terms'
+            : user?.projectName 
+              ? `No asset types found for project: ${user.projectName}. Get started by creating your first asset type.`
             : 'Get started by creating your first asset type to define custom fields for your assets'
           }
           actionText={searchTerm ? 'Clear Search' : 'Create Your First Asset Type'}
@@ -653,6 +822,19 @@ const AssetTypeManagement: React.FC = () => {
         />
       ) : (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          {/* Project Header for Asset Types */}
+          {user?.projectName && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b border-green-200 dark:border-green-700 px-6 py-3">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                  Project: <span className="font-bold">{user.projectName}</span>
+                </span>
+              </div>
+            </div>
+          )}
           <div className="p-6 border-b bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Asset Types Overview</h3>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Showing {filteredAssetTypes.length} asset types</p>
@@ -770,6 +952,7 @@ const AssetTypeManagement: React.FC = () => {
 // Main Page Component
 const ManageAssetsPage: React.FC = () => {
   const [showPermissions, setShowPermissions] = useState(false);
+  const { user } = useAuth();
 
   if (showPermissions) {
     return (
@@ -797,7 +980,9 @@ const ManageAssetsPage: React.FC = () => {
                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                      Admin Permissions
                    </h1>
-                   <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">Manage system-wide permissions and access controls</p>
+                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+                       {user?.projectName ? `Manage permissions for project: ${user.projectName}` : 'Manage system-wide permissions and access controls'}
+                     </p>
                    <div className="flex items-center gap-3">
                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -820,14 +1005,33 @@ const ManageAssetsPage: React.FC = () => {
                     className="flex items-center gap-2 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 shadow-sm text-sm"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7" />
                     </svg>
                     Back to Assets
                   </Button>
                 </div>
+                
+                {/* Project Info Banner for Permissions */}
+                {user?.projectName && (
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                        Managing permissions for project: <span className="font-bold">{user.projectName}</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Enhanced breadcrumb */}
                 <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  <span className="hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer transition-colors">Asset Management</span>
+                  <span className="hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer transition-colors">
+                    {user?.projectName ? `Asset Management (${user.projectName})` : 'Asset Management'}
+                  </span>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -860,7 +1064,9 @@ const ManageAssetsPage: React.FC = () => {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                       Asset Management
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Manage your assets and configurations with ease</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                      {user?.projectName ? `Managing assets for project: ${user.projectName}` : 'Manage your assets and configurations with ease'}
+                    </p>
                   </div>
                 </div>
                 <Button 
@@ -873,6 +1079,22 @@ const ManageAssetsPage: React.FC = () => {
                   Asset Permissions
                 </Button>
               </div>
+              
+              {/* Project Info Banner */}
+              {user?.projectName && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      Currently managing assets for project: <span className="font-bold">{user.projectName}</span>
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Enhanced Tabs with better styling */}

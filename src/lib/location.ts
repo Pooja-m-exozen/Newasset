@@ -91,6 +91,30 @@ export const geocodeAddress = async (address: string): Promise<LocationCoordinat
   }
 };
 
+// Reverse geocoding function to convert coordinates to address
+export const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyCqvcEKoqwRG5PBDIVp-MjHyjXKT3s4KY4';
+  
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`;
+    console.log('Reverse geocoding URL:', url);
+
+    const response = await fetch(url);
+    const data: GoogleMapsGeocodingResponse = await response.json();
+    
+    console.log('Reverse geocoding response:', data);
+    
+    if (data.status === 'OK' && data.results.length > 0) {
+      return data.results[0].formatted_address;
+    } else {
+      throw new Error(`Reverse geocoding failed: ${data.status}`);
+    }
+  } catch (error) {
+    console.error('Error reverse geocoding coordinates:', error);
+    throw new Error('Failed to get address from coordinates. Please try again.');
+  }
+};
+
 // Generic API request function with authentication
 const apiRequest = async <T>(
   endpoint: string,

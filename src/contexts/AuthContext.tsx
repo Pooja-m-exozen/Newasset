@@ -9,6 +9,7 @@ interface User {
   email: string
   role: string
   projectName?: string
+  projectId?: string
   status?: string
 }
 

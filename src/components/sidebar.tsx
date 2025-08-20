@@ -93,13 +93,13 @@ export default function Sidebar({ className }: SidebarProps) {
       href: "/admin/checklist",
       description: "Task checklists and inspections"
     },
-    {
-      id: "automation",
-      label: "Automation",
-      icon: Bot,
-      href: "/admin/automation",
-      description: "Automated workflows and processes"
-    },
+    // {
+    //   id: "automation",
+    //   label: "Automation",
+    //   icon: Bot,
+    //   href: "/admin/automation",
+    //   description: "Automated workflows and processes"
+    // },
     {
       id: "reports",
       label: "View All Logs/Reports",
@@ -119,12 +119,12 @@ export default function Sidebar({ className }: SidebarProps) {
           href: "/admin/viewalllogs/maintenance-logs",
           description: "Maintenance activities and schedules"
         },
-        {
-          id: "audit-trails",
-          label: "Audit Trails Logs",
-          href: "/admin/viewalllogs/audit-trails",
-          description: "System access and changes"
-        }
+        // {
+        //   id: "audit-trails",
+        //   label: "Audit Trails Logs",
+        //   href: "/admin/viewalllogs/audit-trails",
+        //   description: "System access and changes"
+        // }
       ]
     }
   ], [])

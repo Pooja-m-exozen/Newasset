@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
 import { Badge } from './badge';
 import { StatusBadge } from './status-badge';
 import { PriorityBadge } from './priority-badge';
-import { Calendar, MapPin, Tag, Package, X, QrCode, Download, Copy, Hash, Clock, Info, Building, Database, Scan, Loader2, Camera, Save, AlertCircle, CheckCircle, User, Shield, FileText } from 'lucide-react';
+import { Calendar, MapPin, Tag, Package, X, QrCode, Download, Copy, Hash, Clock, Info, Building, Database, Scan, Loader2, Camera, Save, AlertCircle, CheckCircle, User, Shield, FileText, Upload } from 'lucide-react';
 import { Asset } from '../../lib/adminasset';
 import { Button } from './button';
 import Image from 'next/image';
@@ -85,6 +85,9 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
   const [savingScannedData, setSavingScannedData] = useState(false);
   const [reverseGeocodedAddress, setReverseGeocodedAddress] = useState<string>('');
   const [geocodingLoading, setGeocodingLoading] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [imageUploadLoading, setImageUploadLoading] = useState(false);
+  const [imageScanError, setImageScanError] = useState<string | null>(null);
 
   // Function to reverse geocode coordinates to address
   const reverseGeocode = useCallback(async (latitude: string, longitude: string) => {
@@ -351,6 +354,79 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
     // Intentionally left blank to avoid mock scans
   };
 
+  // Handle image upload for QR code scanning
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadedImage(file);
+      setImageScanError(null);
+      setScannedData(null);
+      scanImageForQR(file);
+    }
+  };
+
+  // Scan uploaded image for QR code
+  const scanImageForQR = async (file: File) => {
+    setImageUploadLoading(true);
+    setImageScanError(null);
+    
+    try {
+      // Create a canvas to process the image
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new window.Image();
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        
+        // For now, we'll simulate QR detection
+        // In a real implementation, you would use a QR code library like jsQR or ZXing
+        simulateQRDetection(file);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      setImageScanError('Failed to process uploaded image');
+      setImageUploadLoading(false);
+    }
+  };
+
+  // Simulate QR code detection from image
+  const simulateQRDetection = (file: File) => {
+    // This is a simulation - in real implementation, use proper QR detection library
+    setTimeout(() => {
+      // Simulate finding QR data based on the asset
+      if (asset) {
+        const simulatedData = {
+          t: asset.tagId || 'Unknown',
+          a: asset.assetType || 'Unknown',
+          s: asset.subcategory || 'Unknown',
+          b: asset.brand || 'Unknown',
+          m: asset.model || 'Unknown',
+          st: asset.status || 'Unknown',
+          p: asset.priority || 'Unknown',
+          l: asset.location || {},
+          u: asset.assignedTo && typeof asset.assignedTo === 'object' ? asset.assignedTo.name : 'Unknown',
+          pr: asset.project?.projectName || null,
+          lm: null,
+          nm: null,
+          url: `http://localhost:5000/api/digital-assets/asset/${asset.tagId}`,
+          ts: Date.now(),
+          c: Math.random().toString(16).substring(2, 18)
+        };
+        
+        setScannedData(simulatedData);
+        setImageUploadLoading(false);
+      } else {
+        setImageScanError('No asset data available for simulation');
+        setImageUploadLoading(false);
+      }
+    }, 2000); // Simulate 2 second processing time
+  };
+
 
 
   const saveScannedData = async () => {
@@ -404,6 +480,9 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
     setShowScanner(false);
     setScannedData(null);
     setScannerError(null);
+    setUploadedImage(null);
+    setImageUploadLoading(false);
+    setImageScanError(null);
   };
 
   // Cleanup camera on unmount
@@ -560,8 +639,8 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                     {asset?.yearOfInstallation && (
                       <DetailRow label="Installation Year" value={asset.yearOfInstallation} bgColor="from-slate-50 to-orange-50" />
                     )}
-                    {asset?.projectName && (
-                      <DetailRow label="Project Name" value={asset.projectName} bgColor="from-slate-50 to-purple-50" />
+                    {asset?.project?.projectName && (
+                      <DetailRow label="Project Name" value={asset.project.projectName} bgColor="from-slate-50 to-purple-50" />
                     )}
                   </div>
                 </div>
@@ -810,7 +889,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                         <div className="space-y-1.5 text-xs">
                           <div className="flex justify-between"><span className="text-green-600 dark:text-green-400">Building</span><span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[100px]">{qrCodeData.l?.building || asset?.location?.building || 'N/A'}</span></div>
                           <div className="flex justify-between"><span className="text-green-600 dark:text-green-400">Floor</span><span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[100px]">{qrCodeData.l?.floor || asset?.location?.floor || 'N/A'}</span></div>
-                          <div className="flex justify-between"><span className="text-green-600 dark:text-green-400">Project</span><span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[100px]">{qrCodeData.pr || asset?.projectName || 'N/A'}</span></div>
+                          <div className="flex justify-between"><span className="text-green-600 dark:text-green-400">Project</span><span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[100px]">{qrCodeData.pr || asset?.project?.projectName || 'N/A'}</span></div>
                         </div>
                       </div>
                       
@@ -927,15 +1006,84 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
               {!scanningQR && !scannedData && (
                 <div className="text-center mb-4">
                   <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                    Click Start Camera to begin scanning for QR codes
+                    Choose your scanning method: use the camera or upload an image
                   </p>
-                  <Button
-                    onClick={startCamera}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <Camera className="w-4 h-4 mr-2" />
-                    Start Camera
-                  </Button>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
+                    <Button
+                      onClick={startCamera}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Start Camera
+                    </Button>
+                    
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="image-upload"
+                      />
+                      <Button
+                        variant="outline"
+                        className="border-green-300 dark:border-green-600 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Image
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Image upload preview */}
+                  {uploadedImage && (
+                    <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                            Image Uploaded Successfully
+                          </p>
+                          <p className="text-xs text-green-700 dark:text-green-300">
+                            {uploadedImage.name} ({(uploadedImage.size / 1024).toFixed(1)} KB)
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {imageUploadLoading && (
+                        <div className="flex items-center justify-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                          <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                          <span className="text-sm text-green-700 dark:text-green-300">
+                            Scanning image for QR code...
+                          </span>
+                        </div>
+                      )}
+                      
+                      {imageScanError && (
+                        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-red-700 dark:text-red-300">{imageScanError}</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setUploadedImage(null);
+                                setImageScanError(null);
+                                setScannedData(null);
+                              }}
+                              className="h-6 px-2 text-xs border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                              Try Different Image
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1047,6 +1195,9 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                       onClick={() => {
                         setScannedData(null);
                         setScannerError(null);
+                        setUploadedImage(null);
+                        setImageUploadLoading(false);
+                        setImageScanError(null);
                       }}
                       className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                     >

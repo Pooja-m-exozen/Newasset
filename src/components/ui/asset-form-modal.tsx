@@ -239,12 +239,28 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
   // Generate unique IDs
   const generateTagId = () => {
+    // Get project name initials (first letter of each word)
+    const projectName = user?.projectName || '';
+    const projectInitials = projectName
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('');
+    
+    // Get asset type initial (first letter)
+    const assetTypeInitial = formData.assetType ? formData.assetType.charAt(0).toUpperCase() : 'A';
+    
+    // Generate sequential number (you might want to get this from backend in production)
     const timestamp = Date.now();
-    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    const tagId = `ASSET${timestamp.toString().slice(-6)}${randomSuffix}`;
+    const sequentialNumber = (timestamp % 1000).toString().padStart(3, '0');
+    
+    // Format: ProjectInitials + AssetTypeInitial + SequentialNumber
+    // Example: "Sriram Suhana Project" + "Laptop" + "001" = "SSPL001"
+    const tagId = `${projectInitials}${assetTypeInitial}${sequentialNumber}`;
     
     setFormData(prev => ({ ...prev, tagId }));
   };
+
+
 
   const generateSerialNumber = () => {
     setGeneratingSerialNumber(true);
@@ -297,10 +313,11 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
         fetchUsersForProject(asset.project.projectName);
         console.log(`Editing asset for project: "${asset.project.projectName}"`);
       }
-    } else if (mode === 'create') {
+          } else if (mode === 'create') {
         // Create mode: set defaults and generate IDs
       setFormData(prev => ({
           ...prev, 
+          tagId: '', // Start with empty Tag ID
           assignedTo: '', 
           project: { 
             projectId: user?.projectId || user?.projectName || '', // Use projectName as fallback if projectId is missing
@@ -323,8 +340,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
         console.log(`Creating asset for project: "${user.projectName}"`);
       }
       
-      generateTagId();
-      generateSerialNumber();
+      // Don't generate initial tag ID - let user select asset type first
+      // generateSerialNumber(); // Keep this if you want serial number auto-generated
       setCoordinatesFound(false);
       setAddressInput('');
     }
@@ -363,6 +380,12 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       }
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
+      
+      // Auto-generate tag ID when asset type changes
+      if (field === 'assetType' && value) {
+        // Generate new Tag ID immediately when asset type changes
+        generateTagId();
+      }
     }
   };
 
@@ -863,49 +886,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label htmlFor="tagId" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                  Tag ID *
-                  <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-normal">
-                    Auto-generated
-                  </span>
-                </Label>
-                <div className="flex space-x-2">
-                  <Input
-                    id="tagId"
-                    value={formData.tagId}
-                    onChange={(e) => handleInputChange('tagId', e.target.value)}
-                    placeholder="e.g., ASSET000001"
-                    required
-                    className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={generateTagId}
-                    className="border-green-300 dark:border-green-600 hover:border-green-500 dark:hover:border-green-400 text-green-700 dark:text-green-300"
-                    title="Generate new Tag ID"
-                  >
-                    <Zap className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={generateSerialNumber}
-                    disabled={generatingSerialNumber}
-                    className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300"
-                    title="Generate new Serial Number"
-                  >
-                    {generatingSerialNumber ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-        
-              </div>
-              
-              <div>
                 <Label htmlFor="assetType" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Asset Type *</Label>
                 <Select 
                   value={formData.assetType} 
@@ -922,6 +902,34 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="tagId" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  Tag ID *
+                  <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-normal">
+                    Auto-generated
+                  </span>
+                </Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="tagId"
+                    value={formData.tagId}
+                    onChange={(e) => handleInputChange('tagId', e.target.value)}
+                    placeholder="e.g., SSPL001"
+                    required
+                    className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={generateTagId}
+                    className="border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-400 text-blue-700 dark:text-blue-300"
+                    title="Generate new Tag ID"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               <div>
@@ -1126,19 +1134,22 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     ) : projects.length === 0 ? (
                       <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">No projects available</div>
                     ) : (
-                      projects.map(project => (
-                        <SelectItem key={project._id} value={project._id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>
-                            <div>
-                              <div className="font-medium">{project.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {project.code} • {project.status}
+                      // Filter projects to show only the user's project
+                      projects
+                        .filter(project => project.name === user?.projectName)
+                        .map(project => (
+                          <SelectItem key={project._id} value={project._id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>
+                              <div>
+                                <div className="font-medium">{project.name}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {project.code} • {project.status}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </SelectItem>
-                      ))
+                          </SelectItem>
+                        ))
                     )}
                   </SelectContent>
                 </Select>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../../components/ui/error-display';
@@ -15,6 +15,7 @@ import { Input } from '../../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { 
   Activity,
   MapPin,
@@ -23,7 +24,6 @@ import {
   FileText,
   BarChart3,
   Edit,
-  Plus,
   Calendar,
   Clock,
   AlertCircle,
@@ -38,8 +38,23 @@ import {
   Server
 } from 'lucide-react';
 
+// API Base URL constant
+const API_BASE_URL = 'http://192.168.0.5:5021/api';
+
+interface AssetsResponse {
+  success?: boolean;
+  assets?: Asset[];
+  data?: Asset[];
+  items?: Asset[];
+  results?: Asset[];
+}
+
 function AssetsLogsContent() {
-  const { assets, loading, error, successMessage, clearError, clearSuccess } = useReportContext();
+  const { user } = useAuth();
+  const { assets: reportAssets, loading, error, successMessage, clearError, clearSuccess } = useReportContext();
+  const [projectAssets, setProjectAssets] = useState<Asset[]>([]);
+  const [assetTypes, setAssetTypes] = useState<Array<{_id: string, name: string}>>([]);
+  const [selectedAssetType, setSelectedAssetType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
@@ -51,9 +66,109 @@ function AssetsLogsContent() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
+  // Fetch asset types from API
+  const fetchAssetTypes = async () => {
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/asset-types`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch asset types: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.assetTypes) {
+        setAssetTypes(data.assetTypes);
+      }
+    } catch (err) {
+      console.error('Error fetching asset types:', err);
+    }
+  };
+
+  // Fetch assets from API and filter by user's project
+  const fetchProjectAssets = async () => {
+    try {
+      if (!user?.projectName) {
+        throw new Error('User project not found. Please login again.');
+      }
+
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/assets`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        }
+        throw new Error(`Failed to fetch assets: ${response.status}`);
+      }
+
+      const data: AssetsResponse = await response.json();
+      
+      let allAssets: Asset[] = [];
+      
+      // Extract assets from response
+      if (data.success && data.assets) {
+        allAssets = data.assets;
+      } else if (data.assets) {
+        allAssets = data.assets;
+      } else if (Array.isArray(data)) {
+        allAssets = data;
+      } else {
+        const possibleAssets = data.data || data.items || data.results || [];
+        if (Array.isArray(possibleAssets)) {
+          allAssets = possibleAssets as Asset[];
+        }
+      }
+
+      // Filter assets by user's project name
+      const userAssets = allAssets.filter(asset => {
+        // Check both the old projectName property and the new nested project structure
+        const assetProjectName = asset.project?.projectName || asset.projectName;
+        return assetProjectName === user.projectName;
+      });
+
+      if (userAssets.length === 0) {
+        console.warn(`No assets found for project: ${user.projectName}`);
+      }
+      
+      setProjectAssets(userAssets);
+    } catch (err) {
+      console.error('Error fetching project assets:', err);
+      // Don't set error here as we still want to show the page
+    }
+  };
+
+  // Load project assets and asset types when user changes
+  useEffect(() => {
+    if (user?.projectName) {
+      fetchProjectAssets();
+      fetchAssetTypes();
+    }
+  }, [user?.projectName]);
+
   const filteredAssets = useMemo(() => {
     // Transform assets to match Report library's Asset interface
-    const transformedAssets = assets.map(asset => ({
+    const transformedAssets = projectAssets.map(asset => ({
       ...asset,
       createdBy: asset.createdBy ? {
         _id: asset.createdBy,
@@ -62,7 +177,12 @@ function AssetsLogsContent() {
       } : undefined
     }));
     
-    const filtered = filterAssets(transformedAssets as Asset[], searchTerm, filterStatus, filterPriority, filterType);
+    let filtered = filterAssets(transformedAssets as Asset[], searchTerm, filterStatus, filterPriority, filterType);
+    
+    // Additional filtering by selected asset type
+    if (selectedAssetType !== 'all') {
+      filtered = filtered.filter(asset => asset.assetType === selectedAssetType);
+    }
     
     // Sort assets
     filtered.sort((a, b) => {
@@ -82,13 +202,14 @@ function AssetsLogsContent() {
     });
     
     return filtered;
-  }, [assets, searchTerm, filterStatus, filterPriority, filterType, sortBy, sortOrder]);
+  }, [projectAssets, searchTerm, filterStatus, filterPriority, filterType, selectedAssetType, sortBy, sortOrder]);
 
   const handleClearFilters = () => {
     setSearchTerm('');
     setFilterStatus('all');
     setFilterPriority('all');
     setFilterType('all');
+    setSelectedAssetType('all');
     setSortBy('updatedAt');
     setSortOrder('desc');
   };
@@ -201,6 +322,71 @@ function AssetsLogsContent() {
     return 'No location specified';
   };
 
+  // Custom table component for the specific columns
+  const ProjectAssetsTable = ({ assets }: { assets: Asset[] }) => {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-border bg-muted/50">
+              <th className="text-left p-3 font-medium text-sm text-muted-foreground">S.No</th>
+              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Asset Name</th>
+              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Asset Tag Number</th>
+              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Vendor Name</th>
+              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Asset Category</th>
+              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            {assets.map((asset, index) => (
+              <tr key={asset._id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                <td className="p-3 text-sm text-muted-foreground">{index + 1}</td>
+                <td className="p-3">
+                  <div className="font-medium text-foreground">
+                    {asset.brand} {asset.model || ''}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {asset.assetType}
+                  </div>
+                </td>
+                <td className="p-3">
+                  <div className="font-mono text-sm text-foreground">
+                    {asset.tagId || 'N/A'}
+                  </div>
+                  {asset.serialNumber && (
+                    <div className="text-xs text-muted-foreground">
+                      SN: {asset.serialNumber}
+                    </div>
+                  )}
+                </td>
+                <td className="p-3 text-sm text-foreground">
+                  {/* Use customFields.Vendor Name if available, otherwise fallback to brand */}
+                  {(() => {
+                    const vendorName = asset.customFields?.['Vendor Name'];
+                    return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
+                  })()}
+                </td>
+                <td className="p-3">
+                  <Badge variant="outline" className="text-xs">
+                    {asset.assetType || 'Unknown'}
+                  </Badge>
+                </td>
+                <td className="p-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <div className="text-sm text-foreground">
+                      {formatLocation(asset.location)}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen bg-gradient-to-br from-background to-muted">
@@ -223,8 +409,12 @@ function AssetsLogsContent() {
         <header className="bg-card border-b border-border px-4 sm:px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Assets Logs</h1>
-              <p className="text-sm sm:text-base text-muted-foreground">Track asset activity, changes, and maintenance history</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                {selectedAssetType !== 'all' ? `${selectedAssetType} Assets` : 'Assets'} Logs
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Track {selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'asset'} activity, changes, and maintenance history for {user?.projectName || 'your project'}
+              </p>
             </div>
           </div>
         </header>
@@ -246,22 +436,69 @@ function AssetsLogsContent() {
             />
           )}
 
+          {/* Project Info Banner */}
+          {user?.projectName && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                  <Building2 className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Currently viewing {selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'all'} assets for project: <span className="font-bold">{user.projectName}</span>
+                  {selectedAssetType !== 'all' && (
+                    <span className="ml-2 text-blue-600 dark:text-blue-400">
+                      (Filtered by {selectedAssetType})
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Search and Filters */}
           <Card className="border-0 shadow-sm">
             <CardContent className="p-3 sm:p-6">
               <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-                <div className="w-full max-w-md">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search assets, users, tags, or descriptions..."
-                      className="pl-10 h-11 text-sm"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex flex-col lg:flex-row gap-4 flex-1">
+                  <div className="w-full max-w-md">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search assets, users, tags, or descriptions..."
+                        className="pl-10 h-11 text-sm"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Asset Type Dropdown */}
+                  <div className="w-full max-w-md">
+                    <Select value={selectedAssetType} onValueChange={setSelectedAssetType}>
+                      <SelectTrigger className="h-11 text-sm">
+                        <SelectValue placeholder="Select Asset Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Asset Types</SelectItem>
+                        {assetTypes.map(type => (
+                          <SelectItem key={type._id} value={type.name}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                  </div>
+                
+                <Button
+                  variant="outline"
+                  onClick={fetchProjectAssets}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh Assets
+                </Button>
+              </div>
                   
               {/* Filters */}
               {showFilters && (
@@ -327,7 +564,8 @@ function AssetsLogsContent() {
             
               <AssetPDFDownload
                 assets={filteredAssets}
-                filename="assets-logs-report.pdf"
+                filename={`${user?.projectName || 'project'}-${selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'all'}-asset-details.pdf`}
+                selectedAssetType={selectedAssetType}
                 onDownload={handlePDFDownload}
               />
               <AssetExcelDownload
@@ -340,11 +578,11 @@ function AssetsLogsContent() {
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                {filteredAssets.length} of {assets.length} assets
+                {filteredAssets.length} of {projectAssets.length} assets
               </div>
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
-                {Math.round((filteredAssets.length / assets.length) * 100)}% filtered
+                {projectAssets.length > 0 ? Math.round((filteredAssets.length / projectAssets.length) * 100) : 0}% filtered
               </div>
             </div>
           </div>
@@ -358,7 +596,10 @@ function AssetsLogsContent() {
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-3">No assets found</h3>
                 <p className="text-muted-foreground mb-6 text-lg max-w-md mx-auto">
-                  No assets match your current filters. Try adjusting your search criteria or clearing the filters.
+                  {projectAssets.length === 0 
+                    ? `No assets found for project: ${user?.projectName || 'your project'}`
+                    : 'No assets match your current filters. Try adjusting your search criteria or clearing the filters.'
+                  }
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <Button
@@ -370,10 +611,11 @@ function AssetsLogsContent() {
                   </Button>
                   <Button
                     variant="outline"
+                    onClick={fetchProjectAssets}
                     className="flex items-center gap-2"
                   >
-                    <Plus className="w-4 h-4" />
-                    Add New Asset
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh Assets
                   </Button>
                 </div>
               </CardContent>
@@ -387,9 +629,9 @@ function AssetsLogsContent() {
                       <Building2 className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-foreground">Asset Inventory</h2>
+                      <h2 className="text-xl font-bold text-foreground">Project Assets Inventory</h2>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Detailed view of all tracked assets and their current status
+                        Detailed view of all tracked assets for {user?.projectName || 'your project'}
                       </p>
                     </div>
                   </div>
@@ -402,13 +644,7 @@ function AssetsLogsContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <AssetTable
-                  assets={filteredAssets}
-                  sortBy={sortBy}
-                  sortOrder={sortOrder}
-                  onSort={handleSort}
-                  onViewDetails={handleViewDetails}
-                />
+                <ProjectAssetsTable assets={filteredAssets} />
               </CardContent>
             </Card>
           ) : (

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Eye, EyeOff, User, Mail, Lock, Shield, CheckCircle, AlertCircle, ArrowLeft, Save, Key } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { apiService } from "@/lib/api"
+import { useAuth } from "@/contexts/AuthContext"
 import Link from "next/link"
 
 // Define User interface
@@ -17,6 +18,7 @@ interface User {
 }
 
 export default function ProfilePage() {
+  const { user: authUser } = useAuth()
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile')
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -202,7 +204,7 @@ export default function ProfilePage() {
         {/* Header */}
         <div className="mb-8">
           <Link 
-            href="/dashboard" 
+            href={authUser?.role === 'viewer' ? '/viewer/dashboard' : '/admin/dashboard'} 
             className="inline-flex items-center space-x-2 text-sm text-gray-600 hover:text-blue-600 font-medium transition-colors mb-4"
           >
             <ArrowLeft className="w-4 h-4" />

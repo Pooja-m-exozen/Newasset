@@ -45,89 +45,125 @@ interface SidebarProps {
 export default function Sidebar({ className }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [activeItem, setActiveItem] = useState("dashboard")
   const [expandedSubmenu, setExpandedSubmenu] = useState<string | null>(null)
 
-  const navigationItems: NavigationItem[] = useMemo(() => [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: Home,
-      href: "/admin/dashboard",
-      description: "Main dashboard and overview"
-    },
-    {
-      id: "users",
-      label: "Manage Users",
-      icon: Users,
-      href: "/admin/manageusers",
-      description: "User management and permissions"
-    },
-    {
-      id: "assets",
-      label: "Manage Assets",
-      icon: Building2,
-      href: "/admin/manageassets",
-      description: "Asset tracking and maintenance"
-    },
-    {
-      id: "locations",
-      label: "Manage Location",
-      icon: MapPin,
-      href: "/admin/managelocation",
-      description: "Location and site management"
-    },
-    {
-      id: "digital-assets",
-      label: "Digital Assets",
-      icon: FileDigit,
-      href: "/admin/digital-assets/generate",
-      description: "Create and generate digital assets"
-    },
-    {
-      id: "checklist",
-      label: "Checklist",
-      icon: CheckSquare,
-      href: "/admin/checklist",
-      description: "Task checklists and inspections"
-    },
-    // {
-    //   id: "automation",
-    //   label: "Automation",
-    //   icon: Bot,
-    //   href: "/admin/automation",
-    //   description: "Automated workflows and processes"
-    // },
-    {
-      id: "reports",
-      label: "View All Logs/Reports",
-      icon: FileText,
-      href: "/admin/viewalllogs",
-      description: "Reports and audit trails",
-      submenu: [
-        {
-          id: "assets-logs",
-          label: "Assets Logs",
-          href: "/admin/viewalllogs/assets-logs",
-          description: "Asset activity and changes"
-        },
-        {
-          id: "maintenance-logs",
-          label: "Maintenance Logs",
-          href: "/admin/viewalllogs/maintenance-logs",
-          description: "Maintenance activities and schedules"
-        },
-        // {
-        //   id: "audit-trails",
-        //   label: "Audit Trails Logs",
-        //   href: "/admin/viewalllogs/audit-trails",
-        //   description: "System access and changes"
-        // }
-      ]
+  // Determine user role and show appropriate navigation
+  const isViewer = user?.role === 'viewer'
+  const isAdmin = user?.role === 'admin'
+
+  const navigationItems: NavigationItem[] = useMemo(() => {
+    // Admin navigation items
+    const adminItems: NavigationItem[] = [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: Home,
+        href: "/admin/dashboard",
+        description: "Main dashboard and overview"
+      },
+      {
+        id: "users",
+        label: "Manage Users",
+        icon: Users,
+        href: "/admin/manageusers",
+        description: "User management and permissions"
+      },
+      {
+        id: "assets",
+        label: "Manage Assets",
+        icon: Building2,
+        href: "/admin/manageassets",
+        description: "Asset tracking and maintenance"
+      },
+      {
+        id: "locations",
+        label: "Manage Location",
+        icon: MapPin,
+        href: "/admin/managelocation",
+        description: "Location and site management"
+      },
+      {
+        id: "digital-assets",
+        label: "Digital Assets",
+        icon: FileDigit,
+        href: "/admin/digital-assets/generate",
+        description: "Create and generate digital assets"
+      },
+      {
+        id: "checklist",
+        label: "Checklist",
+        icon: CheckSquare,
+        href: "/admin/checklist",
+        description: "Task checklists and inspections"
+      },
+      {
+        id: "reports",
+        label: "View All Logs/Reports",
+        icon: FileText,
+        href: "/admin/viewalllogs",
+        description: "Reports and audit trails",
+        submenu: [
+          {
+            id: "assets-logs",
+            label: "Assets Logs",
+            href: "/admin/viewalllogs/assets-logs",
+            description: "Asset activity and changes"
+          },
+          {
+            id: "maintenance-logs",
+            label: "Maintenance Logs",
+            href: "/admin/viewalllogs/maintenance-logs",
+            description: "Maintenance activities and schedules"
+          }
+        ]
+      }
+    ]
+
+    // Viewer navigation items
+    const viewerItems: NavigationItem[] = [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: Home,
+        href: "/viewer/dashboard",
+        description: "View asset overview and status"
+      },
+      {
+        id: "assets",
+        label: "View Assets",
+        icon: Building2,
+        href: "/viewer/assets",
+        description: "Browse and search assets"
+      },
+      {
+        id: "locations",
+        label: "View checklist",
+        icon: MapPin,
+        href: "/viewer/checklist",
+        description: "View checklist information"
+      },
+      {
+        id: "reports",
+        label: "View Reports",
+        icon: FileText,
+        href: "/viewer/reports",
+        description: "View asset reports and logs"
+      }
+    ]
+
+    // Return appropriate navigation based on user role
+    if (isViewer) {
+      return viewerItems
+    } else if (isAdmin) {
+      return adminItems
+    } else {
+      // Default to admin items if role is not determined
+      return adminItems
     }
-  ], [])
+  }, [isViewer, isAdmin])
 
   // Update active item based on current pathname
   useEffect(() => {

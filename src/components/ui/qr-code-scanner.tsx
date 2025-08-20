@@ -524,7 +524,7 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Project:</span>
-                    <span>{currentScannedAsset.asset.projectName}</span>
+                                            <span>{currentScannedAsset.asset.project?.projectName || currentScannedAsset.asset.projectName}</span>
                   </div>
                 </div>
               </div>

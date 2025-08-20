@@ -9,6 +9,7 @@ import { Label } from './label'
 import { Badge } from './badge'
 import { generateAllDigitalAssets, type BulkDigitalAssetsGenerationResponse } from '@/lib/DigitalAssets'
 import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
 import { QrCode, Barcode, Wifi, Info, Hash, MapPin, Building, Settings, Package, CheckCircle, Search } from 'lucide-react'
@@ -31,7 +32,9 @@ const BARCODE_FORMATS = [
 ]
 
 export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGeneratorProps) {
-  const { assets, fetchAssets, loading: assetsLoading } = useDigitalAssets()
+  const { user } = useAuth()
+  const [assets, setAssets] = useState<any[]>([])
+  const [assetsLoading, setAssetsLoading] = useState(false)
   const [qrSize, setQrSize] = useState(300)
   const [barcodeFormat, setBarcodeFormat] = useState('code128')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -45,6 +48,70 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
   const [searchTerm, setSearchTerm] = useState('')
   const [qrImageLoading, setQrImageLoading] = useState(false)
   const [barcodeImageLoading, setBarcodeImageLoading] = useState(false)
+
+  // Fetch assets from API and filter by user's project
+  const fetchAssets = useCallback(async () => {
+    try {
+      setAssetsLoading(true)
+      
+      if (!user?.projectName) {
+        console.warn('User project not found')
+        return
+      }
+
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+      if (!token) {
+        console.warn('Authentication token not found')
+        return
+      }
+
+      const response = await fetch('http://192.168.0.5:5021/api/assets', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assets: ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      let allAssets: any[] = []
+      
+      // Extract assets from response
+      if (data.success && data.assets) {
+        allAssets = data.assets
+      } else if (data.assets) {
+        allAssets = data.assets
+      } else if (Array.isArray(data)) {
+        allAssets = data
+      } else {
+        const possibleAssets = data.data || data.items || data.results || []
+        if (Array.isArray(possibleAssets)) {
+          allAssets = possibleAssets
+        }
+      }
+
+      // Filter assets by user's project name
+      const userAssets = allAssets.filter((asset: any) => {
+        // Check both the old projectName property and the new nested project structure
+        const assetProjectName = asset.project?.projectName || asset.projectName
+        console.log(`Asset ${asset.tagId}: projectName=${asset.projectName}, project.projectName=${asset.project?.projectName}, userProject=${user.projectName}`)
+        return assetProjectName === user.projectName
+      })
+
+      console.log(`Found ${userAssets.length} assets for project: ${user.projectName}`)
+      console.log('All assets before filtering:', allAssets.map(a => ({ tagId: a.tagId, projectName: a.projectName, project: a.project })))
+      setAssets(userAssets)
+    } catch (err) {
+      console.error('Error fetching assets:', err)
+    } finally {
+      setAssetsLoading(false)
+    }
+  }, [user?.projectName])
 
   // Load assets on component mount
   useEffect(() => {
@@ -112,7 +179,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
           setBarcodeImageLoading(false)
         }
       }, 10000) // 10 second timeout
-      // Refresh global assets so other views (e.g., AssetsViewer) reflect newly stored digital assets
+      // Refresh assets to reflect newly stored digital assets
       try {
         await fetchAssets()
       } catch (e) {
@@ -150,6 +217,22 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
         />
       )}
       
+      {/* Project Info Banner */}
+      {user?.projectName && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              Currently working with project: <span className="font-bold">{user.projectName}</span>
+            </span>
+          </div>
+        </div>
+      )}
+
       <Card className="shadow-sm">
         <CardHeader className="pb-6">
           <div className="flex items-center space-x-3">
@@ -161,7 +244,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                 Bulk Digital Assets Generator
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-1">
-                Select an asset and generate QR code, barcode, and NFC data simultaneously
+                Select an asset from your project and generate QR code, barcode, and NFC data simultaneously
               </CardDescription>
             </div>
           </div>
@@ -204,25 +287,15 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                     </div>
                   ) : filteredAssets.length > 0 ? (
                     filteredAssets.map((asset) => (
-                      <SelectItem key={asset._id} value={asset.tagId} className="py-3">
-                        <div className="flex flex-col space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold">{asset.tagId}</span>
-                            <Badge 
-                              variant={asset.status === 'active' ? 'default' : 'secondary'} 
-                              className="text-xs px-2 py-1"
-                            >
-                              {asset.status}
-                            </Badge>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <p className="font-medium">{asset.assetType} - {asset.brand} {asset.model}</p>
-                            <p className="flex items-center space-x-1">
-                              <Building className="h-3 w-3" />
-                              <span>{asset.location?.building || 'N/A'}, {asset.location?.floor || 'N/A'}</span>
-                            </p>
-                            <p className="text-primary font-mono text-xs">ID: {asset._id}</p>
-                          </div>
+                      <SelectItem key={asset._id} value={asset.tagId} className="py-2">
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium">{asset.tagId}</span>
+                          <Badge 
+                            variant={asset.status === 'active' ? 'default' : 'secondary'} 
+                            className="text-xs px-2 py-0.5"
+                          >
+                            {asset.status}
+                          </Badge>
                         </div>
                       </SelectItem>
                     ))
@@ -236,11 +309,14 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                 </SelectContent>
               </Select>
               
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>
-                  {assetsLoading ? 'Loading...' : `${filteredAssets.length} of ${assets.length} assets shown`}
-                </span>
-                <span>Select an asset and click &quot;Generate All Digital Assets&quot;</span>
+              <div className="text-center text-xs text-muted-foreground">
+                {assetsLoading ? 'Loading...' : (
+                  assets.length === 0 ? (
+                    <span className="text-red-500">⚠️ No assets found for project: {user?.projectName}</span>
+                  ) : (
+                    <span>{filteredAssets.length} assets available</span>
+                  )
+                )}
               </div>
             </div>
           </div>

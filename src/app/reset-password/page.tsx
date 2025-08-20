@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Eye, EyeOff, User, Mail, Lock, Shield, CheckCircle, AlertCircle, ArrowLeft, Save, Key } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { apiService } from "@/lib/api"
+import { useAuth } from "@/contexts/AuthContext"
 import Link from "next/link"
 
 // Define User interface
@@ -17,6 +18,7 @@ interface User {
 }
 
 export default function ProfilePage() {
+  const { user: authUser } = useAuth()
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile')
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})

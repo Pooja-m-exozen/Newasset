@@ -7,6 +7,7 @@ import { LoadingSpinner } from './loading-spinner'
 import { ErrorDisplay } from './error-display'
 import { AssetTable } from './asset-table'
 import { Asset } from '../../lib/Report'
+import { useAuth } from '../../contexts/AuthContext'
 
 import { ExportButtons } from './export-buttons'
 import { Input } from './input'
@@ -22,7 +23,10 @@ import {
   Copy,
   X,
   Building,
-  Calendar
+  Calendar,
+  Globe,
+  User,
+  MapPin
 } from 'lucide-react'
 import { StatusBadge } from './status-badge'
 import { PriorityBadge } from './priority-badge'
@@ -31,30 +35,6 @@ import { ScrollArea } from './scroll-area'
 
 // API Base URL constant
 const API_BASE_URL = 'http://192.168.0.5:5021/api'
-
-// Define proper types for assets
-interface NFCData {
-  type: string
-  id: string
-  assetType: string
-  subcategory: string
-  brand: string
-  model: string
-  status: string
-  priority: string
-  location: {
-    building?: string
-    floor?: string
-    room?: string
-  }
-  assignedTo: string
-  projectName: string
-  timestamp: string
-  checksum: string
-  signature: string
-}
-
-
 
 interface AssetsResponse {
   success?: boolean
@@ -69,15 +49,13 @@ interface AssetsViewerProps {
 }
 
 export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) => {
+  const { user } = useAuth()
   const [assets, setAssets] = useState<Asset[]>([])
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-  const [nfcViewData, setNfcViewData] = useState<NFCData | null>(null)
-  const [nfcLoading, setNfcLoading] = useState(false)
-  const [nfcError, setNfcError] = useState<string | null>(null)
   const [qrImgSrc, setQrImgSrc] = useState<string | null>(null)
   const [barcodeImgSrc, setBarcodeImgSrc] = useState<string | null>(null)
   const [qrLoading, setQrLoading] = useState(false)
@@ -90,13 +68,17 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
     location: ''
   })
 
-  // Fetch assets from API
+  // Fetch assets from API and filter by user's project
   const fetchAssets = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
       
-      const token = localStorage.getItem('authToken')
+      if (!user?.projectName) {
+        throw new Error('User project not found. Please login again.')
+      }
+
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
       if (!token) {
         throw new Error('Authentication token not found')
       }
@@ -110,34 +92,42 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please login again.')
+        }
         throw new Error(`Failed to fetch assets: ${response.status}`)
       }
 
       const data: AssetsResponse = await response.json()
       
-      // Just set whatever response comes from the API
+      let allAssets: Asset[] = []
+      
+      // Extract assets from response
       if (data.success && data.assets) {
-        setAssets(data.assets)
-        setFilteredAssets(data.assets)
+        allAssets = data.assets
       } else if (data.assets) {
-        // If no success flag but assets exist, use them anyway
-        setAssets(data.assets)
-        setFilteredAssets(data.assets)
+        allAssets = data.assets
       } else if (Array.isArray(data)) {
-        // If response is directly an array
-        setAssets(data)
-        setFilteredAssets(data)
+        allAssets = data
       } else {
-        // If response has different structure, try to extract assets
         const possibleAssets = data.data || data.items || data.results || []
         if (Array.isArray(possibleAssets)) {
-          setAssets(possibleAssets as Asset[])
-          setFilteredAssets(possibleAssets as Asset[])
-        } else {
-          // Just set the entire response as assets
-          setAssets([data as Asset])
-          setFilteredAssets([data as Asset])
+          allAssets = possibleAssets as Asset[]
         }
+      }
+
+      // Filter assets by user's project name
+      const userAssets = allAssets.filter(asset => {
+        // Check both the old projectName property and the new nested project structure
+        const assetProjectName = asset.project?.projectName || asset.projectName
+        return assetProjectName === user.projectName
+      })
+
+      if (userAssets.length === 0) {
+        setError(`No assets found for project: ${user.projectName}`)
+      } else {
+        setAssets(userAssets)
+        setFilteredAssets(userAssets)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while fetching assets')
@@ -145,12 +135,26 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [user?.projectName])
 
   // Helper to extract safely stored digital asset URLs for display
-  const getQrUrl = (asset: Asset): string | null => asset?.digitalAssets?.qrCode?.url ? `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}` : null
-  const getBarcodeUrl = (asset: Asset): string | null => asset?.digitalAssets?.barcode?.url ? `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}` : null
-  const getNfcUrl = (asset: Asset): string | null => asset?.digitalAssets?.nfcData?.url ? `http://192.168.0.5:5021${asset.digitalAssets.nfcData.url}` : null
+  const getQrUrl = (asset: Asset): string | null => {
+    return asset?.digitalAssets?.qrCode?.url 
+      ? `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}` 
+      : null
+  }
+
+  const getBarcodeUrl = (asset: Asset): string | null => {
+    return asset?.digitalAssets?.barcode?.url 
+      ? `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}` 
+      : null
+  }
+
+  const getNfcUrl = (asset: Asset): string | null => {
+    return asset?.digitalAssets?.nfcData?.url 
+      ? `http://192.168.0.5:5021${asset.digitalAssets.nfcData.url}` 
+      : null
+  }
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -174,38 +178,6 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
     }
   }
 
-  // Load NFC JSON (pretty view) when modal opens
-  useEffect(() => {
-    const url = selectedAsset ? getNfcUrl(selectedAsset) : null
-    if (!isViewModalOpen || !url) {
-      setNfcViewData(null)
-      setNfcLoading(false)
-      setNfcError(null)
-      return
-    }
-    let cancelled = false
-    ;(async () => {
-      try {
-        setNfcLoading(true)
-        setNfcError(null)
-        const res = await fetch(url)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const json = await res.json()
-        if (!cancelled) {
-          // Some files may wrap data under "data"
-          setNfcViewData(json?.data ?? json)
-        }
-      } catch {
-        if (!cancelled) setNfcError('Failed to load NFC data')
-      } finally {
-        if (!cancelled) setNfcLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [isViewModalOpen, selectedAsset])
-
   // Prepare QR/Barcode images when modal opens
   useEffect(() => {
     if (!selectedAsset) {
@@ -215,12 +187,16 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
       setBarcodeLoading(false)
       return
     }
+    
+    // Load QR Code
     const qrUrl = getQrUrl(selectedAsset)
-    const barcodeUrl = getBarcodeUrl(selectedAsset)
     if (qrUrl) {
       setQrLoading(true)
       setQrImgSrc(qrUrl)
     }
+    
+    // Load Barcode
+    const barcodeUrl = getBarcodeUrl(selectedAsset)
     if (barcodeUrl) {
       setBarcodeLoading(true)
       setBarcodeImgSrc(barcodeUrl)
@@ -259,20 +235,21 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
     }
   }
 
-  // Apply filters - handle any property structure
+
+
+  // Apply filters - handle new asset structure
   useEffect(() => {
     let filtered = [...assets]
     
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
       filtered = filtered.filter(asset => {
-        // Try to search in common properties, handle undefined safely
-        const tagId = asset?.tagId || ''
-        const assetType = asset?.assetType || ''
-        const brand = asset?.brand || ''
-        const model = asset?.model || ''
-        const assignedTo = typeof asset?.assignedTo === 'object' ? asset.assignedTo.name : asset?.assignedTo || ''
-        const location = typeof asset?.location === 'object' ? asset.location.building : asset?.location || ''
+        const tagId = asset.tagId || ''
+        const assetType = asset.assetType || ''
+        const brand = asset.brand || ''
+        const model = asset.model || ''
+        const assignedTo = asset.assignedTo?.name || ''
+        const location = asset.location?.building || ''
         
         return (
           tagId.toLowerCase().includes(searchLower) ||
@@ -280,39 +257,39 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
           brand.toLowerCase().includes(searchLower) ||
           model.toLowerCase().includes(searchLower) ||
           assignedTo.toLowerCase().includes(searchLower) ||
-          (location || '').toLowerCase().includes(searchLower)
+          location.toLowerCase().includes(searchLower)
         )
       })
     }
     
     if (filters.assetType) {
       filtered = filtered.filter(asset => 
-        asset?.assetType === filters.assetType
+        asset.assetType === filters.assetType
       )
     }
     
     if (filters.status) {
       filtered = filtered.filter(asset => 
-        asset?.status === filters.status
+        asset.status === filters.status
       )
     }
     
     if (filters.priority) {
       filtered = filtered.filter(asset => 
-        asset?.priority === filters.priority
+        asset.priority === filters.priority
       )
     }
     
     if (filters.location) {
       filtered = filtered.filter(asset => {
-        const building = typeof asset?.location === 'object' ? asset.location.building || '' : asset?.location || ''
-        const floor = typeof asset?.location === 'object' ? asset.location.floor || '' : ''
-        const room = typeof asset?.location === 'object' ? asset.location.room || '' : ''
+        const building = asset.location?.building || ''
+        const floor = asset.location?.floor || ''
+        const room = asset.location?.room || ''
         
         return (
-          (building || '').includes(filters.location) ||
-          (floor || '').includes(filters.location) ||
-          (room || '').includes(filters.location)
+          building.includes(filters.location) ||
+          floor.includes(filters.location) ||
+          room.includes(filters.location)
         )
       })
     }
@@ -326,42 +303,15 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
     setIsViewModalOpen(true)
   }
 
-  // Handle asset edit
-  // const handleEditAsset = (asset: Asset) => {
-  //   // TODO: Implement edit functionality
-  //   console.log('Edit asset:', asset)
-  // }
-
-  // Handle asset delete
-  // const handleDeleteAsset = (assetId: string) => {
-  //   // TODO: Implement delete functionality
-  //   console.log('Delete asset:', assetId)
-  // }
-
-  // Handle QR generation
-  // const handleGenerateQR = (asset: Asset) => {
-  //   // TODO: Implement QR generation
-  //   console.log('Generate QR for asset:', asset)
-  // }
-
   // Load assets on component mount
   useEffect(() => {
     fetchAssets()
   }, [fetchAssets])
 
   // Get unique values for filter options
-  const assetTypes = [...new Set(assets.map(asset => asset?.assetType || '').filter(Boolean))]
-  const statuses = [...new Set(assets.map(asset => asset?.status || '').filter(Boolean))]
-  const priorities = [...new Set(assets.map(asset => asset?.priority || '').filter(Boolean))]
-  // const locations = [...new Set(assets.map(asset => {
-  //   if (typeof asset?.location === 'object' && asset.location?.building) {
-  //     return asset.location.building
-  //   }
-  //   if (typeof asset?.location === 'string') {
-  //     return asset.location
-  //   }
-  //   return asset?.building || ''
-  // }).filter(Boolean))]
+  const assetTypes = [...new Set(assets.map(asset => asset.assetType).filter(Boolean) as string[])]
+  const statuses = [...new Set(assets.map(asset => asset.status).filter(Boolean) as string[])]
+  const priorities = [...new Set(assets.map(asset => asset.priority).filter(Boolean) as string[])]
 
   if (isLoading) {
     return (
@@ -385,9 +335,9 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Assets</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Project Assets</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage and view all your digital assets
+            {user?.projectName ? `Managing assets for ${user.projectName}` : 'Loading project...'}
           </p>
         </div>
         
@@ -405,79 +355,21 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
         </div>
       </div>
 
-      {/* Removed generator cards for a focused viewer */}
-      {/*
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <QrCode className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">QR Code Generator</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Generate QR codes for assets</p>
-              </div>
+      {/* Project Info Banner */}
+      {user?.projectName && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
             </div>
-            <Button 
-              onClick={() => {
-                // TODO: Open QR code generator modal
-                console.log('Open QR Code Generator')
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Generate QR Code
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-green-500 rounded-lg">
-                <Barcode className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Barcode Generator</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Generate barcodes for assets</p>
-              </div>
-            </div>
-            <Button 
-              onClick={() => {
-                // TODO: Open barcode generator modal
-                console.log('Open Barcode Generator')
-              }}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              Generate Barcode
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-purple-500 rounded-lg">
-                <Smartphone className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">NFC Generator</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Generate NFC data for assets</p>
-              </div>
-            </div>
-            <Button 
-              onClick={() => {
-                // TODO: Open NFC generator modal
-                console.log('Open NFC Generator')
-              }}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              Generate NFC
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-      */}
+            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              Currently viewing assets for project: <span className="font-bold">{user.projectName}</span>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <Card className="bg-white shadow-sm">
@@ -520,7 +412,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                   <SelectContent>
                     <SelectItem value="">All Status</SelectItem>
                     {statuses.map(status => (
-                      <SelectItem key={status || ''} value={status || ''}>{status || ''}</SelectItem>
+                      <SelectItem key={status} value={status}>{status}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -534,7 +426,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                   <SelectContent>
                     <SelectItem value="">All Priorities</SelectItem>
                     {priorities.map(priority => (
-                      <SelectItem key={priority || ''} value={priority || ''}>{priority || ''}</SelectItem>
+                      <SelectItem key={priority} value={priority}>{priority}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -559,6 +451,18 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
         </CardContent>
       </Card>
 
+      {/* Results Count */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          Showing {filteredAssets.length} of {assets.length} total assets
+          {user?.projectName && (
+            <span className="ml-2 text-blue-600 dark:text-blue-400">
+              (filtered by project: {user.projectName})
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Assets Display - Table Only */}
       {filteredAssets.length === 0 ? (
         <Card>
@@ -570,7 +474,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
             <p className="text-gray-600 dark:text-gray-400">
               {filters.search || filters.assetType || filters.status || filters.priority || filters.location
                 ? 'Try adjusting your filters'
-                : 'No assets have been created yet'
+                : `No assets found for project: ${user?.projectName}`
               }
             </p>
           </CardContent>
@@ -587,28 +491,18 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
 
       {/* Simple Asset View Modal */}
       {isViewModalOpen && selectedAsset && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            {/* Themed Header */}
-            <div className="px-6 py-4 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-b border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
-                  <Package className="w-5 h-5 text-white" />
-                </div>
-                <div className="min-w-0">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            {/* Simple Header */}
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">Asset Details</h2>
-                                         {selectedAsset?.status && (
-                       <StatusBadge status={selectedAsset.status} />
-                     )}
-                     {selectedAsset?.priority && (
-                       <PriorityBadge priority={selectedAsset.priority} />
-                     )}
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-800/60 px-2 py-1 rounded-full inline-block border border-slate-200/60 dark:border-slate-600/60">
-                    {selectedAsset?.tagId || 'Unknown Asset'}
-                  </div>
-                </div>
+                <Package className="w-5 h-5 text-blue-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {selectedAsset?.tagId}
+                </h2>
+                    {selectedAsset?.status && (
+                      <StatusBadge status={selectedAsset.status} />
+                    )}
               </div>
               <Button
                 variant="ghost"
@@ -617,239 +511,375 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                   setIsViewModalOpen(false)
                   setSelectedAsset(null)
                 }}
-                className="h-8 w-8 p-0 hover:bg-white/80 dark:hover:bg-slate-800/80 text-slate-600 dark:text-slate-400 rounded-lg"
+                className="h-8 w-8 p-0"
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
             
             {/* Body */}
-            <ScrollArea className="max-h-[calc(90vh-60px)]">
-              <div className="p-6 space-y-6">
-                {/* Hero summary */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-slate-800 dark:via-slate-900 dark:to-blue-900/20 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700/60">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full -translate-y-12 translate-x-12"></div>
-                  <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600">
-                        <Package className="w-4 h-4 text-white" />
+            <div className="overflow-y-auto max-h-[calc(80vh-80px)]">
+              <div className="p-4 space-y-4">
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Type:</span>
+                      <span className="ml-2 font-medium">{selectedAsset?.assetType || 'N/A'}</span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Type</p>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.assetType || 'N/A'}</p>
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Brand:</span>
+                      <span className="ml-2 font-medium">{selectedAsset?.brand || 'N/A'}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600">
-                        <Package className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Brand</p>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.brand || 'N/A'}</p>
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Model:</span>
+                      <span className="ml-2 font-medium">{selectedAsset?.model || 'N/A'}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
-                        <Building className="w-4 h-4 text-white" />
+                  <div className="space-y-2">
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                      <span className="ml-2 font-medium">{selectedAsset?.status || 'N/A'}</span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Location</p>
-                                                 <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                           {typeof selectedAsset?.location === 'object' && selectedAsset.location?.building 
-                             ? selectedAsset.location.building 
-                             : typeof selectedAsset?.location === 'string' 
-                               ? selectedAsset.location 
-                               : 'N/A'}
-                         </p>
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Priority:</span>
+                      <span className="ml-2 font-medium">{selectedAsset?.priority || 'N/A'}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-red-600">
-                        <Calendar className="w-4 h-4 text-white" />
-                </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">Created</p>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedAsset?.createdAt ? new Date(selectedAsset?.createdAt).toLocaleString() : 'N/A'}</p>
-                </div>
-                </div>
-                </div>
-              </div>
-
-              {/* Three cards: QR, Barcode, NFC */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* QR */}
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded bg-blue-100 text-blue-700"><QrCode className="w-4 h-4" /></div>
-                      <div className="text-sm font-semibold">QR Code</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" disabled={!getQrUrl(selectedAsset)} onClick={() => getQrUrl(selectedAsset) && window.open(getQrUrl(selectedAsset)!, '_blank')}><span>Open</span></Button>
-                      <Button variant="outline" size="sm" disabled={!getQrUrl(selectedAsset)} onClick={() => getQrUrl(selectedAsset) && copyToClipboard(getQrUrl(selectedAsset)!)}><Copy className="w-4 h-4" /></Button>
-                      <Button variant="outline" size="sm" disabled={!getQrUrl(selectedAsset)} onClick={() => getQrUrl(selectedAsset) && downloadFile(getQrUrl(selectedAsset)!, `qr_${selectedAsset?.tagId || 'asset'}.png`)}><Download className="w-4 h-4" /></Button>
+                    <div className="text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Assigned:</span>
+                      <span className="ml-2 font-medium">{selectedAsset?.assignedTo?.name || 'Unassigned'}</span>
                     </div>
                   </div>
-                  <div className="relative flex items-center justify-center min-h-[180px] bg-gray-50 dark:bg-gray-700 rounded">
+                </div>
+
+                {/* Location */}
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Location</h3>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedAsset?.location?.building || 'N/A'} • {selectedAsset?.location?.floor || 'N/A'} • {selectedAsset?.location?.room || 'N/A'}
+                        </div>
+                      </div>
+                      
+                {/* QR Code */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">QR Code</h3>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        disabled={!getQrUrl(selectedAsset)} 
+                        onClick={() => getQrUrl(selectedAsset) && copyToClipboard(getQrUrl(selectedAsset)!)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copy
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        disabled={!getQrUrl(selectedAsset)} 
+                        onClick={() => getQrUrl(selectedAsset) && downloadFile(getQrUrl(selectedAsset)!, `qr_${selectedAsset?.tagId || 'asset'}.png`)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-center">
                     {qrImgSrc ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <div className="relative">
                         <img
                           src={qrImgSrc}
-                          alt="QR"
-                          className="w-40 h-40 object-contain"
+                          alt="QR Code"
+                          className="w-32 h-32 object-contain border border-gray-200 dark:border-gray-600 rounded-lg"
                           onLoad={() => setQrLoading(false)}
                           onError={handleQrError}
                         />
                         {qrLoading && (
-                          <div className="absolute text-xs text-gray-500">Loading...</div>
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80 rounded-lg">
+                            <div className="text-xs text-gray-500">Loading...</div>
+                          </div>
                         )}
-                      </>
+                      </div>
                     ) : (
-                      <div className="text-xs text-gray-500">No QR available</div>
+                      <div className="w-32 h-32 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                        <div className="text-center">
+                          <QrCode className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                          <p className="text-xs text-gray-500 dark:text-gray-400">No QR Code</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
                 {/* Barcode */}
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded bg-green-100 text-green-700"><Barcode className="w-4 h-4" /></div>
-                      <div className="text-sm font-semibold">Barcode</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" disabled={!getBarcodeUrl(selectedAsset)} onClick={() => getBarcodeUrl(selectedAsset) && window.open(getBarcodeUrl(selectedAsset)!, '_blank')}><span>Open</span></Button>
-                      <Button variant="outline" size="sm" disabled={!getBarcodeUrl(selectedAsset)} onClick={() => getBarcodeUrl(selectedAsset) && copyToClipboard(getBarcodeUrl(selectedAsset)!)}><Copy className="w-4 h-4" /></Button>
-                      <Button variant="outline" size="sm" disabled={!getBarcodeUrl(selectedAsset)} onClick={() => getBarcodeUrl(selectedAsset) && downloadFile(getBarcodeUrl(selectedAsset)!, `barcode_${selectedAsset?.tagId || 'asset'}.png`)}><Download className="w-4 h-4" /></Button>
-                    </div>
-                  </div>
-                  <div className="relative flex items-center justify-center min-h-[180px] bg-gray-50 dark:bg-gray-700 rounded">
-                    {barcodeImgSrc ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={barcodeImgSrc}
-                          alt="Barcode"
-                          className="w-56 h-24 object-contain"
-                          onLoad={() => setBarcodeLoading(false)}
-                          onError={handleBarcodeError}
-                        />
-                        {barcodeLoading && (
-                          <div className="absolute text-xs text-gray-500">Loading...</div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-xs text-gray-500">No Barcode available</div>
-                    )}
-                  </div>
+                {selectedAsset?.digitalAssets?.barcode?.url && (
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">Barcode</h3>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            const url = getBarcodeUrl(selectedAsset)
+                            if (url) {
+                              copyToClipboard(url)
+                            }
+                          }}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <Copy className="w-3 h-3 mr-1" />
+                          Copy
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            const url = getBarcodeUrl(selectedAsset)
+                            if (url) {
+                              downloadFile(url, `barcode_${selectedAsset?.tagId || 'asset'}.png`)
+                            }
+                          }}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Download
+                        </Button>
                 </div>
-
-                {/* NFC */}
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded bg-purple-100 text-purple-700"><Smartphone className="w-4 h-4" /></div>
-                      <div className="text-sm font-semibold">NFC Data</div>
+              </div>
+                    
+                    <div className="flex justify-center">
+                      {barcodeImgSrc ? (
+                        <div className="relative">
+                          <img
+                            src={barcodeImgSrc}
+                            alt="Barcode"
+                            className="w-48 h-16 object-contain border border-gray-200 dark:border-gray-600 rounded-lg"
+                            onLoad={() => setBarcodeLoading(false)}
+                            onError={handleBarcodeError}
+                          />
+                          {barcodeLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80 rounded-lg">
+                              <div className="text-xs text-gray-500">Loading...</div>
+                            </div>
+                          )}
+                </div>
+                      ) : (
+                        <div className="w-48 h-16 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                          <div className="text-center">
+                            <Barcode className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                            <p className="text-xs text-gray-500 dark:text-gray-400">No Barcode</p>
+                </div>
+              </div>
+                      )}
                     </div>
-                    {getNfcUrl(selectedAsset) && (
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => window.open(getNfcUrl(selectedAsset)!, '_blank')}><span>Open</span></Button>
-                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(getNfcUrl(selectedAsset)!)}><Copy className="w-4 h-4" /></Button>
-                        <Button variant="outline" size="sm" onClick={() => downloadFile(getNfcUrl(selectedAsset)!, `nfc_${selectedAsset?.tagId || 'asset'}.json`)}><Download className="w-4 h-4" /></Button>
+                    
+                    {selectedAsset?.digitalAssets?.barcode?.data && (
+                      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Barcode Data:</div>
+                        <code className="text-xs font-mono text-gray-900 dark:text-white break-all">
+                          {selectedAsset.digitalAssets.barcode.data}
+                        </code>
                       </div>
                     )}
                   </div>
-                  <div className="text-xs p-3 bg-gray-50 dark:bg-gray-700 rounded min-h-[180px]">
-                    {!getNfcUrl(selectedAsset) && <div className="text-gray-500">No NFC data</div>}
-                    {getNfcUrl(selectedAsset) && (
-                      nfcLoading ? (
-                        <div className="text-gray-500">Loading NFC data...</div>
-                      ) : nfcError ? (
-                        <div className="text-red-600">{nfcError}</div>
-                      ) : nfcViewData ? (
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-[10px] text-gray-500">Type</div>
-                              <div className="text-xs font-semibold">{nfcViewData.type}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-gray-500">ID</div>
-                              <div className="text-xs font-mono">{nfcViewData.id}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-gray-500">Asset Type</div>
-                              <div className="text-xs font-semibold">{nfcViewData.assetType}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-gray-500">Brand</div>
-                              <div className="text-xs">{nfcViewData.brand}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-gray-500">Model</div>
-                              <div className="text-xs">{nfcViewData.model}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-gray-500">Priority</div>
-                              <div className="text-xs">{nfcViewData.priority}</div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <div>
-                              <div className="text-[10px] text-gray-500">Building</div>
-                              <div className="text-xs">{nfcViewData.location?.building}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-gray-500">Floor</div>
-                              <div className="text-xs">{nfcViewData.location?.floor}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-gray-500">Room</div>
-                              <div className="text-xs">{nfcViewData.location?.room}</div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-[10px] text-gray-500">Timestamp</div>
-                              <div className="text-xs">{nfcViewData.timestamp ? new Date(nfcViewData.timestamp).toLocaleString() : ''}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-gray-500">Checksum</div>
-                              <div className="text-[10px] font-mono">{nfcViewData.checksum}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-gray-500">NFC data not available</div>
-                      )
-                    )}
+                )}
+
+                {/* NFC Data */}
+                {selectedAsset?.digitalAssets?.nfcData?.url && (
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">NFC Data</h3>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            const url = getNfcUrl(selectedAsset)
+                            if (url) {
+                              copyToClipboard(url)
+                            }
+                          }}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <Copy className="w-3 h-3 mr-1" />
+                          Copy URL
+                        </Button>
+              <Button 
+                          variant="outline" 
+                          size="sm" 
+                onClick={() => {
+                            const url = getNfcUrl(selectedAsset)
+                            if (url) {
+                              downloadFile(url, `nfc_${selectedAsset?.tagId || 'asset'}.json`)
+                            }
+                          }}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Download JSON
+              </Button>
+                      </div>
+                    </div>
+                    
+                    {/* NFC Data Display */}
+                    <div className="space-y-3">
+                                             {/* NFC Status Card */}
+                       <div className="flex justify-center">
+                         <div className="w-full max-w-md p-4 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-lg border border-purple-200 dark:border-purple-600">
+                           <div className="flex items-center justify-center gap-3">
+                             <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-800">
+                               <Smartphone className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                             </div>
+                             <div className="text-center">
+                               <p className="text-sm font-medium text-purple-700 dark:text-purple-300">NFC Data Available</p>
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                      
+                       {/* NFC Data Content - Readable Format */}
+                       {selectedAsset?.digitalAssets?.nfcData?.data && (
+                         <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-600">
+                           <div className="flex items-center justify-between mb-4">
+                             <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-300">Asset Information</h4>
+                             <Button 
+                               variant="ghost" 
+                               size="sm" 
+                               onClick={() => {
+                                 const nfcData = selectedAsset.digitalAssets?.nfcData?.data
+                                 if (nfcData) {
+                                   copyToClipboard(JSON.stringify(nfcData, null, 2))
+                                 }
+                               }}
+                               className="h-7 px-3 text-xs text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-800"
+                             >
+                               <Copy className="w-3 h-3 mr-1" />
+                               Copy All
+                             </Button>
+                           </div>
+                           
+                           {/* Structured Data Grid */}
+                           <div className="grid grid-cols-2 gap-4">
+                             {/* Left Column */}
+                             <div className="space-y-3">
+                               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-purple-200 dark:border-purple-600">
+                                 <div className="flex items-center gap-2 mb-2">
+                                   <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                   <span className="text-xs font-medium text-purple-700 dark:text-purple-300">Basic Details</span>
+                                 </div>
+                                 <div className="space-y-2 text-xs">
+                                   <div className="flex justify-between">
+                                     <span className="text-gray-600 dark:text-gray-400">Type:</span>
+                                     <span className="font-medium text-gray-900 dark:text-white capitalize">
+                                       {selectedAsset.digitalAssets.nfcData.data.type || 'N/A'}
+                                     </span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-gray-600 dark:text-gray-400">ID:</span>
+                                     <span className="font-mono font-medium text-gray-900 dark:text-white">
+                                       {selectedAsset.digitalAssets.nfcData.data.id || 'N/A'}
+                                     </span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-gray-600 dark:text-gray-400">Asset Type:</span>
+                                     <span className="font-medium text-gray-900 dark:text-white">
+                                       {selectedAsset.digitalAssets.nfcData.data.assetType || 'N/A'}
+                                     </span>
+                                   </div>
+                                 </div>
+                               </div>
+                               
+                               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-purple-200 dark:border-purple-600">
+                                 <div className="flex items-center gap-2 mb-2">
+                                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                   <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Specifications</span>
+                                 </div>
+                                 <div className="space-y-2 text-xs">
+                                   <div className="flex justify-between">
+                                     <span className="text-gray-600 dark:text-gray-400">Brand:</span>
+                                     <span className="font-medium text-gray-900 dark:text-white">
+                                       {selectedAsset.digitalAssets.nfcData.data.brand || 'N/A'}
+                                     </span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-gray-600 dark:text-gray-400">Model:</span>
+                                     <span className="font-medium text-gray-900 dark:text-white">
+                                       {selectedAsset.digitalAssets.nfcData.data.model || 'N/A'}
+                                     </span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-gray-600 dark:text-gray-400">Subcategory:</span>
+                                     <span className="font-medium text-gray-900 dark:text-white">
+                                       {selectedAsset.digitalAssets.nfcData.data.subcategory || 'N/A'}
+                                     </span>
+                                   </div>
+                                 </div>
+                               </div>
+                             </div>
+                             
+                             {/* Right Column */}
+                             <div className="space-y-3">
+                               <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-purple-200 dark:border-purple-600">
+                                 <div className="flex items-center gap-2 mb-2">
+                                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                   <span className="text-xs font-medium text-green-700 dark:text-green-300">Status</span>
+                                 </div>
+                                 <div className="space-y-2 text-xs">
+                                   <div className="flex justify-between">
+                                     <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                       selectedAsset.digitalAssets.nfcData.data.status === 'active' 
+                                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                         : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                                     }`}>
+                                       {selectedAsset.digitalAssets.nfcData.data.status || 'N/A'}
+                                     </span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                     <span className="text-gray-600 dark:text-gray-400">Priority:</span>
+                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                       selectedAsset.digitalAssets.nfcData.data.priority === 'high' 
+                                         ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                         : selectedAsset.digitalAssets.nfcData.data.priority === 'medium'
+                                         ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                         : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                     }`}>
+                                       {selectedAsset.digitalAssets.nfcData.data.priority || 'N/A'}
+                                     </span>
+                                   </div>
+                                 </div>
+                               </div>
+                               
+
+                             </div>
+                           </div>
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Project Info */}
+                <div className="border-t pt-4">
+                  <div className="text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">Project:</span>
+                    <span className="ml-2 font-medium">
+                      {selectedAsset?.project?.projectName || selectedAsset?.projectName || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="text-sm mt-1">
+                    <span className="text-gray-500 dark:text-gray-400">Created:</span>
+                    <span className="ml-2 font-medium">
+                      {selectedAsset?.createdAt ? new Date(selectedAsset.createdAt).toLocaleDateString() : 'N/A'}
+                    </span>
                   </div>
                 </div>
               </div>
-            </div>
-            </ScrollArea>
-            {/* Footer */}
-            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-                  <Package className="w-3.5 h-3.5" />
-                  Asset ID: {selectedAsset?._id || 'N/A'}
-                </div>
-                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-                <div className="text-xs text-slate-500 dark:text-slate-500">
-                  Last updated: {selectedAsset?.updatedAt ? new Date(selectedAsset?.updatedAt).toLocaleString() : 'Unknown'}
-                </div>
-                </div>
-              <Button 
-                onClick={() => {
-                  setIsViewModalOpen(false)
-                  setSelectedAsset(null)
-                }} 
-                className="bg-gradient-to-r from-slate-600 to-slate-700 dark:from-slate-700 dark:to-slate-800 hover:from-slate-700 hover:to-slate-800 dark:hover:from-slate-600 dark:hover:to-slate-700 text-white px-4 h-9 rounded-lg"
-              >
-                Close
-              </Button>
             </div>
           </div>
         </div>

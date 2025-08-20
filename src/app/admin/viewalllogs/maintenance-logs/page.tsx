@@ -34,11 +34,16 @@ import {
   Eye,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Plus
 } from 'lucide-react';
+
+// Import reverseGeocode function
+import { reverseGeocode } from '../../../../lib/location';
 
 interface MaintenanceLog {
   _id: string;
+  asset: string; // Asset tag from create form
   assetId: string;
   assetName: string;
   maintenanceType: string;
@@ -78,6 +83,35 @@ export default function MaintenanceLogsPage() {
   const [viewingLog, setViewingLog] = useState<MaintenanceLog | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [geocodedAddresses, setGeocodedAddresses] = useState<Record<string, string>>({});
+  const [geocodingLoading, setGeocodingLoading] = useState<Record<string, boolean>>({});
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    asset: '',
+    maintenanceType: '',
+    title: '',
+    description: '',
+    actionTaken: '',
+    status: 'scheduled' as const,
+    remarks: '',
+    priority: 'medium' as const,
+    estimatedDuration: 0,
+    scheduledDate: '',
+    dueDate: '',
+    estimatedCost: 0,
+    location: {
+      building: '',
+      floor: '',
+      room: '',
+      coordinates: {
+        latitude: '',
+        longitude: ''
+      },
+      address: '' // Added address field
+    }
+  });
 
   const handleAuthError = (errorMessage: string) => {
     setError(errorMessage);
@@ -87,6 +121,40 @@ export default function MaintenanceLogsPage() {
       window.location.href = '/login';
     }, 3000);
   };
+
+  // Function to reverse geocode coordinates to address
+  const handleReverseGeocode = useCallback(async (logId: string, location: any) => {
+    if (!location || typeof location !== 'object') return;
+    
+    // Check if we have coordinates
+    const hasCoordinates = location.coordinates && 
+                          location.coordinates.latitude && 
+                          location.coordinates.longitude &&
+                          location.coordinates.latitude !== '0' && 
+                          location.coordinates.longitude !== '0';
+    
+    if (!hasCoordinates) return;
+    
+    // Check if we already have the geocoded address
+    if (geocodedAddresses[logId]) return;
+    
+    setGeocodingLoading(prev => ({ ...prev, [logId]: true }));
+    
+    try {
+      const latitude = parseFloat(location.coordinates.latitude);
+      const longitude = parseFloat(location.coordinates.longitude);
+      
+      if (isNaN(latitude) || isNaN(longitude)) return;
+      
+      const address = await reverseGeocode(latitude, longitude);
+      setGeocodedAddresses(prev => ({ ...prev, [logId]: address }));
+    } catch (error) {
+      console.error('Error reverse geocoding location:', error);
+      setGeocodedAddresses(prev => ({ ...prev, [logId]: 'Address not available' }));
+    } finally {
+      setGeocodingLoading(prev => ({ ...prev, [logId]: false }));
+    }
+  }, [geocodedAddresses]);
 
   const fetchMaintenanceLogs = useCallback(async () => {
     try {
@@ -155,11 +223,30 @@ export default function MaintenanceLogsPage() {
     fetchMaintenanceLogs();
   }, [fetchMaintenanceLogs]);
 
+  // Trigger reverse geocoding for all logs when they change
+  useEffect(() => {
+    if (logs.length > 0) {
+      logs.forEach(log => {
+        if (log.location) {
+          handleReverseGeocode(log._id, log.location);
+        }
+      });
+    }
+  }, [logs, handleReverseGeocode]);
+
+  // Clear geocoded addresses when view modal is closed
+  useEffect(() => {
+    if (!showViewLogModal && viewingLog) {
+      setViewingLog(null);
+    }
+  }, [showViewLogModal, viewingLog]);
+
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.assetName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.assetId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.technicianName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (log.asset?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (log.assetName?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (log.assetId?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (log.technicianName?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (log.description?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || log.status === filterStatus;
     const matchesPriority = filterPriority === 'all' || log.priority === filterPriority;
     
@@ -167,6 +254,12 @@ export default function MaintenanceLogsPage() {
   }).sort((a, b) => {
     let aValue: unknown = a[sortBy as keyof typeof a];
     let bValue: unknown = b[sortBy as keyof typeof b];
+    
+    // Handle asset field specifically
+    if (sortBy === 'asset') {
+      aValue = a.asset || a.assetName || a.assetId || '';
+      bValue = b.asset || b.assetName || b.assetId || '';
+    }
     
     if (sortBy === 'date' || sortBy === 'createdAt' || sortBy === 'updatedAt' || 
         sortBy === 'workStartedAt' || sortBy === 'workCompletedAt') {
@@ -250,7 +343,7 @@ export default function MaintenanceLogsPage() {
       const csvContent = [
         headers.join(','),
         ...filteredLogs.map(log => [
-          `"${log.assetName || 'N/A'}"`,
+          `"${log.asset || log.assetName || 'N/A'}"`,
           `"${log.assetId || 'N/A'}"`,
           `"${log.maintenanceType || 'N/A'}"`,
           `"${log.technicianName || 'N/A'}"`,
@@ -260,7 +353,7 @@ export default function MaintenanceLogsPage() {
           `"${log.workStartedAt ? formatDateTime(log.workStartedAt) : 'Not started'}"`,
           `"${log.workCompletedAt ? formatDateTime(log.workCompletedAt) : 'Not completed'}"`,
           `"${log.cost ? '$' + log.cost : 'N/A'}"`,
-          `"${formatLocation(log.location)}"`
+          `"${formatLocationForExport(log.location, log._id)}"`
         ].join(','))
       ].join('\n');
 
@@ -324,7 +417,7 @@ export default function MaintenanceLogsPage() {
               <tbody>
                 ${filteredLogs.map(log => `
                   <tr>
-                    <td>${log.assetName || 'N/A'}</td>
+                    <td>${log.asset || log.assetName || 'N/A'}</td>
                     <td>${log.assetId || 'N/A'}</td>
                     <td>${log.maintenanceType || 'N/A'}</td>
                     <td>${log.technicianName || 'N/A'}</td>
@@ -332,7 +425,7 @@ export default function MaintenanceLogsPage() {
                     <td><span class="priority-${log.priority}">${log.priority}</span></td>
                     <td>${formatDateTime(log.date)}</td>
                     <td>${log.cost ? '$' + log.cost : 'N/A'}</td>
-                    <td>${formatLocation(log.location)}</td>
+                    <td>${formatLocationForExport(log.location, log._id)}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -380,13 +473,206 @@ export default function MaintenanceLogsPage() {
     setShowViewLogModal(true);
   };
 
+  const createMaintenanceLog = async () => {
+    try {
+      setCreating(true);
+      setError(null);
+      
+      // Validate required fields
+      if (!createForm.asset?.trim()) {
+        setError('Asset tag is required');
+        return;
+      }
+      
+      if (!createForm.maintenanceType?.trim()) {
+        setError('Maintenance type is required');
+        return;
+      }
+      
+      if (!createForm.title?.trim()) {
+        setError('Title is required');
+        return;
+      }
+      
+      if (!createForm.scheduledDate) {
+        setError('Scheduled date is required');
+        return;
+      }
+      
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      
+      if (!token) {
+        handleAuthError('Authentication token not found. Please login again.');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/maintenance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(createForm),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          handleAuthError('Authentication failed. Please login again.');
+          return;
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Reset form and close modal
+        setCreateForm({
+          asset: '',
+          maintenanceType: '',
+          title: '',
+          description: '',
+          actionTaken: '',
+          status: 'scheduled',
+          remarks: '',
+          priority: 'medium',
+          estimatedDuration: 0,
+          scheduledDate: '',
+          dueDate: '',
+          estimatedCost: 0,
+          location: {
+            building: '',
+            floor: '',
+            room: '',
+            coordinates: {
+              latitude: '',
+              longitude: ''
+            },
+            address: ''
+          }
+        });
+        setShowCreateModal(false);
+        
+        // Refresh the logs
+        await fetchMaintenanceLogs();
+        
+        // Show success message
+        alert('Maintenance log created successfully!');
+      } else {
+        throw new Error(data.message || 'Failed to create maintenance log');
+      }
+    } catch (err) {
+      console.error('Error creating maintenance log:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create maintenance log');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCreateFormChange = (field: string, value: any) => {
+    if (field === 'location.building') {
+      setCreateForm(prev => ({
+        ...prev,
+        location: { ...prev.location, building: value }
+      }));
+    } else if (field === 'location.floor') {
+      setCreateForm(prev => ({
+        ...prev,
+        location: { ...prev.location, floor: value }
+      }));
+    } else if (field === 'location.room') {
+      setCreateForm(prev => ({
+        ...prev,
+        location: { ...prev.location, room: value }
+      }));
+    } else if (field === 'location.coordinates.latitude') {
+      setCreateForm(prev => ({
+        ...prev,
+        location: { 
+          ...prev.location, 
+          coordinates: { ...prev.location.coordinates, latitude: value }
+        }
+      }));
+    } else if (field === 'location.coordinates.longitude') {
+      setCreateForm(prev => ({
+        ...prev,
+        location: { 
+          ...prev.location, 
+          coordinates: { ...prev.location.coordinates, longitude: value }
+        }
+      }));
+    } else if (field === 'location.address') {
+      setCreateForm(prev => ({
+        ...prev,
+        location: { ...prev.location, address: value }
+      }));
+    } else {
+      setCreateForm(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
+  const getCurrentLocation = async () => {
+    if (navigator.geolocation) {
+      setLocationLoading(true);
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+          });
+        });
+
+        const { latitude, longitude } = position.coords;
+        const latStr = latitude.toFixed(6);
+        const lngStr = longitude.toFixed(6);
+        
+        // Update coordinates
+        setCreateForm(prev => ({
+          ...prev,
+          location: {
+            ...prev.location,
+            coordinates: { latitude: latStr, longitude: lngStr }
+          }
+        }));
+        
+        // Get address from coordinates using reverse geocoding
+        try {
+          const address = await reverseGeocode(latitude, longitude);
+          setCreateForm(prev => ({
+            ...prev,
+            location: {
+              ...prev.location,
+              address: address
+            }
+          }));
+        } catch (error) {
+          console.error('Error getting address from coordinates:', error);
+          // Keep coordinates even if address lookup fails
+        }
+        
+      } catch (error) {
+        console.error('Error getting current location:', error);
+        alert('Failed to get current location. Please ensure location services are enabled.');
+      } finally {
+        setLocationLoading(false);
+      }
+    } else {
+      alert('Geolocation is not supported by your browser.');
+      setLocationLoading(false);
+    }
+  };
 
 
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase();
   };
 
-  const formatLocation = (location: string | { building?: string; floor?: string; room?: string } | undefined) => {
+  const formatLocation = (location: string | { building?: string; floor?: string; room?: string; coordinates?: { latitude?: string; longitude?: string } } | undefined, logId?: string) => {
     if (!location) return 'N/A';
     if (typeof location === 'string') return location;
     if (typeof location === 'object') {
@@ -395,6 +681,49 @@ export default function MaintenanceLogsPage() {
         location.floor,
         location.room
       ].filter(Boolean);
+      
+      // If we have coordinates and a geocoded address, show it
+      if (logId && location.coordinates && geocodedAddresses[logId]) {
+        const address = geocodedAddresses[logId];
+        if (geocodingLoading[logId]) {
+          return (
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Loading address...</span>
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">{address}</span>
+          </div>
+        );
+      }
+      
+      // Fallback to basic location info
+      return parts.length > 0 ? parts.join(' ') : 'N/A';
+    }
+    return 'N/A';
+  };
+
+  // Simple formatLocation function for exports (CSV/PDF) that returns only text
+  const formatLocationForExport = (location: string | { building?: string; floor?: string; room?: string; coordinates?: { latitude?: string; longitude?: string } } | undefined, logId?: string) => {
+    if (!location) return 'N/A';
+    if (typeof location === 'string') return location;
+    if (typeof location === 'object') {
+      const parts = [
+        location.building,
+        location.floor,
+        location.room
+      ].filter(Boolean);
+      
+      // If we have coordinates and a geocoded address, show it
+      if (logId && location.coordinates && geocodedAddresses[logId]) {
+        return geocodedAddresses[logId];
+      }
+      
+      // Fallback to basic location info
       return parts.length > 0 ? parts.join(' ') : 'N/A';
     }
     return 'N/A';
@@ -442,6 +771,13 @@ export default function MaintenanceLogsPage() {
                 <span>Refresh</span>
               </Button>
               
+              <Button 
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Log</span>
+              </Button>
             </div>
           </div>
         </header>
@@ -621,11 +957,11 @@ export default function MaintenanceLogsPage() {
                       <TableRow className="hover:bg-accent/50">
                         <TableHead 
                           className="cursor-pointer font-semibold text-foreground"
-                          onClick={() => handleSort('assetName')}
+                          onClick={() => handleSort('asset')}
                         >
                           <div className="flex items-center space-x-1">
-                            <span>Asset</span>
-                            {getSortIcon('assetName')}
+                            <span>Asset Tag</span>
+                            {getSortIcon('asset')}
                           </div>
                         </TableHead>
                         <TableHead 
@@ -684,8 +1020,13 @@ export default function MaintenanceLogsPage() {
                         <TableRow key={log._id} className="hover:bg-accent/50 transition-colors">
                           <TableCell>
                             <div>
-                              <div className="font-semibold text-foreground">{log.assetName || 'N/A'}</div>
-                              <div className="text-sm text-muted-foreground">{log.assetId || 'N/A'}</div>
+                              <div className="font-semibold text-foreground">
+                                {log.asset?.toString() || log.assetName?.toString() || log.assetId?.toString() || 'N/A'}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {log.assetName && log.assetName !== log.asset ? log.assetName.toString() : ''}
+                                {log.assetId && log.assetId !== log.asset ? log.assetId.toString() : ''}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -742,7 +1083,14 @@ export default function MaintenanceLogsPage() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <MapPin className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">{formatLocation(log.location)}</span>
+                              {geocodingLoading[log._id] ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                  <span className="text-sm text-muted-foreground">Loading address...</span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">{formatLocation(log.location, log._id)}</span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -823,10 +1171,10 @@ export default function MaintenanceLogsPage() {
               {/* Log Header */}
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-2xl">
-                  {getInitials(viewingLog.assetName || 'Asset')}
+                  {getInitials(viewingLog.asset || viewingLog.assetName || 'Asset')}
                 </div>
                 <div>
-                  <h4 className="text-xl font-semibold text-foreground">{viewingLog.assetName || 'N/A'}</h4>
+                  <h4 className="text-xl font-semibold text-foreground">{viewingLog.asset || viewingLog.assetName || 'N/A'}</h4>
                   <div className="flex items-center space-x-2 mt-1">
                     {getStatusBadge(viewingLog.status)}
                     {getPriorityBadge(viewingLog.priority)}
@@ -838,13 +1186,21 @@ export default function MaintenanceLogsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Asset Tag</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-foreground">{viewingLog.asset || 'N/A'}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
                     <Label className="text-sm font-medium text-muted-foreground">Asset ID</Label>
                     <div className="flex items-center space-x-2 mt-1">
                       <Building2 className="w-4 h-4 text-muted-foreground" />
                       <span className="text-foreground">{viewingLog.assetId || 'N/A'}</span>
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Maintenance Type</Label>
                     <div className="flex items-center space-x-2 mt-1">
@@ -865,7 +1221,7 @@ export default function MaintenanceLogsPage() {
                     <Label className="text-sm font-medium text-muted-foreground">Location</Label>
                     <div className="flex items-center space-x-2 mt-1">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-foreground">{formatLocation(viewingLog.location)}</span>
+                      <span className="text-foreground">{formatLocation(viewingLog.location, viewingLog._id)}</span>
                     </div>
                   </div>
                 </div>
@@ -958,8 +1314,339 @@ export default function MaintenanceLogsPage() {
               </div>
             </div>
           </DialogContent>
-                 </Dialog>
-       )}
+        </Dialog>
+      )}
+
+      {/* Create Maintenance Log Modal */}
+      {showCreateModal && (
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent className="max-w-5xl max-h-[90vh] bg-card border-border overflow-hidden">
+            <DialogHeader className="px-6 py-4 border-b border-border">
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Create New Maintenance Log
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 max-h-[calc(90vh-180px)]">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="asset" className="text-sm font-medium text-foreground">Asset Tag</Label>
+                  <Input
+                    id="asset"
+                    placeholder="e.g., SSL135"
+                    value={createForm.asset}
+                    onChange={(e) => handleCreateFormChange('asset', e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="maintenanceType" className="text-sm font-medium text-foreground">Maintenance Type</Label>
+                  <Select value={createForm.maintenanceType} onValueChange={(value) => handleCreateFormChange('maintenanceType', value)}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cleaning">Cleaning</SelectItem>
+                      <SelectItem value="repair">Repair</SelectItem>
+                      <SelectItem value="inspection">Inspection</SelectItem>
+                      <SelectItem value="preventive">Preventive</SelectItem>
+                      <SelectItem value="emergency">Emergency</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-sm font-medium text-foreground">Title</Label>
+                  <Input
+                    id="title"
+                    placeholder="Maintenance title"
+                    value={createForm.title}
+                    onChange={(e) => handleCreateFormChange('title', e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="priority" className="text-sm font-medium text-foreground">Priority</Label>
+                  <Select value={createForm.priority} onValueChange={(value) => handleCreateFormChange('priority', value)}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="critical">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-sm font-medium text-foreground">Status</Label>
+                  <Select value={createForm.status} onValueChange={(value) => handleCreateFormChange('status', value)}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="paused">Paused</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedDuration" className="text-sm font-medium text-foreground">Estimated Duration (minutes)</Label>
+                  <Input
+                    id="estimatedDuration"
+                    type="number"
+                    placeholder="240"
+                    value={createForm.estimatedDuration}
+                    onChange={(e) => handleCreateFormChange('estimatedDuration', parseInt(e.target.value) || 0)}
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="scheduledDate" className="text-sm font-medium text-foreground">Scheduled Date</Label>
+                  <Input
+                    id="scheduledDate"
+                    type="datetime-local"
+                    value={createForm.scheduledDate}
+                    onChange={(e) => handleCreateFormChange('scheduledDate', e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate" className="text-sm font-medium text-foreground">Due Date</Label>
+                  <Input
+                    id="dueDate"
+                    type="datetime-local"
+                    value={createForm.dueDate}
+                    onChange={(e) => handleCreateFormChange('dueDate', e.target.value)}
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedCost" className="text-sm font-medium text-foreground">Estimated Cost ($)</Label>
+                  <Input
+                    id="estimatedCost"
+                    type="number"
+                    placeholder="0.00"
+                    value={createForm.estimatedCost}
+                    onChange={(e) => handleCreateFormChange('estimatedCost', parseFloat(e.target.value) || 0)}
+                    className="h-10"
+                  />
+                </div>
+              </div>
+
+              {/* Description and Action */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-sm font-medium text-foreground">Description</Label>
+                  <textarea
+                    id="description"
+                    placeholder="Describe the maintenance work needed..."
+                    value={createForm.description}
+                    onChange={(e) => handleCreateFormChange('description', e.target.value)}
+                    className="w-full h-24 p-3 border border-border rounded-md bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="actionTaken" className="text-sm font-medium text-foreground">Action Taken</Label>
+                  <textarea
+                    id="actionTaken"
+                    placeholder="Describe what actions were taken..."
+                    value={createForm.actionTaken}
+                    onChange={(e) => handleCreateFormChange('actionTaken', e.target.value)}
+                    className="w-full h-24 p-3 border border-border rounded-md bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              {/* Remarks */}
+              <div className="space-y-2">
+                <Label htmlFor="remarks" className="text-sm font-medium text-foreground">Remarks</Label>
+                <textarea
+                  id="remarks"
+                  placeholder="Additional notes or remarks..."
+                  value={createForm.remarks}
+                  onChange={(e) => handleCreateFormChange('remarks', e.target.value)}
+                  className="w-full h-20 p-3 border border-border rounded-md bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              {/* Location Information */}
+              <div className="space-y-4">
+                <h5 className="font-semibold text-foreground">Location Details</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="building" className="text-sm font-medium text-foreground">Building</Label>
+                    <Input
+                      id="building"
+                      placeholder="e.g., Main Building"
+                      value={createForm.location.building}
+                      onChange={(e) => handleCreateFormChange('location.building', e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="floor" className="text-sm font-medium text-foreground">Floor</Label>
+                    <Input
+                      id="floor"
+                      placeholder="e.g., 1st Floor"
+                      value={createForm.location.floor}
+                      onChange={(e) => handleCreateFormChange('location.floor', e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="room" className="text-sm font-medium text-foreground">Room</Label>
+                    <Input
+                      id="room"
+                      placeholder="e.g., General"
+                      value={createForm.location.room}
+                      onChange={(e) => handleCreateFormChange('location.room', e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground">Address</Label>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={getCurrentLocation}
+                          disabled={locationLoading}
+                          className="h-10 flex-1"
+                        >
+                          {locationLoading ? (
+                            <LoadingSpinner size="sm" className="mr-2" />
+                          ) : (
+                            <MapPin className="w-4 h-4 mr-2" />
+                          )}
+                          {locationLoading ? 'Getting Location...' : 'Get Current Location'}
+                        </Button>
+                      </div>
+                      
+                      {/* Address Display */}
+                      {createForm.location.coordinates.latitude && createForm.location.coordinates.longitude && (
+                        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">
+                                Location Detected
+                              </div>
+                              {createForm.location.address ? (
+                                <div className="text-sm text-green-700 dark:text-green-300">
+                                  <span className="font-medium">Address:</span> {createForm.location.address}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-2">
+                                  <div className="w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                                  Getting address...
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Manual Address Input */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Or enter address manually:</Label>
+                        <Input
+                          placeholder="Enter full address (e.g., 123 Main St, City, State)"
+                          value={createForm.location.address || ''}
+                          onChange={(e) => handleCreateFormChange('location.address', e.target.value)}
+                          className="h-10 text-sm"
+                        />
+                      </div>
+                      
+                      {/* Status Indicator */}
+                      {!createForm.location.coordinates.latitude && !createForm.location.address && (
+                        <div className="p-2 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-md">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 text-center">
+                            No location set. Use "Get Current Location" or enter address manually.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons - Fixed at bottom */}
+            <div className="px-6 py-4 border-t border-border bg-card flex flex-col sm:flex-row justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  // Reset form when closing
+                  setCreateForm({
+                    asset: '',
+                    maintenanceType: '',
+                    title: '',
+                    description: '',
+                    actionTaken: '',
+                    status: 'scheduled',
+                    remarks: '',
+                    priority: 'medium',
+                    estimatedDuration: 0,
+                    scheduledDate: '',
+                    dueDate: '',
+                    estimatedCost: 0,
+                    location: {
+                      building: '',
+                      floor: '',
+                      room: '',
+                      coordinates: {
+                        latitude: '',
+                        longitude: ''
+                      },
+                      address: ''
+                    }
+                  });
+                }}
+                className="h-10 w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={createMaintenanceLog}
+                disabled={creating}
+                className="h-10 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {creating ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Creating...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Plus className="w-4 h-4" />
+                    <span>Create Log</span>
+                  </div>
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
 
      </div>

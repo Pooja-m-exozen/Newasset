@@ -34,7 +34,11 @@ export default function AdminLayout({
   useEffect(() => {
     if (!isLoading && isAuthenticated && user?.role !== 'admin') {
       // Redirect non-admin users to appropriate dashboard
-      router.push('/dashboard')
+      if (user?.role === 'viewer') {
+        router.push('/viewer/dashboard')
+      } else {
+        router.push('/login')
+      }
     }
   }, [isAuthenticated, isLoading, user, router])
 

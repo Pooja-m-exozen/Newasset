@@ -213,26 +213,24 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="min-w-[320px] sm:min-w-[600px] md:min-w-[800px] min-h-[500px] sm:min-h-[600px] max-w-5xl max-h-[90vh] w-[95vw] sm:w-[90vw] h-[90vh] sm:h-[85vh] overflow-y-auto border-0 shadow-2xl bg-white dark:bg-slate-900">
-        {/* Enhanced Header */}
-        <DialogHeader className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-b border-slate-200/60 dark:border-slate-700/60">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* Simple Header */}
+        <DialogHeader className="pb-4 border-b">
           <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 shadow-lg ring-4 ring-blue-100 dark:ring-blue-900/30">
-                <Eye className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Eye className="w-5 h-5 text-blue-600" />
               </div>
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">
-                  {checklist.title}
-                </h2>
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-sm px-3 py-1 border-slate-200/60 dark:border-slate-600/60 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+              <div>
+                <h2 className="text-xl font-semibold">{checklist.title}</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
                     {checklist.type}
                   </Badge>
-                  <Badge className={cn('text-sm px-3 py-1 font-semibold shadow-sm', PRIORITY_COLORS[checklist.priority])}>
+                  <Badge className={cn('text-xs', PRIORITY_COLORS[checklist.priority])}>
                     {checklist.priority}
                   </Badge>
-                  <Badge className={cn('text-sm px-3 py-1 font-semibold shadow-sm', STATUS_COLORS[checklist.status])}>
+                  <Badge className={cn('text-xs', STATUS_COLORS[checklist.status])}>
                     {checklist.status}
                   </Badge>
                 </div>
@@ -242,29 +240,30 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
               variant="ghost" 
               size="sm" 
               onClick={onClose} 
-              className="h-10 w-10 p-0 hover:bg-white/80 dark:hover:bg-slate-800/80 rounded-full transition-all duration-200 hover:scale-110"
+              className="h-8 w-8 p-0"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </Button>
           </DialogTitle>
         </DialogHeader>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 min-h-[500px]">
-          {/* Enhanced QR Code Scanner Section */}
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-xl p-6 border border-amber-200/60 dark:border-amber-700/60 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 shadow-lg">
+        <div className="space-y-4 py-4">
+          {/* Enhanced QR Code & Scanner Section */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-lg">
+            <h3 className="text-xl font-semibold mb-6 flex items-center gap-3 text-gray-800">
+              <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg">
                 <QrCodeIcon className="w-5 h-5 text-white" />
               </div>
               QR Code & Scanner
             </h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Enhanced QR Code Display */}
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* QR Code Display */}
               <div className="text-center">
                 {hasQRCode ? (
                   <div>
-                    <div className="bg-white p-4 rounded-xl inline-block border border-amber-200/60 dark:border-amber-600/60 shadow-lg">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-8 rounded-2xl inline-block border-2 border-gray-200 shadow-lg">
                       <Image 
                         src={checklist.qrCode!.url.startsWith('http') ? checklist.qrCode!.url : `${API_BASE_URL}${checklist.qrCode!.url}`}
                         alt="Checklist QR Code" 
@@ -273,16 +272,18 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
                         className="w-35 h-35 object-contain"
                       />
                     </div>
-                    <div className="mt-4 space-y-3">
-                      <p className="text-sm text-slate-600 dark:text-slate-400 bg-white/60 dark:bg-slate-800/60 px-3 py-2 rounded-lg">
-                        Generated: {formatDate(checklist.qrCode!.generatedAt)}
-                      </p>
-                      <div className="flex justify-center gap-3">
-                        <Button onClick={downloadQRCode} variant="outline" size="sm" className="text-sm h-9 px-4 border-amber-200 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20">
+                    <div className="mt-6 space-y-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                        <p className="text-sm text-blue-700 font-medium">
+                          Generated: {formatDate(checklist.qrCode!.generatedAt)}
+                        </p>
+                      </div>
+                      <div className="flex justify-center gap-4">
+                        <Button onClick={downloadQRCode} variant="outline" size="sm" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 px-6 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
                           <Download className="w-4 h-4 mr-2" />
                           Download
                         </Button>
-                        <Button onClick={() => handleCopyToClipboard(checklist._id)} variant="outline" size="sm" className="text-sm h-9 px-4 border-amber-200 dark:border-amber-600 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20">
+                        <Button onClick={() => handleCopyToClipboard(checklist._id)} variant="outline" size="sm" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 px-6 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
                           <Copy className="w-4 h-4 mr-2" />
                           Copy ID
                         </Button>
@@ -291,19 +292,19 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
                   </div>
                 ) : (
                   <div className="text-center">
-                    <div className="w-24 h-24 mx-auto mb-3 rounded-xl border-2 border-dashed border-amber-300 dark:border-amber-600 flex items-center justify-center bg-white/60 dark:bg-slate-800/60">
+                    <div className="w-28 h-28 mx-auto mb-6 rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
                       {generatingQR ? (
-                        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
                       ) : (
-                        <QrCode className="w-8 h-8 text-amber-400" />
+                        <QrCodeIcon className="w-10 h-10 text-gray-400" />
                       )}
                     </div>
-                    <h4 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
-                      {generatingQR ? 'Generating...' : 'No QR Code'}
+                    <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                      {generatingQR ? 'Generating QR Code...' : 'No QR Code Generated'}
                     </h4>
                     
                     {qrGenerationError && (
-                      <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg text-sm text-red-700 dark:text-red-300">
+                      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
                         {qrGenerationError}
                       </div>
                     )}
@@ -311,18 +312,18 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
                     <Button 
                       onClick={handleGenerateQR}
                       disabled={generatingQR}
-                      size="sm"
-                      className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm h-9 px-6 shadow-lg hover:shadow-xl transition-all duration-200"
+                      size="lg"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                     >
                       {generatingQR ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                           Generating...
                         </>
                       ) : (
                         <>
-                          <QrCode className="w-4 h-4 mr-2" />
-                          Generate QR
+                          <QrCodeIcon className="w-5 h-5 mr-2" />
+                          Generate QR Code
                         </>
                       )}
                     </Button>
@@ -330,14 +331,60 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
                 )}
               </div>
 
-              {/* Enhanced QR Scanner */}
-              <div className="text-center">
-
+              {/* Enhanced Scanner Section */}
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-gray-700 mb-4">Scan QR Code</h4>
+                  
+                  {/* Scanner Controls */}
+                  <div className="space-y-4">
+                    <Button 
+                      onClick={() => setShowScanner(!showScanner)}
+                      variant="outline"
+                      size="lg"
+                      className={`w-full rounded-xl border-2 ${
+                        showScanner 
+                          ? 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100' 
+                          : 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
+                      }`}
+                    >
+                      <Scan className="w-5 h-5 mr-2" />
+                      {showScanner ? 'Stop Scanner' : 'Start Scanner'}
+                    </Button>
+                    
+                    {showScanner && (
+                      <div className="space-y-3">
+                        <Button 
+                          variant="outline"
+                          size="lg"
+                          className="w-full bg-green-50 border-green-300 text-green-700 hover:bg-green-100 rounded-xl"
+                          onClick={() => {/* Capture functionality */}}
+                        >
+                          <QrCodeIcon className="w-5 h-5 mr-2" />
+                          Capture QR Code
+                        </Button>
+                        
+                        <Button 
+                          variant="outline"
+                          size="lg"
+                          className="w-full bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100 rounded-xl"
+                          onClick={() => {/* Gallery upload functionality */}}
+                        >
+                          <FileText className="w-5 h-5 mr-2" />
+                          Upload from Gallery
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 
-         
-                
+                {/* Scanner Display */}
                 {showScanner && (
-                  <div className="border border-blue-200/60 dark:border-blue-600/60 rounded-xl p-4 bg-white/80 dark:bg-slate-800/80 shadow-lg">
+                  <div className="border-2 border-gray-200 rounded-2xl p-6 bg-gradient-to-br from-gray-50 to-gray-100 shadow-lg">
+                    <div className="text-center mb-4">
+                      <div className="w-4 h-4 bg-red-500 rounded-full mx-auto mb-3 animate-pulse shadow-lg"></div>
+                      <p className="text-sm text-gray-600 font-medium">Scanner Active</p>
+                    </div>
                     <QRCodeScanner />
                   </div>
                 )}
@@ -345,247 +392,154 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
             </div>
           </div>
 
-          {/* Enhanced Key Information */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl border border-blue-200/60 dark:border-blue-600/60 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 mx-auto mb-3 w-fit shadow-lg">
-                <FileText className="w-5 h-5 text-white" />
+          {/* Enhanced Info Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200 p-4 text-center hover:shadow-md transition-all duration-200">
+              <div className="w-8 h-8 bg-blue-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-white" />
               </div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Type</p>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{checklist.type}</p>
+              <div className="text-sm text-blue-600 mb-1">Type</div>
+              <div className="font-semibold text-blue-900">{checklist.type}</div>
             </div>
             
-            <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 rounded-xl border border-green-200/60 dark:border-green-600/60 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 mx-auto mb-3 w-fit shadow-lg">
-                <Clock className="w-5 h-5 text-white" />
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200 p-4 text-center hover:shadow-md transition-all duration-200">
+              <div className="w-8 h-8 bg-green-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-white" />
               </div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Frequency</p>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{checklist.frequency}</p>
+              <div className="text-sm text-green-600 mb-1">Frequency</div>
+              <div className="font-semibold text-green-900">{checklist.frequency}</div>
             </div>
             
-            <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10 rounded-xl border border-purple-200/60 dark:border-purple-600/60 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-violet-600 mx-auto mb-3 w-fit shadow-lg">
-                <CheckSquare className="w-5 h-5 text-white" />
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200 p-4 text-center hover:shadow-md transition-all duration-200">
+              <div className="w-8 h-8 bg-purple-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                <CheckSquare className="w-4 h-4 text-white" />
               </div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Items</p>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{checklist.items.length}</p>
+              <div className="text-sm text-purple-600 mb-1">Items</div>
+              <div className="font-semibold text-purple-900">{checklist.items.length}</div>
             </div>
             
-            <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/10 dark:to-amber-900/10 rounded-xl border border-orange-200/60 dark:border-orange-600/60 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 mx-auto mb-3 w-fit shadow-lg">
-                <Building className="w-5 h-5 text-white" />
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200 p-4 text-center hover:shadow-md transition-all duration-200">
+              <div className="w-8 h-8 bg-orange-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                <Building className="w-4 h-4 text-white" />
               </div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Location</p>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{checklist.location.building}</p>
+              <div className="text-sm text-orange-600 mb-1">Location</div>
+              <div className="font-semibold text-orange-900">{checklist.location.building}</div>
             </div>
           </div>
 
-          {/* Enhanced Progress Section */}
-          <div className="bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/10 dark:to-indigo-900/10 rounded-xl p-6 border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg">
-                <CheckSquare className="w-5 h-5 text-white" />
-              </div>
-              Progress Overview
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center group">
-                <div className="text-3xl font-bold text-slate-900 dark:text-white mb-2 group-hover:scale-110 transition-transform duration-200">
-                  {checklist.progress || 0}%
-                </div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-3">Overall Progress</div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 mt-2 overflow-hidden shadow-inner">
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out shadow-lg"
-                    style={{ width: `${checklist.progress || 0}%` }}
-                  />
-                </div>
-              </div>
-              
-              <div className="text-center group">
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2 group-hover:scale-110 transition-transform duration-200">
-                  {checklist.items.filter(item => item.status === 'completed').length}
-                </div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400">Completed Items</div>
-                <div className="w-16 h-16 mx-auto mt-3 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-              
-              <div className="text-center group">
-                <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-2 group-hover:scale-110 transition-transform duration-200">
-                  {checklist.items.filter(item => item.status !== 'completed').length}
-                </div>
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400">Pending Items</div>
-                <div className="w-16 h-16 mx-auto mt-3 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
-                  <Clock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-full">
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column */}
-            <div className="space-y-6">
-              {/* Enhanced Description */}
-              <div className="bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-800 dark:to-blue-900/10 rounded-xl p-5 border border-slate-200/60 dark:border-slate-600/60 shadow-sm hover:shadow-md transition-all duration-200">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-slate-500 to-blue-600 shadow-lg">
-                    <FileText className="w-5 h-5 text-white" />
-                  </div>
+            <div className="space-y-5">
+              {/* Description */}
+              <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-all duration-200">
+                <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
                   Description
                 </h3>
-                <p className="text-base text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {checklist.description}
-                </p>
+                <p className="text-gray-700 leading-relaxed">{checklist.description}</p>
               </div>
 
-              {/* Enhanced Location Details */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-5 border border-blue-200/60 dark:border-blue-600/60 shadow-sm hover:shadow-md transition-all duration-200">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg">
-                    <MapPin className="w-5 h-5 text-white" />
-                  </div>
+              {/* Location */}
+              <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-all duration-200">
+                <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-green-600" />
                   Location Details
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
-                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                      <Building className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Building</p>
-                      <p className="text-base font-semibold text-slate-900 dark:text-white">{checklist.location.building}</p>
-                    </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Building:</span>
+                    <span className="font-semibold text-gray-900">{checklist.location.building}</span>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
-                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
-                      <MapPin className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Floor</p>
-                      <p className="text-base font-semibold text-slate-900 dark:text-white">{checklist.location.floor}</p>
-                    </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Floor:</span>
+                    <span className="font-semibold text-gray-900">{checklist.location.floor}</span>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
-                    <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                      <MapPin className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Zone</p>
-                      <p className="text-base font-semibold text-slate-900 dark:text-white">{checklist.location.zone}</p>
-                    </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Zone:</span>
+                    <span className="font-semibold text-gray-900">{checklist.location.zone}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Enhanced Details */}
-              <div className="bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-800 dark:to-blue-900/10 rounded-xl p-5 border border-slate-200/60 dark:border-slate-600/60 shadow-sm hover:shadow-md transition-all duration-200">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-slate-500 to-blue-600 shadow-lg">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
-                  Details
+              {/* Details */}
+              <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-all duration-200">
+                <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                  <User className="w-5 h-5 text-purple-600" />
+                  Additional Details
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
-                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                      <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Created By</p>
-                      <p className="text-base font-semibold text-slate-900 dark:text-white">
-                        {checklist.createdBy?.name || 'Unknown'}
-                      </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {checklist.createdBy?.email}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Created By:</span>
+                    <span className="font-semibold text-gray-900">{checklist.createdBy?.name || 'Unknown'}</span>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
-                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
-                      <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Created</p>
-                      <p className="text-base font-semibold text-slate-900 dark:text-white">
-                        {formatDate(checklist.createdAt)}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Created:</span>
+                    <span className="font-semibold text-gray-900">{formatDate(checklist.createdAt)}</span>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
-                    <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                      <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Last Updated</p>
-                      <p className="text-base font-semibold text-slate-900 dark:text-white">
-                        {formatDate(checklist.updatedAt)}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Updated:</span>
+                    <span className="font-semibold text-gray-900">{formatDate(checklist.updatedAt)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Right Column */}
-            <div className="space-y-6">
-              {/* Enhanced Checklist Items */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 rounded-xl p-5 border border-green-200/60 dark:border-green-600/60 shadow-sm hover:shadow-md transition-all duration-200">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg">
-                    <CheckSquare className="w-5 h-5 text-white" />
-                  </div>
+            <div className="space-y-5">
+              {/* Checklist Items */}
+              <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-all duration-200">
+                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <CheckSquare className="w-5 h-5 text-green-600" />
                   Checklist Items ({checklist.items.length})
                 </h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
                   {checklist.items.map((item, index) => (
-                    <div key={item._id} className="group flex items-start gap-3 p-4 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-600/60 hover:shadow-md hover:border-green-300 dark:hover:border-green-600 transition-all duration-200">
-                      <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-lg">
-                        {item.serialNumber}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-slate-900 dark:text-white text-sm mb-2 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors duration-200">
-                          {item.inspectionItem}
-                        </h4>
-                        {item.details && (
-                          <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-3 leading-relaxed">
-                            {item.details}
-                          </p>
-                        )}
-                        <Badge 
-                          variant={item.status === 'completed' ? 'default' : 'secondary'}
-                          className={cn(
-                            'text-xs px-3 py-1 font-medium',
-                            item.status === 'completed' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-700'
-                              : 'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                    <div key={item._id} className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:shadow-sm transition-all duration-200">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm">
+                          {item.serialNumber}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 text-sm mb-2">
+                            {item.inspectionItem}
+                          </h4>
+                          {item.details && (
+                            <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+                              {item.details}
+                            </p>
                           )}
-                        >
-                          {item.status || 'pending'}
-                        </Badge>
+                          <Badge 
+                            variant={item.status === 'completed' ? 'default' : 'secondary'}
+                            className={cn(
+                              'text-xs px-3 py-1',
+                              item.status === 'completed' 
+                                ? 'bg-green-100 text-green-800 border-green-200'
+                                : 'bg-gray-100 text-gray-800 border-gray-200'
+                            )}
+                          >
+                            {item.status || 'pending'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Enhanced Tags */}
+              {/* Tags */}
               {checklist.tags && checklist.tags.length > 0 && (
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-5 border border-blue-200/60 dark:border-blue-600/60 shadow-sm hover:shadow-md transition-all duration-200">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg">
-                      <Tag className="w-5 h-5 text-white" />
-                    </div>
+                <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition-all duration-200">
+                  <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                    <Tag className="w-5 h-5 text-orange-600" />
                     Tags
                   </h3>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2">
                     {checklist.tags.map((tag, index) => (
                       <Badge 
                         key={index} 
                         variant="secondary" 
-                        className="text-sm px-4 py-2 bg-white/80 dark:bg-slate-800/80 text-blue-700 dark:text-blue-300 border-blue-200/60 dark:border-blue-700/60 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all duration-200 hover:scale-105 shadow-sm"
+                        className="text-xs bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200 transition-colors duration-200"
                       >
                         {tag}
                       </Badge>
@@ -597,24 +551,12 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
           </div>
         </div>
 
-        {/* Enhanced Footer */}
-        <div className="px-4 sm:px-6 md:px-8 py-3 sm:py-4 bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/60 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
-              <span className="font-medium">ID:</span>
-              <span className="font-mono text-xs">{checklist._id}</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/60 dark:bg-slate-800/60 rounded-lg border border-slate-200/60 dark:border-slate-600/60">
-              <span className="font-medium">Updated:</span>
-              <span>{formatDate(checklist.updatedAt)}</span>
-            </div>
+        {/* Simple Footer */}
+        <div className="pt-4 border-t flex items-center justify-between">
+          <div className="text-sm text-gray-500">
+            ID: {checklist._id} • Updated: {formatDate(checklist.updatedAt)}
           </div>
-          <Button 
-            onClick={onClose} 
-            variant="outline" 
-            size="sm" 
-            className="border-slate-200/60 dark:border-slate-600/60 text-sm h-10 px-6 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 hover:scale-105"
-          >
+          <Button onClick={onClose} variant="outline" size="sm">
             Close
           </Button>
         </div>

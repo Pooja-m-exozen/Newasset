@@ -66,7 +66,11 @@ export interface Asset {
   serialNumber?: string;
   capacity?: string;
   yearOfInstallation?: string;
-  projectName?: string;
+  projectName?: string; // Keep for backward compatibility
+  project?: {
+    projectId: string;
+    projectName: string;
+  };
   alerts?: string[];
   documents?: string[];
   assignedTo?: {
@@ -145,6 +149,9 @@ export interface Asset {
   tags?: string[];
   notes?: string;
   photos?: string[];
+  customFields?: {
+    [key: string]: string | number | boolean | object | null | undefined;
+  };
   scanHistory?: {
     timestamp: string;
     action: string;
@@ -290,7 +297,7 @@ export const filterAssets = (
                          asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          asset.assignedTo?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.projectName?.toLowerCase().includes(searchTerm.toLowerCase());
+                         (asset.project?.projectName || asset.projectName)?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || asset.priority === priorityFilter;
     const matchesType = typeFilter === 'all' || asset.assetType === typeFilter;
@@ -395,7 +402,7 @@ export const generateExcelData = (assets: Asset[]) => {
     'Last Updated': new Date(asset.updatedAt).toLocaleDateString(),
     'Serial Number': asset.serialNumber || '',
     'Capacity': asset.capacity || '',
-    'Project Name': asset.projectName || '',
+            'Project Name': asset.project?.projectName || asset.projectName || '',
     'Digital Tag Type': asset.digitalTagType || '',
     'Year of Installation': asset.yearOfInstallation || ''
   }));

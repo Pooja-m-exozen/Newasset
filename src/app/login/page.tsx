@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const { login } = useAuth()
+  const { login, user } = useAuth()
   const { toasts, addToast, removeToast } = useToast()
 
   const validateForm = () => {
@@ -52,7 +52,7 @@ export default function LoginPage() {
     setErrors({})
 
     try {
-      await login(email, password)
+      const loginResult: { id: string; name: string; email: string; role: string } | undefined = await login(email, password)
 
       addToast({
         type: "success",
@@ -69,8 +69,13 @@ export default function LoginPage() {
       }
 
       // Redirect to appropriate dashboard based on user role
+      // Use the user data returned from login function
       setTimeout(() => {
-        window.location.href = "/admin/dashboard"
+        if (loginResult?.role === 'viewer') {
+          window.location.href = "/viewer/dashboard"
+        } else {
+          window.location.href = "/admin/dashboard"
+        }
       }, 2000)
 
     } catch (error) {

@@ -17,7 +17,7 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<User>
   logout: () => void
   updateUser: (userData: Partial<User>) => void
 }
@@ -61,6 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.token) {
           localStorage.setItem('authToken', response.token)
         }
+        // Store the user's project name for asset filtering
+        if (response.user.projectName) {
+          localStorage.setItem('userProject', response.user.projectName)
+        }
+        return response.user
       } else {
         throw new Error(response.message || 'Login failed')
       }
@@ -71,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('authToken')
+    localStorage.removeItem('userProject')
     localStorage.removeItem('rememberMe')
     setUser(null)
     window.location.href = '/login'

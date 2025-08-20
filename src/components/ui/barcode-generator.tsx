@@ -8,7 +8,7 @@ import { Label } from './label'
 import { Badge } from './badge'
 
 import { generateBarcode, type BarcodeGenerationResponse } from '@/lib/DigitalAssets'
-import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
 import { Barcode, Settings, Info, Hash, CheckCircle, Search, Building } from 'lucide-react'
@@ -32,7 +32,9 @@ const BARCODE_FORMATS = [
 ]
 
 export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
-  const { assets, fetchAssets, loading: assetsLoading } = useDigitalAssets()
+  const { user } = useAuth()
+  const [assets, setAssets] = useState<any[]>([])
+  const [assetsLoading, setAssetsLoading] = useState(false)
   const [format, setFormat] = useState('code128')
   const [height, setHeight] = useState(10)
   const [scale, setScale] = useState(3)
@@ -47,14 +49,72 @@ export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [imageLoading, setImageLoading] = useState(false)
 
-  // Load assets on component mount - optimized with useCallback
-  const loadAssets = useCallback(() => {
+  // Fetch assets from API and filter by user's project
+  const fetchAssets = useCallback(async () => {
+    try {
+      setAssetsLoading(true)
+      
+      if (!user?.projectName) {
+        console.warn('User project not found')
+        return
+      }
+
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+      if (!token) {
+        console.warn('Authentication token not found')
+        return
+      }
+
+      const response = await fetch('http://192.168.0.5:5021/api/assets', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assets: ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      let allAssets: any[] = []
+      
+      // Extract assets from response
+      if (data.success && data.assets) {
+        allAssets = data.assets
+      } else if (data.assets) {
+        allAssets = data.assets
+      } else if (Array.isArray(data)) {
+        allAssets = data
+      } else {
+        const possibleAssets = data.data || data.items || data.results || []
+        if (Array.isArray(possibleAssets)) {
+          allAssets = possibleAssets
+        }
+      }
+
+      // Filter assets by user's project name
+      const userAssets = allAssets.filter((asset: any) => {
+        // Check both the old projectName property and the new nested project structure
+        const assetProjectName = asset.project?.projectName || asset.projectName
+        return assetProjectName === user.projectName
+      })
+
+      console.log(`Found ${userAssets.length} assets for project: ${user.projectName}`)
+      setAssets(userAssets)
+    } catch (err) {
+      console.error('Error fetching assets:', err)
+    } finally {
+      setAssetsLoading(false)
+    }
+  }, [user?.projectName])
+
+  // Load assets on component mount
+  useEffect(() => {
     fetchAssets()
   }, [fetchAssets])
-
-  useEffect(() => {
-    loadAssets()
-  }, [loadAssets])
 
   // Memoized filtered assets for better performance
   const filteredAssets = useMemo(() => 
@@ -160,6 +220,22 @@ export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
         />
       )}
       
+      {/* Project Info Banner */}
+      {user?.projectName && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              Currently working with project: <span className="font-bold">{user.projectName}</span>
+            </span>
+          </div>
+        </div>
+      )}
+
       <Card className="shadow-sm">
         <CardHeader className="pb-6">
           <div className="flex items-center space-x-3">
@@ -171,7 +247,7 @@ export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
                 Barcode Generator
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-1">
-                Select an asset and generate a professional barcode for digital asset tracking
+                Select an asset from your project and generate a professional barcode for digital asset tracking
               </CardDescription>
             </div>
           </div>
@@ -249,6 +325,9 @@ export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   {assetsLoading ? 'Loading...' : `${filteredAssets.length} of ${assets.length} assets shown`}
+                  {!assetsLoading && assets.length === 0 && (
+                    <span className="text-red-500 ml-2">⚠️ No assets found for project: {user?.projectName}</span>
+                  )}
                 </span>
                 <span>Select an asset and click &apos;Generate Barcode&apos;</span>
               </div>

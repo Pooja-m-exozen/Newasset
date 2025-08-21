@@ -72,14 +72,14 @@ export default function Sidebar({ className }: SidebarProps) {
         description: "User management and permissions"
       },
       {
-        id: "assets",
+        id: "manage-assets",
         label: "Manage Assets",
         icon: Building2,
         href: "/admin/manageassets",
         description: "Asset tracking and maintenance"
       },
       {
-        id: "locations",
+        id: "manage-locations",
         label: "Manage Location",
         icon: MapPin,
         href: "/admin/managelocation",
@@ -100,7 +100,14 @@ export default function Sidebar({ className }: SidebarProps) {
         description: "Task checklists and inspections"
       },
       {
-        id: "reports",
+        id: "view-assets",
+        label: "View Assets",
+        icon: Building2,
+        href: "/admin/assets",
+        description: "Browse and search assets"
+      },
+      {
+        id: "view-reports",
         label: "View All Logs/Reports",
         icon: FileText,
         href: "/admin/viewalllogs",
@@ -132,21 +139,21 @@ export default function Sidebar({ className }: SidebarProps) {
         description: "View asset overview and status"
       },
       {
-        id: "assets",
+        id: "viewer-assets",
         label: "View Assets",
         icon: Building2,
         href: "/viewer/assets",
         description: "Browse and search assets"
       },
       {
-        id: "locations",
+        id: "viewer-checklist",
         label: "View checklist",
         icon: MapPin,
         href: "/viewer/checklist",
         description: "View checklist information"
       },
       {
-        id: "reports",
+        id: "viewer-reports",
         label: "View Reports",
         icon: FileText,
         href: "/viewer/reports",

@@ -251,7 +251,7 @@ Timestamps:
     }
   }
 
-  // Fetch assets from API
+  // Fetch assets from API and filter by user's project
   const fetchAssets = async () => {
     try {
       setIsLoading(true)
@@ -261,6 +261,9 @@ Timestamps:
       if (!token) {
         throw new Error('Authentication token not found. Please login again.')
       }
+
+      // Get user project info from token or storage
+      const userProject = localStorage.getItem('userProject') || sessionStorage.getItem('userProject')
       
       const response = await fetch('http://192.168.0.5:5021/api/assets', {
         method: 'GET',
@@ -281,8 +284,27 @@ Timestamps:
       
       const data: ApiResponse = await response.json()
       if (data.success) {
-        setAssets(data.assets)
-        setFilteredAssets(data.assets)
+        let allAssets = data.assets
+
+        // Filter assets by user's project if userProject is available
+        if (userProject) {
+          const projectAssets = allAssets.filter(asset => {
+            // Check both the old projectName property and the new nested project structure
+            const assetProjectName = asset.project?.projectName || asset.projectName
+            return assetProjectName === userProject
+          })
+
+          if (projectAssets.length === 0) {
+            setError(`No assets found for your project: ${userProject}`)
+          } else {
+            setAssets(projectAssets)
+            setFilteredAssets(projectAssets)
+          }
+        } else {
+          // If no project info, show all assets (fallback)
+          setAssets(allAssets)
+          setFilteredAssets(allAssets)
+        }
       } else {
         throw new Error('Failed to fetch assets')
       }

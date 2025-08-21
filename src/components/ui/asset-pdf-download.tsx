@@ -25,8 +25,8 @@ const getReverseGeocodedAddress = async (latitude: string, longitude: string): P
     }
     
     return 'Address not available';
-  } catch (error) {
-    console.error('Error getting reverse geocoded address:', error);
+  } catch {
+    console.error('Error getting reverse geocoded address');
     return 'Address not available';
   }
 };
@@ -58,7 +58,7 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
         
         // Add logo to PDF (reduced height for better layout)
         doc.addImage(logoImg, 'PNG', 15, 15, 35, 12);
-      } catch (error) {
+      } catch  {
         console.log('Logo not available, using text fallback');
         // Fallback to text if image fails
         doc.setFillColor(255, 165, 0); // Orange color for ZEN logo
@@ -233,102 +233,34 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
        doc.setDrawColor(200, 200, 200);
        doc.line(startX, currentY, startX + totalTableWidth, currentY);
        
-       // Add comprehensive summary section below the table
-       const summaryStartY = currentY + 15;
-       const summaryBoxHeight = 40;
-       
-       // Summary box background
-       doc.setFillColor(248, 250, 252); // Light blue-gray background
-       doc.rect(startX, summaryStartY, totalTableWidth, summaryBoxHeight, 'F');
-       
-       // Summary box border
-       doc.setDrawColor(59, 130, 246); // Blue border
-       doc.setLineWidth(0.5);
-       doc.rect(startX, summaryStartY, totalTableWidth, summaryBoxHeight);
-       
-       // Summary title
-       doc.setFontSize(14);
-       doc.setFont('helvetica', 'bold');
-       doc.setTextColor(59, 130, 246); // Blue text
-       doc.text('ASSET SUMMARY REPORT', startX + 5, summaryStartY + 8);
-       
-       // Summary content
-       doc.setFontSize(10);
-       doc.setFont('helvetica', 'normal');
-       doc.setTextColor(0, 0, 0);
-       
-       let summaryContentY = summaryStartY + 18;
-       let summaryContentX = startX + 5;
-       
-       // Total assets with highlight
-       doc.setFont('helvetica', 'bold');
-       doc.setFillColor(59, 130, 246); // Blue highlight
-       doc.rect(summaryContentX, summaryContentY - 3, 25, 6, 'F');
-       doc.setTextColor(255, 255, 255); // White text
-       doc.text(`Total: ${assets.length}`, summaryContentX + 2, summaryContentY + 1);
-       
-       // Reset text color for categories
-       doc.setTextColor(0, 0, 0);
-       summaryContentX += 35;
-       
-               // Category breakdown with better formatting
+               // Add simple summary section below the table
+        const summaryStartY = currentY + 15;
+        
+        // Summary title
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('ASSET SUMMARY', startX + 5, summaryStartY);
+        
+        // Summary content
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        
+        let summaryContentY = summaryStartY + 15;
+        const summaryContentX = startX + 5;
+        
+        // Total assets
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total Assets: ${assets.length}`, summaryContentX, summaryContentY);
+        
+        // Category counts
+        summaryContentY += 8;
         Object.entries(assetCounts).forEach(([category, count]) => {
-          // Category box with better spacing
-          doc.setFillColor(239, 246, 255); // Light blue background
-          doc.rect(summaryContentX, summaryContentY - 3, 40, 6, 'F');
-          doc.setDrawColor(59, 130, 246);
-          doc.rect(summaryContentX, summaryContentY - 3, 40, 6);
-          
-          // Category text (capitalized first letter)
-          doc.setFontSize(9);
-          doc.setFont('helvetica', 'bold');
           const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
-          doc.text(formattedCategory, summaryContentX + 2, summaryContentY + 1);
-          
-          // Count text with colon format
-          doc.setFontSize(8);
-          doc.setFont('helvetica', 'normal');
-          doc.text(count.toString(), summaryContentX + 2, summaryContentY + 5);
-          
-          summaryContentX += 45; // Increased spacing for better readability
-          
-          // Move to next row if running out of space
-          if (summaryContentX > startX + totalTableWidth - 50) {
-            summaryContentX = startX + 40;
-            summaryContentY += 12;
-          }
+          doc.text(`${formattedCategory}: ${count}`, summaryContentX, summaryContentY);
+          summaryContentY += 6;
         });
-       
-       // Add percentage calculations
-       summaryContentY += 8;
-       summaryContentX = startX + 5;
-       
-       doc.setFontSize(9);
-       doc.setFont('helvetica', 'bold');
-       doc.setTextColor(107, 114, 128); // Gray text
-       doc.text('Distribution:', summaryContentX, summaryContentY);
-       
-       summaryContentX += 25;
-               Object.entries(assetCounts).forEach(([category, count]) => {
-          const percentage = ((count / assets.length) * 100).toFixed(1);
-          
-          doc.setFontSize(8);
-          doc.setFont('helvetica', 'normal');
-          const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
-          doc.text(`${formattedCategory}: ${percentage}%`, summaryContentX, summaryContentY);
-          
-          summaryContentX += 45; // Increased spacing for better readability
-          if (summaryContentX > startX + totalTableWidth - 50) {
-            summaryContentX = startX + 30;
-            summaryContentY += 6;
-          }
-        });
-       
-       // Add generation timestamp
-       doc.setFontSize(8);
-       doc.setFont('helvetica', 'italic');
-       doc.setTextColor(156, 163, 175); // Light gray
-       doc.text(`Report generated on: ${new Date().toLocaleString()}`, startX + 5, summaryStartY + summaryBoxHeight - 3);
        
        // Save the PDF
        doc.save(filename);
@@ -336,8 +268,8 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
       if (onDownload) {
         onDownload();
       }
-    } catch (error) {
-      console.error('Error generating PDF:', error);
+    } catch {
+      console.error('Error generating PDF');
       alert('Error generating PDF. Please try again.');
     }
   };
@@ -464,8 +396,8 @@ export const AssetExcelDownload: React.FC<{
       XLSX.writeFile(workbook, filename);
       
       onDownload?.();
-    } catch (error) {
-      console.error('Error generating Excel:', error);
+    } catch {
+      console.error('Error generating Excel');
       // Fallback to alert if xlsx is not available
       alert('Excel generation failed. Please install xlsx: npm install xlsx');
     }

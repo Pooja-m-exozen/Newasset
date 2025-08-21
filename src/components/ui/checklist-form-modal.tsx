@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -62,7 +61,7 @@ interface Checklist {
   }
   metadata?: {
     version: string
-    compliance: any[]
+    compliance: string[]
   }
 }
 
@@ -103,7 +102,7 @@ export default function ChecklistFormModal({
   editingChecklist,
   mode
 }: ChecklistFormModalProps) {
-  const { user, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [activeTab, setActiveTab] = useState<'manual' | 'import'>('manual')
   const [formData, setFormData] = useState<ChecklistFormData>({
     title: '',
@@ -123,7 +122,7 @@ export default function ChecklistFormModal({
 
   // Excel import state
   const [excelFile, setExcelFile] = useState<File | null>(null)
-  const [importPreview, setImportPreview] = useState<any[]>([])
+  const [importPreview, setImportPreview] = useState<Record<string, string>[]>([])
   const [isImporting, setIsImporting] = useState(false)
   
   // Form submission state
@@ -239,7 +238,7 @@ export default function ChecklistFormModal({
         try {
           responseData = await response.json()
           console.log('Response data:', responseData)
-        } catch (parseError) {
+        } catch {
           console.log('Could not parse response as JSON')
           responseData = null
         }
@@ -350,7 +349,7 @@ export default function ChecklistFormModal({
     }))
   }
 
-  const updateChecklistItem = (index: number, field: string, value: any) => {
+  const updateChecklistItem = (index: number, field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
       items: prev.items.map((item, i) => 
@@ -377,7 +376,7 @@ export default function ChecklistFormModal({
       const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
       const data = lines.slice(1).filter(line => line.trim()).map(line => {
         const values = line.split(',').map(v => v.replace(/"/g, '').trim())
-        const row: any = {}
+        const row: Record<string, string> = {}
         headers.forEach((header, index) => {
           row[header] = values[index] || ''
         })
@@ -723,7 +722,7 @@ export default function ChecklistFormModal({
                     <div className="text-center py-8 text-gray-500">
                       <CheckSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                       <p>No checklist items added yet</p>
-                      <p className="text-sm">Click "Add Item" to get started</p>
+                      <p className="text-sm">Click &quot;Add Item&quot; to get started</p>
                     </div>
                   ) : (
                     <div className="space-y-4">

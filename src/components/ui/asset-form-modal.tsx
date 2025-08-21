@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
 import { Button } from './button';
 import { Input } from './input';
@@ -21,8 +21,7 @@ import {
   Barcode, 
   Wifi,
   RefreshCw,
-  User,
-  Zap
+  User
 } from 'lucide-react';
 import { QRGenerationModal } from './qr-generation-modal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -115,7 +114,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const [geocodingLoading, setGeocodingLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [usingFallbackFilter, setUsingFallbackFilter] = useState(false);
   
   // Feature toggles
   const [enableGeocoding, setEnableGeocoding] = useState(true);
@@ -139,11 +137,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const [createdAsset, setCreatedAsset] = useState<Asset | null>(null);
   const [assetCreationStatus, setAssetCreationStatus] = useState<'idle' | 'creating' | 'success' | 'ready-for-qr'>('idle');
 
-
-
-
   // Fetch data functions
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setLoadingProjects(true);
     try {
       const response = await fetch('http://192.168.0.5:5021/api/projects', {
@@ -164,14 +159,14 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       } else {
         setProjects([]);
       }
-    } catch (error) {
+    } catch {
       setProjects([]);
     } finally {
       setLoadingProjects(false);
     }
-  };
+  }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
       // Only fetch users if we have a project name to filter by
@@ -204,7 +199,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       } else {
         // Fallback: fetch all users and filter client-side
         console.log('Project filter query failed, falling back to client-side filtering');
-        setUsingFallbackFilter(true);
         response = await fetch('http://192.168.0.5:5021/api/admin', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -228,14 +222,68 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           setUsers([]);
         }
       }
-    } catch (error) {
+    } catch {
       setUsers([]);
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [user?.projectName]);
 
-
+  const fetchUsersForProject = useCallback(async (projectName: string) => {
+    setLoadingUsers(true);
+    try {
+      // Try to fetch users with project filter first
+      let response = await fetch(`http://192.168.0.5:5021/api/admin?projectName=${encodeURIComponent(projectName)}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.users) {
+          // Filter users to only show those from the selected project
+          const filteredUsers = data.users.filter((userItem: User) => 
+            userItem.projectName === projectName
+          );
+          setUsers(filteredUsers);
+          console.log(`Filtered users for project "${projectName}":`, filteredUsers);
+        } else {
+          setUsers([]);
+        }
+      } else {
+        // Fallback: fetch all users and filter client-side
+        console.log('Project filter query failed, falling back to client-side filtering');
+        response = await fetch('http://192.168.0.5:5021/api/admin', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.users) {
+            // Filter users to only show those from the selected project
+            const filteredUsers = data.users.filter((userItem: User) => 
+              userItem.projectName === projectName
+            );
+            setUsers(filteredUsers);
+            console.log(`Client-side filtered users for project "${projectName}":`, filteredUsers);
+          } else {
+            setUsers([]);
+          }
+        } else {
+          setUsers([]);
+        }
+      }
+    } catch {
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, []);
 
   // Generate unique IDs
   const generateTagId = () => {
@@ -260,8 +308,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     setFormData(prev => ({ ...prev, tagId }));
   };
 
-
-
   const generateSerialNumber = () => {
     setGeneratingSerialNumber(true);
     
@@ -276,7 +322,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   // Initialize form data
   useEffect(() => {
     if (isOpen) {
-      setUsingFallbackFilter(false); // Reset fallback filter state
       fetchProjects(); // Fetch available projects
       fetchUsers();
       
@@ -291,9 +336,9 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       console.log('Note: If projectId is missing, the system will use projectName as the identifier');
       console.log(`Will filter users by project: "${user?.projectName}"`);
       
-    if (asset && mode === 'edit') {
+      if (asset && mode === 'edit') {
         // Edit mode: populate with existing asset data
-      setFormData({
+        setFormData({
           tagId: asset.tagId || '', assetType: asset.assetType || '', subcategory: asset.subcategory || '',
           brand: asset.brand || '', model: asset.model || '', serialNumber: asset.serialNumber || '',
           capacity: asset.capacity || '', yearOfInstallation: asset.yearOfInstallation || '',
@@ -301,21 +346,21 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           assignedTo: typeof asset.assignedTo === 'string' ? asset.assignedTo : asset.assignedTo?._id || '',
           notes: asset.notes || '', priority: asset.priority || '', status: asset.status || '',
           digitalTagType: asset.digitalTagType || '', tags: asset.tags || [], customFields: asset.customFields || {},
-        location: {
+          location: {
             latitude: asset.location?.latitude || '0', longitude: asset.location?.longitude || '0',
             building: asset.location?.building || '', floor: asset.location?.floor || '', room: asset.location?.room || ''
+          }
+        });
+        setCoordinatesFound((asset.location?.latitude || '0') !== '0' && (asset.location?.longitude || '0') !== '0');
+        
+        // Fetch users for the asset's project if it has one
+        if (asset.project?.projectName) {
+          fetchUsersForProject(asset.project.projectName);
+          console.log(`Editing asset for project: "${asset.project.projectName}"`);
         }
-      });
-      setCoordinatesFound((asset.location?.latitude || '0') !== '0' && (asset.location?.longitude || '0') !== '0');
-      
-      // Fetch users for the asset's project if it has one
-      if (asset.project?.projectName) {
-        fetchUsersForProject(asset.project.projectName);
-        console.log(`Editing asset for project: "${asset.project.projectName}"`);
-      }
-          } else if (mode === 'create') {
+      } else if (mode === 'create') {
         // Create mode: set defaults and generate IDs
-      setFormData(prev => ({
+        setFormData(prev => ({
           ...prev, 
           tagId: '', // Start with empty Tag ID
           assignedTo: '', 
@@ -323,30 +368,30 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
             projectId: user?.projectId || user?.projectName || '', // Use projectName as fallback if projectId is missing
             projectName: user?.projectName || '' 
           }
-      }));
-      
-      // Ensure project is set from user context
-      if (user?.projectName) {
-        setFormData(prev => ({
-          ...prev,
-          project: {
-            projectId: user.projectId || user.projectName || '', // Use projectName as fallback if projectId is missing
-            projectName: user.projectName || ''
-          }
         }));
         
-        // Fetch users for the default project
-        fetchUsersForProject(user.projectName);
-        console.log(`Creating asset for project: "${user.projectName}"`);
+        // Ensure project is set from user context
+        if (user?.projectName) {
+          setFormData(prev => ({
+            ...prev,
+            project: {
+              projectId: user.projectId || user.projectName || '', // Use projectName as fallback if projectId is missing
+              projectName: user.projectName || ''
+            }
+          }));
+          
+          // Fetch users for the default project
+          fetchUsersForProject(user.projectName);
+          console.log(`Creating asset for project: "${user.projectName}"`);
+        }
+        
+        // Don't generate initial tag ID - let user select asset type first
+        // generateSerialNumber(); // Keep this if you want serial number auto-generated
+        setCoordinatesFound(false);
+        setAddressInput('');
       }
-      
-      // Don't generate initial tag ID - let user select asset type first
-      // generateSerialNumber(); // Keep this if you want serial number auto-generated
-      setCoordinatesFound(false);
-      setAddressInput('');
     }
-    }
-  }, [isOpen, mode, asset, user]);
+  }, [isOpen, mode, asset, user, fetchUsers, fetchUsersForProject, fetchProjects]);
 
 
 
@@ -535,63 +580,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     }
   };
 
-  const fetchUsersForProject = async (projectName: string) => {
-    setLoadingUsers(true);
-    try {
-      // Try to fetch users with project filter first
-      let response = await fetch(`http://192.168.0.5:5021/api/admin?projectName=${encodeURIComponent(projectName)}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.users) {
-          // Filter users to only show those from the selected project
-          const filteredUsers = data.users.filter((userItem: User) => 
-            userItem.projectName === projectName
-          );
-          setUsers(filteredUsers);
-          console.log(`Filtered users for project "${projectName}":`, filteredUsers);
-        } else {
-          setUsers([]);
-        }
-      } else {
-        // Fallback: fetch all users and filter client-side
-        console.log('Project filter query failed, falling back to client-side filtering');
-        setUsingFallbackFilter(true);
-        response = await fetch('http://192.168.0.5:5021/api/admin', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.users) {
-            // Filter users to only show those from the selected project
-            const filteredUsers = data.users.filter((userItem: User) => 
-              userItem.projectName === projectName
-            );
-            setUsers(filteredUsers);
-            console.log(`Client-side filtered users for project "${projectName}":`, filteredUsers);
-          } else {
-            setUsers([]);
-          }
-        } else {
-          setUsers([]);
-        }
-      }
-    } catch (error) {
-      setUsers([]);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
   const handleDigitalTagGenerated = (updatedAsset: Asset) => {
     // Handle the generated digital tag and push into global state so views update immediately
     console.log('Digital tag generated for asset:', updatedAsset);
@@ -614,7 +602,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     if (onSubmit && typeof onSubmit === 'function') {
       onSubmit(completeUpdatedAsset as unknown as AssetFormData).then(() => {
         console.log('Asset updated with QR code in parent component');
-      }).catch((error) => {
+      }).catch(() => {
         // Handle error silently
       });
     }
@@ -696,10 +684,10 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       // Close modal for non-QR assets
       setAssetCreationStatus('idle');
       onClose();
-          } catch {
-        setAssetCreationStatus('idle');
-        throw new Error('Failed to submit asset');
-      }
+    } catch {
+      setAssetCreationStatus('idle');
+      throw new Error('Failed to submit asset');
+    }
   };
 
   const getModalTitle = () => {
@@ -1213,7 +1201,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                       <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">Loading users...</div>
                     ) : users.length === 0 ? (
                       <div className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">
-                        No users found in project "{formData.project.projectName || 'Select a project first'}". Contact your administrator to add users to this project.
+                        No users found in project &quot;{formData.project.projectName || 'Select a project first'}&quot;. Contact your administrator to add users to this project.
                       </div>
                     ) : (
                       users.map(user => (

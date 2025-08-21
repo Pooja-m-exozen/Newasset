@@ -11,7 +11,7 @@ import { generateNFCData, type NFCGenerationResponse } from '@/lib/DigitalAssets
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { Wifi, Info, Hash, MapPin, Building, User, Shield, CheckCircle, Search } from 'lucide-react'
+import { Wifi, Info, Hash, MapPin, User, Shield, CheckCircle, Search } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 
@@ -20,9 +20,23 @@ interface NFCGeneratorProps {
   className?: string;
 }
 
+// Asset interface
+interface Asset {
+  _id: string;
+  tagId: string;
+  assetType: string;
+  brand: string;
+  model?: string;
+  status?: string;
+  project?: {
+    projectName: string;
+  };
+  projectName?: string;
+}
+
 export function NFCGenerator({ className }: NFCGeneratorProps) {
   const { user } = useAuth()
-  const [assets, setAssets] = useState<any[]>([])
+  const [assets, setAssets] = useState<Asset[]>([])
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [nfcData, setNfcData] = useState<NFCGenerationResponse | null>(null)
@@ -64,7 +78,7 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
 
       const data = await response.json()
       
-      let allAssets: any[] = []
+      let allAssets: Asset[] = []
       
       // Extract assets from response
       if (data.success && data.assets) {
@@ -81,7 +95,7 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
       }
 
       // Filter assets by user's project name
-      const userAssets = allAssets.filter((asset: any) => {
+      const userAssets = allAssets.filter((asset: Asset) => {
         // Check both the old projectName property and the new nested project structure
         const assetProjectName = asset.project?.projectName || asset.projectName
         return assetProjectName === user.projectName
@@ -159,7 +173,7 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
     asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
     asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.model.toLowerCase().includes(searchTerm.toLowerCase())
+    (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   const formatTimestamp = (timestamp: string) => {

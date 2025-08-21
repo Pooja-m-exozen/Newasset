@@ -80,7 +80,6 @@ const PermissionsDisplay: React.FC = () => {
     fetchAdminPermissions, 
     clearError 
   } = useAssetContext();
-  const { user } = useAuth();
   const { toasts, removeToast } = useToast();
 
   useEffect(() => {
@@ -139,10 +138,10 @@ const AssetsList: React.FC = () => {
   const handleDelete = async (assetId: string) => {
     if (window.confirm('Are you sure you want to delete this asset?')) {
       try {
-      await deleteAsset(assetId);
+        await deleteAsset(assetId);
         setSuccessMessage('Asset deleted successfully!');
         setShowSuccess(true);
-      } catch (error) {
+      } catch {
         // Handle error silently or show user-friendly message
       }
     }
@@ -671,7 +670,7 @@ const AssetTypeManagement: React.FC = () => {
         await deleteAssetType(assetTypeId);
         setSuccessMessage('Asset type deleted successfully!');
         setShowSuccess(true);
-      } catch (error) {
+      } catch {
         // Handle error silently or show user-friendly message
       }
     }

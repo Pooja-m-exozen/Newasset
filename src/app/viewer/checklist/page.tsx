@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import Image from 'next/image'
 import { 
   MapPin, 
   Building2, 
@@ -14,7 +15,6 @@ import {
   Calendar,
   Clock,
   User,
-  Tag,
   QrCode,
   Eye,
   Download,
@@ -59,7 +59,7 @@ interface Checklist {
   items: ChecklistItem[]
   location: Location
   createdBy: CreatedBy
-  assignedTo: any[]
+  assignedTo: string[]
   status: string
   priority: string
   tags: string[]
@@ -92,7 +92,13 @@ export default function ViewerChecklists() {
   // Scanner states
   const [showScanner, setShowScanner] = useState(false)
   const [scanningQR, setScanningQR] = useState(false)
-  const [scannedData, setScannedData] = useState<any>(null)
+  const [scannedData, setScannedData] = useState<{
+    checklistId: string;
+    title: string;
+    type: string;
+    location: Record<string, unknown>;
+    url: string;
+  } | null>(null)
   const [scannerError, setScannerError] = useState<string | null>(null)
   const [savingScannedData, setSavingScannedData] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<File | null>(null)
@@ -104,33 +110,8 @@ export default function ViewerChecklists() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
-  useEffect(() => {
-    fetchChecklists()
-  }, [])
-
-  useEffect(() => {
-    filterChecklists()
-  }, [checklists, searchTerm, typeFilter, statusFilter, priorityFilter])
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showQRModal) {
-        closeQRModal()
-      }
-    }
-
-    if (showQRModal) {
-      document.addEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'hidden'
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'unset'
-    }
-  }, [showQRModal])
-
-  const fetchChecklists = async () => {
+  // Define functions first before using them in useEffect
+  const fetchChecklists = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -168,30 +149,15 @@ export default function ViewerChecklists() {
       } else {
         setError('Failed to fetch checklists')
       }
-    } catch (error) {
+    } catch {
       setError('Error connecting to server. Please check your connection.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [authToken])
 
-  const handleRefresh = async () => {
-    setRefreshing(true)
-    await fetchChecklists()
-    setRefreshing(false)
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken')
-    setAuthToken('')
-    setChecklists([])
-    setFilteredChecklists([])
-    setShowTokenInput(false)
-    setError(null)
-  }
-
-  const filterChecklists = () => {
-    let filtered = checklists.filter(checklist => {
+  const filterChecklists = useCallback(() => {
+    const filtered = checklists.filter(checklist => {
       const matchesSearch = checklist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           checklist.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           checklist.location.building.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -206,6 +172,57 @@ export default function ViewerChecklists() {
     })
     
     setFilteredChecklists(filtered)
+  }, [checklists, searchTerm, typeFilter, statusFilter, priorityFilter])
+
+  const closeQRModal = useCallback(() => {
+    if (selectedQRData?.blobUrl) {
+      URL.revokeObjectURL(selectedQRData.blobUrl)
+    }
+    setShowQRModal(false)
+    setSelectedQRData(null)
+    setQrImageLoading(false)
+    setQrImageError(false)
+  }, [])
+
+  useEffect(() => {
+    fetchChecklists()
+  }, [fetchChecklists])
+
+  useEffect(() => {
+    filterChecklists()
+  }, [filterChecklists])
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showQRModal) {
+        closeQRModal()
+      }
+    }
+
+    if (showQRModal) {
+      document.addEventListener('keydown', handleEscape)
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = 'unset'
+    }
+  }, [showQRModal, closeQRModal])
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchChecklists()
+    setRefreshing(false)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken')
+    setAuthToken('')
+    setChecklists([])
+    setFilteredChecklists([])
+    setShowTokenInput(false)
+    setError(null)
   }
 
   const getPriorityColor = (priority: string) => {
@@ -263,8 +280,8 @@ export default function ViewerChecklists() {
       setSelectedQRData(prev => prev ? { ...prev, blobUrl: imageUrl } : null)
       setQrImageLoading(false)
     })
-    .catch(error => {
-      const testImg = new Image()
+    .catch(() => {
+      const testImg = new window.Image()
       testImg.crossOrigin = 'anonymous'
       testImg.onload = () => {
         setQrImageLoading(false)
@@ -275,16 +292,6 @@ export default function ViewerChecklists() {
       }
       testImg.src = testImageUrl
     })
-  }
-
-  const closeQRModal = () => {
-    if (selectedQRData?.blobUrl) {
-      URL.revokeObjectURL(selectedQRData.blobUrl)
-    }
-    setShowQRModal(false)
-    setSelectedQRData(null)
-    setQrImageLoading(false)
-    setQrImageError(false)
   }
 
   const handleModalBackdropClick = (e: React.MouseEvent) => {
@@ -312,7 +319,7 @@ export default function ViewerChecklists() {
         streamRef.current = stream
         startQRScanning()
       }
-    } catch (error) {
+    } catch {
       setScannerError('Failed to access camera. Please check permissions.')
       setScanningQR(false)
     }
@@ -356,7 +363,7 @@ export default function ViewerChecklists() {
         
         // Continue scanning
         requestAnimationFrame(scanFrame)
-      } catch (error) {
+      } catch {
         requestAnimationFrame(scanFrame)
       }
     }
@@ -387,17 +394,17 @@ export default function ViewerChecklists() {
         canvas.width = img.width
         canvas.height = img.height
         ctx?.drawImage(img, 0, 0)
-        simulateQRDetection(file)
+        simulateQRDetection()
       }
       
       img.src = URL.createObjectURL(file)
-    } catch (error) {
+    } catch {
       setImageScanError('Failed to process uploaded image')
       setImageUploadLoading(false)
     }
   }
 
-  const simulateQRDetection = (file: File) => {
+  const simulateQRDetection = () => {
     setTimeout(() => {
       if (selectedQRData) {
         try {
@@ -412,7 +419,7 @@ export default function ViewerChecklists() {
           
           setScannedData(simulatedData)
           setImageUploadLoading(false)
-        } catch (error) {
+        } catch {
           setImageScanError('Failed to parse QR code data')
           setImageUploadLoading(false)
         }
@@ -432,7 +439,7 @@ export default function ViewerChecklists() {
       console.log('Saving scanned data:', scannedData)
       await new Promise(resolve => setTimeout(resolve, 1000))
       closeScanner()
-    } catch (error) {
+    } catch {
       setScannerError('Failed to save scanned data')
     } finally {
       setSavingScannedData(false)
@@ -795,13 +802,14 @@ export default function ViewerChecklists() {
                     </div>
                   )}
                   
-                  <img 
+                  <Image 
                     src={selectedQRData.blobUrl || (selectedQRData.url.startsWith('http') ? selectedQRData.url : `http://192.168.0.5:5021${selectedQRData.url}`)}
                     alt="QR Code"
-                    className={`w-48 h-48 mx-auto object-contain ${
+                    width={192}
+                    height={192}
+                    className={`mx-auto object-contain ${
                       qrImageLoading ? 'hidden' : ''
                     }`}
-                    crossOrigin="anonymous"
                     style={{ display: qrImageLoading ? 'none' : 'block' }}
                   />
                   
@@ -848,8 +856,6 @@ export default function ViewerChecklists() {
                     <Scan className="h-4 w-4 mr-2" />
                     Open Scanner
                   </Button>
-                  
-
                 </div>
               </div>
             </div>

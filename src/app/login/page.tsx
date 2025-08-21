@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const { login, user } = useAuth()
+  const { login } = useAuth()
   const { toasts, addToast, removeToast } = useToast()
 
   const validateForm = () => {

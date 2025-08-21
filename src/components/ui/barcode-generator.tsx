@@ -22,6 +22,25 @@ interface BarcodeGeneratorProps {
   className?: string;
 }
 
+// Asset interface
+interface Asset {
+  _id: string;
+  tagId: string;
+  assetType: string;
+  brand: string;
+  model?: string;
+  status?: string;
+  location: {
+    building: string;
+    floor: string;
+    room?: string;
+  };
+  project?: {
+    projectName: string;
+  };
+  projectName?: string;
+}
+
 const BARCODE_FORMATS = [
   { value: 'code128', label: 'Code 128', description: 'Most common format, supports all ASCII characters' },
   { value: 'code39', label: 'Code 39', description: 'Industrial standard, supports numbers and uppercase letters' },
@@ -33,7 +52,7 @@ const BARCODE_FORMATS = [
 
 export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
   const { user } = useAuth()
-  const [assets, setAssets] = useState<any[]>([])
+  const [assets, setAssets] = useState<Asset[]>([])
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [format, setFormat] = useState('code128')
   const [height, setHeight] = useState(10)
@@ -79,7 +98,7 @@ export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
 
       const data = await response.json()
       
-      let allAssets: any[] = []
+      let allAssets: Asset[] = []
       
       // Extract assets from response
       if (data.success && data.assets) {
@@ -96,7 +115,7 @@ export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
       }
 
       // Filter assets by user's project name
-      const userAssets = allAssets.filter((asset: any) => {
+      const userAssets = allAssets.filter((asset: Asset) => {
         // Check both the old projectName property and the new nested project structure
         const assetProjectName = asset.project?.projectName || asset.projectName
         return assetProjectName === user.projectName
@@ -122,7 +141,7 @@ export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
       asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.model.toLowerCase().includes(searchTerm.toLowerCase())
+      (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase()))
     ), [assets, searchTerm]
   )
 

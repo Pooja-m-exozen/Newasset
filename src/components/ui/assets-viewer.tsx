@@ -21,16 +21,10 @@ import {
   Package,
   Download,
   Copy,
-  X,
-  Building,
-  Calendar,
-  Globe,
-  User,
-  MapPin
+  X
 } from 'lucide-react'
 import { StatusBadge } from './status-badge'
-import { PriorityBadge } from './priority-badge'
-import { ScrollArea } from './scroll-area'
+import NextImage from 'next/image'
  
 
 // API Base URL constant
@@ -591,9 +585,11 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                   <div className="flex justify-center">
                     {qrImgSrc ? (
                       <div className="relative">
-                        <img
+                        <NextImage
                           src={qrImgSrc}
                           alt="QR Code"
+                          width={128}
+                          height={128}
                           className="w-32 h-32 object-contain border border-gray-200 dark:border-gray-600 rounded-lg"
                           onLoad={() => setQrLoading(false)}
                           onError={handleQrError}
@@ -655,9 +651,11 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                     <div className="flex justify-center">
                       {barcodeImgSrc ? (
                         <div className="relative">
-                          <img
+                          <NextImage
                             src={barcodeImgSrc}
                             alt="Barcode"
+                            width={192}
+                            height={64}
                             className="w-48 h-16 object-contain border border-gray-200 dark:border-gray-600 rounded-lg"
                             onLoad={() => setBarcodeLoading(false)}
                             onError={handleBarcodeError}

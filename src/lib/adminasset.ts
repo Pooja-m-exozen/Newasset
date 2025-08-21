@@ -551,7 +551,7 @@ export const assetApi = {
       try {
         console.log('Trying project ID endpoint with:', projectIdentifier);
         return await apiRequest<AssetsResponse>(`/assets/project/${projectIdentifier}`);
-      } catch (error) {
+      } catch {
         console.log('Project ID endpoint failed, trying project name endpoint');
         // Fallback to project name endpoint
         return await apiRequest<AssetsResponse>(`/assets/project/${encodeURIComponent(projectIdentifier)}`);
@@ -561,7 +561,7 @@ export const assetApi = {
       try {
         console.log('Trying project name endpoint with:', projectIdentifier);
         return await apiRequest<AssetsResponse>(`/assets/project/${encodeURIComponent(projectIdentifier)}`);
-      } catch (error) {
+      } catch {
         console.log('Project name endpoint failed, trying project ID endpoint');
         // Fallback to project ID endpoint
         return await apiRequest<AssetsResponse>(`/assets/project/${projectIdentifier}`);

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -10,14 +10,10 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  Download, 
   CheckSquare, 
-  Calendar, 
-  User, 
   Building, 
   MapPin,
   Search,
-  Filter,
   RefreshCw,
   FileSpreadsheet,
   Eye
@@ -70,7 +66,7 @@ interface Checklist {
   }
   metadata?: {
     version: string
-    compliance: any[]
+    compliance: string[]
   }
   progress?: number
 }
@@ -88,7 +84,7 @@ interface AnalyticsSummary {
     _id: string
     count: number
   }>
-  recentActivity: any[]
+  recentActivity: string[]
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -138,22 +134,7 @@ export default function ChecklistPage() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null)
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false)
 
-  // Form state
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    type: '',
-    frequency: '',
-    priority: '',
-    status: 'active',
-    location: {
-      building: '',
-      floor: '',
-      zone: ''
-    },
-    items: [],
-    tags: []
-  })
+  // Form state moved to modal component
 
   // Fetch checklists from API
   useEffect(() => {
@@ -178,7 +159,7 @@ export default function ChecklistPage() {
           const result = await response.json()
           if (result.success && result.data) {
             // Transform API data to match our interface
-            const transformedChecklists = result.data.map((checklist: any) => ({
+            const transformedChecklists = result.data.map((checklist: Checklist) => ({
               ...checklist,
               progress: calculateProgress(checklist.items || [])
             }))
@@ -219,7 +200,7 @@ export default function ChecklistPage() {
         if (response.ok) {
           const result = await response.json()
           if (result.success && result.data) {
-            setAnalytics(result.data)
+            setAnalytics(result.data as AnalyticsSummary)
           }
         } else {
           console.error('Failed to fetch analytics:', response.status)
@@ -256,7 +237,7 @@ export default function ChecklistPage() {
           const result = await response.json()
           if (result.success && result.data) {
             // Transform API data to match our interface
-            const transformedChecklists = result.data.map((checklist: any) => ({
+            const transformedChecklists = result.data.map((checklist: Checklist) => ({
               ...checklist,
               progress: calculateProgress(checklist.items || [])
             }))
@@ -292,14 +273,14 @@ export default function ChecklistPage() {
         }
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success && result.data) {
-          setAnalytics(result.data)
+              if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            setAnalytics(result.data as AnalyticsSummary)
+          }
+        } else {
+          console.error('Failed to fetch analytics:', response.status)
         }
-      } else {
-        console.error('Failed to fetch analytics:', response.status)
-      }
     } catch (error) {
       console.error('Error fetching analytics:', error)
     } finally {
@@ -443,24 +424,10 @@ export default function ChecklistPage() {
   }
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      type: '',
-      frequency: '',
-      priority: '',
-      status: 'active',
-      location: {
-        building: '',
-        floor: '',
-        zone: ''
-      },
-      items: [],
-      tags: []
-    })
+    // Form reset functionality moved to modal component
   }
 
-  const calculateProgress = (items: any[]): number => {
+  const calculateProgress = (items: ChecklistItem[]): number => {
     if (items.length === 0) return 0
     const completed = items.filter(item => item.status === 'completed').length
     return Math.round((completed / items.length) * 100)

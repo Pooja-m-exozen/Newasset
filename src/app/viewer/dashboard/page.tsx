@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { 
   Building2, 
   MapPin, 
-  FileText, 
+  // FileText, 
   Search, 
   Eye, 
   Calendar,
@@ -17,7 +17,7 @@ import {
   User,
   CheckCircle,
   AlertCircle,
-  Clock
+  // Clock
 } from 'lucide-react'
 
 interface Asset {

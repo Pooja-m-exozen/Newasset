@@ -7,27 +7,27 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
-  Building2, 
+  // Building2, 
   MapPin, 
   Search, 
   Eye, 
-  Filter,
+  // Filter,
   Package,
   User,
-  Calendar,
+  // Calendar,
   Download,
   QrCode,
   Globe,
-  Smartphone,
+  // Smartphone,
   Monitor,
   Server,
   Database,
   Wifi,
   Shield,
   AlertCircle,
-  CheckCircle,
-  Clock,
-  Map
+  // CheckCircle,
+  // Clock,
+  // Map
 } from 'lucide-react'
 
 interface Asset {
@@ -100,7 +100,7 @@ export default function ViewerAssets() {
 
   useEffect(() => {
     // Apply filters
-    let filtered = assets.filter(asset => {
+    const filtered = assets.filter(asset => {
       const assetData = asset.digitalAssets.qrCode.data
       const matchesSearch = 
         assetData.t.toLowerCase().includes(searchTerm.toLowerCase()) ||

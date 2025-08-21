@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../../components/ui/error-display';
-import { AssetTable } from '../../../../components/ui/asset-table';
 import { AssetGrid } from '../../../../components/ui/asset-grid';
 import { AssetPDFDownload, AssetExcelDownload } from '../../../../components/ui/asset-pdf-download';
 import { ReportProvider, useReportContext } from '../../../../contexts/ReportContext';
@@ -51,7 +50,7 @@ interface AssetsResponse {
 
 function AssetsLogsContent() {
   const { user } = useAuth();
-  const { assets: reportAssets, loading, error, successMessage, clearError, clearSuccess } = useReportContext();
+  const { loading, error, successMessage, clearError, clearSuccess } = useReportContext();
   const [projectAssets, setProjectAssets] = useState<Asset[]>([]);
   const [assetTypes, setAssetTypes] = useState<Array<{_id: string, name: string}>>([]);
   const [selectedAssetType, setSelectedAssetType] = useState<string>('all');
@@ -164,7 +163,7 @@ function AssetsLogsContent() {
       fetchProjectAssets();
       fetchAssetTypes();
     }
-  }, [user?.projectName]);
+  }, [user?.projectName, fetchProjectAssets, fetchAssetTypes]);
 
   const filteredAssets = useMemo(() => {
     // Transform assets to match Report library's Asset interface
@@ -214,14 +213,8 @@ function AssetsLogsContent() {
     setSortOrder('desc');
   };
 
-  const handleSort = (field: string) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('desc');
-    }
-  };
+  // Sort functionality handled by the sortBy and sortOrder state variables
+  // No need for separate handleSort function as sorting is controlled by the Select components
 
   const handleViewDetails = (asset: Asset) => {
     setSelectedAsset(asset);

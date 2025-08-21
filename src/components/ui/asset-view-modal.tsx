@@ -383,7 +383,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
         
         // For now, we'll simulate QR detection
         // In a real implementation, you would use a QR code library like jsQR or ZXing
-        simulateQRDetection(file);
+        simulateQRDetection();
       };
       
       img.src = URL.createObjectURL(file);
@@ -395,7 +395,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
   };
 
   // Simulate QR code detection from image
-  const simulateQRDetection = (file: File) => {
+  const simulateQRDetection = () => {
     // This is a simulation - in real implementation, use proper QR detection library
     setTimeout(() => {
       // Simulate finding QR data based on the asset

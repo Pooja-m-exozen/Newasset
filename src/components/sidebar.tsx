@@ -17,7 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileDigit,
-  Bot,
+  // Bot,
   CheckSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"

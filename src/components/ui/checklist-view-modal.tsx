@@ -4,22 +4,19 @@ import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
 import { 
   X, 
   Download, 
-  QrCode, 
   Building, 
   MapPin, 
   User, 
-  Calendar,
   CheckSquare,
   Clock,
   Tag,
   FileText,
   Eye,
   Loader2,
-  CheckCircle,
   Copy,
   Scan,
   QrCode as QrCodeIcon
@@ -67,7 +64,7 @@ interface Checklist {
   }
   metadata?: {
     version: string
-    compliance: any[]
+    compliance: string[]
   }
   progress?: number
 }
@@ -96,7 +93,6 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
   const [showScanner, setShowScanner] = useState(false)
   const [generatingQR, setGeneratingQR] = useState(false)
   const [qrGenerationError, setQrGenerationError] = useState<string | null>(null)
-  const [qrGenerationSuccess, setQrGenerationSuccess] = useState(false)
 
   const API_BASE_URL = 'http://192.168.0.5:5021'
   const hasQRCode = checklist?.qrCode?.url
@@ -105,17 +101,12 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
   useEffect(() => {
     if (isOpen && checklist?._id) {
       // Reset any previous states
-      setQrGenerationSuccess(false)
       setQrGenerationError(null)
       setGeneratingQR(false)
       
-      // Check if checklist has a QR code and show success state briefly
+      // Check if checklist has a QR code
       if (checklist?.qrCode) {
-        setQrGenerationSuccess(true)
-        // Hide success message after 2 seconds
-        setTimeout(() => {
-          setQrGenerationSuccess(false)
-        }, 2000)
+        // QR code exists, no need to show success state
       }
     }
   }, [isOpen, checklist?._id, checklist?.qrCode])
@@ -189,13 +180,6 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
           if (onChecklistUpdated) {
             onChecklistUpdated(updatedChecklist)
           }
-          
-          setQrGenerationSuccess(true)
-          
-          // Show success message briefly
-          setTimeout(() => {
-            setQrGenerationSuccess(false)
-          }, 2000)
           
         } else {
           setQrGenerationError(data.message || 'Failed to generate QR code')
@@ -494,7 +478,7 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
                   Checklist Items ({checklist.items.length})
                 </h3>
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-                  {checklist.items.map((item, index) => (
+                  {checklist.items.map((item) => (
                     <div key={item._id} className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:shadow-sm transition-all duration-200">
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm">

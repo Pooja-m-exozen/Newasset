@@ -59,7 +59,15 @@ interface MaintenanceLog {
   workCompletedAt?: string;
   status: 'scheduled' | 'in-progress' | 'completed' | 'overdue' | 'cancelled' | 'paused';
   priority: 'low' | 'medium' | 'high' | 'critical';
-  location: string | { building?: string; floor?: string; room?: string };
+  location: string | { 
+    building?: string; 
+    floor?: string; 
+    room?: string;
+    coordinates?: {
+      latitude?: string;
+      longitude?: string;
+    };
+  };
   cost?: number;
   partsUsed: unknown[];
   attachments: unknown[];
@@ -123,7 +131,7 @@ export default function MaintenanceLogsPage() {
   };
 
   // Function to reverse geocode coordinates to address
-  const handleReverseGeocode = useCallback(async (logId: string, location: any) => {
+  const handleReverseGeocode = useCallback(async (logId: string, location: MaintenanceLog['location']) => {
     if (!location || typeof location !== 'object') return;
     
     // Check if we have coordinates
@@ -141,8 +149,8 @@ export default function MaintenanceLogsPage() {
     setGeocodingLoading(prev => ({ ...prev, [logId]: true }));
     
     try {
-      const latitude = parseFloat(location.coordinates.latitude);
-      const longitude = parseFloat(location.coordinates.longitude);
+      const latitude = parseFloat(location.coordinates!.latitude!);
+      const longitude = parseFloat(location.coordinates!.longitude!);
       
       if (isNaN(latitude) || isNaN(longitude)) return;
       
@@ -570,28 +578,28 @@ export default function MaintenanceLogsPage() {
     }
   };
 
-  const handleCreateFormChange = (field: string, value: any) => {
+  const handleCreateFormChange = (field: string, value: string | number) => {
     if (field === 'location.building') {
       setCreateForm(prev => ({
         ...prev,
-        location: { ...prev.location, building: value }
+        location: { ...prev.location, building: value as string }
       }));
     } else if (field === 'location.floor') {
       setCreateForm(prev => ({
         ...prev,
-        location: { ...prev.location, floor: value }
+        location: { ...prev.location, floor: value as string }
       }));
     } else if (field === 'location.room') {
       setCreateForm(prev => ({
         ...prev,
-        location: { ...prev.location, room: value }
+        location: { ...prev.location, room: value as string }
       }));
     } else if (field === 'location.coordinates.latitude') {
       setCreateForm(prev => ({
         ...prev,
         location: { 
           ...prev.location, 
-          coordinates: { ...prev.location.coordinates, latitude: value }
+          coordinates: { ...prev.location.coordinates, latitude: value as string }
         }
       }));
     } else if (field === 'location.coordinates.longitude') {
@@ -599,13 +607,13 @@ export default function MaintenanceLogsPage() {
         ...prev,
         location: { 
           ...prev.location, 
-          coordinates: { ...prev.location.coordinates, longitude: value }
+          coordinates: { ...prev.location.coordinates, longitude: value as string }
         }
       }));
     } else if (field === 'location.address') {
       setCreateForm(prev => ({
         ...prev,
-        location: { ...prev.location, address: value }
+        location: { ...prev.location, address: value as string }
       }));
     } else {
       setCreateForm(prev => ({
@@ -1580,7 +1588,7 @@ export default function MaintenanceLogsPage() {
                       {!createForm.location.coordinates.latitude && !createForm.location.address && (
                         <div className="p-2 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-md">
                           <div className="text-xs text-gray-600 dark:text-gray-400 text-center">
-                            No location set. Use "Get Current Location" or enter address manually.
+                            No location set. Use &quot;Get Current Location&quot; or enter address manually.
                           </div>
                         </div>
                       )}

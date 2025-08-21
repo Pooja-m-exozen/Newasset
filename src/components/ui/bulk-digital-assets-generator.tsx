@@ -8,11 +8,11 @@ import { Input } from './input'
 import { Label } from './label'
 import { Badge } from './badge'
 import { generateAllDigitalAssets, type BulkDigitalAssetsGenerationResponse } from '@/lib/DigitalAssets'
-import { useDigitalAssets } from '@/contexts/DigitalAssetsContext'
+
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, Barcode, Wifi, Info, Hash, MapPin, Building, Settings, Package, CheckCircle, Search } from 'lucide-react'
+import { QrCode, Barcode, Wifi, Info, Hash, MapPin, Settings, Package, CheckCircle, Search } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 // API Base URL constant
@@ -20,6 +20,20 @@ const API_BASE_URL = 'http://192.168.0.5:5021'
 
 interface BulkDigitalAssetsGeneratorProps {
   className?: string;
+}
+
+// Asset interface
+interface Asset {
+  _id: string;
+  tagId: string;
+  assetType: string;
+  brand: string;
+  model?: string;
+  status?: string;
+  project?: {
+    projectName: string;
+  };
+  projectName?: string;
 }
 
 const BARCODE_FORMATS = [
@@ -33,7 +47,7 @@ const BARCODE_FORMATS = [
 
 export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGeneratorProps) {
   const { user } = useAuth()
-  const [assets, setAssets] = useState<any[]>([])
+  const [assets, setAssets] = useState<Asset[]>([])
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [qrSize, setQrSize] = useState(300)
   const [barcodeFormat, setBarcodeFormat] = useState('code128')
@@ -79,7 +93,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
 
       const data = await response.json()
       
-      let allAssets: any[] = []
+      let allAssets: Asset[] = []
       
       // Extract assets from response
       if (data.success && data.assets) {
@@ -96,7 +110,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
       }
 
       // Filter assets by user's project name
-      const userAssets = allAssets.filter((asset: any) => {
+      const userAssets = allAssets.filter((asset: Asset) => {
         // Check both the old projectName property and the new nested project structure
         const assetProjectName = asset.project?.projectName || asset.projectName
         console.log(`Asset ${asset.tagId}: projectName=${asset.projectName}, project.projectName=${asset.project?.projectName}, userProject=${user.projectName}`)
@@ -190,7 +204,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
     } finally {
       setIsGenerating(false)
     }
-  }, [mappedAssetId, qrSize, barcodeFormat, fetchAssets])
+  }, [mappedAssetId, qrSize, barcodeFormat, fetchAssets, qrImageLoading, barcodeImageLoading])
 
   const handleGenerate = useCallback(async () => {
     await handleGenerateAllDigitalAssets()

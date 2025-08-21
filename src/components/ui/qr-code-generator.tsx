@@ -12,7 +12,7 @@ import { generateQRCode } from '@/lib/DigitalAssets'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, MapPin, Building, Hash, CheckCircle, Search, Scan, Download, Copy, Clock, Globe, Smartphone, Zap } from 'lucide-react'
+import { QrCode, MapPin, Hash, CheckCircle, Search, Scan, Download, Copy, Clock, Globe, Smartphone, Zap } from 'lucide-react'
 import Image from 'next/image'
 
 // API Base URL constant
@@ -22,85 +22,74 @@ interface QRCodeGeneratorProps {
   className?: string;
 }
 
+// Asset interface
+interface Asset {
+  _id: string;
+  tagId: string;
+  assetType: string;
+  brand: string;
+  model?: string;
+  status?: string;
+  project?: {
+    projectName: string;
+  };
+  projectName?: string;
+}
+
+// Scanned data interface
+interface ScannedData {
+  t?: string;
+  tagId?: string;
+  a?: string;
+  assetType?: string;
+  b?: string;
+  brand?: string;
+  m?: string;
+  model?: string;
+  st?: string;
+  status?: string;
+  p?: string;
+  priority?: string;
+  l?: {
+    building?: string;
+    floor?: string;
+    room?: string;
+    latitude?: string;
+    longitude?: string;
+  };
+  location?: {
+    building?: string;
+    floor?: string;
+    room?: string;
+  };
+  pr?: string;
+  projectName?: string;
+  ts?: number;
+  c?: string;
+  u?: string;
+  url?: string;
+}
+
+// QR code data interface
+interface QRCodeData {
+  qrCode: {
+    data: ScannedData;
+    url: string;
+    shortUrl: string;
+  };
+}
+
 export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
   const { user } = useAuth()
-  const [assets, setAssets] = useState<any[]>([])
+  const [assets, setAssets] = useState<Asset[]>([])
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [size, setSize] = useState(300)
   const [includeUrl, setIncludeUrl] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
-  const [scannedData, setScannedData] = useState<{
-    t?: string
-    tagId?: string
-    a?: string
-    assetType?: string
-    b?: string
-    brand?: string
-    m?: string
-    model?: string
-    st?: string
-    status?: string
-    p?: string
-    priority?: string
-    l?: {
-      building?: string
-      floor?: string
-      room?: string
-      latitude?: string
-      longitude?: string
-    }
-    location?: {
-      building?: string
-      floor?: string
-      room?: string
-    }
-    pr?: string
-    projectName?: string
-    ts?: number
-    c?: string
-    u?: string
-    url?: string
-  } | null>(null)
+  const [scannedData, setScannedData] = useState<ScannedData | null>(null)
 
-  const [qrCodeData, setQrCodeData] = useState<{
-    qrCode: {
-      data: {
-        t?: string
-        tagId?: string
-        a?: string
-        assetType?: string
-        b?: string
-        brand?: string
-        m?: string
-        model?: string
-        st?: string
-        status?: string
-        p?: string
-        priority?: string
-        l?: {
-          building?: string
-          floor?: string
-          room?: string
-          latitude?: string
-          longitude?: string
-        }
-        location?: {
-          building?: string
-          floor?: string
-          room?: string
-        }
-        pr?: string
-        projectName?: string
-        ts?: number
-        c?: string
-        u?: string
-        url?: string
-      }
-      url: string
-      shortUrl: string
-    }
-  } | null>(null)
+  const [qrCodeData, setQrCodeData] = useState<QRCodeData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -140,7 +129,7 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
 
       const data = await response.json()
       
-      let allAssets: any[] = []
+      let allAssets: Asset[] = []
       
       // Extract assets from response
       if (data.success && data.assets) {
@@ -157,7 +146,7 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
       }
 
       // Filter assets by user's project name
-      const userAssets = allAssets.filter((asset: any) => {
+      const userAssets = allAssets.filter((asset: Asset) => {
         // Check both the old projectName property and the new nested project structure
         const assetProjectName = asset.project?.projectName || asset.projectName
         return assetProjectName === user.projectName
@@ -183,7 +172,7 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
       asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.model.toLowerCase().includes(searchTerm.toLowerCase())
+      (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase()))
     ), [assets, searchTerm]
   )
 

@@ -117,6 +117,7 @@ interface Asset {
     name: string
     email: string
   } | string
+  projectName?: string  // For backward compatibility
   createdAt: string
   updatedAt: string
 }
@@ -134,6 +135,7 @@ export default function AssetsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [isMobile, setIsMobile] = useState(false)
+  const [userProject, setUserProject] = useState<string | null>(null)
   
   // Modal states
   const [showScanner, setShowScanner] = useState(false)
@@ -263,7 +265,8 @@ Timestamps:
       }
 
       // Get user project info from token or storage
-      const userProject = localStorage.getItem('userProject') || sessionStorage.getItem('userProject')
+      const userProjectName = localStorage.getItem('userProject') || sessionStorage.getItem('userProject')
+      setUserProject(userProjectName)
       
       const response = await fetch('http://192.168.0.5:5021/api/assets', {
         method: 'GET',
@@ -286,16 +289,16 @@ Timestamps:
       if (data.success) {
         let allAssets = data.assets
 
-        // Filter assets by user's project if userProject is available
-        if (userProject) {
+        // Filter assets by user's project if userProjectName is available
+        if (userProjectName) {
           const projectAssets = allAssets.filter(asset => {
             // Check both the old projectName property and the new nested project structure
             const assetProjectName = asset.project?.projectName || asset.projectName
-            return assetProjectName === userProject
+            return assetProjectName === userProjectName
           })
 
           if (projectAssets.length === 0) {
-            setError(`No assets found for your project: ${userProject}`)
+            setError(`No assets found for your project: ${userProjectName}`)
           } else {
             setAssets(projectAssets)
             setFilteredAssets(projectAssets)
@@ -421,7 +424,7 @@ Timestamps:
                   Asset Management
                 </h1>
                 <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1 hidden sm:block">
-                  Manage facility assets with advanced scanning capabilities
+                  {userProject ? `Managing assets for ${userProject}` : 'Manage facility assets with advanced scanning capabilities'}
                 </p>
               </div>
             </div>
@@ -436,6 +439,21 @@ Timestamps:
 
         {/* Main Content */}
         <main className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+          {/* Project Info Banner */}
+          {userProject && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Currently managing assets for project: <span className="font-bold">{userProject}</span>
+                </span>
+              </div>
+            </div>
+          )}
           {/* Enhanced Header Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-2">
@@ -530,6 +548,11 @@ Timestamps:
                       {searchTerm && (
                         <span className="hidden sm:inline"> matching "{searchTerm}"</span>
                       )}
+                      {userProject && (
+                        <span className="ml-2 text-blue-600 dark:text-blue-400 text-xs">
+                          (filtered by project: {userProject})
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -554,7 +577,12 @@ Timestamps:
                       No assets found
                     </h3>
                     <p className="text-slate-600 text-base max-w-md">
-                      Try adjusting your search or filter criteria
+                      {searchTerm 
+                        ? 'Try adjusting your search or filter criteria'
+                        : userProject 
+                        ? `No assets found for project: ${userProject}`
+                        : 'No assets are currently available'
+                      }
                     </p>
                     <Button 
                       onClick={() => setSearchTerm('')}

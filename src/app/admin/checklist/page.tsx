@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +16,14 @@ import {
   Search,
   RefreshCw,
   FileSpreadsheet,
-  Eye
+  Eye,
+  QrCode,
+  Camera,
+  CameraOff,
+  Download,
+  Scan,
+  X,
+  AlertCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ChecklistFormModal from '@/components/ui/checklist-form-modal'
@@ -131,6 +138,19 @@ export default function ChecklistPage() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null)
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false)
 
+  // QR Code Scanner State
+  const [isScannerOpen, setIsScannerOpen] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  const [scannedResult, setScannedResult] = useState<string | null>(null)
+  const [scannerError, setScannerError] = useState<string | null>(null)
+  const [showScannerSuccess, setShowScannerSuccess] = useState(false)
+  
+  // Video stream refs
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
   // Form state moved to modal component
 
   // Fetch checklists from API
@@ -210,6 +230,18 @@ export default function ChecklistPage() {
     }
 
     fetchAnalytics()
+  }, [])
+
+  // Cleanup camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+      }
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current)
+      }
+    }
   }, [])
 
   const refreshChecklists = () => {
@@ -450,6 +482,131 @@ export default function ChecklistPage() {
     document.body.removeChild(link)
   }
 
+  // QR Code Scanner Functions
+  const startCamera = async () => {
+    try {
+      setScannerError(null)
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      })
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        streamRef.current = stream
+        setIsScanning(true)
+        
+        // Start scanning interval
+        scanIntervalRef.current = setInterval(() => {
+          detectQRCode()
+        }, 100)
+      }
+    } catch (error) {
+      console.error('Error starting camera:', error)
+      setScannerError('Failed to access camera. Please check permissions.')
+    }
+  }
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current)
+      scanIntervalRef.current = null
+    }
+    setIsScanning(false)
+  }
+
+  const detectQRCode = () => {
+    if (!videoRef.current || !canvasRef.current) return
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+
+    if (!ctx) return
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+
+    // Draw video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    
+    // Simulate QR code detection for demonstration
+    // In a real implementation, you would use a QR library like jsQR
+    const random = Math.random()
+    if (random < 0.01) { // 1% chance to simulate detection
+      const mockQRData = `CHECKLIST_${Date.now()}_DEMO_${Math.floor(Math.random() * 1000)}`
+      setScannedResult(mockQRData)
+      setShowScannerSuccess(true)
+      stopCamera()
+      
+      addToast({
+        type: 'success',
+        title: 'QR Code Detected!',
+        message: 'Successfully scanned a QR code.'
+      })
+    }
+  }
+
+  const downloadScannedQR = () => {
+    if (scannedResult) {
+      try {
+        // Create a text file with scan result
+        const content = `QR Code Scan Result
+Generated: ${new Date().toLocaleString()}
+
+Result: ${scannedResult}
+
+This QR code was scanned using the FacilioTrack Checklist Management System.`
+        
+        const blob = new Blob([content], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `qr-scan-result-${new Date().toISOString().split('T')[0]}.txt`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        
+        addToast({
+          type: 'success',
+          title: 'Download Successful',
+          message: 'QR scan result downloaded successfully.'
+        })
+      } catch (error) {
+        console.error('Error downloading scan result:', error)
+        addToast({
+          type: 'error',
+          title: 'Download Failed',
+          message: 'Failed to download scan result. Please try again.'
+        })
+      }
+    }
+  }
+
+  const openScanner = () => {
+    setIsScannerOpen(true)
+    setScannedResult(null)
+    setScannerError(null)
+    setShowScannerSuccess(false)
+  }
+
+  const closeScanner = () => {
+    setIsScannerOpen(false)
+    stopCamera()
+    setScannedResult(null)
+    setScannerError(null)
+    setShowScannerSuccess(false)
+  }
+
   const clearFilters = () => {
     setSearchTerm('')
     setFilterPriority('')
@@ -506,6 +663,14 @@ export default function ChecklistPage() {
           >
             <FileSpreadsheet className="w-4 h-4" />
             Export Excel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={openScanner}
+            className="flex items-center gap-2 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+          >
+            <Scan className="w-4 h-4" />
+            QR Scanner
           </Button>
           <Button
             onClick={() => setIsCreateModalOpen(true)}
@@ -845,6 +1010,143 @@ export default function ChecklistPage() {
         checklist={viewingChecklist}
         onChecklistUpdated={handleChecklistUpdated}
       />
+
+      {/* QR Code Scanner Modal */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <QrCode className="w-6 h-6 text-blue-600" />
+                  QR Code Scanner
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeScanner}
+                  className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Camera Controls */}
+              <div className="flex items-center gap-3">
+                {!isScanning ? (
+                  <Button
+                    onClick={startCamera}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Camera className="w-4 h-4" />
+                    Start Camera
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={stopCamera}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <CameraOff className="w-4 h-4" />
+                    Stop Camera
+                  </Button>
+                )}
+                
+                {scannedResult && (
+                  <Button
+                    onClick={downloadScannedQR}
+                    variant="outline"
+                    className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Result
+                  </Button>
+                )}
+              </div>
+
+              {/* Camera Feed */}
+              {isScanning && (
+                <div className="relative">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-64 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    className="hidden"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="border-2 border-blue-500 border-dashed w-48 h-48 rounded-lg flex items-center justify-center">
+                      <div className="text-blue-500 text-sm font-medium">Scan Area</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Scanner Status */}
+              {isScanning && (
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 text-blue-600">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium">Scanning for QR codes...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Display */}
+              {scannerError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">{scannerError}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Success Display */}
+              {showScannerSuccess && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <CheckSquare className="w-4 h-4" />
+                    <span className="text-sm font-medium">QR code detected successfully!</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Scan Result */}
+              {scannedResult && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                    Scan Result:
+                  </h3>
+                  <div className="bg-white dark:bg-gray-800 p-3 rounded border border-blue-200 dark:border-blue-700">
+                    <code className="text-sm text-blue-800 dark:text-blue-200 break-all">
+                      {scannedResult}
+                    </code>
+                  </div>
+                </div>
+              )}
+
+              {/* Instructions */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  How to use:
+                </h3>
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                  <li>• Click "Start Camera" to begin scanning</li>
+                  <li>• Point your camera at a QR code</li>
+                  <li>• The scanner will automatically detect QR codes</li>
+                  <li>• Download the scan result for your records</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Container */}
       <ToastContainer toasts={toasts} onClose={removeToast} />

@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { adminDashboardService, DashboardData, PredictionsResponse, AIInsightsData, AIInsightCard, PerformanceData, HealthResponse, CostResponse, TrendsResponse } from '@/lib/AdminDashboard'
 import { useAuth } from './AuthContext'
 
@@ -63,7 +63,7 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
   const [costError, setCostError] = useState<string | null>(null)
   const [trendsError, setTrendsError] = useState<string | null>(null)
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -82,9 +82,9 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user?.projectName])
 
-  const fetchPredictionsData = async () => {
+  const fetchPredictionsData = useCallback(async () => {
     try {
       setIsPredictionsLoading(true)
       setPredictionsError(null)
@@ -103,9 +103,9 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsPredictionsLoading(false)
     }
-  }
+  }, [user?.projectName])
 
-  const fetchAIInsightsData = async (insightType?: string, timeRange?: string) => {
+  const fetchAIInsightsData = useCallback(async (insightType?: string, timeRange?: string) => {
     try {
       setIsAIInsightsLoading(true)
       setAiInsightsError(null)
@@ -125,9 +125,9 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsAIInsightsLoading(false)
     }
-  }
+  }, [user?.projectName])
 
-  const fetchPerformanceData = async (timeRange?: string, metric?: string) => {
+  const fetchPerformanceData = useCallback(async (timeRange?: string, metric?: string) => {
     try {
       setIsPerformanceLoading(true)
       setPerformanceError(null)
@@ -146,9 +146,9 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsPerformanceLoading(false)
     }
-  }
+  }, [user?.projectName])
 
-  const fetchHealthData = async () => {
+  const fetchHealthData = useCallback(async () => {
     try {
       setIsHealthLoading(true)
       setHealthError(null)
@@ -167,9 +167,9 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsHealthLoading(false)
     }
-  }
+  }, [user?.projectName])
 
-  const fetchCostData = async () => {
+  const fetchCostData = useCallback(async () => {
     try {
       setIsCostLoading(true)
       setCostError(null)
@@ -188,9 +188,9 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsCostLoading(false)
     }
-  }
+  }, [user?.projectName])
 
-  const fetchTrendsData = async () => {
+  const fetchTrendsData = useCallback(async () => {
     try {
       setIsTrendsLoading(true)
       setTrendsError(null)
@@ -209,7 +209,7 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsTrendsLoading(false)
     }
-  }
+  }, [user?.projectName])
 
   useEffect(() => {
     if (user?.projectName) {
@@ -221,7 +221,7 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
       fetchCostData()
       fetchTrendsData()
     }
-  }, [user?.projectName])
+  }, [user?.projectName, fetchDashboardData, fetchPredictionsData, fetchAIInsightsData, fetchPerformanceData, fetchHealthData, fetchCostData, fetchTrendsData])
 
   const refreshDashboard = async () => {
     await fetchDashboardData()

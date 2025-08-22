@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -110,7 +110,7 @@ interface Asset {
   alerts: string[]
   documents: string[]
   tags: string[]
-  customFields: Record<string, any>
+  customFields: Record<string, unknown>
 }
 
 interface Checklist {
@@ -180,7 +180,7 @@ export default function ViewerDashboard() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
 
   // Fetch assets from API
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken')
       if (!token) {
@@ -229,10 +229,10 @@ export default function ViewerDashboard() {
       setError(errorMessage)
       console.error('Error fetching assets:', err)
     }
-  }
+  }, [])
 
   // Fetch checklists from API
-  const fetchChecklists = async () => {
+  const fetchChecklists = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken')
       if (!token) {
@@ -265,7 +265,7 @@ export default function ViewerDashboard() {
 
         // Filter checklists by user's project
         if (userProject) {
-          const projectChecklists = allChecklists.filter((checklist: Checklist) => {
+          const projectChecklists = allChecklists.filter(() => {
             // Since checklists don't have projectName, we'll show all for now
             // You can add project filtering logic here when available
             return true
@@ -285,10 +285,10 @@ export default function ViewerDashboard() {
       setError(errorMessage)
       console.error('Error fetching checklists:', err)
     }
-  }
+  }, [])
 
   // Fetch all data
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -299,13 +299,13 @@ export default function ViewerDashboard() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [fetchAssets, fetchChecklists])
 
   // Initialize data
   useEffect(() => {
     // Fetch data regardless of project name to show checklists
     fetchAllData()
-  }, []) // Remove dependency on user?.projectName
+  }, [fetchAllData]) // Now properly includes fetchAllData as dependency
 
   // Filter assets based on search
   useEffect(() => {

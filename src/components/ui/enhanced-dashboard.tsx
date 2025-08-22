@@ -204,8 +204,8 @@ export function EnhancedDashboard({
         prediction: {
           confidence: prediction.prediction.confidence,
           nextMaintenanceDate: prediction.prediction.nextMaintenanceDate,
-          predictedIssues: (prediction.prediction as any).factors || [], // Map factors to predictedIssues
-          recommendations: (prediction.prediction as any).recommendations || []
+          predictedIssues: (prediction.prediction as { factors?: string[] }).factors || [], // Map factors to predictedIssues
+          recommendations: (prediction.prediction as { recommendations?: string[] }).recommendations || []
         }
       }))
     }

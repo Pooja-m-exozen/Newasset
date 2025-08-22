@@ -20,10 +20,19 @@ import {
 interface Prediction {
   assetId: string
   assetType: string
+  projectName: string
+  projectId: string
+  tagId: string
+  assignedTo?: {
+    _id: string
+    name: string
+    email: string
+  }
   prediction: {
     confidence: number
     nextMaintenanceDate: string
     predictedIssues: string[]
+    recommendations?: string[]
   }
 }
 
@@ -69,13 +78,12 @@ export function AIPredictionsChart({
       low: predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length
     }
 
-    // Asset type distribution - ensure we have all asset types even if count is 0
-    const assetTypeData = {
-      HVAC: predictions.filter((p: Prediction) => p.assetType === 'HVAC').length,
-      Pump: predictions.filter((p: Prediction) => p.assetType === 'Pump').length,
-      Equipment: predictions.filter((p: Prediction) => p.assetType === 'equipment').length,
-      Motor: predictions.filter((p: Prediction) => p.assetType === 'Motor').length
-    }
+    // Asset type distribution - dynamic detection from actual data
+    const assetTypeCounts: Record<string, number> = {}
+    predictions.forEach((p: Prediction) => {
+      const assetType = p.assetType || 'Unknown'
+      assetTypeCounts[assetType] = (assetTypeCounts[assetType] || 0) + 1
+    })
 
     // Maintenance timeline (next 30 days)
     const maintenanceData = predictions.reduce((acc: Record<string, number>, p: Prediction) => {
@@ -90,7 +98,7 @@ export function AIPredictionsChart({
 
     return {
       confidence: confidenceData,
-      assetType: assetTypeData,
+      assetType: assetTypeCounts,
       maintenance: maintenanceData
     }
   }, [predictionsData])
@@ -288,6 +296,19 @@ export function AIPredictionsChart({
     if (!chartData) return null
 
     const data = chartData[selectedMetric as keyof ChartData]
+    
+    // If no data for the selected metric, show a message
+    if (!data || Object.keys(data).length === 0) {
+      return (
+        <div className="text-center py-12">
+          <Info className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">No data available</h3>
+          <p className="text-muted-foreground">
+            No {selectedMetric} data found for the current predictions
+          </p>
+        </div>
+      )
+    }
 
     switch (selectedChartType) {
       case 'pie':
@@ -475,7 +496,7 @@ export function AIPredictionsChart({
               </div>
               
               <Badge variant="outline" className="border-border text-muted-foreground font-semibold text-xs">
-                Real-time
+                {predictionsData?.count || 0} Predictions
               </Badge>
             </div>
           </div>

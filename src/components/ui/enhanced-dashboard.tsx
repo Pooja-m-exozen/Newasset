@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Badge } from './badge'
@@ -61,6 +62,14 @@ interface EnhancedDashboardProps {
         }
         healthScore?: number
       }
+      projectBreakdown?: Array<{
+        projectId: string
+        projectName: string
+        count: number
+        activeCount: number
+        maintenanceCount: number
+        criticalCount: number
+      }>
     }
   } | null
   isLoading: boolean
@@ -72,10 +81,19 @@ interface EnhancedDashboardProps {
     predictions: Array<{
       assetId: string
       assetType: string
+      projectName: string
+      projectId: string
+      tagId: string
+      assignedTo?: {
+        _id: string
+        name: string
+        email: string
+      }
       prediction: {
         confidence: number
         nextMaintenanceDate: string
         predictedIssues: string[]
+        recommendations: string[]
       }
     }>
   } | null
@@ -147,6 +165,7 @@ export function EnhancedDashboard({
   onRefreshTrends
 }: EnhancedDashboardProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false)
   const [alertsData, setAlertsData] = useState<AlertsData | null>(null)
   const [isAlertsLoading, setIsAlertsLoading] = useState(false)
@@ -167,6 +186,30 @@ export function EnhancedDashboard({
     isActive: true,
     cooldown: 3600
   })
+
+  // Transform predictionsData to match the expected format
+  const transformedPredictionsData = useMemo(() => {
+    if (!predictionsData) return null
+    
+    return {
+      success: predictionsData.success,
+      count: predictionsData.count,
+      predictions: predictionsData.predictions.map(prediction => ({
+        assetId: prediction.assetId,
+        assetType: prediction.assetType,
+        projectName: prediction.projectName,
+        projectId: prediction.projectId,
+        tagId: prediction.tagId,
+        assignedTo: prediction.assignedTo,
+        prediction: {
+          confidence: prediction.prediction.confidence,
+          nextMaintenanceDate: prediction.prediction.nextMaintenanceDate,
+          predictedIssues: (prediction.prediction as any).factors || [], // Map factors to predictedIssues
+          recommendations: (prediction.prediction as any).recommendations || []
+        }
+      }))
+    }
+  }, [predictionsData])
 
   // Memoized computed datasets for performance and smoother UI
   const advancedStats = useMemo(() => [
@@ -208,14 +251,14 @@ export function EnhancedDashboard({
     },
     {
       title: "AI Predictions",
-      value: predictionsData?.count?.toString() || "0",
+      value: transformedPredictionsData?.count?.toString() || "0",
       change: "+25%",
       icon: Brain,
       color: "bg-gradient-to-r from-indigo-500 to-indigo-600",
       trend: "up",
       description: "AI-powered maintenance predictions",
-      subValue: `${predictionsData?.predictions?.filter((p) => p.prediction.confidence > 0.7).length || 0} High Confidence`,
-      health: predictionsData?.predictions?.length ? Math.round((predictionsData.predictions.filter((p) => p.prediction.confidence > 0.7).length / predictionsData.predictions.length) * 100) : 0,
+      subValue: `${transformedPredictionsData?.predictions?.filter((p) => p.prediction.confidence > 0.7).length || 0} High Confidence`,
+      health: transformedPredictionsData?.predictions?.length ? Math.round((transformedPredictionsData.predictions.filter((p) => p.prediction.confidence > 0.7).length / transformedPredictionsData.predictions.length) * 100) : 0,
       priority: "normal"
     },
     {
@@ -230,7 +273,7 @@ export function EnhancedDashboard({
       health: dashboardData?.data?.performanceData?.insights?.overallEfficiency ? Math.round(dashboardData.data.performanceData.insights.overallEfficiency * 100) : 85,
       priority: "normal"
     }
-  ], [dashboardData, predictionsData])
+  ], [dashboardData, transformedPredictionsData])
 
   const assetHealthData = useMemo(() => (
     healthData?.success && healthData?.statistics ? [
@@ -551,6 +594,16 @@ export function EnhancedDashboard({
                 <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-foreground mb-2">Failed to load dashboard data</h3>
                 <p className="text-muted-foreground mb-4">{error}</p>
+                {user?.projectName && (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg mb-4">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Current Project:</strong> {user.projectName}
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                      Dashboard data will be filtered for this project only
+                    </p>
+                  </div>
+                )}
               </div>
               <Button onClick={onRefresh} disabled={isLoading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -571,7 +624,12 @@ export function EnhancedDashboard({
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-sm sm:text-base text-muted-foreground">Real-time facility management and analytics</p>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Real-time facility management and analytics
+                {user?.projectName && (
+                  <span className="ml-2 text-primary font-medium">• {user.projectName}</span>
+                )}
+              </p>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3">
               <Button 
@@ -602,7 +660,7 @@ export function EnhancedDashboard({
         <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           {/* Advanced Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-            {advancedStats.map((stat,) => (
+            {advancedStats.map((stat) => (
               <Card key={stat.title} className="hover:shadow-lg transition-all duration-300 hover:scale-105 border-0 shadow-sm">
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -653,6 +711,18 @@ export function EnhancedDashboard({
                 <CardDescription className="text-sm">Real-time asset health status distribution</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
+                {/* Project Filter Indicator */}
+                {user?.projectName && (
+                  <div className="mb-3 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Thermometer className="w-3 h-3 text-red-600" />
+                      <span className="text-xs text-red-700 dark:text-red-300">
+                        Showing health data for: <strong>{user.projectName}</strong>
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
                 {isHealthLoading ? (
                   <div className="flex items-center justify-center py-6" aria-busy="true" aria-live="polite">
                     <div className="text-center">
@@ -707,6 +777,11 @@ export function EnhancedDashboard({
                           Real-time
                         </Badge>
                       </div>
+                      {user?.projectName && (
+                        <div className="mt-2 text-xs text-red-700">
+                          <span className="font-medium">Project:</span> {user.projectName}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -942,7 +1017,7 @@ export function EnhancedDashboard({
             {/* AI Predictions Chart Section - Reduced Width */}
             <div className="lg:col-span-2">
               <AIPredictionsChart
-                predictionsData={predictionsData || null}
+                predictionsData={transformedPredictionsData || null}
                 isLoading={isPredictionsLoading}
                 error={predictionsError}
                 onRefresh={onRefreshPredictions || (() => {})}

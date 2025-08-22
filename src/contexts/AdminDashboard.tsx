@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { adminDashboardService, DashboardData, PredictionsResponse, AIInsightsData, AIInsightCard, PerformanceData, HealthResponse, CostResponse, TrendsResponse } from '@/lib/AdminDashboard'
+import { useAuth } from './AuthContext'
 
 interface AdminDashboardContextType {
   dashboardData: DashboardData | null
@@ -38,6 +39,7 @@ interface AdminDashboardContextType {
 const AdminDashboardContext = createContext<AdminDashboardContextType | undefined>(undefined)
 
 export function AdminDashboardProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [predictionsData, setPredictionsData] = useState<PredictionsResponse | null>(null)
   const [aiInsightsData, setAiInsightsData] = useState<AIInsightsData | null>(null)
@@ -65,10 +67,17 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true)
       setError(null)
+      
+      if (!user?.projectName) {
+        setError('User project not found. Please login again or contact your administrator.')
+        return
+      }
+
       const data = await adminDashboardService.getDashboardData()
       setDashboardData(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch dashboard data'
+      setError(errorMessage)
       console.error('Dashboard data fetch error:', err)
     } finally {
       setIsLoading(false)
@@ -79,27 +88,36 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     try {
       setIsPredictionsLoading(true)
       setPredictionsError(null)
+      
+      if (!user?.projectName) {
+        setPredictionsError('User project not found. Please login again.')
+        return
+      }
+
       const data = await adminDashboardService.getPredictions()
       setPredictionsData(data)
     } catch (err) {
-      setPredictionsError(err instanceof Error ? err.message : 'Failed to fetch predictions data')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch predictions data'
+      setPredictionsError(errorMessage)
       console.error('Predictions data fetch error:', err)
     } finally {
       setIsPredictionsLoading(false)
     }
   }
 
-  const fetchAIInsightsData = async (insightType: string = 'performance', timeRange: string = '90_days') => {
+  const fetchAIInsightsData = async (insightType?: string, timeRange?: string) => {
     try {
       setIsAIInsightsLoading(true)
       setAiInsightsError(null)
       
+      if (!user?.projectName) {
+        setAiInsightsError('User project not found. Please login again.')
+        return
+      }
+
       const data = await adminDashboardService.getAIInsights(insightType, timeRange)
       setAiInsightsData(data)
-      
-      // Convert AI insights to dashboard cards
-      const cards = adminDashboardService.convertAIInsightsToCards(data)
-      setAiInsightCards(cards)
+      setAiInsightCards(adminDashboardService.convertAIInsightsToCards(data))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch AI insights data'
       setAiInsightsError(errorMessage)
@@ -109,14 +127,21 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const fetchPerformanceData = async (timeRange: string = '30_days', metric: string = 'all') => {
+  const fetchPerformanceData = async (timeRange?: string, metric?: string) => {
     try {
       setIsPerformanceLoading(true)
       setPerformanceError(null)
+      
+      if (!user?.projectName) {
+        setPerformanceError('User project not found. Please login again.')
+        return
+      }
+
       const data = await adminDashboardService.getPerformanceData(timeRange, metric)
       setPerformanceData(data)
     } catch (err) {
-      setPerformanceError(err instanceof Error ? err.message : 'Failed to fetch performance data')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch performance data'
+      setPerformanceError(errorMessage)
       console.error('Performance data fetch error:', err)
     } finally {
       setIsPerformanceLoading(false)
@@ -127,10 +152,17 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     try {
       setIsHealthLoading(true)
       setHealthError(null)
+      
+      if (!user?.projectName) {
+        setHealthError('User project not found. Please login again.')
+        return
+      }
+
       const data = await adminDashboardService.getHealthData()
       setHealthData(data)
     } catch (err) {
-      setHealthError(err instanceof Error ? err.message : 'Failed to fetch health data')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch health data'
+      setHealthError(errorMessage)
       console.error('Health data fetch error:', err)
     } finally {
       setIsHealthLoading(false)
@@ -141,10 +173,17 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     try {
       setIsCostLoading(true)
       setCostError(null)
+      
+      if (!user?.projectName) {
+        setCostError('User project not found. Please login again.')
+        return
+      }
+
       const data = await adminDashboardService.getCostData()
       setCostData(data)
     } catch (err) {
-      setCostError(err instanceof Error ? err.message : 'Failed to fetch cost data')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch cost data'
+      setCostError(errorMessage)
       console.error('Cost data fetch error:', err)
     } finally {
       setIsCostLoading(false)
@@ -155,10 +194,17 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
     try {
       setIsTrendsLoading(true)
       setTrendsError(null)
+      
+      if (!user?.projectName) {
+        setTrendsError('User project not found. Please login again.')
+        return
+      }
+
       const data = await adminDashboardService.getTrendsData()
       setTrendsData(data)
     } catch (err) {
-      setTrendsError(err instanceof Error ? err.message : 'Failed to fetch trends data')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch trends data'
+      setTrendsError(errorMessage)
       console.error('Trends data fetch error:', err)
     } finally {
       setIsTrendsLoading(false)
@@ -166,14 +212,16 @@ export function AdminDashboardProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    fetchDashboardData()
-    fetchPredictionsData()
-    fetchAIInsightsData()
-    fetchPerformanceData()
-    fetchHealthData()
-    fetchCostData()
-    fetchTrendsData()
-  }, [])
+    if (user?.projectName) {
+      fetchDashboardData()
+      fetchPredictionsData()
+      fetchAIInsightsData()
+      fetchPerformanceData()
+      fetchHealthData()
+      fetchCostData()
+      fetchTrendsData()
+    }
+  }, [user?.projectName])
 
   const refreshDashboard = async () => {
     await fetchDashboardData()

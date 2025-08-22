@@ -4,6 +4,8 @@ export interface Prediction {
   assetId: string
   tagId: string
   assetType: string
+  projectName: string
+  projectId: string
   assignedTo?: {
     _id: string
     name: string
@@ -41,6 +43,14 @@ export interface DashboardData {
     iotStats: Record<string, string | number | boolean | object | null | undefined>
     performanceStats: Record<string, string | number | boolean | object | null | undefined>
     alertStats: Record<string, string | number | boolean | object | null | undefined>
+    projectBreakdown?: Array<{
+      count: number
+      activeCount: number
+      maintenanceCount: number
+      criticalCount: number
+      projectName: string
+      projectId: string
+    }>
   }
 }
 
@@ -105,6 +115,8 @@ export interface AssetHealth {
   assetId: string
   tagId: string
   assetType: string
+  projectName: string
+  projectId: string
   assignedTo?: {
     _id: string
     name: string
@@ -245,9 +257,18 @@ class AdminDashboardService {
     }
   }
 
+  private getUserProject() {
+    return localStorage.getItem('userProject')
+  }
+
   async getDashboardData(): Promise<DashboardData> {
     try {
-      const response = await fetch(`${API_BASE_URL}/analytics/dashboard`, {
+      const userProject = this.getUserProject()
+      if (!userProject) {
+        throw new Error('User project not found')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/analytics/dashboard?projectName=${encodeURIComponent(userProject)}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       })
@@ -266,6 +287,11 @@ class AdminDashboardService {
 
     async getPredictions(): Promise<PredictionsResponse> {
     try {
+      const userProject = this.getUserProject()
+      if (!userProject) {
+        throw new Error('User project not found')
+      }
+
       const response = await fetch(`${API_BASE_URL}/analytics/predictions`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
@@ -277,6 +303,19 @@ class AdminDashboardService {
         throw new Error(result.message || 'Failed to fetch predictions data')
       }
 
+      // Filter predictions by user's project name
+      if (result.success && result.predictions && Array.isArray(result.predictions)) {
+        const filteredPredictions = result.predictions.filter(
+          (prediction: Prediction) => prediction.projectName === userProject
+        )
+        
+        return {
+          ...result,
+          predictions: filteredPredictions,
+          count: filteredPredictions.length
+        }
+      }
+
       return result
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to fetch predictions data')
@@ -285,6 +324,11 @@ class AdminDashboardService {
 
   async getHealthData(): Promise<HealthResponse> {
     try {
+      const userProject = this.getUserProject()
+      if (!userProject) {
+        throw new Error('User project not found')
+      }
+
       const response = await fetch(`${API_BASE_URL}/analytics/health`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
@@ -296,6 +340,28 @@ class AdminDashboardService {
         throw new Error(result.message || 'Failed to fetch health data')
       }
 
+      // Filter health data by user's project name
+      if (result.success && result.healthData && Array.isArray(result.healthData)) {
+        const filteredHealthData = result.healthData.filter(
+          (asset: AssetHealth) => asset.projectName === userProject
+        )
+        
+        // Recalculate statistics based on filtered data
+        const statistics = {
+          excellent: filteredHealthData.filter((asset: AssetHealth) => asset.health.status === 'excellent').length,
+          good: filteredHealthData.filter((asset: AssetHealth) => asset.health.status === 'good').length,
+          fair: filteredHealthData.filter((asset: AssetHealth) => asset.health.status === 'fair').length,
+          poor: filteredHealthData.filter((asset: AssetHealth) => asset.health.status === 'poor').length,
+          critical: filteredHealthData.filter((asset: AssetHealth) => asset.health.status === 'critical').length
+        }
+        
+        return {
+          ...result,
+          healthData: filteredHealthData,
+          statistics
+        }
+      }
+
       return result
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Failed to fetch health data')
@@ -304,7 +370,12 @@ class AdminDashboardService {
 
   async getCostData(): Promise<CostResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/analytics/cost`, {
+      const userProject = this.getUserProject()
+      if (!userProject) {
+        throw new Error('User project not found')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/analytics/cost?projectName=${encodeURIComponent(userProject)}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       })
@@ -323,7 +394,12 @@ class AdminDashboardService {
 
   async getTrendsData(): Promise<TrendsResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/analytics/trends`, {
+      const userProject = this.getUserProject()
+      if (!userProject) {
+        throw new Error('User project not found')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/analytics/trends?projectName=${encodeURIComponent(userProject)}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       })
@@ -342,8 +418,13 @@ class AdminDashboardService {
 
   async getAIInsights(insightType: string = 'performance', timeRange: string = '90_days'): Promise<AIInsightsData> {
     try {
+      const userProject = this.getUserProject()
+      if (!userProject) {
+        throw new Error('User project not found')
+      }
+
       const response = await fetch(
-        `${API_BASE_URL}/ai/insights/system?insightType=${insightType}&timeRange=${timeRange}`,
+        `${API_BASE_URL}/ai/insights/system?insightType=${insightType}&timeRange=${timeRange}&projectName=${encodeURIComponent(userProject)}`,
         {
           method: 'GET',
           headers: this.getAuthHeaders(),
@@ -388,8 +469,13 @@ class AdminDashboardService {
 
   async getPerformanceData(timeRange: string = '30_days', metric: string = 'all'): Promise<PerformanceData> {
     try {
+      const userProject = this.getUserProject()
+      if (!userProject) {
+        throw new Error('User project not found')
+      }
+
       const response = await fetch(
-        `${API_BASE_URL}/analytics/performance?timeRange=${timeRange}&metric=${metric}`,
+        `${API_BASE_URL}/analytics/performance?timeRange=${timeRange}&metric=${metric}&projectName=${encodeURIComponent(userProject)}`,
         {
           method: 'GET',
           headers: this.getAuthHeaders(),

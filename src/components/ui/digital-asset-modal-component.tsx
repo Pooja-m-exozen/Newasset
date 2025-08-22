@@ -124,6 +124,66 @@ export function DigitalAssetModal({
   const [modalQrLoading, setModalQrLoading] = useState(false)
   const [modalBarcodeLoading, setModalBarcodeLoading] = useState(false)
 
+  // Download QR code image
+  const downloadQRCode = async () => {
+    try {
+      if (!asset.digitalAssets?.qrCode?.url) {
+        alert('QR code not available for this asset')
+        return
+      }
+
+      const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+      const response = await fetch(qrUrl)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch QR code image')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `qr-code_${asset.tagId}_${new Date().toISOString().split('T')[0]}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading QR code:', error)
+      alert('Failed to download QR code image')
+    }
+  }
+
+  // Download barcode image
+  const downloadBarcode = async () => {
+    try {
+      if (!asset.digitalAssets?.barcode?.url) {
+        alert('Barcode not available for this asset')
+        return
+      }
+
+      const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+      const response = await fetch(barcodeUrl)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch barcode image')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `barcode_${asset.tagId}_${new Date().toISOString().split('T')[0]}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading barcode:', error)
+      alert('Failed to download barcode image')
+    }
+  }
+
   // Load digital asset modal images with blob URLs (robust loading)
   const loadModalImages = async () => {
     // Load QR Code
@@ -260,7 +320,18 @@ export function DigitalAssetModal({
           {/* Digital Asset Display */}
           {type === 'qrCode' && asset.digitalAssets?.qrCode && (
             <div className="space-y-4">
-              <h4 className="font-semibold text-slate-900 text-lg border-b border-slate-200 pb-2">QR Code</h4>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <h4 className="font-semibold text-slate-900 text-lg">QR Code</h4>
+                <Button
+                  onClick={downloadQRCode}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Download
+                </Button>
+              </div>
               <div className="flex justify-center">
                 <div className="bg-white rounded-xl p-4 border border-blue-200 shadow-lg">
                   {modalQrImgSrc ? (
@@ -376,7 +447,18 @@ export function DigitalAssetModal({
 
           {type === 'barcode' && asset.digitalAssets?.barcode && (
             <div className="space-y-4">
-              <h4 className="font-semibold text-slate-900 text-lg border-b border-slate-200 pb-2">Barcode</h4>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <h4 className="font-semibold text-slate-900 text-lg">Barcode</h4>
+                <Button
+                  onClick={downloadBarcode}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 text-xs border-green-200 text-green-700 hover:bg-green-50"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Download
+                </Button>
+              </div>
               <div className="flex justify-center">
                 <div className="bg-white rounded-xl p-4 border border-green-200 shadow-lg">
                   {modalBarcodeImgSrc ? (
@@ -437,7 +519,18 @@ export function DigitalAssetModal({
 
           {type === 'nfcData' && asset.digitalAssets?.nfcData && (
             <div className="space-y-4">
-              <h4 className="font-semibold text-slate-900 text-lg border-b border-slate-200 pb-2">NFC Data</h4>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <h4 className="font-semibold text-slate-900 text-lg">NFC Data</h4>
+                <Button
+                  onClick={() => onDownloadAssetInfo(asset)}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Download Info
+                </Button>
+              </div>
               <div className="bg-white rounded-xl p-4 border border-purple-200 shadow-lg">
                 <div className="text-center mb-4">
                   <div className="w-16 h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-3">

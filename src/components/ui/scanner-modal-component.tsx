@@ -199,14 +199,20 @@ export function ScannerModal({
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.type.startsWith('image/')) {
-      // Clear previous scan results when new image is uploaded
+      // Force complete state reset for new image
       setScanResult(null)
+      setUploadedImage(null)
+      setUploadPreview(null)
+      
+      // Small delay to ensure state is cleared before setting new values
+      setTimeout(() => {
       setUploadedImage(file)
       const reader = new FileReader()
       reader.onload = (e) => {
         setUploadPreview(e.target?.result as string)
       }
       reader.readAsDataURL(file)
+      }, 10)
     }
   }
 
@@ -216,8 +222,11 @@ export function ScannerModal({
     try {
       console.log('Processing uploaded image:', uploadedImage.name)
       
-      // Clear any previous results first
+      // Force complete state reset before processing
       setScanResult(null)
+      
+      // Small delay to ensure state is cleared
+      await new Promise(resolve => setTimeout(resolve, 10))
       
       // Show processing state
       setScanResult({
@@ -280,7 +289,7 @@ export function ScannerModal({
               asset.digitalAssets?.qrCode?.data?.a === scannedQRContent,
               asset.digitalAssets?.nfcData?.data?.id === scannedQRContent,
               asset.tagId.includes(scannedQRContent),
-              scannedQRContent.includes(asset.tagId)
+            scannedQRContent.includes(asset.tagId)
             ]
             
             console.log('Asset', asset.tagId, 'matches:', matches)
@@ -320,6 +329,7 @@ export function ScannerModal({
         })
       }
       
+      // Clear upload state after processing
       setUploadedImage(null)
       setUploadPreview(null)
       
@@ -444,20 +454,34 @@ export function ScannerModal({
     }
   }
 
-  const handleClose = () => {
-    stopScanner()
+  // Complete reset function to clear all cached data
+  const resetScannerState = () => {
+    setScanResult(null)
     setUploadedImage(null)
     setUploadPreview(null)
-    setScanResult(null)
+    setIsScanning(false)
+    setIsCameraReady(false)
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+  }
+
+  const handleClose = () => {
+    resetScannerState()
     onClose()
   }
 
   // Clear results when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
-      setScanResult(null)
-      setUploadedImage(null)
-      setUploadPreview(null)
+      resetScannerState()
+    } else {
+      // Ensure clean state when modal opens
+      resetScannerState()
     }
   }, [isOpen])
 
@@ -643,9 +667,9 @@ export function ScannerModal({
             <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm">
               {/* Simple Header Section */}
               <div className={`p-4 border-b border-gray-200 ${
-                scanResult.isProcessing 
+              scanResult.isProcessing 
                   ? 'bg-blue-50'
-                  : scanResult.success 
+                : scanResult.success 
                   ? 'bg-green-50' 
                   : scanResult.assetId 
                   ? 'bg-yellow-50'  // QR found but no match
@@ -656,9 +680,9 @@ export function ScannerModal({
                     <div className="flex items-center justify-center space-x-3 mb-2">
                       <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                       <h3 className="text-lg font-semibold text-blue-800">Processing Image...</h3>
-                    </div>
+                      </div>
                     <p className="text-sm text-blue-600">Extracting QR code data from uploaded image</p>
-                  </div>
+                    </div>
                 ) : scanResult.success ? (
                   <div className="text-center">
                     <div className="flex items-center justify-center space-x-3 mb-2">
@@ -682,11 +706,11 @@ export function ScannerModal({
                 ) : (
                   <div className="text-center">
                     <div className="flex items-center justify-center space-x-3 mb-2">
-                      <X className="w-6 h-6 text-red-600" />
+                        <X className="w-6 h-6 text-red-600" />
                       <h3 className="text-lg font-semibold text-red-800">No QR Code Detected</h3>
-                    </div>
+                      </div>
                     <p className="text-sm text-red-600">Scanner could not find QR code in the image</p>
-                  </div>
+                    </div>
                 )}
               </div>
 
@@ -897,7 +921,7 @@ export function ScannerModal({
                           </Button>
                         </div>
                       </div>
-                    ) : (
+                                         ) : (
                       /* Simple Error Message or No Data Message */
                       <div className="text-center space-y-4">
                         {scanResult.assetId ? (
@@ -1003,10 +1027,10 @@ export function ScannerModal({
                         >
                           Try Another Image
                         </Button>
-                      </div>
-                    )}
-                  </>
-                )}
+                       </div>
+                      )}
+                       </>
+                   )}
               </div>
             </div>
           )}

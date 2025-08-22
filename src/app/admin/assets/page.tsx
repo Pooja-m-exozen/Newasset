@@ -150,6 +150,12 @@ export default function AssetsPage() {
     type: 'qrCode' | 'barcode' | 'nfcData'
   } | null>(null)
 
+  // Scanner image states for view modal
+  const [viewModalQrImgSrc, setViewModalQrImgSrc] = useState<string | null>(null)
+  const [viewModalBarcodeImgSrc, setViewModalBarcodeImgSrc] = useState<string | null>(null)
+  const [viewModalQrLoading, setViewModalQrLoading] = useState(false)
+  const [viewModalBarcodeLoading, setViewModalBarcodeLoading] = useState(false)
+
   // Check if device is mobile
   useEffect(() => {
     const checkMobile = () => {
@@ -163,6 +169,45 @@ export default function AssetsPage() {
   // Simplified handlers
   const showDigitalAssetModal = (asset: Asset, type: 'qrCode' | 'barcode' | 'nfcData') => {
     setDigitalAssetModal({ asset, type })
+  }
+
+  // Load scanner images for view modal
+  const loadViewModalImages = async (asset: Asset) => {
+    // Load QR Code
+    if (asset.digitalAssets?.qrCode?.url) {
+      setViewModalQrLoading(true)
+      try {
+        const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+        const response = await fetch(qrUrl)
+        if (!response.ok) throw new Error('QR fetch failed')
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        setViewModalQrImgSrc(objectUrl)
+      } catch (error) {
+        console.log('View Modal QR Code loading failed:', error)
+        setViewModalQrImgSrc(null)
+      } finally {
+        setViewModalQrLoading(false)
+      }
+    }
+    
+    // Load Barcode
+    if (asset.digitalAssets?.barcode?.url) {
+      setViewModalBarcodeLoading(true)
+      try {
+        const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+        const response = await fetch(barcodeUrl)
+        if (!response.ok) throw new Error('Barcode fetch failed')
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        setViewModalBarcodeImgSrc(objectUrl)
+      } catch (error) {
+        console.log('View Modal Barcode loading failed:', error)
+        setViewModalBarcodeImgSrc(null)
+      } finally {
+        setViewModalBarcodeLoading(false)
+      }
+    }
   }
 
   // Handle scanned QR code result
@@ -253,6 +298,66 @@ Timestamps:
     }
   }
 
+  // Download QR code image
+  const downloadQRCode = async (asset: Asset) => {
+    try {
+      if (!asset.digitalAssets?.qrCode?.url) {
+        alert('QR code not available for this asset')
+        return
+      }
+
+      const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+      const response = await fetch(qrUrl)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch QR code image')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `qr-code_${asset.tagId}_${new Date().toISOString().split('T')[0]}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading QR code:', error)
+      alert('Failed to download QR code image')
+    }
+  }
+
+  // Download barcode image
+  const downloadBarcode = async (asset: Asset) => {
+    try {
+      if (!asset.digitalAssets?.barcode?.url) {
+        alert('Barcode not available for this asset')
+        return
+      }
+
+      const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+      const response = await fetch(barcodeUrl)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch barcode image')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `barcode_${asset.tagId}_${new Date().toISOString().split('T')[0]}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading barcode:', error)
+      alert('Failed to download barcode image')
+    }
+  }
+
   // Fetch assets from API and filter by user's project
   const fetchAssets = async () => {
     try {
@@ -335,6 +440,23 @@ Timestamps:
       setIsLoading(false)
     }
   }, [])
+
+  // Load scanner images when asset modal opens
+  useEffect(() => {
+    if (scannedAsset && showScannedAssetModal) {
+      loadViewModalImages(scannedAsset)
+    }
+    
+    // Cleanup blob URLs when modal closes
+    return () => {
+      if (viewModalQrImgSrc && viewModalQrImgSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(viewModalQrImgSrc)
+      }
+      if (viewModalBarcodeImgSrc && viewModalBarcodeImgSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(viewModalBarcodeImgSrc)
+      }
+    }
+  }, [scannedAsset, showScannedAssetModal])
 
   // Filter assets based on search
   useEffect(() => {
@@ -637,6 +759,8 @@ Timestamps:
         onClose={() => setShowScanner(false)}
         onScanResult={handleScannedResult}
         scannedResult={scannedResult}
+        assets={assets}
+        mode="assets"
       />
 
       <SuccessModal
@@ -670,61 +794,80 @@ Timestamps:
 
       {/* Scanned Asset Details Modal */}
       {showScannedAssetModal && scannedAsset && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md sm:max-w-2xl lg:max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                  <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-[95vw] sm:max-w-2xl lg:max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700">
+            {/* Enhanced Modal Header */}
+            <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/20 dark:via-emerald-950/20 dark:to-teal-950/20">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                      Asset Details
+                    </h3>
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
+                      Complete asset information & digital assets
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900">Asset Details</h3>
-                  <p className="text-xs sm:text-sm text-slate-600">Complete asset information</p>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowScannedAssetModal(false)}
+                  className="h-8 w-8 sm:h-10 sm:w-10 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowScannedAssetModal(false)}
-                className="h-8 w-8 p-0 hover:bg-slate-100 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </Button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-              {/* Asset Header */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 sm:p-6 border border-green-200">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Building className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+            {/* Enhanced Modal Content */}
+            <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-140px)]">
+              {/* Enhanced Asset Header */}
+              <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 rounded-2xl p-4 sm:p-6 border border-green-200 dark:border-green-700 shadow-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-xl">
+                    <Building className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl sm:text-2xl font-bold text-green-800 mb-1">{scannedAsset.tagId}</h2>
-                    <p className="text-sm sm:text-base text-green-600 font-medium">{scannedAsset.assetType}</p>
-                    <p className="text-xs sm:text-sm text-green-600">{scannedAsset.brand} • {scannedAsset.model}</p>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-800 dark:text-green-200 mb-2 break-words">
+                      {scannedAsset.tagId}
+                    </h2>
+                    <p className="text-base sm:text-lg text-green-700 dark:text-green-300 font-semibold mb-1">
+                      {scannedAsset.assetType}
+                    </p>
+                    <p className="text-sm sm:text-base text-green-600 dark:text-green-400">
+                      {scannedAsset.brand} • {scannedAsset.model}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 rounded-full border border-green-300">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-bold text-green-700 capitalize">{scannedAsset.status}</span>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900/30 rounded-full border border-green-300 dark:border-green-600">
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
+                    <span className="text-sm sm:text-base font-bold text-green-700 dark:text-green-300 capitalize">
+                      {scannedAsset.status}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Quick Info Grid */}
+              {/* Enhanced Quick Info Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-slate-900 text-sm uppercase tracking-wide">Asset Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between py-2 border-b border-slate-100">
-                      <span className="text-slate-500">Priority:</span>
-                      <span className="font-medium text-slate-900 capitalize">{scannedAsset.priority}</span>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    Asset Details
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">Priority:</span>
+                      <span className="font-medium text-gray-900 dark:text-white capitalize text-sm sm:text-base">
+                        {scannedAsset.priority}
+                      </span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-slate-100">
-                      <span className="text-slate-500">Assigned To:</span>
-                      <span className="font-medium text-slate-900">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">Assigned To:</span>
+                      <span className="font-medium text-gray-900 dark:text-white text-sm sm:text-base max-w-[120px] truncate">
                         {typeof scannedAsset.assignedTo === 'string' 
                           ? scannedAsset.assignedTo 
                           : scannedAsset.assignedTo?.name || 'N/A'}
@@ -733,42 +876,328 @@ Timestamps:
                   </div>
                 </div>
                 
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-slate-900 text-sm uppercase tracking-wide">Location</h4>
-                  <div className="space-y-2 text-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Location
+                  </h4>
+                  <div className="space-y-3">
                     {scannedAsset.location ? (
                       <>
-                        <div className="flex justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-500">Building:</span>
-                          <span className="font-medium text-slate-900">{scannedAsset.location.building}</span>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                          <span className="text-gray-500 dark:text-gray-400 text-sm">Building:</span>
+                          <span className="font-medium text-gray-900 dark:text-white text-sm sm:text-base max-w-[120px] truncate">
+                            {scannedAsset.location.building}
+                          </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-500">Floor:</span>
-                          <span className="font-medium text-slate-900">{scannedAsset.location.floor}</span>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                          <span className="text-gray-500 dark:text-gray-400 text-sm">Floor:</span>
+                          <span className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">
+                            {scannedAsset.location.floor}
+                          </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-500">Room:</span>
-                          <span className="font-medium text-slate-900">{scannedAsset.location.room}</span>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                          <span className="text-gray-500 dark:text-gray-400 text-sm">Room:</span>
+                          <span className="font-medium text-gray-900 dark:text-white text-sm sm:text-base max-w-[120px] truncate">
+                            {scannedAsset.location.room}
+                          </span>
                         </div>
                       </>
                     ) : (
-                      <div className="text-center py-4 text-slate-500">
-                        <span>Location information not available</span>
+                      <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm">Location information not available</span>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
+              {/* Enhanced Digital Assets Section */}
+              <div className="space-y-4 sm:space-y-6">
+                <h4 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base uppercase tracking-wide flex items-center gap-3">
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  Digital Assets
+                  <div className="flex-1 h-px bg-gradient-to-r from-purple-500 to-transparent"></div>
+                </h4>
+                
+                {/* QR Code */}
+                {scannedAsset.digitalAssets?.qrCode?.url && (
+                  <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 rounded-2xl p-4 sm:p-6 border border-blue-200 dark:border-blue-700 shadow-lg">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-semibold text-blue-800 dark:text-blue-200 text-lg sm:text-xl">QR Code</h5>
+                        <p className="text-sm text-blue-600 dark:text-blue-400">
+                          Generated: {new Date(scannedAsset.digitalAssets.qrCode.generatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {/* Download Button */}
+                      <Button
+                        onClick={() => downloadQRCode(scannedAsset)}
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                    <div className="flex justify-center mb-4">
+                      {viewModalQrImgSrc ? (
+                        <div className="relative group cursor-pointer" onClick={() => downloadQRCode(scannedAsset)}>
+                          <img 
+                            src={viewModalQrImgSrc}
+                            alt="QR Code" 
+                            className="w-32 h-32 sm:w-40 sm:h-40 border-2 border-blue-200 dark:border-blue-600 rounded-xl shadow-lg transition-all duration-200 group-hover:scale-105 group-hover:shadow-xl"
+                          />
+                          <div className="absolute inset-0 bg-blue-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="bg-white dark:bg-gray-800 rounded-lg p-2 shadow-lg">
+                              <Download className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                          </div>
+                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            Click to Download
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-32 h-32 sm:w-40 sm:h-40 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-200 dark:border-blue-600 rounded-xl flex items-center justify-center">
+                          {viewModalQrLoading ? (
+                            <div className="text-center">
+                              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                              <div className="text-sm text-blue-600 dark:text-blue-400">Loading...</div>
+                            </div>
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400 text-sm text-center">QR Code<br/>Unavailable</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {scannedAsset.digitalAssets.qrCode.data && (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-blue-200 dark:border-blue-600">
+                        <div className="text-sm text-blue-600 dark:text-blue-400 mb-3 font-medium">QR Code Information:</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          {scannedAsset.digitalAssets.qrCode.data.t && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-600">
+                              <span className="text-blue-600 dark:text-blue-400 font-medium">Type:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white">{scannedAsset.digitalAssets.qrCode.data.t}</span>
+                            </div>
+                          )}
+                          {scannedAsset.digitalAssets.qrCode.data.a && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-600">
+                              <span className="text-blue-600 dark:text-blue-400 font-medium">Asset ID:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white">{scannedAsset.digitalAssets.qrCode.data.a}</span>
+                            </div>
+                          )}
+                          {scannedAsset.digitalAssets.qrCode.data.s && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-600">
+                              <span className="text-blue-600 dark:text-blue-400 font-medium">Status:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white capitalize">{scannedAsset.digitalAssets.qrCode.data.s}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Barcode */}
+                {scannedAsset.digitalAssets?.barcode?.url && (
+                  <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 rounded-2xl p-4 sm:p-6 border border-green-200 dark:border-green-700 shadow-lg">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-semibold text-green-800 dark:text-green-200 text-lg sm:text-xl">Barcode</h5>
+                        <p className="text-sm text-green-600 dark:text-green-400">
+                          Generated: {new Date(scannedAsset.digitalAssets.barcode.generatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {/* Download Button */}
+                      <Button
+                        onClick={() => downloadBarcode(scannedAsset)}
+                        variant="outline"
+                        size="sm"
+                        className="border-green-300 text-green-700 hover:bg-green-50 dark:border-green-600 dark:text-green-300 dark:hover:bg-green-900/20"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                    <div className="flex justify-center mb-4">
+                      {viewModalBarcodeImgSrc ? (
+                        <div className="relative group cursor-pointer" onClick={() => downloadBarcode(scannedAsset)}>
+                          <img 
+                            src={viewModalBarcodeImgSrc}
+                            alt="Barcode" 
+                            className="h-24 sm:h-32 border-2 border-green-200 dark:border-green-600 rounded-xl shadow-lg transition-all duration-200 group-hover:scale-105 group-hover:shadow-xl"
+                          />
+                          <div className="absolute inset-0 bg-green-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="bg-white dark:bg-gray-800 rounded-lg p-2 shadow-lg">
+                              <Download className="w-6 h-6 text-green-600 dark:text-green-400" />
+                            </div>
+                          </div>
+                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            Click to Download
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-24 sm:h-32 bg-green-100 dark:bg-green-900/30 border-2 border-green-200 dark:border-green-600 rounded-xl flex items-center justify-center px-6">
+                          {viewModalBarcodeLoading ? (
+                            <div className="text-center">
+                              <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                              <div className="text-sm text-green-600 dark:text-green-400">Loading...</div>
+                            </div>
+                          ) : (
+                            <span className="text-green-600 dark:text-green-400 text-sm text-center">Barcode<br/>Unavailable</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {scannedAsset.digitalAssets.barcode.data && (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-green-200 dark:border-green-600">
+                        <div className="text-sm text-green-600 dark:text-green-400 mb-3 font-medium">Barcode Information:</div>
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-600">
+                          <div className="text-lg font-mono text-green-800 dark:text-green-200 text-center break-all">
+                            {scannedAsset.digitalAssets.barcode.data}
+                          </div>
+                          <div className="text-xs text-green-600 dark:text-green-400 text-center mt-2">
+                            Scan this barcode to access asset information
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* NFC Data */}
+                {scannedAsset.digitalAssets?.nfcData?.url && (
+                  <div className="bg-gradient-to-r from-purple-50 via-violet-50 to-fuchsia-50 dark:from-purple-950/20 dark:via-violet-950/20 dark:to-fuchsia-950/20 rounded-2xl p-4 sm:p-6 border border-purple-200 dark:border-purple-700 shadow-lg">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-semibold text-purple-800 dark:text-purple-200 text-lg sm:text-xl">NFC Data</h5>
+                        <p className="text-sm text-purple-600 dark:text-purple-400">
+                          Generated: {new Date(scannedAsset.digitalAssets.nfcData.generatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    {scannedAsset.digitalAssets.nfcData.data && (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-purple-200 dark:border-purple-600">
+                        <div className="text-sm text-purple-600 dark:text-purple-400 mb-3 font-medium">NFC Information:</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          {scannedAsset.digitalAssets.nfcData.data.type && (
+                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-600">
+                              <span className="text-purple-600 dark:text-purple-400 font-medium">Type:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white capitalize">{scannedAsset.digitalAssets.nfcData.data.type}</span>
+                            </div>
+                          )}
+                          {scannedAsset.digitalAssets.nfcData.data.id && (
+                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-600">
+                              <span className="text-purple-600 dark:text-purple-400 font-medium">ID:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white break-all">{scannedAsset.digitalAssets.nfcData.data.id}</span>
+                            </div>
+                          )}
+                          {scannedAsset.digitalAssets.nfcData.data.assetType && (
+                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-600">
+                              <span className="text-purple-600 dark:text-purple-400 font-medium">Asset Type:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white">{scannedAsset.digitalAssets.nfcData.data.assetType}</span>
+                            </div>
+                          )}
+                          {scannedAsset.digitalAssets.nfcData.data.timestamp && (
+                            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-600">
+                              <span className="text-purple-600 dark:text-purple-400 font-medium">Timestamp:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white text-xs">
+                                {new Date(scannedAsset.digitalAssets.nfcData.data.timestamp).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Enhanced No Digital Assets Message */}
+                {!scannedAsset.digitalAssets?.qrCode?.url && 
+                 !scannedAsset.digitalAssets?.barcode?.url && 
+                 !scannedAsset.digitalAssets?.nfcData?.url && (
+                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700 text-center">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-200 to-slate-300 dark:from-gray-700 dark:to-slate-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h5 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 text-lg">No Digital Assets</h5>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base max-w-md mx-auto">
+                      This asset doesn't have any QR codes, barcodes, or NFC data generated yet.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Enhanced Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <Button
                   onClick={() => downloadAssetInfo(scannedAsset)}
                   variant="outline"
-                  className="flex-1 border-green-300 text-green-700 hover:bg-green-50"
+                  className="flex-1 h-12 sm:h-14 border-green-300 dark:border-green-600 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl font-semibold transition-all duration-200 hover:scale-105"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Info
+                  <Download className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Download Asset Info
+                </Button>
+                
+                {/* Digital Assets Download Buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                  {scannedAsset.digitalAssets?.qrCode?.url && (
+                    <Button
+                      onClick={() => downloadQRCode(scannedAsset)}
+                      variant="outline"
+                      className="h-12 sm:h-14 border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl font-semibold transition-all duration-200 hover:scale-105"
+                    >
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
+                      </svg>
+                      Download QR
+                    </Button>
+                  )}
+                  
+                  {scannedAsset.digitalAssets?.barcode?.url && (
+                    <Button
+                      onClick={() => downloadBarcode(scannedAsset)}
+                      variant="outline"
+                      className="h-12 sm:h-14 border-green-300 dark:border-green-600 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl font-semibold transition-all duration-200 hover:scale-105"
+                    >
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download Barcode
+                    </Button>
+                  )}
+                </div>
+                
+                <Button
+                  onClick={() => setShowScanner(true)}
+                  className="flex-1 h-12 sm:h-14 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 hover:scale-105 shadow-lg"
+                >
+                  <Scan className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Scan New Asset
                 </Button>
               </div>
             </div>

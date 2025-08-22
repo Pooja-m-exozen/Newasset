@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,8 +25,7 @@ import {
   Scan,
   Eye,
   Download,
-  X,
-  MoreHorizontal
+  X
 } from 'lucide-react'
 
 interface Asset {
@@ -134,7 +134,6 @@ export default function AssetsPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [isMobile, setIsMobile] = useState(false)
   const [userProject, setUserProject] = useState<string | null>(null)
   
   // Modal states
@@ -157,15 +156,7 @@ export default function AssetsPage() {
   const [viewModalQrLoading, setViewModalQrLoading] = useState(false)
   const [viewModalBarcodeLoading, setViewModalBarcodeLoading] = useState(false)
 
-  // Check if device is mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+
 
   // Simplified handlers
   const showDigitalAssetModal = (asset: Asset, type: 'qrCode' | 'barcode' | 'nfcData') => {
@@ -393,7 +384,7 @@ Timestamps:
       
       const data: ApiResponse = await response.json()
       if (data.success) {
-        let allAssets = data.assets
+        const allAssets = data.assets
 
         // Filter assets by user's project if userProjectName is available
         if (userProjectName) {
@@ -457,7 +448,7 @@ Timestamps:
         URL.revokeObjectURL(viewModalBarcodeImgSrc)
       }
     }
-  }, [scannedAsset, showScannedAssetModal])
+  }, [scannedAsset, showScannedAssetModal, viewModalQrImgSrc, viewModalBarcodeImgSrc])
 
   // Filter assets based on search
   useEffect(() => {
@@ -672,7 +663,7 @@ Timestamps:
                     <span className="text-xs sm:text-sm">
                       {filteredAssets.length} of {assets.length} assets
                       {searchTerm && (
-                        <span className="hidden sm:inline"> matching "{searchTerm}"</span>
+                        <span className="hidden sm:inline"> matching &quot;{searchTerm}&quot;</span>
                       )}
                       {userProject && (
                         <span className="ml-2 text-blue-600 dark:text-blue-400 text-xs">
@@ -893,9 +884,11 @@ Timestamps:
                     </div>
                     <div className="flex justify-center">
                       {viewModalQrImgSrc ? (
-                        <img 
+                        <Image 
                           src={viewModalQrImgSrc}
                           alt="QR Code" 
+                          width={128}
+                          height={128}
                           className="w-28 h-28 sm:w-32 sm:h-32 border border-gray-300 rounded"
                         />
                       ) : (
@@ -928,9 +921,11 @@ Timestamps:
                     </div>
                     <div className="flex justify-center">
                       {viewModalBarcodeImgSrc ? (
-                        <img 
+                        <Image 
                           src={viewModalBarcodeImgSrc}
                           alt="Barcode" 
+                          width={200}
+                          height={96}
                           className="h-20 sm:h-24 border border-gray-300 rounded"
                         />
                       ) : (

@@ -23,14 +23,11 @@ import {
   CheckSquare,
   TrendingUp,
   Activity,
-  Filter,
   RefreshCw,
   BarChart3,
   PieChart,
   Target,
-  Shield,
   Zap,
-  Star,
   FileText,
   QrCode,
   Scan,
@@ -287,14 +284,12 @@ const sampleChecklists: Checklist[] = [
 
 export default function ViewerDashboard() {
   const { user } = useAuth()
-  const [assets, setAssets] = useState<Asset[]>(sampleAssets)
-  const [checklists, setChecklists] = useState<Checklist[]>(sampleChecklists)
-  const [loading, setLoading] = useState(false)
+  const [assets] = useState<Asset[]>(sampleAssets)
+  const [checklists] = useState<Checklist[]>(sampleChecklists)
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>(sampleAssets)
   const [filteredChecklists, setFilteredChecklists] = useState<Checklist[]>(sampleChecklists)
   const [activeTab, setActiveTab] = useState('overview')
-  const [refreshKey, setRefreshKey] = useState(0)
   const [showScanner, setShowScanner] = useState(false)
   const [scannedResult, setScannedResult] = useState<string | null>(null)
 
@@ -321,8 +316,8 @@ export default function ViewerDashboard() {
   }, [searchTerm, checklists])
 
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1)
     // In real app, this would refetch data
+    console.log('Refreshing dashboard data...')
   }
 
   const getStatusColor = (status: string) => {
@@ -376,23 +371,12 @@ export default function ViewerDashboard() {
     return 'text-green-600 dark:text-green-400'
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+
 
   const activeAssets = assets.filter(asset => asset.status === 'active').length
   const maintenanceAssets = assets.filter(asset => asset.status === 'maintenance').length
-  const inactiveAssets = assets.filter(asset => asset.status === 'inactive').length
   const activeChecklists = checklists.filter(checklist => checklist.status === 'active').length
   const completedChecklists = checklists.filter(checklist => checklist.status === 'completed').length
-  const totalLocations = new Set(assets.map(asset => asset.location.building)).size
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">

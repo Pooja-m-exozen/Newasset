@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
@@ -113,7 +114,6 @@ export function ScannerModal({
   isOpen, 
   onClose, 
   onScanResult, 
-  scannedResult,
   assets = [],
   checklists = [],
   mode = 'assets'
@@ -125,7 +125,35 @@ export function ScannerModal({
   const [scanResult, setScanResult] = useState<{
     success: boolean
     assetId: string
-    asset?: any
+    asset?: {
+      _id: string
+      tagId?: string
+      title?: string
+      assetType?: string
+      brand?: string
+      model?: string
+      status?: string
+      priority?: string
+      type?: string
+      location?: {
+        building: string
+        floor: string
+        room?: string
+        zone?: string
+      } | null
+      assignedTo?: {
+        name: string
+        email: string
+      } | string
+      items?: Array<{
+        _id: string
+        serialNumber: number
+        inspectionItem: string
+        details: string
+        status?: string
+        remarks?: string
+      }>
+    }
     message: string
     isProcessing?: boolean
     qrImageData?: string
@@ -350,7 +378,7 @@ export function ScannerModal({
       // Create a canvas to process the image
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
-      const img = new Image()
+      const img = document.createElement('img') as HTMLImageElement
       
       img.onload = () => {
         try {
@@ -616,9 +644,11 @@ export function ScannerModal({
                   {uploadPreview && (
                     <div className="space-y-3">
                       <div className="bg-white rounded-xl p-3 border border-slate-200">
-                        <img 
+                        <Image 
                           src={uploadPreview} 
                           alt="Preview" 
+                          width={400}
+                          height={128}
                           className="w-full h-32 object-contain rounded-lg"
                         />
                       </div>
@@ -752,9 +782,11 @@ export function ScannerModal({
                             <div className="text-center mb-4">
                               <h5 className="text-sm font-medium text-gray-700 mb-2">Scanned QR Code Image</h5>
                               <div className="relative inline-block group">
-                                <img 
+                                <Image 
                                   src={scanResult.qrImageData}
                                   alt="Scanned QR Code" 
+                                  width={96}
+                                  height={96}
                                   className="w-24 h-24 border-2 border-gray-200 rounded-lg shadow-sm"
                                 />
                               </div>
@@ -938,9 +970,11 @@ export function ScannerModal({
                                 <div className="text-center mb-4">
                                   <h5 className="text-sm font-medium text-gray-700 mb-2">Scanned QR Code Image</h5>
                                   <div className="relative inline-block group">
-                                    <img 
+                                    <Image 
                                       src={scanResult.qrImageData}
                                       alt="Scanned QR Code" 
+                                      width={96}
+                                      height={96}
                                       className="w-24 h-24 border-2 border-gray-200 rounded-lg shadow-sm"
                                     />
                                   </div>

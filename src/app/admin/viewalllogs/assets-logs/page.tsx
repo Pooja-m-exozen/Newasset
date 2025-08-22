@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../../components/ui/error-display';
@@ -66,7 +66,7 @@ function AssetsLogsContent() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   // Fetch asset types from API
-  const fetchAssetTypes = async () => {
+  const fetchAssetTypes = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
       if (!token) {
@@ -92,10 +92,10 @@ function AssetsLogsContent() {
     } catch (err) {
       console.error('Error fetching asset types:', err);
     }
-  };
+  }, []);
 
   // Fetch assets from API and filter by user's project
-  const fetchProjectAssets = async () => {
+  const fetchProjectAssets = useCallback(async () => {
     try {
       if (!user?.projectName) {
         throw new Error('User project not found. Please login again.');
@@ -155,7 +155,7 @@ function AssetsLogsContent() {
       console.error('Error fetching project assets:', err);
       // Don't set error here as we still want to show the page
     }
-  };
+  }, [user?.projectName]);
 
   // Load project assets and asset types when user changes
   useEffect(() => {

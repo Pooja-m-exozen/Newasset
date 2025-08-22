@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,8 +25,7 @@ import {
   Scan,
   Eye,
   Download,
-  X,
-  MoreHorizontal
+  X
 } from 'lucide-react'
 
 interface Asset {
@@ -134,11 +134,11 @@ export default function AssetsPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [isMobile, setIsMobile] = useState(false)
   const [userProject, setUserProject] = useState<string | null>(null)
   
   // Modal states
   const [showScanner, setShowScanner] = useState(false)
+  const [scannerKey, setScannerKey] = useState(0)
   const [scannedResult, setScannedResult] = useState<string | null>(null)
   const [showMoreOptions, setShowMoreOptions] = useState<string | null>(null)
   const [scannedAsset, setScannedAsset] = useState<Asset | null>(null)
@@ -150,19 +150,56 @@ export default function AssetsPage() {
     type: 'qrCode' | 'barcode' | 'nfcData'
   } | null>(null)
 
-  // Check if device is mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  // Scanner image states for view modal
+  const [viewModalQrImgSrc, setViewModalQrImgSrc] = useState<string | null>(null)
+  const [viewModalBarcodeImgSrc, setViewModalBarcodeImgSrc] = useState<string | null>(null)
+  const [viewModalQrLoading, setViewModalQrLoading] = useState(false)
+  const [viewModalBarcodeLoading, setViewModalBarcodeLoading] = useState(false)
+
+
 
   // Simplified handlers
   const showDigitalAssetModal = (asset: Asset, type: 'qrCode' | 'barcode' | 'nfcData') => {
     setDigitalAssetModal({ asset, type })
+  }
+
+  // Load scanner images for view modal
+  const loadViewModalImages = async (asset: Asset) => {
+    // Load QR Code
+    if (asset.digitalAssets?.qrCode?.url) {
+      setViewModalQrLoading(true)
+      try {
+        const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+        const response = await fetch(qrUrl)
+        if (!response.ok) throw new Error('QR fetch failed')
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        setViewModalQrImgSrc(objectUrl)
+      } catch (error) {
+        console.log('View Modal QR Code loading failed:', error)
+        setViewModalQrImgSrc(null)
+      } finally {
+        setViewModalQrLoading(false)
+      }
+    }
+    
+    // Load Barcode
+    if (asset.digitalAssets?.barcode?.url) {
+      setViewModalBarcodeLoading(true)
+      try {
+        const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+        const response = await fetch(barcodeUrl)
+        if (!response.ok) throw new Error('Barcode fetch failed')
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        setViewModalBarcodeImgSrc(objectUrl)
+      } catch (error) {
+        console.log('View Modal Barcode loading failed:', error)
+        setViewModalBarcodeImgSrc(null)
+      } finally {
+        setViewModalBarcodeLoading(false)
+      }
+    }
   }
 
   // Handle scanned QR code result
@@ -253,6 +290,66 @@ Timestamps:
     }
   }
 
+  // Download QR code image
+  const downloadQRCode = async (asset: Asset) => {
+    try {
+      if (!asset.digitalAssets?.qrCode?.url) {
+        alert('QR code not available for this asset')
+        return
+      }
+
+      const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+      const response = await fetch(qrUrl)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch QR code image')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `qr-code_${asset.tagId}_${new Date().toISOString().split('T')[0]}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading QR code:', error)
+      alert('Failed to download QR code image')
+    }
+  }
+
+  // Download barcode image
+  const downloadBarcode = async (asset: Asset) => {
+    try {
+      if (!asset.digitalAssets?.barcode?.url) {
+        alert('Barcode not available for this asset')
+        return
+      }
+
+      const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+      const response = await fetch(barcodeUrl)
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch barcode image')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `barcode_${asset.tagId}_${new Date().toISOString().split('T')[0]}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading barcode:', error)
+      alert('Failed to download barcode image')
+    }
+  }
+
   // Fetch assets from API and filter by user's project
   const fetchAssets = async () => {
     try {
@@ -287,7 +384,7 @@ Timestamps:
       
       const data: ApiResponse = await response.json()
       if (data.success) {
-        let allAssets = data.assets
+        const allAssets = data.assets
 
         // Filter assets by user's project if userProjectName is available
         if (userProjectName) {
@@ -335,6 +432,23 @@ Timestamps:
       setIsLoading(false)
     }
   }, [])
+
+  // Load scanner images when asset modal opens
+  useEffect(() => {
+    if (scannedAsset && showScannedAssetModal) {
+      loadViewModalImages(scannedAsset)
+    }
+    
+    // Cleanup blob URLs when modal closes
+    return () => {
+      if (viewModalQrImgSrc && viewModalQrImgSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(viewModalQrImgSrc)
+      }
+      if (viewModalBarcodeImgSrc && viewModalBarcodeImgSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(viewModalBarcodeImgSrc)
+      }
+    }
+  }, [scannedAsset, showScannedAssetModal, viewModalQrImgSrc, viewModalBarcodeImgSrc])
 
   // Filter assets based on search
   useEffect(() => {
@@ -509,7 +623,10 @@ Timestamps:
               
               <Button 
                 size="sm"
-                onClick={() => setShowScanner(true)}
+                onClick={() => {
+                  setScannerKey(prev => prev + 1)
+                  setShowScanner(true)
+                }}
                 className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
               >
                 <Scan className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -546,7 +663,7 @@ Timestamps:
                     <span className="text-xs sm:text-sm">
                       {filteredAssets.length} of {assets.length} assets
                       {searchTerm && (
-                        <span className="hidden sm:inline"> matching "{searchTerm}"</span>
+                        <span className="hidden sm:inline"> matching &quot;{searchTerm}&quot;</span>
                       )}
                       {userProject && (
                         <span className="ml-2 text-blue-600 dark:text-blue-400 text-xs">
@@ -633,10 +750,13 @@ Timestamps:
 
       {/* Modals */}
       <ScannerModal
+        key={scannerKey}
         isOpen={showScanner}
         onClose={() => setShowScanner(false)}
         onScanResult={handleScannedResult}
         scannedResult={scannedResult}
+        assets={assets}
+        mode="assets"
       />
 
       <SuccessModal
@@ -670,61 +790,50 @@ Timestamps:
 
       {/* Scanned Asset Details Modal */}
       {showScannedAssetModal && scannedAsset && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md sm:max-w-2xl lg:max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                  <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900">Asset Details</h3>
-                  <p className="text-xs sm:text-sm text-slate-600">Complete asset information</p>
-                </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-lg sm:max-w-xl w-full max-h-[90vh] overflow-hidden">
+            {/* Simple Modal Header */}
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-gray-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Asset Details</h3>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowScannedAssetModal(false)}
-                className="h-8 w-8 p-0 hover:bg-slate-100 rounded-lg"
+                className="h-8 w-8 p-0 hover:bg-gray-100 rounded"
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+            {/* Simple Modal Content */}
+            <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(90vh-80px)]">
               {/* Asset Header */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 sm:p-6 border border-green-200">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Building className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl sm:text-2xl font-bold text-green-800 mb-1">{scannedAsset.tagId}</h2>
-                    <p className="text-sm sm:text-base text-green-600 font-medium">{scannedAsset.assetType}</p>
-                    <p className="text-xs sm:text-sm text-green-600">{scannedAsset.brand} • {scannedAsset.model}</p>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 rounded-full border border-green-300">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-bold text-green-700 capitalize">{scannedAsset.status}</span>
-                  </div>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">{scannedAsset.tagId}</h2>
+                <p className="text-sm text-gray-600">{scannedAsset.assetType}</p>
+                <p className="text-sm text-gray-600">{scannedAsset.brand} • {scannedAsset.model}</p>
+                <div className="mt-2">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {scannedAsset.status}
+                  </span>
                 </div>
               </div>
 
-              {/* Quick Info Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-slate-900 text-sm uppercase tracking-wide">Asset Details</h4>
+              {/* Asset Info Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Asset Details</h4>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between py-2 border-b border-slate-100">
-                      <span className="text-slate-500">Priority:</span>
-                      <span className="font-medium text-slate-900 capitalize">{scannedAsset.priority}</span>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Priority:</span>
+                      <span className="font-medium text-gray-900 capitalize">{scannedAsset.priority}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-b border-slate-100">
-                      <span className="text-slate-500">Assigned To:</span>
-                      <span className="font-medium text-slate-900">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Assigned To:</span>
+                      <span className="font-medium text-gray-900 max-w-[120px] truncate">
                         {typeof scannedAsset.assignedTo === 'string' 
                           ? scannedAsset.assignedTo 
                           : scannedAsset.assignedTo?.name || 'N/A'}
@@ -733,42 +842,115 @@ Timestamps:
                   </div>
                 </div>
                 
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-slate-900 text-sm uppercase tracking-wide">Location</h4>
-                  <div className="space-y-2 text-sm">
-                    {scannedAsset.location ? (
-                      <>
-                        <div className="flex justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-500">Building:</span>
-                          <span className="font-medium text-slate-900">{scannedAsset.location.building}</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-500">Floor:</span>
-                          <span className="font-medium text-slate-900">{scannedAsset.location.floor}</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-slate-100">
-                          <span className="text-slate-500">Room:</span>
-                          <span className="font-medium text-slate-900">{scannedAsset.location.room}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center py-4 text-slate-500">
-                        <span>Location information not available</span>
+                {scannedAsset.location && (
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Location</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Building:</span>
+                        <span className="font-medium text-gray-900">{scannedAsset.location.building}</span>
                       </div>
-                    )}
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Floor:</span>
+                        <span className="font-medium text-gray-900">{scannedAsset.location.floor}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Room:</span>
+                        <span className="font-medium text-gray-900">{scannedAsset.location.room}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
+              {/* Digital Assets */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-gray-700">Digital Assets</h4>
+                
+                {/* QR Code */}
+                {scannedAsset.digitalAssets?.qrCode?.url && (
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="text-sm font-medium text-gray-700">QR Code</h5>
+                      <Button
+                        onClick={() => downloadQRCode(scannedAsset)}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                    <div className="flex justify-center">
+                      {viewModalQrImgSrc ? (
+                        <Image 
+                          src={viewModalQrImgSrc}
+                          alt="QR Code" 
+                          width={128}
+                          height={128}
+                          className="w-28 h-28 sm:w-32 sm:h-32 border border-gray-300 rounded"
+                        />
+                      ) : (
+                        <div className="w-28 h-28 sm:w-32 sm:h-32 bg-gray-200 border border-gray-300 rounded flex items-center justify-center">
+                          {viewModalQrLoading ? (
+                            <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <span className="text-xs text-gray-500 text-center">Loading...</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Barcode */}
+                {scannedAsset.digitalAssets?.barcode?.url && (
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="text-sm font-medium text-gray-700">Barcode</h5>
+                      <Button
+                        onClick={() => downloadBarcode(scannedAsset)}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                    <div className="flex justify-center">
+                      {viewModalBarcodeImgSrc ? (
+                        <Image 
+                          src={viewModalBarcodeImgSrc}
+                          alt="Barcode" 
+                          width={200}
+                          height={96}
+                          className="h-20 sm:h-24 border border-gray-300 rounded"
+                        />
+                      ) : (
+                        <div className="h-20 sm:h-24 bg-gray-200 border border-gray-300 rounded flex items-center justify-center">
+                          {viewModalBarcodeLoading ? (
+                            <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <span className="text-xs text-gray-500 text-center">Loading...</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Simple Action Buttons */}
+              <div className="pt-3 border-t border-gray-200">
                 <Button
                   onClick={() => downloadAssetInfo(scannedAsset)}
                   variant="outline"
-                  className="flex-1 border-green-300 text-green-700 hover:bg-green-50"
+                  className="w-full h-9 border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download Info
+                  Download Asset Info
                 </Button>
               </div>
             </div>

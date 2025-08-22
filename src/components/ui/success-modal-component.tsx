@@ -37,7 +37,29 @@ interface Asset {
   digitalAssets: {
     qrCode: {
       url: string
-      data: any
+      data: {
+        t?: string
+        a?: string
+        s?: string
+        b?: string
+        m?: string
+        st?: string
+        p?: string
+        l?: {
+          latitude: string
+          longitude: string
+          floor: string
+          room: string
+          building: string
+        }
+        u?: string
+        pr?: string | null
+        lm?: string | null
+        nm?: string | null
+        url?: string
+        ts?: number
+        c?: string
+      } | null
       generatedAt: string
     }
     barcode: {
@@ -47,7 +69,27 @@ interface Asset {
     }
     nfcData: {
       url: string
-      data: any
+      data: {
+        type?: string
+        id?: string
+        assetType?: string
+        subcategory?: string
+        brand?: string
+        model?: string
+        status?: string
+        priority?: string
+        location?: {
+          latitude: string
+          longitude: string
+          floor: string
+          room: string
+          building: string
+        }
+        assignedTo?: string
+        timestamp?: string
+        checksum?: string
+        signature?: string
+      } | null
       generatedAt: string
     }
   }

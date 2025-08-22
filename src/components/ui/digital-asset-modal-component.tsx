@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { 
   QrCode, 
@@ -185,7 +186,7 @@ export function DigitalAssetModal({
   }
 
   // Load digital asset modal images with blob URLs (robust loading)
-  const loadModalImages = async () => {
+  const loadModalImages = useCallback(async () => {
     // Load QR Code
     if (asset.digitalAssets?.qrCode?.url) {
       setModalQrLoading(true)
@@ -225,7 +226,7 @@ export function DigitalAssetModal({
         setModalBarcodeLoading(false)
       }
     }
-  }
+  }, [asset.digitalAssets?.qrCode?.url, asset.digitalAssets?.barcode?.url])
 
   useEffect(() => {
     loadModalImages()
@@ -239,7 +240,7 @@ export function DigitalAssetModal({
         URL.revokeObjectURL(modalBarcodeImgSrc)
       }
     }
-  }, [])
+  }, [loadModalImages, modalQrImgSrc, modalBarcodeImgSrc])
 
   const handleClose = () => {
     // Cleanup blob URLs before closing
@@ -336,9 +337,11 @@ export function DigitalAssetModal({
                 <div className="bg-white rounded-xl p-4 border border-blue-200 shadow-lg">
                   {modalQrImgSrc ? (
                     <div className="relative">
-                      <img 
+                      <Image 
                         src={modalQrImgSrc}
                         alt="QR Code" 
+                        width={256}
+                        height={256}
                         className="w-48 h-48 sm:w-64 sm:h-64 object-contain rounded-lg"
                         onLoad={() => console.log('Modal QR Code loaded successfully')}
                         onError={() => {
@@ -463,9 +466,11 @@ export function DigitalAssetModal({
                 <div className="bg-white rounded-xl p-4 border border-green-200 shadow-lg">
                   {modalBarcodeImgSrc ? (
                     <div className="relative">
-                      <img 
+                      <Image 
                         src={modalBarcodeImgSrc}
                         alt="Barcode" 
+                        width={320}
+                        height={128}
                         className="w-64 h-24 sm:w-80 sm:h-32 object-contain rounded-lg"
                         onLoad={() => console.log('Modal Barcode loaded successfully')}
                         onError={() => {

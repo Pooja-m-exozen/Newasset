@@ -551,48 +551,62 @@ export default function ChecklistFormModal({
                     />
                   </div>
                   
-                                                                           {mode === 'create' && (
+                  {mode === 'create' && (
                     <>
                       <div className="space-y-2">
                         <Label htmlFor="type" className="flex items-center gap-2">
                           Checklist Type <span className="text-red-500">*</span>
                         </Label>
-                        <Input
-                          id="type"
-                          value={formData.type}
-                          onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                          placeholder="Enter checklist type (e.g., Daily, Weekly, Monthly)"
-                          className="w-full"
-                        />
+                        <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select checklist type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Daily">Daily</SelectItem>
+                            <SelectItem value="Weekly">Weekly</SelectItem>
+                            <SelectItem value="Monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="frequency" className="flex items-center gap-2">
                           Frequency <span className="text-red-500">*</span>
                         </Label>
-                        <Input
-                          id="frequency"
-                          value={formData.frequency}
-                          onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value }))}
-                          placeholder="Enter frequency (e.g., daily, weekly, monthly)"
-                          className="w-full"
-                        />
+                        <Select value={formData.frequency} onValueChange={(value) => setFormData(prev => ({ ...prev, frequency: value }))}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select frequency" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="annually">Annually</SelectItem>
+                            <SelectItem value="on-demand">On Demand</SelectItem>
+                            <SelectItem value="custom">Custom</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </>
                   )}
 
-                                                                           <div className="space-y-2">
-                      <Label htmlFor="priority" className="flex items-center gap-2">
-                        Priority <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="priority"
-                        value={formData.priority}
-                        onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
-                        placeholder="Enter priority (e.g., low, medium, high, critical)"
-                        className="w-full"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="priority" className="flex items-center gap-2">
+                      Priority <span className="text-red-500">*</span>
+                    </Label>
+                    <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="status" className="flex items-center gap-2">

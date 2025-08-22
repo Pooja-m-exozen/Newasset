@@ -24,9 +24,6 @@ import ChecklistViewModal from '@/components/ui/checklist-view-modal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 
-// Import the interface type from the modal component
-type ChecklistFormData = Parameters<React.ComponentProps<typeof ChecklistFormModal>['onSubmit']>[0]
-
 interface ChecklistItem {
   _id: string
   serialNumber: number
@@ -305,7 +302,7 @@ export default function ChecklistPage() {
     return matchesSearch && matchesPriority && matchesStatus && matchesType
   })
 
-  const handleCreateChecklist = (data: ChecklistFormData) => {
+  const handleCreateChecklist = () => {
     // Add success notification
     addToast({
       type: 'success',
@@ -317,7 +314,7 @@ export default function ChecklistPage() {
     refreshChecklists()
   }
 
-  const handleEditChecklist = async (data: ChecklistFormData) => {
+  const handleEditChecklist = async () => {
     if (!editingChecklist) return
 
     try {

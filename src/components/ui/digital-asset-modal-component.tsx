@@ -240,7 +240,7 @@ export function DigitalAssetModal({
         URL.revokeObjectURL(modalBarcodeImgSrc)
       }
     }
-  }, [loadModalImages, modalQrImgSrc, modalBarcodeImgSrc])
+  }, [loadModalImages])
 
   const handleClose = () => {
     // Cleanup blob URLs before closing

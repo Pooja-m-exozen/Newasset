@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -164,7 +164,7 @@ export default function AssetsPage() {
   }
 
   // Load scanner images for view modal
-  const loadViewModalImages = async (asset: Asset) => {
+  const loadViewModalImages = useCallback(async (asset: Asset) => {
     // Load QR Code
     if (asset.digitalAssets?.qrCode?.url) {
       setViewModalQrLoading(true)
@@ -200,7 +200,7 @@ export default function AssetsPage() {
         setViewModalBarcodeLoading(false)
       }
     }
-  }
+  }, [])
 
   // Handle scanned QR code result
   const handleScannedResult = (assetId: string) => {
@@ -438,17 +438,22 @@ Timestamps:
     if (scannedAsset && showScannedAssetModal) {
       loadViewModalImages(scannedAsset)
     }
-    
-    // Cleanup blob URLs when modal closes
-    return () => {
+  }, [scannedAsset, showScannedAssetModal, loadViewModalImages])
+
+  // Cleanup blob URLs when modal closes
+  useEffect(() => {
+    if (!showScannedAssetModal) {
+      // Reset image states when modal closes
       if (viewModalQrImgSrc && viewModalQrImgSrc.startsWith('blob:')) {
         URL.revokeObjectURL(viewModalQrImgSrc)
+        setViewModalQrImgSrc(null)
       }
       if (viewModalBarcodeImgSrc && viewModalBarcodeImgSrc.startsWith('blob:')) {
         URL.revokeObjectURL(viewModalBarcodeImgSrc)
+        setViewModalBarcodeImgSrc(null)
       }
     }
-  }, [scannedAsset, showScannedAssetModal, viewModalQrImgSrc, viewModalBarcodeImgSrc])
+  }, [showScannedAssetModal, viewModalQrImgSrc, viewModalBarcodeImgSrc])
 
   // Filter assets based on search
   useEffect(() => {

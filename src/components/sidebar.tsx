@@ -152,13 +152,13 @@ export default function Sidebar({ className }: SidebarProps) {
         href: "/viewer/checklist",
         description: "View checklist information"
       },
-      {
-        id: "viewer-reports",
-        label: "View Reports",
-        icon: FileText,
-        href: "/viewer/reports",
-        description: "View asset reports and logs"
-      }
+      // {
+      //   id: "viewer-reports",
+      //   label: "View Reports",
+      //   icon: FileText,
+      //   href: "/viewer/reports",
+      //   description: "View asset reports and logs"
+      // }
     ]
 
     // Return appropriate navigation based on user role

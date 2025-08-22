@@ -9,26 +9,74 @@ import {
   X,
   Scan,
   Image as ImageIcon,
-  CheckCircle
+  CheckCircle,
+  MapPin,
+  Eye
 } from 'lucide-react'
+import jsQR from 'jsqr'
 
 interface ScannerModalProps {
   isOpen: boolean
   onClose: () => void
   onScanResult: (result: string) => void
   scannedResult?: string | null
+  assets?: Array<{
+    _id: string
+    tagId: string
+    assetType: string
+    brand: string
+    model: string
+    status: string
+    priority: string
+    location?: {
+      building: string
+      floor: string
+      room: string
+    }
+    assignedTo?: {
+      name: string
+      email: string
+    }
+  }>
+  checklists?: Array<{
+    _id: string
+    title: string
+    qrCode: {
+      data: string
+      url: string
+    }
+    location: {
+      building: string
+      floor: string
+      zone: string
+    }
+    type: string
+    status: string
+    priority: string
+  }>
+  mode?: 'assets' | 'checklists'
 }
 
 export function ScannerModal({ 
   isOpen, 
   onClose, 
   onScanResult, 
-  scannedResult 
+  scannedResult,
+  assets = [],
+  checklists = [],
+  mode = 'assets'
 }: ScannerModalProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [isCameraReady, setIsCameraReady] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<File | null>(null)
   const [uploadPreview, setUploadPreview] = useState<string | null>(null)
+  const [scanResult, setScanResult] = useState<{
+    success: boolean
+    assetId: string
+    asset?: any
+    message: string
+    isProcessing?: boolean
+  } | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
@@ -103,30 +151,168 @@ export function ScannerModal({
     if (!uploadedImage) return
     
     try {
-      // Here you would typically send the image to your backend for QR code processing
-      // For now, we'll simulate the process
       console.log('Processing uploaded image:', uploadedImage.name)
       
-      // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Show processing state
+      setScanResult({
+        success: false,
+        assetId: '',
+        message: 'Processing image...',
+        isProcessing: true
+      })
       
-      // Simulate result (replace with actual QR code detection)
-      const simulatedAssetId = 'SSG746'
-      onScanResult(simulatedAssetId)
+      // Actually process the uploaded image to extract QR code data
+      const extractedData = await extractQRCodeFromImage(uploadedImage)
+      
+      if (extractedData && extractedData.success && extractedData.assetId) {
+        const scannedQRContent = extractedData.assetId
+        
+        if (mode === 'checklists') {
+          // Handle checklist scanning
+          const foundChecklist = checklists.find(checklist => 
+            checklist._id === scannedQRContent ||
+            checklist.qrCode?.data === scannedQRContent ||
+            checklist.qrCode?.data?.includes(scannedQRContent) ||
+            scannedQRContent.includes(checklist.qrCode?.data || '')
+          )
+          
+          if (foundChecklist) {
+            // Checklist found - show success
+            setScanResult({
+              success: true,
+              assetId: scannedQRContent,
+              asset: foundChecklist,
+              message: `✅ Checklist found: ${foundChecklist.title}`
+            })
+            onScanResult(scannedQRContent)
+          } else {
+            // QR code found but checklist not in system - show info
+            setScanResult({
+              success: false,
+              assetId: scannedQRContent,
+              message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Checklist not found in system`
+            })
+          }
+        } else {
+          // Handle asset scanning (existing logic)
+          const foundAsset = assets.find(asset => 
+            asset.tagId === scannedQRContent ||
+            asset._id === scannedQRContent ||
+            asset.tagId.includes(scannedQRContent) ||
+            scannedQRContent.includes(asset.tagId)
+          )
+          
+          if (foundAsset) {
+            // Asset found - show success
+            setScanResult({
+              success: true,
+              assetId: scannedQRContent,
+              asset: foundAsset,
+              message: `✅ Asset found: ${foundAsset.tagId}`
+            })
+            onScanResult(scannedQRContent)
+          } else {
+            // QR code found but asset not in system - show info
+            setScanResult({
+              success: false,
+              assetId: scannedQRContent,
+              message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Not registered in system`
+            })
+          }
+        }
+      } else {
+        // Failed to extract QR code from image
+        setScanResult({
+          success: false,
+          assetId: '',
+          message: extractedData.error || '❌ No QR code found in the uploaded image. Please ensure the image contains a clear, readable QR code.'
+        })
+      }
       
       setUploadedImage(null)
       setUploadPreview(null)
       
     } catch (error) {
       console.error('Error processing image:', error)
-      alert('Error processing image. Please try again.')
+      setScanResult({
+        success: false,
+        assetId: '',
+        message: '❌ Error processing image. Please try again.'
+      })
     }
+  }
+
+  // Function to actually extract QR code from image
+  const extractQRCodeFromImage = async (imageFile: File): Promise<{ success: boolean; assetId?: string; error?: string }> => {
+    return new Promise((resolve) => {
+      // Create a canvas to process the image
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      img.onload = () => {
+        try {
+          // Set canvas size to match image
+          canvas.width = img.width
+          canvas.height = img.height
+          
+          // Draw image on canvas
+          ctx?.drawImage(img, 0, 0)
+          
+          // Get image data for processing
+          const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height)
+          
+          if (imageData) {
+            console.log('Processing image:', img.width, 'x', img.height, 'pixels')
+            
+            // Use jsQR to decode the QR code
+            const code = jsQR(imageData.data, imageData.width, imageData.height)
+            
+            if (code) {
+              console.log('QR code found:', code.data)
+              resolve({
+                success: true,
+                assetId: code.data
+              })
+            } else {
+              console.log('No QR code detected in image')
+              resolve({
+                success: false,
+                error: 'No QR code detected in the uploaded image. Please ensure the image contains a clear, readable QR code.'
+              })
+            }
+          } else {
+            resolve({
+              success: false,
+              error: 'Failed to process image data'
+            })
+          }
+        } catch (error) {
+          console.error('Error processing image:', error)
+          resolve({
+            success: false,
+            error: 'Error processing image data'
+          })
+        }
+      }
+      
+      img.onerror = () => {
+        resolve({
+          success: false,
+          error: 'Failed to load image'
+        })
+      }
+      
+      // Load the image from the file
+      img.src = URL.createObjectURL(imageFile)
+    })
   }
 
   const handleClose = () => {
     stopScanner()
     setUploadedImage(null)
     setUploadPreview(null)
+    setScanResult(null)
     onClose()
   }
 
@@ -233,6 +419,10 @@ export function ScannerModal({
                 <div className="text-center mb-4">
                   <h3 className="text-lg font-semibold text-slate-900 mb-2">Upload from Gallery</h3>
                   <p className="text-sm text-slate-600">Select an image containing a QR code</p>
+                  <div className="mt-2 p-2 bg-blue-50 rounded-lg text-xs text-blue-700">
+                    <p><strong>Note:</strong> The scanner will analyze the actual image content</p>
+                    <p>to extract QR code data, not the filename.</p>
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
@@ -277,25 +467,199 @@ export function ScannerModal({
             </TabsContent>
           </Tabs>
 
-          {/* Scan Result */}
-          {scannedResult && (
-            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-green-800">Scan Result</h4>
-                  <p className="text-sm text-green-700 font-mono">{scannedResult}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onScanResult('')}
-                  className="text-green-600 hover:bg-green-100"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+          {/* Enhanced Scan Result */}
+          {scanResult && (
+            <div className={`mt-6 rounded-xl border overflow-hidden ${
+              scanResult.isProcessing 
+                ? 'bg-white border-blue-200 shadow-lg'
+                : scanResult.success 
+                ? 'bg-white border-green-200 shadow-lg' 
+                : 'bg-white border-red-200 shadow-lg'
+            }`}>
+              {/* Header Section */}
+              <div className={`p-4 ${
+                scanResult.isProcessing 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600'
+                  : scanResult.success 
+                  ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                  : 'bg-white'
+              } ${scanResult.success || scanResult.isProcessing ? 'text-white' : 'text-red-600'} text-center relative`}>
+                {scanResult.isProcessing ? (
+                  <>
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                      <h3 className="text-2xl font-bold">Processing Image...</h3>
+                    </div>
+                    <p className="text-sm opacity-90">Extracting QR code data from uploaded image</p>
+                  </>
+                ) : scanResult.success ? (
+                  <>
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                        <CheckCircle className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-bold">
+                        {mode === 'checklists' ? 'Checklist Found!' : 'Asset Found!'}
+                      </h3>
+                      <div className="text-2xl">🎉</div>
+                    </div>
+                    <p className="text-sm opacity-90">
+                      Scanner successfully identified {mode === 'checklists' ? 'checklist' : 'asset'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                        <X className="w-6 h-6 text-red-600" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-red-600">Scanner Failed</h3>
+                    </div>
+                    <p className="text-sm text-red-600">Scanner could not process QR code</p>
+                  </>
+                )}
+              </div>
+
+              {/* Body Section */}
+              <div className="p-6">
+                {scanResult.isProcessing ? (
+                  /* Show Processing State */
+                  <div className="text-center space-y-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <h4 className="text-lg font-semibold text-blue-800 mb-2">Processing Image</h4>
+                    <p className="text-blue-700 mb-3">
+                      Analyzing uploaded image for QR code data...
+                    </p>
+                    <p className="text-sm text-blue-600">
+                      This may take a few seconds depending on image quality.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                     {/* QR Code Content Badge - Only show for successful scans */}
+                     {scanResult.success && (
+                       <div className="flex justify-center mb-4">
+                         <div className="px-4 py-2 rounded-full bg-blue-100 text-blue-800 border border-blue-200 flex items-center space-x-2">
+                           <div className="w-4 h-4">🏷️</div>
+                           <span className="font-bold font-mono">
+                             {mode === 'checklists' 
+                               ? scanResult.asset?.title || scanResult.assetId
+                               : scanResult.asset?.tagId || scanResult.assetId
+                             }
+                           </span>
+                         </div>
+                       </div>
+                     )}
+
+                    {scanResult.success && scanResult.asset ? (
+                      /* Show Asset/Checklist Details if Found */
+                      <div className="space-y-4">
+                        {mode === 'checklists' ? (
+                          /* Checklist Details */
+                          <div className="space-y-4">
+                            {/* Checklist Properties Grid */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <span className="text-xs font-medium text-gray-500 uppercase">Type</span>
+                                <p className="text-sm font-semibold text-gray-900">{scanResult.asset.type}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <span className="text-xs font-medium text-gray-500 uppercase">Status</span>
+                                <p className="text-sm font-semibold text-gray-900 capitalize">{scanResult.asset.status}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <span className="text-xs font-medium text-gray-500 uppercase">Priority</span>
+                                <p className="text-sm font-semibold text-gray-900 capitalize">{scanResult.asset.priority}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <span className="text-xs font-medium text-gray-500 uppercase">Title</span>
+                                <p className="text-sm font-semibold text-gray-900">{scanResult.asset.title}</p>
+                              </div>
+                            </div>
+
+                            {/* Location Details */}
+                            {scanResult.asset.location && (
+                              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <MapPin className="w-4 h-4 text-blue-600" />
+                                  <span className="text-sm font-medium text-blue-800 uppercase">Location</span>
+                                </div>
+                                <div className="text-sm text-blue-900">
+                                  <div>{scanResult.asset.location.building}</div>
+                                  <div>Floor {scanResult.asset.location.floor} • Zone {scanResult.asset.location.zone}</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* Asset Details (existing logic) */
+                          <div className="space-y-4">
+                            {/* Asset Properties Grid */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <span className="text-xs font-medium text-gray-500 uppercase">Type</span>
+                                <p className="text-sm font-semibold text-gray-900">{scanResult.asset.assetType}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <span className="text-xs font-medium text-gray-500 uppercase">Brand</span>
+                                <p className="text-sm font-semibold text-gray-900">{scanResult.asset.brand}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <span className="text-xs font-medium text-gray-500 uppercase">Model</span>
+                                <p className="text-sm font-semibold text-gray-900">{scanResult.asset.model}</p>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <span className="text-xs font-medium text-gray-500 uppercase">Status</span>
+                                <p className="text-sm font-semibold text-gray-900 capitalize">{scanResult.asset.status}</p>
+                              </div>
+                            </div>
+
+                            {/* Location Details */}
+                            {scanResult.asset.location && (
+                              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <MapPin className="w-4 h-4 text-blue-600" />
+                                  <span className="text-sm font-medium text-blue-800 uppercase">Location</span>
+                                </div>
+                                <div className="text-sm text-blue-900">
+                                  <div>{scanResult.asset.location.building}</div>
+                                  <div>{scanResult.asset.location.floor} • {scanResult.asset.location.room}</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col space-y-2 pt-4">
+                          <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Full Details
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                            onClick={() => {
+                              setScanResult(null)
+                              onScanResult('')
+                            }}
+                          >
+                            Close
+                          </Button>
+                        </div>
+                      </div>
+                                         ) : (
+                       /* Show Simple Message */
+                       <div className="text-center text-gray-600">
+                         <span>QR code not valid</span>
+                       </div>
+                      )}
+                       </>
+                   )}
               </div>
             </div>
           )}

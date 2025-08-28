@@ -13,17 +13,14 @@ import {
   CheckSquare, 
   Building, 
   MapPin,
-  Search,
   RefreshCw,
-  FileSpreadsheet,
   Eye,
   QrCode,
   Camera,
   CameraOff,
   Download,
-  Scan,
-  X,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ChecklistFormModal from '@/components/ui/checklist-form-modal'
@@ -75,21 +72,7 @@ interface Checklist {
   progress?: number
 }
 
-interface AnalyticsSummary {
-  summary: {
-    totalChecklists: number
-    activeChecklists: number
-    totalResponses: number
-    completedResponses: number
-    failedResponses: number
-    completionRate: number
-  }
-  checklistsByType: Array<{
-    _id: string
-    count: number
-  }>
-  recentActivity: string[]
-}
+
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
@@ -129,27 +112,13 @@ export default function ChecklistPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [editingChecklist, setEditingChecklist] = useState<Checklist | null>(null)
   const [viewingChecklist, setViewingChecklist] = useState<Checklist | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
   const [filterPriority, setFilterPriority] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterType, setFilterType] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
-  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null)
-  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false)
 
-  // QR Code Scanner State
-  const [isScannerOpen, setIsScannerOpen] = useState(false)
-  const [isScanning, setIsScanning] = useState(false)
-  const [scannedResult, setScannedResult] = useState<string | null>(null)
-  const [scannerError, setScannerError] = useState<string | null>(null)
-  const [showScannerSuccess, setShowScannerSuccess] = useState(false)
-  
-  // Video stream refs
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
 
   // Form state moved to modal component
 
@@ -195,54 +164,9 @@ export default function ChecklistPage() {
     fetchChecklists()
   }, [])
 
-  // Fetch analytics data
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        setIsLoadingAnalytics(true)
-        const token = localStorage.getItem('authToken')
-        if (!token) {
-          console.log('No auth token found')
-          return
-        }
 
-        const response = await fetch('http://192.168.0.5:5021/api/checklists/analytics/summary', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        })
 
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success && result.data) {
-            setAnalytics(result.data as AnalyticsSummary)
-          }
-        } else {
-          console.error('Failed to fetch analytics:', response.status)
-        }
-      } catch (error) {
-        console.error('Error fetching analytics:', error)
-      } finally {
-        setIsLoadingAnalytics(false)
-      }
-    }
 
-    fetchAnalytics()
-  }, [])
-
-  // Cleanup camera stream on unmount
-  useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-      }
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current)
-      }
-    }
-  }, [])
 
   const refreshChecklists = () => {
     const fetchChecklists = async () => {
@@ -285,53 +209,17 @@ export default function ChecklistPage() {
     fetchChecklists()
   }
 
-  const refreshAnalytics = async () => {
-    try {
-      setIsLoadingAnalytics(true)
-      const token = localStorage.getItem('authToken')
-      if (!token) {
-        console.log('No auth token found')
-        return
-      }
 
-      const response = await fetch('http://192.168.0.5:5021/api/checklists/analytics/summary', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      })
 
-              if (response.ok) {
-          const result = await response.json()
-          if (result.success && result.data) {
-            setAnalytics(result.data as AnalyticsSummary)
-          }
-        } else {
-          console.error('Failed to fetch analytics:', response.status)
-        }
-    } catch (error) {
-      console.error('Error fetching analytics:', error)
-    } finally {
-      setIsLoadingAnalytics(false)
-    }
-  }
 
-  const refreshAll = () => {
-    refreshChecklists()
-    refreshAnalytics()
-  }
 
-  // Filter checklists based on search and filters
+  // Filter checklists based on filters
   const filteredChecklists = checklists.filter(checklist => {
-    const matchesSearch = checklist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         checklist.description.toLowerCase().includes(searchTerm.toLowerCase())
-    
     const matchesPriority = !filterPriority || checklist.priority === filterPriority
     const matchesStatus = !filterStatus || checklist.status === filterStatus
     const matchesType = !filterType || checklist.type === filterType
 
-    return matchesSearch && matchesPriority && matchesStatus && matchesType
+    return matchesPriority && matchesStatus && matchesType
   })
 
   const handleCreateChecklist = () => {
@@ -462,153 +350,11 @@ export default function ChecklistPage() {
     return Math.round((completed / items.length) * 100)
   }
 
-  const downloadToExcel = () => {
-    // Create CSV content
-    let csvContent = 'Title,Description,Type,Frequency,Priority,Status,Location,Progress,Items Count\n'
-    
-    filteredChecklists.forEach(checklist => {
-      csvContent += `"${checklist.title}","${checklist.description}","${checklist.type}","${checklist.frequency}","${checklist.priority}","${checklist.status}","${checklist.location.building} - ${checklist.location.floor} - ${checklist.location.zone}","${checklist.progress}%","${checklist.items.length}"\n`
-    })
 
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `checklists_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
-  // QR Code Scanner Functions
-  const startCamera = async () => {
-    try {
-      setScannerError(null)
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      })
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        streamRef.current = stream
-        setIsScanning(true)
-        
-        // Start scanning interval
-        scanIntervalRef.current = setInterval(() => {
-          detectQRCode()
-        }, 100)
-      }
-    } catch (error) {
-      console.error('Error starting camera:', error)
-      setScannerError('Failed to access camera. Please check permissions.')
-    }
-  }
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
-    }
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current)
-      scanIntervalRef.current = null
-    }
-    setIsScanning(false)
-  }
-
-  const detectQRCode = () => {
-    if (!videoRef.current || !canvasRef.current) return
-
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-
-    if (!ctx) return
-
-    // Set canvas size to match video
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-
-    // Draw video frame to canvas
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    
-    // Simulate QR code detection for demonstration
-    // In a real implementation, you would use a QR library like jsQR
-    const random = Math.random()
-    if (random < 0.01) { // 1% chance to simulate detection
-      const mockQRData = `CHECKLIST_${Date.now()}_DEMO_${Math.floor(Math.random() * 1000)}`
-      setScannedResult(mockQRData)
-      setShowScannerSuccess(true)
-      stopCamera()
-      
-      addToast({
-        type: 'success',
-        title: 'QR Code Detected!',
-        message: 'Successfully scanned a QR code.'
-      })
-    }
-  }
-
-  const downloadScannedQR = () => {
-    if (scannedResult) {
-      try {
-        // Create a text file with scan result
-        const content = `QR Code Scan Result
-Generated: ${new Date().toLocaleString()}
-
-Result: ${scannedResult}
-
-This QR code was scanned using the FacilioTrack Checklist Management System.`
-        
-        const blob = new Blob([content], { type: 'text/plain' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `qr-scan-result-${new Date().toISOString().split('T')[0]}.txt`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-        
-        addToast({
-          type: 'success',
-          title: 'Download Successful',
-          message: 'QR scan result downloaded successfully.'
-        })
-      } catch (error) {
-        console.error('Error downloading scan result:', error)
-        addToast({
-          type: 'error',
-          title: 'Download Failed',
-          message: 'Failed to download scan result. Please try again.'
-        })
-      }
-    }
-  }
-
-  const openScanner = () => {
-    setIsScannerOpen(true)
-    setScannedResult(null)
-    setScannerError(null)
-    setShowScannerSuccess(false)
-  }
-
-  const closeScanner = () => {
-    setIsScannerOpen(false)
-    stopCamera()
-    setScannedResult(null)
-    setScannerError(null)
-    setShowScannerSuccess(false)
-  }
 
   const clearFilters = () => {
-    setSearchTerm('')
     setFilterPriority('')
     setFilterStatus('')
     setFilterType('')
@@ -644,34 +390,10 @@ This QR code was scanned using the FacilioTrack Checklist Management System.`
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
-            <span className="font-medium">Logged in as:</span> {user?.name || user?.email || 'Unknown'}
-          </div>
-          <Button
-            variant="outline"
-            onClick={refreshAll}
-            disabled={isLoading || isLoadingAnalytics}
-            className="flex items-center gap-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading || isLoadingAnalytics ? 'animate-spin' : ''}`} />
-            {isLoading || isLoadingAnalytics ? 'Loading...' : 'Refresh'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={downloadToExcel}
-            className="flex items-center gap-2 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            Export Excel
-          </Button>
-          <Button
-            variant="outline"
-            onClick={openScanner}
-            className="flex items-center gap-2 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
-          >
-            <Scan className="w-4 h-4" />
-            QR Scanner
-          </Button>
+
+
+
+
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
@@ -682,103 +404,11 @@ This QR code was scanned using the FacilioTrack Checklist Management System.`
         </div>
       </div>
 
-      {/* Analytics Summary */}
-      {analytics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total Checklists */}
-          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Checklists</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.summary.totalChecklists}</p>
-                </div>
-                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                  <CheckSquare className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Active Checklists */}
-          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Checklists</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.summary.activeChecklists}</p>
-                </div>
-                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
-                  <CheckSquare className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Completion Rate */}
-          <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Rate</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.summary.completionRate}%</p>
-                </div>
-                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                  <CheckSquare className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Total Responses */}
-          <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Responses</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics.summary.totalResponses}</p>
-                </div>
-                <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/20">
-                  <CheckSquare className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Analytics Loading State */}
-      {isLoadingAnalytics && (
-        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <CardContent className="p-8 text-center">
-            <div className="relative">
-              <RefreshCw className="w-12 h-12 text-blue-500 mx-auto mb-3 animate-spin" />
-            </div>
-            <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
-              Loading Analytics...
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Fetching checklist analytics data
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Filters */}
       <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search checklists..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400"
-              />
-            </div>
-            
-            <Select value={filterType} onValueChange={setFilterType}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="border-gray-200 dark:border-gray-700">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -968,12 +598,12 @@ This QR code was scanned using the FacilioTrack Checklist Management System.`
               No checklists found
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {searchTerm || filterPriority || filterStatus || filterType
+              {filterPriority || filterStatus || filterType
                 ? 'Try adjusting your filters'
                 : 'Create your first checklist to get started'
               }
             </p>
-            {!searchTerm && !filterPriority && !filterStatus && !filterType && (
+            {!filterPriority && !filterStatus && !filterType && (
               <Button 
                 onClick={() => setIsCreateModalOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
@@ -1010,143 +640,6 @@ This QR code was scanned using the FacilioTrack Checklist Management System.`
         checklist={viewingChecklist}
         onChecklistUpdated={handleChecklistUpdated}
       />
-
-      {/* QR Code Scanner Modal */}
-      {isScannerOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <QrCode className="w-6 h-6 text-blue-600" />
-                  QR Code Scanner
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={closeScanner}
-                  className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {/* Camera Controls */}
-              <div className="flex items-center gap-3">
-                {!isScanning ? (
-                  <Button
-                    onClick={startCamera}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <Camera className="w-4 h-4" />
-                    Start Camera
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={stopCamera}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    <CameraOff className="w-4 h-4" />
-                    Stop Camera
-                  </Button>
-                )}
-                
-                {scannedResult && (
-                  <Button
-                    onClick={downloadScannedQR}
-                    variant="outline"
-                    className="flex items-center gap-2 border-green-200 text-green-700 hover:bg-green-50"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download Result
-                  </Button>
-                )}
-              </div>
-
-              {/* Camera Feed */}
-              {isScanning && (
-                <div className="relative">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-64 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    className="hidden"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="border-2 border-blue-500 border-dashed w-48 h-48 rounded-lg flex items-center justify-center">
-                      <div className="text-blue-500 text-sm font-medium">Scan Area</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Scanner Status */}
-              {isScanning && (
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-2 text-blue-600">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium">Scanning for QR codes...</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Error Display */}
-              {scannerError && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">{scannerError}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Success Display */}
-              {showScannerSuccess && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                    <CheckSquare className="w-4 h-4" />
-                    <span className="text-sm font-medium">QR code detected successfully!</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Scan Result */}
-              {scannedResult && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-                    Scan Result:
-                  </h3>
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded border border-blue-200 dark:border-blue-700">
-                    <code className="text-sm text-blue-800 dark:text-blue-200 break-all">
-                      {scannedResult}
-                    </code>
-                  </div>
-                </div>
-              )}
-
-              {/* Instructions */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  How to use:
-                </h3>
-                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <li>• Click "Start Camera" to begin scanning</li>
-                  <li>• Point your camera at a QR code</li>
-                  <li>• The scanner will automatically detect QR codes</li>
-                  <li>• Download the scan result for your records</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast Container */}
       <ToastContainer toasts={toasts} onClose={removeToast} />

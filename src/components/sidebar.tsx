@@ -17,7 +17,6 @@ import {
   ChevronDown,
   ChevronUp,
   FileDigit,
-  // Bot,
   CheckSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -49,6 +48,7 @@ export default function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [activeItem, setActiveItem] = useState("dashboard")
   const [expandedSubmenu, setExpandedSubmenu] = useState<string | null>(null)
+  const [hoveredSubmenu, setHoveredSubmenu] = useState<string | null>(null)
 
   // Determine user role and show appropriate navigation
   const isViewer = user?.role === 'viewer'
@@ -110,24 +110,11 @@ export default function Sidebar({ className }: SidebarProps) {
         id: "view-reports",
         label: "View All Logs/Reports",
         icon: FileText,
-        href: "/admin/viewalllogs",
-        description: "Reports and audit trails",
-        submenu: [
-          {
-            id: "assets-logs",
-            label: "Assets Logs",
-            href: "/admin/viewalllogs/assets-logs",
-            description: "Asset activity and changes"
-          },
-          {
-            id: "maintenance-logs",
-            label: "Maintenance Logs",
-            href: "/admin/viewalllogs/maintenance-logs",
-            description: "Maintenance activities and schedules"
-          }
-        ]
+        href: "/admin/viewalllogs/assets-logs",
+        description: "Reports and audit trails"
       }
     ]
+
 
     // Viewer navigation items
     const viewerItems: NavigationItem[] = [
@@ -151,14 +138,7 @@ export default function Sidebar({ className }: SidebarProps) {
         icon: MapPin,
         href: "/viewer/checklist",
         description: "View checklist information"
-      },
-      // {
-      //   id: "viewer-reports",
-      //   label: "View Reports",
-      //   icon: FileText,
-      //   href: "/viewer/reports",
-      //   description: "View asset reports and logs"
-      // }
+      }
     ]
 
     // Return appropriate navigation based on user role
@@ -174,19 +154,52 @@ export default function Sidebar({ className }: SidebarProps) {
 
   // Update active item based on current pathname
   useEffect(() => {
-    const currentItem = navigationItems.find(item => item.href === pathname)
-    if (currentItem) {
-      setActiveItem(currentItem.id)
+    console.log("Current pathname:", pathname)
+    
+    // First check if current pathname matches any submenu item
+    let submenuFound = false
+    navigationItems.forEach(item => {
+      if (item.submenu) {
+        const submenuMatch = item.submenu.find(subItem => subItem.href === pathname)
+        if (submenuMatch) {
+          console.log("Found submenu match:", submenuMatch.label)
+          setActiveItem(submenuMatch.id)
+          setExpandedSubmenu(item.id)
+          submenuFound = true
+        }
+      }
+    })
+    
+    // Only check main items if no submenu match was found
+    if (!submenuFound) {
+      const currentItem = navigationItems.find(item => item.href && item.href !== "" && item.href === pathname)
+      if (currentItem) {
+        console.log("Found main item match:", currentItem.label)
+        setActiveItem(currentItem.id)
+      }
     }
   }, [pathname, navigationItems])
 
   const handleItemClick = useCallback((itemId: string) => {
+    console.log("=== handleItemClick DEBUG ===")
+    console.log("handleItemClick called with itemId:", itemId)
     setActiveItem(itemId)
     
     // Find the navigation item to get the href
     const navigationItem = navigationItems.find(item => item.id === itemId)
-    if (navigationItem && navigationItem.href) {
-      router.push(navigationItem.href)
+    console.log("Found navigation item:", navigationItem)
+    
+    if (navigationItem && navigationItem.href && navigationItem.href !== "") {
+      console.log("About to navigate to:", navigationItem.href)
+      console.log("Using router.push with:", navigationItem.href)
+      
+      // Use setTimeout to ensure the click event is fully processed
+      setTimeout(() => {
+        router.push(navigationItem.href)
+        console.log("Router.push called successfully")
+      }, 100)
+    } else {
+      console.log("No navigation - empty href or no href")
     }
   }, [navigationItems, router])
 
@@ -195,65 +208,106 @@ export default function Sidebar({ className }: SidebarProps) {
   }, [expandedSubmenu])
 
   const handleSubmenuItemClick = useCallback((parentId: string, submenuItem: SubmenuItem) => {
+    console.log("Submenu item clicked:", submenuItem.label, "href:", submenuItem.href)
     setActiveItem(submenuItem.id)
     router.push(submenuItem.href)
   }, [router])
 
+  const handleMouseEnter = useCallback((itemId: string) => {
+    if (!isCollapsed) {
+      setHoveredSubmenu(itemId)
+    }
+  }, [isCollapsed])
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredSubmenu(null)
+  }, [])
+
+  // Determine if submenu should be visible (either expanded or hovered)
+  const isSubmenuVisible = (itemId: string) => {
+    return expandedSubmenu === itemId || hoveredSubmenu === itemId
+  }
+
   return (
     <div className={cn(
-      "flex flex-col h-screen bg-sidebar border-r border-sidebar-border shadow-sm transition-all duration-300",
+      "flex flex-col h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-300",
       isCollapsed ? "w-16" : "w-64",
       className
     )}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+      {/* ERP Style Header */}
+      <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-3 border-b border-gray-200 dark:border-gray-700">
         {!isCollapsed && (
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-teal-500 rounded-lg flex items-center justify-center shadow-sm">
-              <Zap className="w-5 h-5 text-white" />
+            <div className="w-7 h-7 flex items-center justify-center">
+              <img 
+                src="/exozen_logo.png" 
+                alt="Exozen Logo" 
+                className="w-7 h-7 object-contain"
+              />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-sidebar-foreground">FacilioTrack</h2>
-              <p className="text-xs text-sidebar-accent-foreground">Enterprise</p>
+              <h2 className="text-base font-bold">Exozen Pvt Ltd</h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Asset Management System</p>
             </div>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-8 w-8 p-0 hover:bg-sidebar-accent rounded-lg"
-        >
-          {isCollapsed ? <ChevronRight className="w-4 h-4 text-sidebar-accent-foreground" /> : <ChevronLeft className="w-4 h-4 text-sidebar-accent-foreground" />}
-        </Button>
+        <div className="mt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-600 dark:text-gray-300"
+          >
+            {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+          </Button>
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto bg-white dark:bg-gray-900">
         {navigationItems.map((item) => (
-          <div key={item.id}>
-            <Button
-              variant={activeItem === item.id ? "default" : "ghost"}
+          <div 
+            key={item.id}
+            onMouseEnter={() => handleMouseEnter(item.id)}
+            onMouseLeave={handleMouseLeave}
+            className="relative"
+          >
+            <button
+              type="button"
               className={cn(
-                "w-full justify-start h-auto py-2.5 px-3 rounded-lg transition-all duration-200 group",
+                "w-full justify-start h-auto py-2 px-3 rounded-lg transition-all duration-200 group border",
                 activeItem === item.id 
-                  ? "bg-blue-700 text-white shadow-sm hover:bg-blue-800 dark:bg-sidebar-primary dark:text-sidebar-primary-foreground dark:hover:bg-sidebar-primary/90" 
-                  : "hover:bg-blue-100 text-blue-900 dark:hover:bg-sidebar-accent dark:text-sidebar-foreground",
-                isCollapsed && "justify-center px-2 py-2.5",
+                  ? "text-blue-600 border-blue-600 shadow-sm bg-transparent" 
+                  : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600",
+                isCollapsed && "justify-center px-2 py-2",
                 "transform hover:scale-[1.01]"
               )}
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                
+                console.log("=== CLICK DEBUG ===")
+                console.log("Item ID:", item.id)
+                console.log("Item label:", item.label)
+                console.log("Item href:", item.href)
+                console.log("Has submenu:", !!item.submenu)
+                console.log("Submenu:", item.submenu)
+                
                 if (item.submenu) {
+                  console.log("Toggling submenu for:", item.id)
                   handleSubmenuToggle(item.id)
-                } else {
+                } else if (item.href && item.href !== "") {
+                  console.log("No submenu, navigating to:", item.href)
                   handleItemClick(item.id)
+                } else {
+                  console.log("No submenu and no valid href")
                 }
               }}
             >
               <item.icon className={cn(
                 "flex-shrink-0 transition-colors duration-200",
-                isCollapsed ? "w-5 h-5" : "w-4 h-4 mr-3",
-                activeItem === item.id ? "text-sidebar-primary-foreground" : "text-sidebar-accent-foreground group-hover:text-sidebar-foreground"
+                isCollapsed ? "w-4 h-4" : "w-4 h-4 mr-3",
+                activeItem === item.id ? "text-white" : "text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200"
               )} />
               {!isCollapsed && (
                 <div className="flex-1 text-left">
@@ -261,7 +315,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   {item.description && (
                     <div className={cn(
                       "text-xs mt-0.5 transition-colors duration-200",
-                      activeItem === item.id ? "text-sidebar-primary-foreground/70" : "text-sidebar-accent-foreground group-hover:text-sidebar-foreground/70"
+                      activeItem === item.id ? "text-blue-100" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400"
                     )}>
                       {item.description}
                     </div>
@@ -270,30 +324,33 @@ export default function Sidebar({ className }: SidebarProps) {
               )}
               {!isCollapsed && item.submenu && (
                 <div className="ml-auto">
-                  {expandedSubmenu === item.id ? (
-                    <ChevronUp className="w-4 h-4 text-sidebar-accent-foreground" />
+                  {isSubmenuVisible(item.id) ? (
+                    <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-sidebar-accent-foreground" />
+                    <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   )}
                 </div>
               )}
-            </Button>
+            </button>
 
             {/* Submenu */}
-            {!isCollapsed && item.submenu && expandedSubmenu === item.id && (
+            {!isCollapsed && item.submenu && isSubmenuVisible(item.id) && (
               <div className="ml-4 mt-1 space-y-1">
                 {item.submenu.map((submenuItem: SubmenuItem) => (
                   <Button
                     key={submenuItem.id}
                     variant="ghost"
                     className={cn(
-                      "w-full justify-start h-auto py-2 px-3 rounded-lg transition-all duration-200 group text-sm bg-transparent",
+                      "w-full justify-start h-auto py-1.5 px-3 rounded-lg transition-all duration-200 group text-sm bg-transparent border border-gray-200 dark:border-gray-600",
                       activeItem === submenuItem.id 
-                        ? "bg-blue-700 text-white shadow-sm hover:bg-blue-800 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700" 
-                        : "text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-900 dark:hover:text-blue-300",
+                        ? "text-blue-600 border-blue-600 shadow-sm bg-transparent" 
+                        : "text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-950 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-200 dark:hover:border-blue-600",
                       "transform hover:scale-[1.01]"
                     )}
-                    onClick={() => handleSubmenuItemClick(item.id, submenuItem)}
+                    onClick={() => {
+                      console.log("Submenu button clicked for:", submenuItem.label)
+                      handleSubmenuItemClick(item.id, submenuItem)
+                    }}
                   >
                     <div className="flex-1 text-left">
                       <div className="font-medium text-sm">{submenuItem.label}</div>
@@ -301,8 +358,8 @@ export default function Sidebar({ className }: SidebarProps) {
                         <div className={cn(
                           "text-xs mt-0.5 transition-colors duration-200",
                           activeItem === submenuItem.id 
-                            ? "text-white/70 dark:text-white/70" 
-                            : "text-gray-500 dark:text-gray-400 group-hover:text-blue-700 dark:group-hover:text-blue-300"
+                            ? "text-blue-100" 
+                            : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                         )}>
                           {submenuItem.description}
                         </div>
@@ -317,14 +374,14 @@ export default function Sidebar({ className }: SidebarProps) {
       </nav>
 
       {/* Footer - Logout Button */}
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <Button
           variant="ghost"
           size="sm"
           onClick={logout}
           className={cn(
-            "w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300 rounded-lg transition-all duration-200 py-2.5",
-            isCollapsed && "w-10 h-10 p-0 justify-center mx-auto"
+            "w-full justify-start text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-700 dark:hover:text-red-300 rounded-lg border border-red-200 dark:border-red-700 transition-all duration-200 py-2",
+            isCollapsed && "w-8 h-8 p-0 justify-center mx-auto"
           )}
         >
           <LogOut className={cn("w-4 h-4", !isCollapsed && "mr-3")} />

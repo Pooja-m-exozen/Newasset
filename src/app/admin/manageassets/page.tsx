@@ -264,23 +264,23 @@ const AssetsList: React.FC = () => {
         onClearError={clearError} 
       />
 
-      {/* Enhanced Header Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      {/* ERP Style Header Section */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-lg flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Asset Management</h2>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Asset Management</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   {user?.projectName ? `Managing assets for project: ${user.projectName}` : 'Manage and track all facility assets'}
                 </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               onClick={() => {
                 console.log('Refresh all assets - will filter by project on frontend');
@@ -296,7 +296,7 @@ const AssetsList: React.FC = () => {
             </Button>
           <Button 
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white hover:from-blue-700 hover:to-blue-800 dark:hover:from-blue-800 dark:hover:to-blue-900 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -309,23 +309,28 @@ const AssetsList: React.FC = () => {
 
 
         {/* Search and Filter Section */}
-        <div className="mt-6 flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <Input
-              placeholder="Search assets by ID, brand, model, or serial number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-            />
+        <div className="mt-6 space-y-4 sm:space-y-0 sm:flex sm:items-center sm:justify-between gap-4">
+          {/* Search Input - Full width on mobile */}
+          <div className="flex-1 min-w-0">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <Input
+                placeholder="Search assets by ID, brand, model, or serial number..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              />
+            </div>
           </div>
-          <div className="flex gap-2">
+          
+          {/* Filters and Actions - Stack on mobile, row on desktop */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
             >
               <option value="all">All Status</option>
               <option value="Active">Active</option>
@@ -340,26 +345,19 @@ const AssetsList: React.FC = () => {
                   setSearchTerm('');
                   setFilterStatus('all');
                 }}
-                className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+                className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 text-sm"
               >
-                Clear
+                Clear Filters
               </Button>
             )}
           </div>
         </div>
 
         {/* Results Count */}
-        <div className="mt-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            Showing {filteredAssets.length} of {state.assets.length} total assets
-            {user?.projectName && (
-              <span className="ml-2 text-blue-600 dark:text-blue-400">
-                (filtered by project: {user.projectName})
-              </span>
-            )}
-          </div>
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+       
           {user?.projectName && (
-            <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md border border-blue-200 dark:border-blue-700">
+            <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-md border border-blue-200 dark:border-blue-700">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
               </svg>
@@ -389,12 +387,12 @@ const AssetsList: React.FC = () => {
         />
       ) : (
         <>
-          {/* Enhanced Desktop Table View */}
+          {/* ERP Desktop Table View */}
           <div className="hidden lg:block">
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
               {/* Project Header */}
               {user?.projectName && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-700 px-6 py-3">
+                <div className="bg-blue-100 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700 px-6 py-3">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -408,7 +406,7 @@ const AssetsList: React.FC = () => {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                    <TableRow className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
                       <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Asset ID</TableHead>
                       <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Brand & Model</TableHead>
                       <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Assigned To</TableHead>
@@ -515,35 +513,65 @@ const AssetsList: React.FC = () => {
           </div>
 
           {/* Enhanced Mobile Card View */}
-          <div className="lg:hidden">
+          <div className="lg:hidden space-y-4">
             {/* Project Header for Mobile */}
             {user?.projectName && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                    Project: <span className="font-bold">{user.projectName}</span>
-                  </span>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      Project: <span className="font-bold">{user.projectName}</span>
+                    </span>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      {filteredAssets.length} assets available
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Asset Overview</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Showing {filteredAssets.length} assets</p>
+            
+            {/* Mobile Asset Cards */}
+            <div className="space-y-3">
+              {filteredAssets.map((asset, index) => (
+                <AssetCard
+                  key={asset._id || `asset-${index}`}
+                  asset={asset}
+                  onView={handleView}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  className="shadow-sm hover:shadow-md transition-shadow duration-200"
+                />
+              ))}
             </div>
-            {filteredAssets.map((asset, index) => (
-              <AssetCard
-                key={asset._id || `asset-${index}`}
-                asset={asset}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-
-                className="mb-4"
-              />
-            ))}
+            
+            {/* Mobile Empty State */}
+            {filteredAssets.length === 0 && (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Assets Found</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  {searchTerm || filterStatus !== 'all' 
+                    ? 'Try adjusting your search or filters'
+                    : 'Get started by adding your first asset'
+                  }
+                </p>
+                <Button 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Add First Asset
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -722,23 +750,23 @@ const AssetTypeManagement: React.FC = () => {
         onClearError={clearError} 
       />
 
-      {/* Enhanced Header Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* ERP Style Header Section */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-lg flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center shadow-sm">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
+              </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Asset Type Management</h2>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Asset Type Management</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   {user?.projectName ? `Define and manage asset types for project: ${user.projectName}` : 'Define and manage asset types for your facility'}
                 </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               onClick={() => fetchAssetTypes()}
               variant="outline"
@@ -751,18 +779,18 @@ const AssetTypeManagement: React.FC = () => {
             </Button>
           <Button 
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-gradient-to-r from-green-600 to-green-700 dark:from-green-700 dark:to-green-800 text-white hover:from-green-700 hover:to-green-800 dark:hover:from-green-800 dark:hover:to-green-900 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center gap-2"
+            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            Add New Asset Type
+            Add Asset Type
           </Button>
           </div>
         </div>
 
         {/* Search and Filter Section */}
-        <div className="mt-6 flex flex-col md:flex-row gap-4">
+        <div className="mt-6 flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -786,12 +814,12 @@ const AssetTypeManagement: React.FC = () => {
         </div>
 
         {/* Results Count */}
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-sm text-gray-600 dark:text-gray-400">
           Showing {filteredAssetTypes.length} of {state.assetTypes.length} asset types
           </div>
           {user?.projectName && (
-            <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md border border-green-200 dark:border-green-700">
+            <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 px-2 py-1 rounded-md border border-green-200 dark:border-green-700">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
               </svg>
@@ -820,10 +848,10 @@ const AssetTypeManagement: React.FC = () => {
           }
         />
       ) : (
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           {/* Project Header for Asset Types */}
           {user?.projectName && (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b border-green-200 dark:border-green-700 px-6 py-3">
+            <div className="bg-green-100 dark:bg-green-900 border-b border-green-200 dark:border-green-700 px-6 py-3">
               <div className="flex items-center gap-2">
                 <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -834,14 +862,11 @@ const AssetTypeManagement: React.FC = () => {
               </div>
             </div>
           )}
-          <div className="p-6 border-b bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Asset Types Overview</h3>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Showing {filteredAssetTypes.length} asset types</p>
-          </div>
+ 
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                <TableRow className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
                   <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Asset Type Name</TableHead>
                   <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Created</TableHead>
                   <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm text-center px-6">Actions</TableHead>
@@ -1047,85 +1072,72 @@ const ManageAssetsPage: React.FC = () => {
 
   return (
     <AssetProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <div className="p-6 lg:p-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-200">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
-            {/* Enhanced Header with modern design */}
+            {/* Enhanced Responsive Header */}
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
                   </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                       Asset Management
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
                       {user?.projectName ? `Managing assets for project: ${user.projectName}` : 'Manage your assets and configurations with ease'}
                     </p>
                   </div>
                 </div>
                 <Button 
                   onClick={() => setShowPermissions(true)}
-                  className="bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white hover:from-purple-700 hover:to-purple-800 dark:hover:from-purple-800 dark:hover:to-purple-900 flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 text-sm"
+                  className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-xs sm:text-sm w-full sm:w-auto justify-center"
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
-                  Asset Permissions
+                  <span className="hidden sm:inline">Asset Permissions</span>
+                  <span className="sm:hidden">Permissions</span>
                 </Button>
               </div>
-              
-              {/* Project Info Banner */}
-              {user?.projectName && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                    </div>
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      Currently managing assets for project: <span className="font-bold">{user.projectName}</span>
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+             </div>
 
-            {/* Enhanced Tabs with better styling */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            {/* Enhanced Responsive Tabs */}
+            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
               <Tabs defaultValue="assets" className="w-full">
-                <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                  <TabsList className="grid w-full grid-cols-2 h-16 bg-transparent border-0">
+                <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+                  <TabsList className="grid w-full grid-cols-2 h-12 sm:h-14 bg-transparent border-0">
                     <TabsTrigger 
                       value="assets" 
-                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-sm rounded-none border-0 h-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 transition-all duration-200"
+                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-sm rounded-none border-0 h-full text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 text-sm sm:text-base"
                     >
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                         </svg>
-                        Assets
+                        <span className="hidden sm:inline">Assets</span>
+                        <span className="sm:hidden">Assets</span>
                       </div>
                     </TabsTrigger>
                     <TabsTrigger 
                       value="asset-types" 
-                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-400 data-[state=active]:shadow-sm rounded-none border-0 h-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 transition-all duration-200"
+                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-400 data-[state=active]:shadow-sm rounded-none border-0 h-full text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 text-sm sm:text-base"
                     >
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
-                        Asset Types
+                        <span className="hidden sm:inline">Asset Types</span>
+                        <span className="sm:hidden">Types</span>
                       </div>
                     </TabsTrigger>
                   </TabsList>
                 </div>
-                <div className="p-6">
+                <div className="p-3 sm:p-4 lg:p-6">
                   <TabsContent value="assets" className="mt-0">
                     <AssetsList />
                   </TabsContent>

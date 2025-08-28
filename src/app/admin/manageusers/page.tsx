@@ -413,41 +413,41 @@ export default function AdminManageUsersPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex h-screen bg-gradient-to-br from-background to-muted">
+      <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
         <div className="flex-1 overflow-auto">
-          {/* Enhanced Header */}
-          <header className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-b border-border px-4 sm:px-6 py-6 shadow-sm">
-            <div className="flex items-center justify-between">
+          {/* ERP Style Header */}
+          <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
                   <Users className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                     User Management
                   </h1>
-                  <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
                     Manage users, roles, and permissions with advanced controls
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-green-700 dark:text-green-300 font-medium">Live</span>
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                  <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
                 </div>
               </div>
             </div>
           </header>
 
           {/* Main Content */}
-          <main className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+          <main className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             {isLoading && users.length === 0 && roles.length === 0 ? (
               <div className="flex items-center justify-center py-20">
                 <div className="flex flex-col items-center gap-4 text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                    <RefreshCw className="w-8 h-8 animate-spin text-white" />
-                  </div>
+                                  <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+                  <RefreshCw className="w-8 h-8 animate-spin text-white" />
+                </div>
                   <div>
                     <h2 className="text-xl font-semibold text-foreground">Loading User Management</h2>
                     <p className="text-sm text-muted-foreground">Please wait while we fetch your data...</p>
@@ -457,27 +457,27 @@ export default function AdminManageUsersPage() {
             ) : (
               <>
                 {/* Enhanced Header Section */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
-                    <Users className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      {sortedUsers.length} Users
-                    </span>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 rounded-full">
+                        <Users className="w-4 h-4 text-blue-800 dark:text-blue-300" />
+                        <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                          {sortedUsers.length} Users
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 rounded-full">
+                        <UserCheck className="w-4 h-4 text-green-800 dark:text-green-300" />
+                        <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                          {users.filter(u => u.status === 'active').length} Active
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Manage your team members, roles, and access permissions
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-950/20 rounded-full">
-                    <UserCheck className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                      {users.filter(u => u.status === 'active').length} Active
-                    </span>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Manage your team members, roles, and access permissions
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -486,7 +486,7 @@ export default function AdminManageUsersPage() {
                     Promise.all([fetchUsers(), fetchRoles()]).finally(() => setIsLoading(false))
                   }}
                   disabled={isLoading}
-                  className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+                  className="flex items-center gap-2 hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900 dark:hover:text-blue-300 dark:hover:border-blue-600"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline">Refresh</span>
@@ -494,7 +494,7 @@ export default function AdminManageUsersPage() {
                 <Button 
                   size="sm"
                   onClick={() => setShowCreateUserModal(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Add User</span>
@@ -520,12 +520,12 @@ export default function AdminManageUsersPage() {
                         />
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-stretch gap-3">
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => setShowRoleModal(true)}
-                        className="flex items-center gap-2 h-11 px-4 bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700 hover:text-purple-800"
+                        className="flex items-center gap-2 h-11 px-4 bg-purple-100 hover:bg-purple-200 border-purple-300 text-purple-800 hover:text-purple-900 dark:bg-purple-900 dark:hover:bg-purple-800 dark:border-purple-600 dark:text-purple-300 dark:hover:text-purple-200"
                       >
                         <Plus className="w-4 h-4" />
                         <span>Create Role</span>
@@ -534,11 +534,11 @@ export default function AdminManageUsersPage() {
                         variant="outline" 
                         size="sm"
                         onClick={() => setShowRolesModal(true)}
-                        className="flex items-center gap-2 h-11 px-4 bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700 hover:text-indigo-800"
+                        className="flex items-center gap-2 h-11 px-4 bg-indigo-100 hover:bg-indigo-200 border-indigo-300 text-indigo-800 hover:text-indigo-900 dark:bg-indigo-900 dark:hover:bg-indigo-800 dark:border-indigo-600 dark:text-indigo-300 dark:hover:text-indigo-200"
                       >
                         <Shield className="w-4 h-4" />
                         <span>Manage Roles</span>
-                        <Badge variant="secondary" className="ml-1 bg-indigo-100 text-indigo-700">
+                        <Badge variant="secondary" className="ml-1 bg-indigo-200 text-indigo-800 dark:bg-indigo-300 dark:text-indigo-900">
                           {roles.length}
                         </Badge>
                       </Button>
@@ -546,7 +546,7 @@ export default function AdminManageUsersPage() {
                   </div>
 
                   {/* Search Results Info */}
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4" />
                       <span>
@@ -555,7 +555,7 @@ export default function AdminManageUsersPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full animate-pulse"></div>
                       <span>Real-time search</span>
                     </div>
                   </div>
@@ -568,19 +568,19 @@ export default function AdminManageUsersPage() {
                 <CardHeader className="pb-6">
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                        <Users className="w-5 h-5 text-white" />
-                      </div>
+                                        <div className="p-2 bg-blue-600 rounded-lg">
+                    <Users className="w-5 h-5 text-white" />
+                  </div>
                       <div>
-                        <h2 className="text-xl font-bold text-foreground">User Management</h2>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">User Management</h2>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                           Manage users, roles, and permissions in a structured table format
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
                         {sortedUsers.length} users
                       </span>
                     </div>
@@ -592,7 +592,7 @@ export default function AdminManageUsersPage() {
                       <div className="flex items-center justify-center py-12">
                         <div className="flex items-center gap-3">
                           <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-                          <span className="text-muted-foreground">Loading users...</span>
+                          <span className="text-gray-600 dark:text-gray-400">Loading users...</span>
                         </div>
                       </div>
                     ) : error ? (
@@ -600,8 +600,8 @@ export default function AdminManageUsersPage() {
                         <div className="flex flex-col items-center gap-3 text-center">
                           <AlertCircle className="w-12 h-12 text-red-500" />
                           <div>
-                            <p className="text-lg font-semibold text-foreground">Failed to load data</p>
-                            <p className="text-sm text-muted-foreground">{error}</p>
+                            <p className="text-lg font-semibold text-gray-900 dark:text-white">Failed to load data</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
                             <Button 
                               onClick={loadData}
                               className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
@@ -616,14 +616,14 @@ export default function AdminManageUsersPage() {
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-muted/50">
+                          <TableRow className="bg-gray-100 dark:bg-gray-800">
                             <TableHead className="w-12">
-                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
+                              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
                                 <Users className="w-4 h-4" />
                               </div>
                             </TableHead>
                             <TableHead 
-                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                               onClick={() => handleSort("name")}
                             >
                               <div className="flex items-center gap-2">
@@ -632,7 +632,7 @@ export default function AdminManageUsersPage() {
                               </div>
                             </TableHead>
                             <TableHead 
-                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                               onClick={() => handleSort("email")}
                             >
                               <div className="flex items-center gap-2">
@@ -641,7 +641,7 @@ export default function AdminManageUsersPage() {
                               </div>
                             </TableHead>
                             <TableHead 
-                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                               onClick={() => handleSort("role")}
                             >
                               <div className="flex items-center gap-2">
@@ -650,7 +650,7 @@ export default function AdminManageUsersPage() {
                               </div>
                             </TableHead>
                             <TableHead 
-                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                               onClick={() => handleSort("projectName")}
                             >
                               <div className="flex items-center gap-2">
@@ -659,7 +659,7 @@ export default function AdminManageUsersPage() {
                               </div>
                             </TableHead>
                             <TableHead 
-                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                               onClick={() => handleSort("status")}
                             >
                               <div className="flex items-center gap-2">
@@ -668,7 +668,7 @@ export default function AdminManageUsersPage() {
                               </div>
                             </TableHead>
                             <TableHead 
-                              className="cursor-pointer hover:bg-muted/80 transition-colors"
+                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                               onClick={() => handleSort("createdAt")}
                             >
                               <div className="flex items-center gap-2">
@@ -681,9 +681,9 @@ export default function AdminManageUsersPage() {
                         </TableHeader>
                         <TableBody>
                           {paginatedUsers.map((user) => (
-                            <TableRow key={user._id} className="hover:bg-accent/50 transition-colors">
+                            <TableRow key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                               <TableCell>
-                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
+                                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
                                 {getInitials(user.name)}
                               </div>
                               </TableCell>
@@ -727,7 +727,7 @@ export default function AdminManageUsersPage() {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                    className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                    className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700"
                                     onClick={() => openViewUserModal(user)}
                                   >
                                     <Eye className="w-4 h-4 text-blue-600" />
@@ -735,7 +735,7 @@ export default function AdminManageUsersPage() {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                    className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                    className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-700"
                                     onClick={() => openEditUserRoleModal(user)}
                                   >
                                     <Edit className="w-4 h-4 text-green-600" />
@@ -743,7 +743,7 @@ export default function AdminManageUsersPage() {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
                                     onClick={() => openDeleteUserModal(user)}
                                   >
                                     <Trash2 className="w-4 h-4 text-red-600" />
@@ -762,8 +762,8 @@ export default function AdminManageUsersPage() {
               {/* Enhanced Pagination */}
               <Card className="border-0 shadow-sm">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
                       Showing {startIndex + 1} to {Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} results
                     </div>
                     <div className="flex items-center gap-2">
@@ -935,9 +935,9 @@ export default function AdminManageUsersPage() {
             <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg">
-                    <Plus className="w-5 h-5 text-white" />
-                  </div>
+                                  <div className="p-2 bg-purple-600 rounded-lg">
+                  <Plus className="w-5 h-5 text-white" />
+                </div>
                   <div>
                     <h3 className="text-xl font-semibold text-foreground">Create New Role</h3>
                     <p className="text-sm text-muted-foreground">Add a new role with permissions</p>
@@ -1007,7 +1007,7 @@ export default function AdminManageUsersPage() {
             <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+                  <div className="p-2 bg-green-600 rounded-lg">
                     <Edit className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -1079,7 +1079,7 @@ export default function AdminManageUsersPage() {
             <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+                  <div className="p-2 bg-green-600 rounded-lg">
                     <Edit className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -1157,9 +1157,9 @@ export default function AdminManageUsersPage() {
             <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-red-500 to-pink-600 rounded-lg">
-                    <Trash2 className="w-5 h-5 text-white" />
-                  </div>
+                                  <div className="p-2 bg-red-600 rounded-lg">
+                  <Trash2 className="w-5 h-5 text-white" />
+                </div>
                   <div>
                     <h3 className="text-xl font-semibold text-foreground">Confirm Deletion</h3>
                     <p className="text-sm text-muted-foreground">This action cannot be undone</p>
@@ -1232,9 +1232,9 @@ export default function AdminManageUsersPage() {
             <div className="bg-card border border-border rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                    <Eye className="w-5 h-5 text-white" />
-                  </div>
+                                  <div className="p-2 bg-blue-600 rounded-lg">
+                  <Eye className="w-5 h-5 text-white" />
+                </div>
                   <div>
                     <h3 className="text-xl font-semibold text-foreground">User Details</h3>
                     <p className="text-sm text-muted-foreground">View complete user information</p>
@@ -1255,10 +1255,10 @@ export default function AdminManageUsersPage() {
               
               <div className="space-y-6">
                 {/* User Header */}
-                <Card className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+                <Card className="border-0 bg-blue-50 dark:bg-blue-100">
                   <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-semibold text-2xl shadow-lg">
+                      <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center text-white font-semibold text-2xl shadow-sm">
                     {getInitials(viewingUser?.name || 'Unknown')}
                   </div>
                       <div className="flex-1">
@@ -1393,9 +1393,9 @@ export default function AdminManageUsersPage() {
             <div className="bg-card border border-border rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg">
-                    <Shield className="w-5 h-5 text-white" />
-                  </div>
+                                  <div className="p-2 bg-indigo-600 rounded-lg">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
                   <div>
                     <h3 className="text-xl font-semibold text-foreground">Role Management</h3>
                     <p className="text-sm text-muted-foreground">Manage all roles and permissions</p>
@@ -1434,7 +1434,7 @@ export default function AdminManageUsersPage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
                               <Shield className="w-5 h-5 text-white" />
                             </div>
                             <div>

@@ -5,7 +5,6 @@ import { useAuth } from "@/contexts/AuthContext"
 import { AdminDashboardProvider } from "@/contexts/AdminDashboard"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import Sidebar from "@/components/sidebar"
 import Header from "@/components/header"
 
 export default function AdminLayout({
@@ -45,14 +44,11 @@ export default function AdminLayout({
   return (
     <ProtectedRoute>
       <AdminDashboardProvider>
-        <div className={`flex h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-          <Sidebar />
-          <div className={`flex-1 flex flex-col overflow-hidden ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-            <Header />
-            <main className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-              {children}
-            </main>
-          </div>
+        <div className="flex flex-col h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+          <Header />
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white dark:bg-gray-900 transition-colors duration-200">
+            {children}
+          </main>
         </div>
       </AdminDashboardProvider>
     </ProtectedRoute>

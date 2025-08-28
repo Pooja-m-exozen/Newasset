@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ManageLocationProvider, useManageLocation } from '../../../contexts/ManageLocationContext';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -19,12 +19,18 @@ import {
   Trash2,
   ArrowUpDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Filter,
+  X,
+  Calendar,
+  Globe,
+  Navigation
 } from 'lucide-react';
 import { Location, CreateLocationRequest, UpdateLocationRequest } from '../../../lib/location';
 import { Input } from '../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const LocationManagementPage = () => {
   return (
@@ -49,6 +55,7 @@ const LocationManagementContent = () => {
     closeModal,
   } = useManageLocation();
 
+  const { user } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,38 +65,77 @@ const LocationManagementContent = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const handleDelete = (location: Location) => {
+  useEffect(() => {
+    // Only fetch if locations array is empty and not loading
+    if (locations.length === 0 && !loading) {
+      fetchLocations();
+    }
+  }, []); // Empty dependency array - only run once on mount
+
+  const handleDelete = useCallback((location: Location) => {
     setLocationToDelete(location);
     setShowDeleteDialog(true);
-  };
+  }, []);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     if (locationToDelete) {
       await removeLocation(locationToDelete._id);
       setShowDeleteDialog(false);
       setLocationToDelete(null);
     }
-  };
+  }, [locationToDelete, removeLocation]);
 
-  const handleModalSubmit = async (data: CreateLocationRequest | UpdateLocationRequest) => {
+  const handleModalSubmit = useCallback(async (data: CreateLocationRequest | UpdateLocationRequest) => {
     if (modalMode === 'create') {
       await addLocation(data as CreateLocationRequest);
+      closeModal();
     } else if (modalMode === 'edit' && selectedLocation) {
       await editLocation(selectedLocation._id, data as UpdateLocationRequest);
+      closeModal();
     }
-  };
+  }, [modalMode, selectedLocation, addLocation, editLocation, closeModal]);
 
-  const handleDownloadExcel = async () => {
+  // Memoized filtered and sorted locations to prevent unnecessary recalculations
+  const filteredLocations = useMemo(() => {
+    return locations.filter(location => {
+      const matchesSearch = location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          location.address.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = filterType === 'all' || location.type === filterType;
+      return matchesSearch && matchesType;
+    });
+  }, [locations, searchTerm, filterType]);
+
+  // Memoized sorted locations
+  const sortedLocations = useMemo(() => {
+    return [...filteredLocations].sort((a, b) => {
+      const aValue = a[sortField as keyof Location] || "";
+      const bValue = b[sortField as keyof Location] || "";
+      
+      if (sortDirection === "asc") {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
+      }
+    });
+  }, [filteredLocations, sortField, sortDirection]);
+
+  // Memoized pagination values
+  const { totalPages, startIndex, endIndex, paginatedLocations } = useMemo(() => {
+    const totalPages = Math.ceil(sortedLocations.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedLocations = sortedLocations.slice(startIndex, endIndex);
+    
+    return { totalPages, startIndex, endIndex, paginatedLocations };
+  }, [sortedLocations, currentPage, itemsPerPage]);
+
+  // Download handler - defined after filteredLocations
+  const handleDownloadExcel = useCallback(async () => {
     setDownloadLoading(true);
     try {
-      const filteredLocations = locations.filter(location => {
-        const matchesSearch = location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            location.address.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = filterType === 'all' || location.type === filterType;
-        return matchesSearch && matchesType;
-      });
-
+      // Use the already filtered locations instead of re-filtering
       const headers = ['Name', 'Type', 'Address', 'Latitude', 'Longitude', 'Created At'];
       const rows = filteredLocations.map(location => [
         location.name,
@@ -105,12 +151,12 @@ const LocationManagementContent = () => {
       ).join('\n');
 
       const blob = new Blob([csvContent], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        type: 'text/csv;charset=utf-8;'
       });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `locations_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.download = `locations_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -120,56 +166,34 @@ const LocationManagementContent = () => {
     } finally {
       setDownloadLoading(false);
     }
-  };
+  }, [filteredLocations]);
 
-  const filteredLocations = locations.filter(location => {
-    const matchesSearch = location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        location.address.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || location.type === filterType;
-    return matchesSearch && matchesType;
-  });
-
-  // Sort locations
-  const sortedLocations = [...filteredLocations].sort((a, b) => {
-    const aValue = a[sortField as keyof Location] || "";
-    const bValue = b[sortField as keyof Location] || "";
-    
-    if (sortDirection === "asc") {
-      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
-    } else {
-      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
-    }
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(sortedLocations.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedLocations = sortedLocations.slice(startIndex, endIndex);
-
-  const handleSort = (field: string) => {
+  const handleSort = useCallback((field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
     } else {
       setSortField(field)
       setSortDirection("asc")
     }
-  };
+  }, [sortField, sortDirection]);
 
-  const locationTypes = ['all', ...Array.from(new Set(locations.map(l => l.type)))];
+  // Memoized location types to prevent recalculation
+  const locationTypes = useMemo(() => {
+    return ['all', ...Array.from(new Set(locations.map(l => l.type)))];
+  }, [locations]);
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = useCallback((type: string) => {
     switch (type.toLowerCase()) {
-      case 'office': return 'bg-blue-100 text-blue-800'
-      case 'warehouse': return 'bg-orange-100 text-orange-800'
-      case 'factory': return 'bg-green-100 text-green-800'
-      case 'retail': return 'bg-purple-100 text-purple-800'
-      case 'residential': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'office': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+      case 'warehouse': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300'
+      case 'factory': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+      case 'retail': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
+      case 'residential': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
     }
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
@@ -178,64 +202,96 @@ const LocationManagementContent = () => {
     if (diffInHours < 24) return `${diffInHours} hours ago`;
     if (diffInHours < 48) return "1 day ago";
     return `${Math.floor(diffInHours / 24)} days ago`;
-  };
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setSearchTerm('');
+    setFilterType('all');
+    setCurrentPage(1);
+  }, []);
+
+  // Memoized statistics to prevent unnecessary recalculations
+  const statistics = useMemo(() => ({
+    totalLocations: sortedLocations.length,
+    officeCount: locations.filter(l => l.type === 'office').length,
+    warehouseCount: locations.filter(l => l.type === 'warehouse').length
+  }), [sortedLocations.length, locations]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          {/* Enhanced Header */}
+          {/* Enhanced ERP Header */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-lg flex items-center justify-center shadow-lg">
                   <MapPin className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                     Location Management
                   </h1>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Manage and organize your facility locations</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                    {user?.projectName ? `Managing locations for project: ${user.projectName}` : 'Manage and organize your facility locations'}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   onClick={handleDownloadExcel}
                   disabled={downloadLoading || locations.length === 0}
                   variant="outline"
                   size="sm"
-                  className="border-green-300 dark:border-green-600 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  className="border-green-300 dark:border-green-600 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 text-xs sm:text-sm w-full sm:w-auto justify-center"
                 >
                   {downloadLoading ? (
                     <>
-                      <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                      Exporting...
+                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 animate-spin" />
+                      <span className="hidden sm:inline">Exporting...</span>
+                      <span className="sm:hidden">Exporting...</span>
                     </>
                   ) : (
                     <>
-                      <Download className="w-3 h-3 mr-1" />
-                      Export
+                      <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                      <span className="hidden sm:inline">Export</span>
+                      <span className="sm:hidden">Export</span>
                     </>
                   )}
                 </Button>
                 <Button 
                   onClick={() => openModal('create')}
-                  className="bg-gradient-to-r from-green-600 to-green-700 dark:from-green-700 dark:to-green-800 text-white hover:from-green-700 hover:to-green-800 dark:hover:from-green-800 dark:hover:to-green-900 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center gap-2 text-sm"
+                  className="bg-gradient-to-r from-green-600 to-green-700 dark:from-green-700 dark:to-green-800 text-white hover:from-green-700 hover:to-green-800 dark:hover:from-green-800 dark:hover:to-green-900 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center gap-2 text-xs sm:text-sm w-full sm:w-auto justify-center"
                 >
-                  <Plus className="w-3 h-3" />
-                  Add Location
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Add Location</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </div>
             </div>
+
+            {/* Project Info Banner */}
+            {user?.projectName && (
+              <div className="bg-green-100 dark:bg-green-900 border border-green-200 dark:border-green-700 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
+                    <MapPin className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                    Currently managing locations for project: <span className="font-bold">{user.projectName}</span>
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Enhanced Tabs with better styling */}
+          {/* Enhanced ERP Tabs */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {/* Enhanced Header Section */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-950/20 rounded-full">
                       <MapPin className="w-4 h-4 text-green-600" />
                       <span className="text-sm font-medium text-green-700 dark:text-green-300">
@@ -245,7 +301,13 @@ const LocationManagementContent = () => {
                     <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
                       <Building className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                        {locations.filter(l => l.type === 'office').length} Offices
+                        {useMemo(() => locations.filter(l => l.type === 'office').length, [locations])} Offices
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 dark:bg-orange-950/20 rounded-full">
+                      <Globe className="w-4 h-4 text-orange-600" />
+                      <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                        {useMemo(() => locations.filter(l => l.type === 'warehouse').length, [locations])} Warehouses
                       </span>
                     </div>
                   </div>
@@ -254,6 +316,15 @@ const LocationManagementContent = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 hover:bg-green-50 hover:text-green-600 hover:border-green-200"
+                  >
+                    <Filter className="w-4 h-4" />
+                    <span className="hidden sm:inline">Filters</span>
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -269,12 +340,12 @@ const LocationManagementContent = () => {
 
               {/* Enhanced Search and Filter Container */}
               <Card className="border-0 shadow-sm mb-6">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="space-y-4">
                     {/* Search Section */}
-                    <div className="flex items-end gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
                       <div className="w-full max-w-md">
-                        <label className="text-sm font-medium text-muted-foreground mb-2">Search Locations</label>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">Search Locations</label>
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
@@ -285,9 +356,25 @@ const LocationManagementContent = () => {
                           />
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      
+                      {/* Mobile Filter Toggle */}
+                      <div className="sm:hidden w-full">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowFilters(!showFilters)}
+                          className="w-full justify-between"
+                        >
+                          <span>Filters</span>
+                          <Filter className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Filters Section - Responsive */}
+                    <div className={`space-y-4 ${showFilters ? 'block' : 'hidden sm:block'}`}>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
                         <div className="w-full max-w-xs">
-                          <label className="text-sm font-medium text-muted-foreground mb-2">Filter by Type</label>
+                          <label className="text-sm font-medium text-muted-foreground mb-2 block">Filter by Type</label>
                           <Select value={filterType} onValueChange={setFilterType}>
                             <SelectTrigger className="h-11 border-gray-300 dark:border-gray-600 focus:border-green-500 dark:focus:border-green-400 focus:ring-green-500 dark:focus:ring-green-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                               <SelectValue placeholder="All types" />
@@ -301,23 +388,23 @@ const LocationManagementContent = () => {
                             </SelectContent>
                           </Select>
                         </div>
+                        
                         {(searchTerm || filterType !== 'all') && (
                           <Button
                             variant="outline"
-                            onClick={() => {
-                              setSearchTerm('');
-                              setFilterType('all');
-                            }}
-                            className="h-11 border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-400 text-gray-700 dark:text-gray-300"
+                            onClick={clearFilters}
+                            className="h-11 border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-400 text-gray-700 dark:text-gray-300 flex items-center gap-2"
                           >
-                            Clear
+                            <X className="w-4 h-4" />
+                            <span className="hidden sm:inline">Clear Filters</span>
+                            <span className="sm:hidden">Clear</span>
                           </Button>
                         )}
                       </div>
                     </div>
 
                     {/* Search Results Info */}
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm text-muted-foreground gap-2">
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
                         <span>
@@ -336,14 +423,14 @@ const LocationManagementContent = () => {
 
               {/* Locations Table */}
               <Card className="border-0 shadow-sm">
-                <CardHeader className="pb-6">
-                  <CardTitle className="flex items-center justify-between">
+                <CardHeader className="pb-4 sm:pb-6">
+                  <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-lg">
                         <MapPin className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-foreground">Location Management</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-foreground">Location Management</h2>
                         <p className="text-sm text-muted-foreground mt-1">
                           Manage locations and site information in a structured table format
                         </p>
@@ -440,6 +527,7 @@ const LocationManagementContent = () => {
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                                  <Calendar className="w-3 h-3" />
                                   <span>{formatDate(location.createdAt)}</span>
                                 </div>
                               </TableCell>
@@ -450,6 +538,7 @@ const LocationManagementContent = () => {
                                     size="sm" 
                                     className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
                                     onClick={() => openModal('view', location)}
+                                    title="View Details"
                                   >
                                     <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                   </Button>
@@ -458,6 +547,7 @@ const LocationManagementContent = () => {
                                     size="sm" 
                                     className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20"
                                     onClick={() => openModal('edit', location)}
+                                    title="Edit Location"
                                   >
                                     <Edit className="w-4 h-4 text-green-600 dark:text-green-400" />
                                   </Button>
@@ -466,6 +556,7 @@ const LocationManagementContent = () => {
                                     size="sm" 
                                     className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
                                     onClick={() => handleDelete(location)}
+                                    title="Delete Location"
                                   >
                                     <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
                                   </Button>
@@ -481,55 +572,57 @@ const LocationManagementContent = () => {
               </Card>
 
               {/* Enhanced Pagination */}
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Showing {startIndex + 1} to {Math.min(endIndex, sortedLocations.length)} of {sortedLocations.length} results
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                        className="flex items-center gap-1"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </Button>
-                      
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const page = i + 1;
-                          return (
-                            <Button
-                              key={page}
-                              variant={currentPage === page ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCurrentPage(page)}
-                              className="w-8 h-8 p-0"
-                            >
-                              {page}
-                            </Button>
-                          )
-                        })}
+              {totalPages > 1 && (
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {startIndex + 1} to {Math.min(endIndex, sortedLocations.length)} of {sortedLocations.length} results
                       </div>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center gap-1"
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                          className="flex items-center gap-1"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          <span className="hidden sm:inline">Previous</span>
+                        </Button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            const page = i + 1;
+                            return (
+                              <Button
+                                key={page}
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(page)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {page}
+                              </Button>
+                            )
+                          })}
+                        </div>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center gap-1"
+                        >
+                          <span className="hidden sm:inline">Next</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>

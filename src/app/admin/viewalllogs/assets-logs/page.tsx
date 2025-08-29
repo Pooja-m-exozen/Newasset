@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ErrorDisplay } from '../../../../components/ui/error-display';
@@ -16,25 +16,22 @@ import { Badge } from '../../../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { 
-  Activity,
   MapPin,
   Search,
-  RefreshCw,
   FileText,
   BarChart3,
   Edit,
   Calendar,
   Clock,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  TrendingUp,
-  Building2,
   User,
   Building,
   Smartphone,
   Monitor,
-  Server
+  Server,
+  Eye,
+  MoreHorizontal,
+  PieChart,
+  Database
 } from 'lucide-react';
 
 // API Base URL constant
@@ -55,13 +52,9 @@ function AssetsLogsContent() {
   const [assetTypes, setAssetTypes] = useState<Array<{_id: string, name: string}>>([]);
   const [selectedAssetType, setSelectedAssetType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterPriority, setFilterPriority] = useState('all');
-  const [filterType, setFilterType] = useState('all');
-  const [viewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [sortBy, setSortBy] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [showFilters] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
@@ -176,7 +169,7 @@ function AssetsLogsContent() {
       } : undefined
     }));
     
-    let filtered = filterAssets(transformedAssets as Asset[], searchTerm, filterStatus, filterPriority, filterType);
+    let filtered = filterAssets(transformedAssets as Asset[], searchTerm, 'all', 'all', 'all');
     
     // Additional filtering by selected asset type
     if (selectedAssetType !== 'all') {
@@ -201,20 +194,14 @@ function AssetsLogsContent() {
     });
     
     return filtered;
-  }, [projectAssets, searchTerm, filterStatus, filterPriority, filterType, selectedAssetType, sortBy, sortOrder]);
+  }, [projectAssets, searchTerm, selectedAssetType, sortBy, sortOrder]);
 
   const handleClearFilters = () => {
     setSearchTerm('');
-    setFilterStatus('all');
-    setFilterPriority('all');
-    setFilterType('all');
     setSelectedAssetType('all');
     setSortBy('updatedAt');
     setSortOrder('desc');
   };
-
-  // Sort functionality handled by the sortBy and sortOrder state variables
-  // No need for separate handleSort function as sorting is controlled by the Select components
 
   const handleViewDetails = (asset: Asset) => {
     setSelectedAsset(asset);
@@ -262,36 +249,35 @@ function AssetsLogsContent() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      active: { color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle },
-      inactive: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400', icon: XCircle },
-      maintenance: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', icon: AlertCircle },
-      intialization: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', icon: Clock }
+      active: { color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700', icon: '✓' },
+      inactive: { color: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400 border-slate-200 dark:border-slate-700', icon: '✗' },
+      maintenance: { color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-700', icon: '⚠' },
+      intialization: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-700', icon: '⏱' }
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.inactive;
-    const Icon = config.icon;
     
     return (
-      <Badge className={`${config.color} flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium`}>
-        <Icon className="w-3 h-3" />
-        {status}
+      <Badge className={`${config.color} flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border`}>
+        <span className="text-sm">{config.icon}</span>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
   };
 
   const getPriorityBadge = (priority: string) => {
     const priorityConfig = {
-      low: { color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-      medium: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-      high: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
-      critical: { color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' }
+      low: { color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700' },
+      medium: { color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-700' },
+      high: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-700' },
+      critical: { color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-700' }
     };
     
     const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.low;
     
     return (
-      <Badge className={`${config.color} px-2 py-1 rounded-full text-xs font-medium`}>
-        {priority}
+      <Badge className={`${config.color} px-3 py-1.5 rounded-full text-xs font-semibold border`}>
+        {priority.charAt(0).toUpperCase() + priority.slice(1)}
       </Badge>
     );
   };
@@ -315,61 +301,176 @@ function AssetsLogsContent() {
     return 'No location specified';
   };
 
+
+
   // Custom table component for the specific columns
   const ProjectAssetsTable = ({ assets }: { assets: Asset[] }) => {
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+      <div className="overflow-x-auto rounded-lg border border-border">
+        {/* Mobile Card View */}
+        <div className="block lg:hidden space-y-4 p-4">
+          {assets.map((asset, index) => (
+            <div key={asset._id} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                    {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
+                      className: "w-4 h-4 text-white"
+                    })}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                      {asset.brand} {asset.model || ''}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {asset.assetType}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(asset.status || 'active')}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewDetails(asset)}
+                    className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    title="View Details"
+                  >
+                    <MoreHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400">Tag ID:</span>
+                  <div className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                    {asset.tagId || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400">Vendor:</span>
+                  <div className="font-medium text-slate-900 dark:text-slate-100">
+                    {(() => {
+                      const vendorName = asset.customFields?.['Vendor Name'];
+                      return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
+                    })()}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400">Location:</span>
+                  <div className="font-medium text-slate-900 dark:text-slate-100">
+                    {formatLocation(asset.location)}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400">Serial:</span>
+                  <div className="font-medium text-slate-900 dark:text-slate-100">
+                    {asset.serialNumber || 'N/A'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <table className="hidden lg:table w-full">
           <thead>
-            <tr className="border-b border-border bg-muted/50">
-              <th className="text-left p-3 font-medium text-sm text-muted-foreground">S.No</th>
-              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Asset Name</th>
-              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Asset Tag Number</th>
-              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Vendor Name</th>
-              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Asset Category</th>
-              <th className="text-left p-3 font-medium text-sm text-muted-foreground">Location</th>
+            <tr className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 border-b border-border">
+              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">S.No</th>
+              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Asset Details</th>
+              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Asset Tag & Serial</th>
+              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Vendor</th>
+              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Category</th>
+              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Location</th>
+              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Status</th>
+              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Actions</th>
             </tr>
           </thead>
           <tbody>
             {assets.map((asset, index) => (
-              <tr key={asset._id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                <td className="p-3 text-sm text-muted-foreground">{index + 1}</td>
-                <td className="p-3">
-                  <div className="font-medium text-foreground">
-                    {asset.brand} {asset.model || ''}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {asset.assetType}
+              <tr key={asset._id} className="border-b border-border/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-200">
+                <td className="p-4 text-sm text-slate-600 dark:text-slate-400 font-medium">
+                  {index + 1}
+                </td>
+                <td className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                      {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
+                        className: "w-4 h-4 text-white"
+                      })}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900 dark:text-slate-100">
+                        {asset.brand} {asset.model || ''}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        {asset.assetType}
+                      </div>
+                    </div>
                   </div>
                 </td>
-                <td className="p-3">
-                  <div className="font-mono text-sm text-foreground">
-                    {asset.tagId || 'N/A'}
+                <td className="p-4">
+                  <div className="space-y-1">
+                    <div className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {asset.tagId || 'N/A'}
+                    </div>
+                    {asset.serialNumber && (
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        SN: {asset.serialNumber}
+                      </div>
+                    )}
                   </div>
-                  {asset.serialNumber && (
-                    <div className="text-xs text-muted-foreground">
-                      SN: {asset.serialNumber}
+                </td>
+                <td className="p-4">
+                  <div className="text-sm text-slate-900 dark:text-slate-100 font-medium">
+                    {(() => {
+                      const vendorName = asset.customFields?.['Vendor Name'];
+                      return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
+                    })()}
+                  </div>
+                  {asset.customFields?.['HSN'] && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      HSN: {String(asset.customFields['HSN'])}
                     </div>
                   )}
                 </td>
-                <td className="p-3 text-sm text-foreground">
-                  {/* Use customFields.Vendor Name if available, otherwise fallback to brand */}
-                  {(() => {
-                    const vendorName = asset.customFields?.['Vendor Name'];
-                    return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
-                  })()}
-                </td>
-                <td className="p-3">
-                  <Badge variant="outline" className="text-xs">
+                <td className="p-4">
+                  <Badge variant="outline" className="text-xs font-medium border-slate-200 dark:border-slate-700">
                     {asset.assetType || 'Unknown'}
                   </Badge>
                 </td>
-                <td className="p-3">
+                <td className="p-4">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <div className="text-sm text-foreground">
+                    <MapPin className="w-4 h-4 text-slate-400" />
+                    <div className="text-sm text-slate-900 dark:text-slate-100">
                       {formatLocation(asset.location)}
                     </div>
+                  </div>
+                </td>
+                <td className="p-4">
+                  {getStatusBadge(asset.status || 'active')}
+                </td>
+                <td className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewDetails(asset)}
+                      className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      <Eye className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewDetails(asset)}
+                      className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      title="View Details"
+                    >
+                      <MoreHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -382,13 +483,12 @@ function AssetsLogsContent() {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-background to-muted">
-        <div className="flex-1 overflow-auto">
-          <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-              <LoadingSpinner size="lg" />
-              <p className="mt-4 text-muted-foreground">Loading assets logs...</p>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center space-y-4">
+            <LoadingSpinner size="lg" />
+            <p className="text-lg text-slate-600 dark:text-slate-400 font-medium">Loading Assets Dashboard...</p>
+            <p className="text-sm text-slate-500 dark:text-slate-500">Please wait while we fetch your project data</p>
           </div>
         </div>
       </div>
@@ -396,425 +496,334 @@ function AssetsLogsContent() {
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background to-muted">
-      <div className="flex-1 overflow-auto">
-        {/* Header */}
-        <header className="bg-card border-b border-border px-4 sm:px-6 py-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                {selectedAssetType !== 'all' ? `${selectedAssetType} Assets` : 'Assets'} Logs
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Track {selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'asset'} activity, changes, and maintenance history for {user?.projectName || 'your project'}
-              </p>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Error Display */}
-          <ErrorDisplay 
-            error={error} 
-            onClearError={clearError} 
-          />
-
-          {/* Success Toast */}
-          {successMessage && (
-            <SuccessToast
-              message={successMessage}
-              onClose={clearSuccess}
-              duration={4000}
-            />
-          )}
-
-          {/* Project Info Banner */}
-          {user?.projectName && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                  <Building2 className="w-3 h-3 text-white" />
-                </div>
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Currently viewing {selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'all'} assets for project: <span className="font-bold">{user.projectName}</span>
-                  {selectedAssetType !== 'all' && (
-                    <span className="ml-2 text-blue-600 dark:text-blue-400">
-                      (Filtered by {selectedAssetType})
-                    </span>
-                  )}
-                </span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Header */}
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 sm:h-16 gap-4 sm:gap-0">
+            <div className="flex items-center space-x-4 min-w-0">
+              <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl flex-shrink-0">
+                <Database className="w-6 h-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white truncate">
+                  Assets Management
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
+                  {user?.projectName || 'Project'} • Asset Inventory & Analytics
+                </p>
               </div>
             </div>
-          )}
+          </div>
+        </div>
+      </header>
 
-          {/* Search and Filters */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-3 sm:p-6">
-              <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-                <div className="flex flex-col lg:flex-row gap-4 flex-1">
-                  <div className="w-full max-w-md">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search assets, users, tags, or descriptions..."
-                        className="pl-10 h-11 text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Asset Type Dropdown */}
-                  <div className="w-full max-w-md">
-                    <Select value={selectedAssetType} onValueChange={setSelectedAssetType}>
-                      <SelectTrigger className="h-11 text-sm">
-                        <SelectValue placeholder="Select Asset Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Asset Types</SelectItem>
-                        {assetTypes.map(type => (
-                          <SelectItem key={type._id} value={type.name}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Error Display */}
+        <ErrorDisplay 
+          error={error} 
+          onClearError={clearError} 
+        />
+
+        {/* Success Toast */}
+        {successMessage && (
+          <SuccessToast
+            message={successMessage}
+            onClose={clearSuccess}
+            duration={4000}
+          />
+        )}
+
+
+
+        {/* Search, Filters, and View Controls */}
+        <Card className="mb-8 border-slate-200 dark:border-slate-700 shadow-sm">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+              {/* Search and Asset Type */}
+              <div className="flex flex-col sm:flex-row gap-4 flex-1 max-w-2xl">
+                <div className="relative flex-1 max-w-xs">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Input
+                    placeholder="Search assets, tags, serial numbers..."
+                    className="pl-10 h-12 text-base border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
                 
+                <div className="w-full sm:w-auto sm:min-w-[180px]">
+                  <Select value={selectedAssetType} onValueChange={setSelectedAssetType}>
+                    <SelectTrigger className="h-12 text-base border-slate-200 dark:border-slate-700">
+                      <SelectValue placeholder="All Asset Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Asset Types</SelectItem>
+                      {assetTypes.map(type => (
+                        <SelectItem key={type._id} value={type.name}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* View Mode Buttons and Export Controls */}
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setViewMode('table')}
+                  className={`${viewMode === 'table' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300' : 'border-slate-200 dark:border-slate-700'} w-full sm:w-auto`}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Table View
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setViewMode('grid')}
+                  className={`${viewMode === 'grid' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300' : 'border-slate-200 dark:border-slate-700'} w-full sm:w-auto`}
+                >
+                  <PieChart className="w-4 h-4 mr-2" />
+                  Grid View
+                </Button>
+                
+                <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
+                
+                <AssetPDFDownload
+                  assets={filteredAssets}
+                  filename={`${user?.projectName || 'project'}-${selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'all'}-asset-details.pdf`}
+                  selectedAssetType={selectedAssetType}
+                  onDownload={handlePDFDownload}
+                />
+                <AssetExcelDownload
+                  assets={filteredAssets}
+                  filename="assets-logs-report.xlsx"
+                  onDownload={handleExcelDownload}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+
+
+        {/* Assets Display */}
+        {filteredAssets.length === 0 ? (
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-16 text-center">
+              <div className="w-24 h-24 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Database className="w-12 h-12 text-slate-400 dark:text-slate-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">No assets found</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-6 text-lg max-w-md mx-auto">
+                {projectAssets.length === 0 
+                  ? `No assets found for project: ${user?.projectName || 'your project'}`
+                  : 'No assets match your current filters. Try adjusting your search criteria or clearing the filters.'
+                }
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Button
+                  onClick={handleClearFilters}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800"
+                >
+                  Clear Filters
+                </Button>
                 <Button
                   variant="outline"
                   onClick={fetchProjectAssets}
-                  className="flex items-center gap-2"
+                  className="border-slate-200 dark:border-slate-700"
                 >
-                  <RefreshCw className="w-4 h-4" />
                   Refresh Assets
                 </Button>
               </div>
-                  
-              {/* Filters */}
-              {showFilters && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t border-border mt-6">
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="intialization">Initialization</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={filterPriority} onValueChange={setFilterPriority}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter by priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Priorities</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="critical">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter by type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="equipment">Equipment</SelectItem>
-                        <SelectItem value="Chiller">Chiller</SelectItem>
-                        <SelectItem value="computer">Computer</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sort by" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="updatedAt">Last Updated</SelectItem>
-                        <SelectItem value="createdAt">Created Date</SelectItem>
-                        <SelectItem value="tagId">Tag ID</SelectItem>
-                        <SelectItem value="brand">Brand</SelectItem>
-                        <SelectItem value="assetType">Asset Type</SelectItem>
-                      </SelectContent>
-                    </Select>
-                </div>
-              )}
             </CardContent>
           </Card>
-
-          {/* Stats and Export Section */}
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-4 p-6 bg-card/60 backdrop-blur-sm rounded-xl border border-border">
-            <div className="flex items-center gap-4">
-            
-              <AssetPDFDownload
-                assets={filteredAssets}
-                filename={`${user?.projectName || 'project'}-${selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'all'}-asset-details.pdf`}
-                selectedAssetType={selectedAssetType}
-                onDownload={handlePDFDownload}
-              />
-              <AssetExcelDownload
-                assets={filteredAssets}
-                filename="assets-logs-report.xlsx"
-                onDownload={handleExcelDownload}
-              />
-            </div>
-            
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                {filteredAssets.length} of {projectAssets.length} assets
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                {projectAssets.length > 0 ? Math.round((filteredAssets.length / projectAssets.length) * 100) : 0}% filtered
-              </div>
-            </div>
-          </div>
-
-          {/* Assets Display */}
-          {filteredAssets.length === 0 ? (
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-16 text-center">
-                <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Activity className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+        ) : viewMode === 'table' ? (
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
+                    <Database className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Asset Inventory</h2>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                      Comprehensive view of all tracked assets for {user?.projectName || 'your project'}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground mb-3">No assets found</h3>
-                <p className="text-muted-foreground mb-6 text-lg max-w-md mx-auto">
-                  {projectAssets.length === 0 
-                    ? `No assets found for project: ${user?.projectName || 'your project'}`
-                    : 'No assets match your current filters. Try adjusting your search criteria or clearing the filters.'
-                  }
-                </p>
-                <div className="flex items-center justify-center gap-3">
-                  <Button
-                    onClick={handleClearFilters}
-                    className="flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Clear Filters
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={fetchProjectAssets}
-                    className="flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Refresh Assets
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                    {filteredAssets.length} assets
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-          ) : viewMode === 'table' ? (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-6">
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                      <Building2 className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-foreground">Project Assets Inventory</h2>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Detailed view of all tracked assets for {user?.projectName || 'your project'}
-                      </p>
-                    </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ProjectAssetsTable assets={filteredAssets} />
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
+                    <PieChart className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Asset Grid View</h2>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                      Visual overview of all assets in card format
+                    </p>
+                  </div>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AssetGrid
+                assets={filteredAssets}
+                onViewDetails={handleViewDetails}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Asset View Modal */}
+        <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+          <DialogContent className="max-w-3xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
+                  <Database className="w-5 h-5 text-white" />
+                </div>
+                Asset Details
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedAsset && (
+              <div className="space-y-6">
+                {/* Asset Header */}
+                <div className="flex items-center gap-4 p-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
+                  <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl">
+                    {React.createElement(getAssetTypeIcon(selectedAsset.assetType || 'unknown'), {
+                      className: "w-8 h-8 text-white"
+                    })}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      {selectedAsset.tagId || 'Unknown Asset'}
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      {selectedAsset.assetType || 'Unknown Type'} • {selectedAsset.brand || 'Unknown Brand'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-muted-foreground">
-                      {filteredAssets.length} assets
-                    </span>
+                    {getStatusBadge(selectedAsset.status || 'active')}
+                    {getPriorityBadge(selectedAsset.priority || 'medium')}
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ProjectAssetsTable assets={filteredAssets} />
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-6">
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                      <Building2 className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-foreground">Asset Grid View</h2>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Visual overview of all assets in card format
-                      </p>
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AssetGrid
-                  assets={filteredAssets}
-                  onViewDetails={handleViewDetails}
-                />
-              </CardContent>
-            </Card>
-          )}
+                </div>
 
-          {/* Asset View Modal */}
-          <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-            <DialogContent className="max-w-2xl bg-card border-border">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-foreground">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                  Asset Details
-                </DialogTitle>
-              </DialogHeader>
-              
-              {selectedAsset && (
-                <div className="space-y-6">
-                  {/* Asset Header */}
-                  <div className="flex items-center gap-4 p-4 bg-card/50 rounded-lg border border-border">
-                    <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                      {React.createElement(getAssetTypeIcon(selectedAsset.assetType || 'unknown'), {
-                        className: "w-6 h-6 text-white"
-                      })}
+                {/* Asset Information Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Assigned To */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <User className="w-4 h-4" />
+                      Assigned To
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-foreground">
-                        {selectedAsset.tagId || 'Unknown Asset'}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedAsset.assetType || 'Unknown Type'} • {selectedAsset.brand || 'Unknown Brand'}
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                      <p className="text-sm text-slate-900 dark:text-white font-medium">
+                        {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.name 
+                          ? selectedAsset.assignedTo.name 
+                          : typeof selectedAsset.assignedTo === 'string' 
+                          ? selectedAsset.assignedTo 
+                          : 'Unassigned'}
+                      </p>
+                      {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.email && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                          {selectedAsset.assignedTo.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <MapPin className="w-4 h-4" />
+                      Location
+                    </div>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                      <p className="text-sm text-slate-900 dark:text-white font-medium">
+                        {selectedAsset.location ? formatLocation(selectedAsset.location) : 'Location not specified'}
                       </p>
                     </div>
                   </div>
 
-                  {/* Asset Information Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Assigned To */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <User className="w-4 h-4" />
-                        Assigned To
-                      </div>
-                      <div className="p-3 bg-card/50 rounded-lg border border-border">
-                        <p className="text-sm text-foreground font-medium">
-                          {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.name 
-                            ? selectedAsset.assignedTo.name 
-                            : typeof selectedAsset.assignedTo === 'string' 
-                            ? selectedAsset.assignedTo 
-                            : 'Unassigned'}
-                        </p>
-                        {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.email && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {selectedAsset.assignedTo.email}
-                          </p>
-                        )}
-                      </div>
+                  {/* Created Date */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <Calendar className="w-4 h-4" />
+                      Created
                     </div>
-
-                    {/* Location */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <MapPin className="w-4 h-4" />
-                        Location
-                      </div>
-                      <div className="p-3 bg-card/50 rounded-lg border border-border">
-                        <p className="text-sm text-foreground font-medium">
-                          {selectedAsset.location ? formatLocation(selectedAsset.location) : 'Location not specified'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Created Date */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        Created
-                      </div>
-                      <div className="p-3 bg-card/50 rounded-lg border border-border">
-                        <p className="text-sm text-foreground font-medium">
-                          {selectedAsset.createdAt ? formatDate(selectedAsset.createdAt) : 'Date not available'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Last Updated */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        Last Updated
-                      </div>
-                      <div className="p-3 bg-card/50 rounded-lg border border-border">
-                        <p className="text-sm text-foreground font-medium">
-                          {selectedAsset.updatedAt ? formatDate(selectedAsset.updatedAt) : 'Date not available'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Activity className="w-4 h-4" />
-                        Status
-                      </div>
-                      <div className="p-3 bg-card/50 rounded-lg border border-border">
-                        {getStatusBadge(selectedAsset.status || 'active')}
-                      </div>
-                    </div>
-
-                    {/* Priority */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <AlertCircle className="w-4 h-4" />
-                        Priority
-                      </div>
-                      <div className="p-3 bg-card/50 rounded-lg border border-border">
-                        {getPriorityBadge(selectedAsset.priority || 'medium')}
-                      </div>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                      <p className="text-sm text-slate-900 dark:text-white font-medium">
+                        {selectedAsset.createdAt ? formatDate(selectedAsset.createdAt) : 'Date not available'}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Additional Details */}
-                  {selectedAsset.notes && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <FileText className="w-4 h-4" />
-                        Notes
-                      </div>
-                      <div className="p-3 bg-card/50 rounded-lg border border-border">
-                        <p className="text-sm text-foreground">
-                          {selectedAsset.notes}
-                        </p>
-                      </div>
+                  {/* Last Updated */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <Clock className="w-4 h-4" />
+                      Last Updated
                     </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-                    <Button
-                      variant="outline"
-                      onClick={closeViewModal}
-                      className="text-foreground border-border hover:bg-accent"
-                    >
-                      Close
-                    </Button>
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Asset
-                    </Button>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                      <p className="text-sm text-slate-900 dark:text-white font-medium">
+                        {selectedAsset.updatedAt ? formatDate(selectedAsset.updatedAt) : 'Date not available'}
+                      </p>
+                    </div>
                   </div>
-        </div>
-              )}
-            </DialogContent>
-          </Dialog>
-        </main>
+                </div>
+
+                {/* Additional Details */}
+                {selectedAsset.notes && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <FileText className="w-4 h-4" />
+                      Notes
+                    </div>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                      <p className="text-sm text-slate-900 dark:text-white">
+                        {selectedAsset.notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
+                  <Button
+                    variant="outline"
+                    onClick={closeViewModal}
+                    className="border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    Close
+                  </Button>
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Asset
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

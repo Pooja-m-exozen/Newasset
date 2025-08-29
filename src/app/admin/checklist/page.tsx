@@ -377,244 +377,267 @@ export default function ChecklistPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6 bg-white dark:bg-gray-900 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Checklist Management
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Create, manage, and track task checklists for your organization
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Page Header */}
+          <div className="mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-lg flex items-center justify-center shadow-lg">
+                  <CheckSquare className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                    Checklist Management
+                  </h1>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                    Create, manage, and track task checklists for your organization
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Checklist
+                </Button>
+              </div>
+            </div>
+          </div>
 
+          {/* Main Content Card */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="p-4 sm:p-6">
+              {/* Header Section */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
+                      <CheckSquare className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                        Checklist Tools
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Filter and manage your checklists by type, priority, and status
+                  </p>
+                </div>
+              </div>
 
+              {/* Filters */}
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6">
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="border-gray-200 dark:border-gray-700">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Types</SelectItem>
+                        {CHECKLIST_TYPES.map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
+                    <Select value={filterPriority} onValueChange={setFilterPriority}>
+                      <SelectTrigger className="border-gray-200 dark:border-gray-700">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Priorities</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
 
-          <Button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
-          >
-            <Plus className="w-4 h-4" />
-            Create Checklist
-          </Button>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="border-gray-200 dark:border-gray-700">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      variant="outline"
+                      onClick={clearFilters}
+                      className="flex items-center gap-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Clear
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Loading State */}
+              {isLoading && (
+                <div className="p-12 text-center">
+                  <div className="relative">
+                    <RefreshCw className="w-16 h-16 text-blue-500 mx-auto mb-4 animate-spin" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    Loading Checklists...
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Please wait while we fetch your checklists from the server.
+                  </p>
+                </div>
+              )}
+
+              {/* Checklists Table */}
+              {!isLoading && (
+                <div className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Title
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Type
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Priority
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Location
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        {filteredChecklists.map((checklist) => (
+                          <tr key={checklist._id} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {checklist.title}
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xs mt-1">
+                                  {checklist.description}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge variant="outline" className="text-xs">
+                                {checklist.type}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge className={cn('text-xs font-medium', PRIORITY_COLORS[checklist.priority])}>
+                                {checklist.priority}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge className={cn('text-xs font-medium', STATUS_COLORS[checklist.status])}>
+                                {checklist.status}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900 dark:text-white">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Building className="w-4 h-4 text-blue-500" />
+                                  <span className="font-medium">{checklist.location.building}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                  <MapPin className="w-4 h-4 text-green-500" />
+                                  <span>{checklist.location.zone}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleView(checklist)}
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                  title="View Details"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEdit(checklist)}
+                                  className="h-8 w-8 p-0 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                  title="Edit Checklist"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteChecklist(checklist._id)}
+                                  disabled={isDeleting === checklist._id}
+                                  className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                                  title="Delete Checklist"
+                                >
+                                  {isDeleting === checklist._id ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!isLoading && filteredChecklists.length === 0 && (
+                <div className="p-12 text-center">
+                  <div className="relative">
+                    <CheckSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    No checklists found
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    {filterPriority || filterStatus || filterType
+                      ? 'Try adjusting your filters'
+                      : 'Create your first checklist to get started'
+                    }
+                  </p>
+                  {!filterPriority && !filterStatus && !filterType && (
+                    <Button 
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Checklist
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Filters */}
-      <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="border-gray-200 dark:border-gray-700">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
-                {CHECKLIST_TYPES.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterPriority} onValueChange={setFilterPriority}>
-              <SelectTrigger className="border-gray-200 dark:border-gray-700">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Priorities</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="border-gray-200 dark:border-gray-700">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="outline"
-              onClick={clearFilters}
-              className="flex items-center gap-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Clear
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Loading State */}
-      {isLoading && (
-        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <CardContent className="p-12 text-center">
-            <div className="relative">
-              <RefreshCw className="w-16 h-16 text-blue-500 mx-auto mb-4 animate-spin" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              Loading Checklists...
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Please wait while we fetch your checklists from the server.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Checklists Table */}
-      {!isLoading && (
-        <Card className="overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Title
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Priority
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Location
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredChecklists.map((checklist) => (
-                    <tr key={checklist._id} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {checklist.title}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xs mt-1">
-                            {checklist.description}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant="outline" className="text-xs">
-                          {checklist.type}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={cn('text-xs font-medium', PRIORITY_COLORS[checklist.priority])}>
-                          {checklist.priority}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={cn('text-xs font-medium', STATUS_COLORS[checklist.status])}>
-                          {checklist.status}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Building className="w-4 h-4 text-blue-500" />
-                            <span className="font-medium">{checklist.location.building}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                            <MapPin className="w-4 h-4 text-green-500" />
-                            <span>{checklist.location.zone}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleView(checklist)}
-                            className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(checklist)}
-                            className="h-8 w-8 p-0 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
-                            title="Edit Checklist"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteChecklist(checklist._id)}
-                            disabled={isDeleting === checklist._id}
-                            className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
-                            title="Delete Checklist"
-                          >
-                            {isDeleting === checklist._id ? (
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && filteredChecklists.length === 0 && (
-        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <CardContent className="p-12 text-center">
-            <div className="relative">
-              <CheckSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No checklists found
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {filterPriority || filterStatus || filterType
-                ? 'Try adjusting your filters'
-                : 'Create your first checklist to get started'
-              }
-            </p>
-            {!filterPriority && !filterStatus && !filterType && (
-              <Button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Checklist
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Create/Edit Modal */}
       <ChecklistFormModal

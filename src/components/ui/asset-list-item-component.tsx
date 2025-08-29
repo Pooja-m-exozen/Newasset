@@ -3,6 +3,7 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useTheme } from '@/contexts/ThemeContext'
 import { 
   QrCode, 
   Barcode, 
@@ -159,14 +160,23 @@ export function AssetListItem({
   onShowMoreOptions, 
   onShowDigitalAsset 
 }: AssetListItemProps) {
+  const { resolvedTheme } = useTheme()
   const statusInfo = getStatusInfo(asset.status)
   const priorityInfo = getPriorityInfo(asset.priority)
   const StatusIcon = statusInfo.icon
 
   return (
-    <div className="group relative overflow-hidden border border-slate-200 rounded-lg hover:shadow-lg transition-all duration-300 hover:border-slate-300 bg-gradient-to-r from-white via-slate-50 to-blue-50">
+    <div className={`group relative overflow-hidden border rounded-lg hover:shadow-lg transition-all duration-300 ${
+      resolvedTheme === 'dark' 
+        ? 'border-gray-700 hover:border-gray-600 bg-gray-800 hover:bg-gray-700' 
+        : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+    }`}>
       {/* Status Indicator */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${statusInfo.bgColor}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+        resolvedTheme === 'dark' 
+          ? statusInfo.bgColor.replace('bg-', 'bg-').replace('100', '800').replace('50', '700')
+          : statusInfo.bgColor
+      }`} />
       
       <div className="flex items-center p-4">
         {/* Asset Icon */}
@@ -179,33 +189,49 @@ export function AssetListItem({
         {/* Asset Info */}
         <div className="flex-1 min-w-0 mr-6">
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+            <h3 className={`text-lg font-bold group-hover:text-blue-600 transition-colors ${
+              resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
               {asset.tagId}
             </h3>
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${statusInfo.bgColor} ${statusInfo.color}`}>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
+              resolvedTheme === 'dark' 
+                ? statusInfo.bgColor.replace('bg-', 'bg-').replace('100', '800').replace('50', '700')
+                : statusInfo.bgColor
+            } ${statusInfo.color}`}>
               <StatusIcon className="w-3 h-3" />
               <span className="text-xs font-bold capitalize tracking-wide">{asset.status}</span>
             </div>
           </div>
-          <p className="text-sm text-slate-600 mb-2 font-medium">
+          <p className={`text-sm mb-2 font-medium ${
+            resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}>
             {asset.assetType} • {asset.brand} {asset.model}
           </p>
-          <div className="flex items-center gap-4 text-xs text-slate-600">
+          <div className={`flex items-center gap-4 text-xs ${
+            resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}>
             {asset.location && (
               <>
                 <div className="flex items-center gap-1">
-                  <Building className="w-3 h-3 text-slate-500" />
+                  <Building className={`w-3 h-3 ${
+                    resolvedTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                  }`} />
                   <span className="font-medium">{asset.location.building}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-slate-500" />
+                  <Layers className={`w-3 h-3 ${
+                    resolvedTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                  }`} />
                   <span className="font-medium">{asset.location.floor} • {asset.location.room}</span>
                 </div>
               </>
             )}
             {asset.project && (
               <div className="flex items-center gap-1">
-                <Users className="w-3 h-3 text-slate-500" />
+                <Users className={`w-3 h-3 ${
+                  resolvedTheme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                }`} />
                 <span className="font-medium">{asset.project.projectName}</span>
               </div>
             )}
@@ -214,7 +240,15 @@ export function AssetListItem({
 
         {/* Priority and Actions */}
         <div className="flex items-center gap-4 flex-shrink-0">
-          <Badge variant={priorityInfo.variant} className={`${priorityInfo.color} ${priorityInfo.bgColor} border-0 font-bold px-3 py-1 text-xs`}>
+          <Badge variant={priorityInfo.variant} className={`${
+            resolvedTheme === 'dark' 
+              ? priorityInfo.bgColor.replace('bg-', 'bg-').replace('100', '800').replace('50', '700')
+              : priorityInfo.bgColor
+          } ${
+            resolvedTheme === 'dark' 
+              ? priorityInfo.color.replace('text-', 'text-').replace('600', '300').replace('500', '300')
+              : priorityInfo.color
+          } border-0 font-bold px-3 py-1 text-xs`}>
             {asset.priority}
           </Badge>
           
@@ -223,28 +257,46 @@ export function AssetListItem({
             {asset.digitalAssets?.qrCode && (
               <button 
                 onClick={() => onShowDigitalAsset(asset, 'qrCode')}
-                className="w-8 h-8 bg-blue-100 hover:bg-blue-200 rounded-lg flex items-center justify-center border border-blue-200 cursor-pointer transition-colors duration-200 hover:scale-110"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center border cursor-pointer transition-colors duration-200 hover:scale-110 ${
+                  resolvedTheme === 'dark'
+                    ? 'bg-blue-900 hover:bg-blue-800 border-blue-700'
+                    : 'bg-blue-100 hover:bg-blue-200 border-blue-200'
+                }`}
                 title="Click to view QR Code"
               >
-                <QrCode className="w-4 h-4 text-blue-600" />
+                <QrCode className={`w-4 h-4 ${
+                  resolvedTheme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                }`} />
               </button>
             )}
             {asset.digitalAssets?.barcode && (
               <button 
                 onClick={() => onShowDigitalAsset(asset, 'barcode')}
-                className="w-8 h-8 bg-green-100 hover:bg-green-200 rounded-lg flex items-center justify-center border border-green-200 cursor-pointer transition-colors duration-200 hover:scale-110"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center border cursor-pointer transition-colors duration-200 hover:scale-110 ${
+                  resolvedTheme === 'dark'
+                    ? 'bg-green-900 hover:bg-green-800 border-green-700'
+                    : 'bg-green-100 hover:bg-green-200 border-green-200'
+                }`}
                 title="Click to view Barcode"
               >
-                <Barcode className="w-4 h-4 text-green-600" />
+                <Barcode className={`w-4 h-4 ${
+                  resolvedTheme === 'dark' ? 'text-green-400' : 'text-green-600'
+                }`} />
               </button>
             )}
             {asset.digitalAssets?.nfcData && (
               <button 
                 onClick={() => onShowDigitalAsset(asset, 'nfcData')}
-                className="w-8 h-8 bg-purple-100 hover:bg-purple-200 rounded-lg flex items-center justify-center border border-purple-200 cursor-pointer transition-colors duration-200 hover:scale-110"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center border cursor-pointer transition-colors duration-200 hover:scale-110 ${
+                  resolvedTheme === 'dark'
+                    ? 'bg-purple-900 hover:bg-purple-800 border-purple-700'
+                    : 'bg-purple-100 hover:bg-purple-200 border-purple-200'
+                }`}
                 title="Click to view NFC Data"
               >
-                <Smartphone className="w-4 h-4 text-purple-600" />
+                <Smartphone className={`w-4 h-4 ${
+                  resolvedTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                }`} />
               </button>
             )}
           </div>
@@ -254,25 +306,37 @@ export function AssetListItem({
               variant="ghost" 
               size="sm" 
               onClick={() => onShowDetails(asset)}
-              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 rounded-lg"
+              className={`h-8 w-8 p-0 rounded-lg ${
+                resolvedTheme === 'dark'
+                  ? 'hover:bg-blue-900/20 hover:text-blue-400 text-blue-400'
+                  : 'hover:bg-blue-50 hover:text-blue-600 text-blue-600'
+              }`}
             >
-              <Eye className="w-4 h-4 text-blue-600" />
+              <Eye className="w-4 h-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => onDownload(asset)}
-              className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 rounded-lg"
+              className={`h-8 w-8 p-0 rounded-lg ${
+                resolvedTheme === 'dark'
+                  ? 'hover:bg-green-900/20 hover:text-green-400 text-green-400'
+                  : 'hover:bg-green-50 hover:text-green-600 text-green-600'
+              }`}
             >
-              <Download className="w-4 h-4 text-green-600" />
+              <Download className="w-4 h-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => onShowMoreOptions(asset._id)}
-              className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 rounded-lg"
+              className={`h-8 w-8 p-0 rounded-lg ${
+                resolvedTheme === 'dark'
+                  ? 'hover:bg-purple-900/20 hover:text-purple-400 text-purple-400'
+                  : 'hover:bg-purple-50 hover:text-purple-600 text-purple-600'
+              }`}
             >
-              <MoreHorizontal className="w-4 h-4 text-purple-600" />
+              <MoreHorizontal className="w-4 h-4" />
             </Button>
           </div>
         </div>

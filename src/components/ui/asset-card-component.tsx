@@ -4,6 +4,7 @@ import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useTheme } from '@/contexts/ThemeContext'
 import { 
   QrCode, 
   Barcode, 
@@ -170,12 +171,17 @@ export function AssetCard({
   onShowMoreOptions, 
   onShowDigitalAsset 
 }: AssetCardProps) {
+  const { resolvedTheme } = useTheme()
   const statusInfo = getStatusInfo(asset.status)
   const priorityInfo = getPriorityInfo(asset.priority)
   const StatusIcon = statusInfo.icon
 
   return (
-    <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer border border-slate-200 rounded-lg">
+    <Card className={`group relative overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer border rounded-lg ${
+      resolvedTheme === 'dark' 
+        ? 'bg-gray-800 border-gray-700' 
+        : 'bg-white border-gray-200'
+    }`}>
       {/* Status Indicator Bar */}
       <div className={`absolute top-0 left-0 right-0 h-1 ${statusInfo.bgColor}`} />
       
@@ -187,14 +193,20 @@ export function AssetCard({
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
                 <Tag className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors">
-                  {asset.tagId}
-                </h3>
-                <p className="text-xs text-slate-600 font-medium uppercase tracking-wide">
-                  {asset.assetType}
-                </p>
-              </div>
+                             <div>
+                 <h3 className={`font-bold text-lg transition-colors ${
+                   resolvedTheme === 'dark' 
+                     ? 'text-white group-hover:text-blue-400' 
+                     : 'text-gray-900 group-hover:text-blue-600'
+                 }`}>
+                   {asset.tagId}
+                 </h3>
+                 <p className={`text-xs font-medium uppercase tracking-wide ${
+                   resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                 }`}>
+                   {asset.assetType}
+                 </p>
+               </div>
             </div>
           </div>
           
@@ -208,15 +220,15 @@ export function AssetCard({
         {/* Asset Details */}
         <div className="space-y-2 mb-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Brand</span>
-            <span className="font-semibold text-slate-900">{asset.brand}</span>
+            <span className={`font-medium ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Brand</span>
+            <span className={`font-semibold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{asset.brand}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Model</span>
-            <span className="font-semibold text-slate-900">{asset.model}</span>
+            <span className={`font-medium ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Model</span>
+            <span className={`font-semibold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{asset.model}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Priority</span>
+            <span className={`font-medium ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Priority</span>
             <Badge variant={priorityInfo.variant} className={`${priorityInfo.color} ${priorityInfo.bgColor} border-0 font-bold px-2 py-0.5 text-xs`}>
               {asset.priority}
             </Badge>
@@ -224,27 +236,41 @@ export function AssetCard({
         </div>
 
         {/* Location Info */}
-        <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg p-3 mb-3 border border-slate-200">
+        <div className={`rounded-lg p-3 mb-3 border ${
+          resolvedTheme === 'dark' 
+            ? 'bg-gray-700 border-gray-600' 
+            : 'bg-gray-50 border-gray-200'
+        }`}>
           <div className="flex items-center gap-2 mb-2">
             <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
               <MapPin className="w-3 h-3 text-white" />
             </div>
-            <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Location</span>
+            <span className={`text-xs font-bold uppercase tracking-wide ${
+              resolvedTheme === 'dark' ? 'text-white' : 'text-gray-800'
+            }`}>Location</span>
           </div>
-          <div className="space-y-1 text-xs text-slate-700">
+          <div className={`space-y-1 text-xs ${
+            resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          }`}>
             {asset.location ? (
               <>
                 <div className="flex items-center gap-2">
-                  <Building className="w-3 h-3 text-slate-500" />
+                  <Building className={`w-3 h-3 ${
+                    resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`} />
                   <span className="font-semibold">{asset.location.building}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Layers className="w-3 h-3 text-slate-500" />
+                  <Layers className={`w-3 h-3 ${
+                    resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`} />
                   <span className="font-semibold">{asset.location.floor} • {asset.location.room}</span>
                 </div>
               </>
             ) : (
-              <div className="text-center py-2 text-slate-500">
+              <div className={`text-center py-2 ${
+                resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
                 <span className="text-xs">Location not available</span>
               </div>
             )}
@@ -256,38 +282,64 @@ export function AssetCard({
           {asset.digitalAssets?.qrCode && (
             <button 
               onClick={() => onShowDigitalAsset(asset, 'qrCode')}
-              className="w-6 h-6 bg-blue-100 hover:bg-blue-200 rounded-lg flex items-center justify-center border border-blue-200 cursor-pointer transition-colors duration-200 hover:scale-110"
+              className={`w-6 h-6 rounded-lg flex items-center justify-center border cursor-pointer transition-colors duration-200 hover:scale-110 ${
+                resolvedTheme === 'dark'
+                  ? 'bg-blue-900 hover:bg-blue-800 border-blue-700'
+                  : 'bg-blue-100 hover:bg-blue-200 border-blue-200'
+              }`}
               title="Click to view QR Code"
             >
-              <QrCode className="w-3 h-3 text-blue-600" />
+              <QrCode className={`w-3 h-3 ${
+                resolvedTheme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+              }`} />
             </button>
           )}
           {asset.digitalAssets?.barcode && (
             <button 
               onClick={() => onShowDigitalAsset(asset, 'barcode')}
-              className="w-6 h-6 bg-green-100 hover:bg-green-200 rounded-lg flex items-center justify-center border border-green-200 cursor-pointer transition-colors duration-200 hover:scale-110"
+              className={`w-6 h-6 rounded-lg flex items-center justify-center border cursor-pointer transition-colors duration-200 hover:scale-110 ${
+                resolvedTheme === 'dark'
+                  ? 'bg-green-900 hover:bg-green-800 border-green-700'
+                  : 'bg-green-100 hover:bg-green-200 border-green-200'
+              }`}
               title="Click to view Barcode"
             >
-              <Barcode className="w-3 h-3 text-green-600" />
+              <Barcode className={`w-3 h-3 ${
+                resolvedTheme === 'dark' ? 'text-green-400' : 'text-green-600'
+              }`} />
             </button>
           )}
           {asset.digitalAssets?.nfcData && (
             <button 
               onClick={() => onShowDigitalAsset(asset, 'nfcData')}
-              className="w-6 h-6 bg-purple-100 hover:bg-purple-200 rounded-lg flex items-center justify-center border border-purple-200 cursor-pointer transition-colors duration-200 hover:scale-110"
+              className={`w-6 h-6 rounded-lg flex items-center justify-center border cursor-pointer transition-colors duration-200 hover:scale-110 ${
+                resolvedTheme === 'dark'
+                  ? 'bg-purple-900 hover:bg-purple-800 border-purple-700'
+                  : 'bg-purple-100 hover:bg-purple-200 border-purple-200'
+              }`}
               title="Click to view NFC Data"
             >
-              <Smartphone className="w-3 h-3 text-purple-600" />
+              <Smartphone className={`w-3 h-3 ${
+                resolvedTheme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+              }`} />
             </button>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-          <div className="text-xs text-slate-600">
+        <div className={`flex items-center justify-between pt-3 border-t ${
+          resolvedTheme === 'dark' ? 'border-gray-600' : 'border-gray-200'
+        }`}>
+          <div className={`text-xs ${
+            resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}>
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-slate-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-3 h-3 text-slate-600" />
+              <div className={`w-5 h-5 rounded-lg flex items-center justify-center ${
+                resolvedTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+              }`}>
+                <Calendar className={`w-3 h-3 ${
+                  resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`} />
               </div>
               <span className="font-semibold">{formatDate(asset.createdAt)}</span>
             </div>
@@ -297,26 +349,38 @@ export function AssetCard({
               variant="ghost" 
               size="sm" 
               onClick={() => onShowDetails(asset)}
-              className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600 rounded-lg"
+              className={`h-7 w-7 p-0 rounded-lg ${
+                resolvedTheme === 'dark'
+                  ? 'hover:bg-blue-900/20 hover:text-blue-400 text-blue-400'
+                  : 'hover:bg-blue-50 hover:text-blue-600 text-blue-600'
+              }`}
             >
-              <Eye className="w-3 h-3 text-blue-600" />
+              <Eye className="w-3 h-3" />
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => onDownload(asset)}
-              className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600 rounded-lg"
+              className={`h-7 w-7 p-0 rounded-lg ${
+                resolvedTheme === 'dark'
+                  ? 'hover:bg-green-900/20 hover:text-green-400 text-green-400'
+                  : 'hover:bg-green-50 hover:text-green-600 text-green-600'
+              }`}
             >
-              <Download className="w-3 h-3 text-green-600" />
+              <Download className="w-3 h-3" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => onShowMoreOptions(asset._id)}
-              className="h-7 w-7 p-0 hover:bg-purple-50 hover:text-purple-600 rounded-lg"
-            >
-              <MoreHorizontal className="w-3 h-3 text-purple-600" />
-            </Button>
+                         <Button 
+               variant="ghost" 
+               size="sm" 
+               onClick={() => onShowMoreOptions(asset._id)}
+               className={`h-7 w-7 p-0 rounded-lg ${
+                 resolvedTheme === 'dark'
+                   ? 'hover:bg-purple-900/20 hover:text-purple-400 text-purple-400'
+                   : 'hover:bg-purple-50 hover:text-purple-600 text-purple-600'
+               }`}
+             >
+               <MoreHorizontal className="w-3 h-3" />
+             </Button>
           </div>
         </div>
       </CardContent>

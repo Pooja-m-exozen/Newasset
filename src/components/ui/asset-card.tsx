@@ -1,8 +1,11 @@
+"use client"
+
 import React from 'react';
 import { Button } from './button';
 // import { Badge } from './badge';
 import { StatusBadge } from './status-badge';
 import { PriorityBadge } from './priority-badge';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Edit, Trash2, Eye, Calendar, MapPin, Tag, QrCode } from 'lucide-react';
 import { Asset } from '../../lib/adminasset';
 
@@ -31,12 +34,20 @@ export const AssetCard: React.FC<AssetCardProps> = ({
   onGenerateQR,
   className = ''
 }) => {
+  const { resolvedTheme } = useTheme();
+  
   return (
-    <div className={`p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors ${className}`}>
+    <div className={`p-4 border rounded-lg transition-colors ${className} ${
+      resolvedTheme === 'dark'
+        ? 'border-gray-700 hover:bg-gray-700 bg-gray-800'
+        : 'border-gray-200 hover:bg-gray-50 bg-white'
+    }`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
-            <h4 className="font-semibold text-gray-900">{asset.tagId}</h4>
+            <h4 className={`font-semibold ${
+              resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>{asset.tagId}</h4>
             <StatusBadge status={asset.status || 'active'} />
             <PriorityBadge priority={asset.priority || 'medium'} />
             {asset.digitalAssets?.qrCode && (
@@ -44,7 +55,9 @@ export const AssetCard: React.FC<AssetCardProps> = ({
             )}
           </div>
           
-          <div className="space-y-1 text-sm text-gray-600">
+          <div className={`space-y-1 text-sm ${
+            resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}>
             <div className="flex items-center space-x-2">
               <Tag className="w-4 h-4" />
               <span>{asset.assetType}</span>
@@ -62,7 +75,9 @@ export const AssetCard: React.FC<AssetCardProps> = ({
           </div>
           
           {asset.notes && (
-            <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+            <p className={`text-sm mt-2 line-clamp-2 ${
+              resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }`}>
               {asset.notes}
             </p>
           )}
@@ -72,30 +87,42 @@ export const AssetCard: React.FC<AssetCardProps> = ({
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8 w-8 p-0 hover:bg-blue-50"
+            className={`h-8 w-8 p-0 ${
+              resolvedTheme === 'dark'
+                ? 'hover:bg-blue-900/20 text-blue-400'
+                : 'hover:bg-blue-50 text-blue-600'
+            }`}
             onClick={() => onView(asset)}
             title="View Details"
           >
-            <Eye className="w-4 h-4 text-blue-600" />
+            <Eye className="w-4 h-4" />
           </Button>
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8 w-8 p-0 hover:bg-green-50"
+            className={`h-8 w-8 p-0 ${
+              resolvedTheme === 'dark'
+                ? 'hover:bg-green-900/20 text-green-400'
+                : 'hover:bg-green-50 text-green-600'
+            }`}
             onClick={() => onEdit(asset)}
             title="Edit Asset"
           >
-            <Edit className="w-4 h-4 text-green-600" />
+            <Edit className="w-4 h-4" />
           </Button>
           {onGenerateQR && (
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 w-8 p-0 hover:bg-purple-50"
+              className={`h-8 w-8 p-0 ${
+                resolvedTheme === 'dark'
+                  ? 'hover:bg-purple-900/20 text-purple-400'
+                  : 'hover:bg-purple-50 text-purple-600'
+              }`}
               onClick={() => onGenerateQR(asset)}
               title="Generate QR Code"
             >
-              <QrCode className="w-4 h-4 text-purple-600" />
+              <QrCode className="w-4 h-4" />
             </Button>
           )}
           <Button 

@@ -594,6 +594,24 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                   )}
                 </div>
                 
+                {/* Vendor Information Row */}
+                {asset?.customFields && (asset.customFields['Vendor Name'] || asset.customFields['HSN']) && (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+                    {asset.customFields['Vendor Name'] && (
+                      <InfoCard icon={Package} title="Vendor" value={asset.customFields['Vendor Name']} bgColor="from-blue-500 to-indigo-600" />
+                    )}
+                    {asset.customFields['HSN'] && (
+                      <InfoCard icon={Hash} title="HSN Code" value={asset.customFields['HSN']} bgColor="from-green-500 to-emerald-600" />
+                    )}
+                    {asset.customFields['Rate//UOM'] && (
+                      <InfoCard icon={Database} title="Rate/UOM" value={asset.customFields['Rate//UOM']} bgColor="from-purple-500 to-violet-600" />
+                    )}
+                    {asset.customFields['Base value'] && (
+                      <InfoCard icon={Database} title="Base Value" value={asset.customFields['Base value']} bgColor="from-amber-500 to-orange-600" />
+                    )}
+                  </div>
+                )}
+                
                 {asset?.notes && (
                   <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-600/60">
                     <div className="flex items-start gap-2.5 p-3 bg-amber-50/80 dark:bg-amber-900/30 backdrop-blur-sm rounded-xl border border-amber-200/60 dark:border-amber-700/60">
@@ -726,6 +744,32 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                   </div>
                 )}
 
+                {/* Vendor & Financial Information Card */}
+                {asset?.customFields && Object.keys(asset.customFields).length > 0 && (
+                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
+                        <Package className="w-4 h-4 text-white" />
+                      </div>
+                      Vendor & Financial Information
+                    </h4>
+                    <div className="space-y-2">
+                      {asset.customFields['Vendor Name'] && (
+                        <DetailRow label="Vendor Name" value={String(asset.customFields['Vendor Name'])} bgColor="from-slate-50 to-blue-50" />
+                      )}
+                      {asset.customFields['HSN'] && (
+                        <DetailRow label="HSN Code" value={String(asset.customFields['HSN'])} bgColor="from-slate-50 to-green-50" />
+                      )}
+                      {asset.customFields['Rate//UOM'] && (
+                        <DetailRow label="Rate/UOM" value={String(asset.customFields['Rate//UOM'])} bgColor="from-slate-50 to-purple-50" />
+                      )}
+                      {asset.customFields['Base value'] && (
+                        <DetailRow label="Base Value" value={String(asset.customFields['Base value'])} bgColor="from-slate-50 to-orange-50" />
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Compliance & Metadata Card */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
                   <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
@@ -756,42 +800,43 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                       </div>
                       Compliance Details
                     </h4>
-                  <div className="space-y-2">
-                    {asset.compliance.certifications && asset.compliance.certifications.length > 0 ? (
-                      <div className="bg-gradient-to-r from-slate-50 to-emerald-50 dark:from-slate-700 dark:to-emerald-900/20 rounded-lg p-3 border border-slate-200/60 dark:border-slate-600/60">
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Certifications</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {asset.compliance.certifications.map((cert, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
-                              {cert}
-                            </Badge>
-                          ))}
+                    <div className="space-y-2">
+                      {asset.compliance.certifications && asset.compliance.certifications.length > 0 ? (
+                        <div className="bg-gradient-to-r from-slate-50 to-emerald-50 dark:from-slate-700 dark:to-emerald-900/20 rounded-lg p-3 border border-slate-200/60 dark:border-slate-600/60">
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Certifications</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {asset.compliance.certifications.map((cert, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+                                {cert}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <DetailRow label="Certifications" value="None" bgColor="from-slate-50 to-gray-50" />
-                    )}
-                    
-                    {asset.compliance.regulatoryRequirements && asset.compliance.regulatoryRequirements.length > 0 ? (
-                      <div className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-700 dark:to-blue-900/20 rounded-lg p-3 border border-slate-200/60 dark:border-slate-600/60">
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Regulatory Requirements</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {asset.compliance.regulatoryRequirements.map((req, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                              {req}
-                            </Badge>
-                          ))}
+                      ) : (
+                        <DetailRow label="Certifications" value="None" bgColor="from-slate-50 to-gray-50" />
+                      )}
+                      
+                      {asset.compliance.regulatoryRequirements && asset.compliance.regulatoryRequirements.length > 0 ? (
+                        <div className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-700 dark:to-blue-900/20 rounded-lg p-3 border border-slate-200/60 dark:border-slate-600/60">
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Regulatory Requirements</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {asset.compliance.regulatoryRequirements.map((req, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                                {req}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <DetailRow label="Regulatory Requirements" value="None" bgColor="from-slate-50 to-gray-50" />
-                    )}
+                      ) : (
+                        <DetailRow label="Regulatory Requirements" value="None" bgColor="from-slate-50 to-gray-50" />
+                      )}
+                    </div>
                   </div>
-                </div>
                 )}
               </div>
 
-              {/* Right Column - QR Code */}
+            
+                       {/* Right Column - QR Code */}
               <div className="space-y-4">
                 {/* QR Code Section */}
                 {hasDigitalAssets && qrCodeData ? (

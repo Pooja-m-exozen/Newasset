@@ -10,7 +10,6 @@ import { DeleteConfirmationDialog } from '../../../components/ui/delete-confirma
 import { 
   Plus, 
   Download,
-  RefreshCw,
   Search,
   MapPin,
   Building,
@@ -20,15 +19,13 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Filter,
-  X,
   Calendar,
   Globe,
-  Navigation
+  Navigation,
+  Loader2
 } from 'lucide-react';
 import { Location, CreateLocationRequest, UpdateLocationRequest } from '../../../lib/location';
 import { Input } from '../../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -59,20 +56,17 @@ const LocationManagementContent = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [sortField, setSortField] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    // Only fetch if locations array is empty and not loading
     if (locations.length === 0 && !loading) {
       fetchLocations();
     }
-  }, []); // Empty dependency array - only run once on mount
+  }, []);
 
   const handleDelete = useCallback((location: Location) => {
     setLocationToDelete(location);
@@ -97,17 +91,14 @@ const LocationManagementContent = () => {
     }
   }, [modalMode, selectedLocation, addLocation, editLocation, closeModal]);
 
-  // Memoized filtered and sorted locations to prevent unnecessary recalculations
   const filteredLocations = useMemo(() => {
     return locations.filter(location => {
       const matchesSearch = location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           location.address.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = filterType === 'all' || location.type === filterType;
-      return matchesSearch && matchesType;
+      return matchesSearch;
     });
-  }, [locations, searchTerm, filterType]);
+  }, [locations, searchTerm]);
 
-  // Memoized sorted locations
   const sortedLocations = useMemo(() => {
     return [...filteredLocations].sort((a, b) => {
       const aValue = a[sortField as keyof Location] || "";
@@ -121,7 +112,6 @@ const LocationManagementContent = () => {
     });
   }, [filteredLocations, sortField, sortDirection]);
 
-  // Memoized pagination values
   const { totalPages, startIndex, endIndex, paginatedLocations } = useMemo(() => {
     const totalPages = Math.ceil(sortedLocations.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -131,11 +121,9 @@ const LocationManagementContent = () => {
     return { totalPages, startIndex, endIndex, paginatedLocations };
   }, [sortedLocations, currentPage, itemsPerPage]);
 
-  // Download handler - defined after filteredLocations
   const handleDownloadExcel = useCallback(async () => {
     setDownloadLoading(true);
     try {
-      // Use the already filtered locations instead of re-filtering
       const headers = ['Name', 'Type', 'Address', 'Latitude', 'Longitude', 'Created At'];
       const rows = filteredLocations.map(location => [
         location.name,
@@ -177,19 +165,14 @@ const LocationManagementContent = () => {
     }
   }, [sortField, sortDirection]);
 
-  // Memoized location types to prevent recalculation
-  const locationTypes = useMemo(() => {
-    return ['all', ...Array.from(new Set(locations.map(l => l.type)))];
-  }, [locations]);
-
   const getTypeColor = useCallback((type: string) => {
     switch (type.toLowerCase()) {
-      case 'office': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-      case 'warehouse': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300'
-      case 'factory': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-      case 'retail': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'
-      case 'residential': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+      case 'office': return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'warehouse': return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'factory': return 'bg-green-100 text-green-800 border-green-200'
+      case 'retail': return 'bg-purple-100 text-purple-800 border-purple-200'
+      case 'residential': return 'bg-gray-100 text-gray-800 border-gray-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }, []);
 
@@ -204,24 +187,17 @@ const LocationManagementContent = () => {
     return `${Math.floor(diffInHours / 24)} days ago`;
   }, []);
 
-  const clearFilters = useCallback(() => {
-    setSearchTerm('');
-    setFilterType('all');
-    setCurrentPage(1);
-  }, []);
-
-  // Memoized statistics to prevent unnecessary recalculations
   const statistics = useMemo(() => ({
-    totalLocations: sortedLocations.length,
-    officeCount: locations.filter(l => l.type === 'office').length,
-    warehouseCount: locations.filter(l => l.type === 'warehouse').length
-  }), [sortedLocations.length, locations]);
+    totalLocations: locations.length,
+    officeCount: locations.filter(l => l.type.toLowerCase() === 'office').length,
+    warehouseCount: locations.filter(l => l.type.toLowerCase() === 'warehouse').length
+  }), [locations]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          {/* Enhanced ERP Header */}
+          {/* Page Header */}
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
@@ -247,7 +223,7 @@ const LocationManagementContent = () => {
                 >
                   {downloadLoading ? (
                     <>
-                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 animate-spin" />
+                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 animate-spin" />
                       <span className="hidden sm:inline">Exporting...</span>
                       <span className="sm:hidden">Exporting...</span>
                     </>
@@ -269,27 +245,13 @@ const LocationManagementContent = () => {
                 </Button>
               </div>
             </div>
-
-            {/* Project Info Banner */}
-            {user?.projectName && (
-              <div className="bg-green-100 dark:bg-green-900 border border-green-200 dark:border-green-700 rounded-lg p-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
-                    <MapPin className="w-3 h-3 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                    Currently managing locations for project: <span className="font-bold">{user.projectName}</span>
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Enhanced ERP Tabs */}
+          {/* Main Content Card */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <div className="p-4 sm:p-6">
-              {/* Enhanced Header Section */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              {/* Header Section */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-950/20 rounded-full">
@@ -298,128 +260,25 @@ const LocationManagementContent = () => {
                         {sortedLocations.length} Locations
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
-                      <Building className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                        {useMemo(() => locations.filter(l => l.type === 'office').length, [locations])} Offices
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 dark:bg-orange-950/20 rounded-full">
-                      <Globe className="w-4 h-4 text-orange-600" />
-                      <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
-                        {useMemo(() => locations.filter(l => l.type === 'warehouse').length, [locations])} Warehouses
-                      </span>
-                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Manage your facility locations and site information
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center gap-2 hover:bg-green-50 hover:text-green-600 hover:border-green-200"
-                  >
-                    <Filter className="w-4 h-4" />
-                    <span className="hidden sm:inline">Filters</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={fetchLocations}
-                    disabled={loading}
-                    className="flex items-center gap-2 hover:bg-green-50 hover:text-green-600 hover:border-green-200"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                    <span className="hidden sm:inline">Refresh</span>
-                  </Button>
+                
+                {/* Search */}
+                <div className="w-full max-w-md">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      placeholder="Search locations..."
+                      className="pl-10"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
-
-              {/* Enhanced Search and Filter Container */}
-              <Card className="border-0 shadow-sm mb-6">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="space-y-4">
-                    {/* Search Section */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                      <div className="w-full max-w-md">
-                        <label className="text-sm font-medium text-muted-foreground mb-2 block">Search Locations</label>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search by name or address..."
-                            className="pl-10 h-11 text-sm"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Mobile Filter Toggle */}
-                      <div className="sm:hidden w-full">
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowFilters(!showFilters)}
-                          className="w-full justify-between"
-                        >
-                          <span>Filters</span>
-                          <Filter className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Filters Section - Responsive */}
-                    <div className={`space-y-4 ${showFilters ? 'block' : 'hidden sm:block'}`}>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                        <div className="w-full max-w-xs">
-                          <label className="text-sm font-medium text-muted-foreground mb-2 block">Filter by Type</label>
-                          <Select value={filterType} onValueChange={setFilterType}>
-                            <SelectTrigger className="h-11 border-gray-300 dark:border-gray-600 focus:border-green-500 dark:focus:border-green-400 focus:ring-green-500 dark:focus:ring-green-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                              <SelectValue placeholder="All types" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                              {locationTypes.map(type => (
-                                <SelectItem key={type} value={type} className="text-gray-900 dark:text-white hover:bg-green-50 dark:hover:bg-green-900/20">
-                                  {type === 'all' ? 'All Types' : type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        {(searchTerm || filterType !== 'all') && (
-                          <Button
-                            variant="outline"
-                            onClick={clearFilters}
-                            className="h-11 border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-400 text-gray-700 dark:text-gray-300 flex items-center gap-2"
-                          >
-                            <X className="w-4 h-4" />
-                            <span className="hidden sm:inline">Clear Filters</span>
-                            <span className="sm:hidden">Clear</span>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Search Results Info */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm text-muted-foreground gap-2">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>
-                          Showing {paginatedLocations.length} of {sortedLocations.length} locations
-                          {searchTerm && ` matching "${searchTerm}"`}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span>Real-time search</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
               {/* Locations Table */}
               <Card className="border-0 shadow-sm">
@@ -449,7 +308,7 @@ const LocationManagementContent = () => {
                   {loading ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="flex items-center gap-3">
-                        <RefreshCw className="w-6 h-6 animate-spin text-green-500" />
+                        <Loader2 className="w-6 h-6 animate-spin text-green-500" />
                         <span className="text-muted-foreground">Loading locations...</span>
                       </div>
                     </div>
@@ -571,9 +430,9 @@ const LocationManagementContent = () => {
                 </CardContent>
               </Card>
 
-              {/* Enhanced Pagination */}
+              {/* Pagination */}
               {totalPages > 1 && (
-                <Card className="border-0 shadow-sm">
+                <Card className="border-0 shadow-sm mt-6">
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="text-sm text-muted-foreground">

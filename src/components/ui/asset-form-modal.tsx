@@ -1447,39 +1447,91 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
             <div>
               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Custom Fields</Label>
-              <div className="flex space-x-2">
-                <Input
-                  value={customFieldName}
-                  onChange={(e) => setCustomFieldName(e.target.value)}
-                  placeholder="Field name (e.g., Vendor Name)"
-                  className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleCustomFieldAdd())}
-                />
-                <Input
-                  value={customFieldValue}
-                  onChange={(e) => setCustomFieldValue(e.target.value)}
-                  placeholder="Field value"
-                  className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleCustomFieldAdd())}
-                />
-                <Button type="button" variant="outline" onClick={handleCustomFieldAdd} className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300">Add</Button>
-              </div>
-              {Object.keys(formData.customFields).length > 0 && (
-                <div className="space-y-2 mt-3">
-                  {Object.entries(formData.customFields).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
-                      <span className="text-sm"><span className="font-medium">{key}:</span> {value}</span>
-                      <button type="button" onClick={() => {
-                        const newCustomFields = { ...formData.customFields };
-                        delete newCustomFields[key];
-                        setFormData(prev => ({ ...prev, customFields: newCustomFields }));
-                      }} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-2">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+              
+              {/* Predefined Custom Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor="vendorName" className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Vendor Name</Label>
+                  <Input
+                    id="vendorName"
+                    value={formData.customFields['Vendor Name'] || ''}
+                    onChange={(e) => handleInputChange('customFields', { ...formData.customFields, 'Vendor Name': e.target.value })}
+                    placeholder="e.g., Kone"
+                    className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
+                  />
                 </div>
-              )}
+                
+                <div>
+                  <Label htmlFor="hsn" className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">HSN Code</Label>
+                  <Input
+                    id="hsn"
+                    value={formData.customFields['HSN'] || ''}
+                    onChange={(e) => handleInputChange('customFields', { ...formData.customFields, 'HSN': e.target.value })}
+                    placeholder="e.g., 998718"
+                    className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="rateUOM" className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Rate/UOM</Label>
+                  <Input
+                    id="rateUOM"
+                    value={formData.customFields['Rate//UOM'] || ''}
+                    onChange={(e) => handleInputChange('customFields', { ...formData.customFields, 'Rate//UOM': e.target.value })}
+                    placeholder="e.g., 20967.45"
+                    className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="baseValue" className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Base Value</Label>
+                  <Input
+                    id="baseValue"
+                    value={formData.customFields['Base value'] || ''}
+                    onChange={(e) => handleInputChange('customFields', { ...formData.customFields, 'Base value': e.target.value })}
+                    placeholder="e.g., 20967.45"
+                    className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
+                  />
+                </div>
+              </div>
+              
+              {/* Additional Custom Fields */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <Label className="text-xs text-gray-600 dark:text-gray-400 mb-2 block">Additional Custom Fields</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    value={customFieldName}
+                    onChange={(e) => setCustomFieldName(e.target.value)}
+                    placeholder="Field name (e.g., Warranty)"
+                    className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleCustomFieldAdd())}
+                  />
+                  <Input
+                    value={customFieldValue}
+                    onChange={(e) => setCustomFieldValue(e.target.value)}
+                    placeholder="Field value"
+                    className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleCustomFieldAdd())}
+                  />
+                  <Button type="button" variant="outline" onClick={handleCustomFieldAdd} className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 text-sm">Add</Button>
+                </div>
+                {Object.keys(formData.customFields).length > 0 && (
+                  <div className="space-y-2 mt-3">
+                    {Object.entries(formData.customFields).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+                        <span className="text-sm"><span className="font-medium">{key}:</span> {value}</span>
+                        <button type="button" onClick={() => {
+                          const newCustomFields = { ...formData.customFields };
+                          delete newCustomFields[key];
+                          setFormData(prev => ({ ...prev, customFields: newCustomFields }));
+                        }} className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-2">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           

@@ -529,52 +529,51 @@ Timestamps:
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background to-muted">
-      <div className="flex-1 overflow-auto">
-        {/* Enhanced Header - Mobile Responsive */}
-        <header className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-b border-border px-3 sm:px-6 py-4 sm:py-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-                <Building className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Page Header */}
+          <div className="mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-lg flex items-center justify-center shadow-lg">
+                  <Building className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                   Asset Management
                 </h1>
-                <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1 hidden sm:block">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 mt-1 leading-relaxed">
                   {userProject ? `Managing assets for ${userProject}` : 'Manage facility assets with advanced scanning capabilities'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-              <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-700 dark:text-green-300 font-medium">Live</span>
               </div>
             </div>
-          </div>
-        </header>
 
-        {/* Main Content */}
-        <main className="p-4 sm:p-8 space-y-6 sm:space-y-8">
-          {/* Project Info Banner */}
-          {userProject && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
+          {/* Main Content Card */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="p-4 sm:p-6">
+              {/* Header Section */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
+                      <Building className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Currently managing assets for project: <span className="font-bold">{userProject}</span>
+                        Asset Management Tools
                 </span>
               </div>
             </div>
-          )}
-          {/* Enhanced Header Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <p className="text-sm text-muted-foreground">
+                    Manage your facility assets with scanning capabilities
+                  </p>
+                </div>
+              </div>
+
+
+              {/* Asset Stats and Controls */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
@@ -590,9 +589,6 @@ Timestamps:
                   </span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Manage your facility assets with scanning capabilities
-              </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <Button 
@@ -600,14 +596,14 @@ Timestamps:
                 size="sm"
                 onClick={fetchAssets}
                 disabled={isLoading}
-                className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 text-xs sm:text-sm"
+                className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 dark:hover:border-blue-700 text-xs sm:text-sm"
               >
                 <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Refresh</span>
               </Button>
               
-              {/* View Mode Toggle - Mobile Responsive */}
-              <div className="flex items-center bg-white rounded-lg border border-slate-200 p-1 shadow-sm">
+                  {/* View Mode Toggle */}
+                             <div className="flex items-center bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
@@ -632,7 +628,7 @@ Timestamps:
                   setScannerKey(prev => prev + 1)
                   setShowScanner(true)
                 }}
-                className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
+                    className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
               >
                 <Scan className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Scan QR</span>
@@ -641,13 +637,13 @@ Timestamps:
             </div>
           </div>
 
-          {/* Enhanced Search Container - Mobile Responsive */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-3 sm:p-6">
-              <div className="space-y-3 sm:space-y-4">
+                                           {/* Search Container */}
+              <Card className="border-0 shadow-sm mb-6">
+                <CardContent className="p-0">
+                  <div className="space-y-3 sm:space-y-4 p-6">
                 {/* Search Section */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4">
-                  <div className="w-full">
+                      <div className="w-full max-w-md">
                     <Label className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Search Assets</Label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
@@ -661,7 +657,7 @@ Timestamps:
                   </div>
                 </div>
 
-                {/* Search Results Info - Mobile Responsive */}
+                    {/* Search Results Info */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Building className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -688,44 +684,40 @@ Timestamps:
 
           {/* Assets Display */}
           {filteredAssets.length === 0 ? (
-            <Card className="shadow-lg bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl">
-              <CardContent className="p-12 text-center">
+                <div className="p-12 text-center">
                 <div className="flex flex-col items-center gap-6">
-                  <div className="w-20 h-20 bg-gradient-to-r from-slate-100 to-blue-100 rounded-full flex items-center justify-center">
-                    <Search className="h-10 w-10 text-slate-400" />
+                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Search className="h-10 w-10 text-blue-600" />
                   </div>
                   <div className="space-y-3">
-                    <h3 className="text-2xl font-bold text-slate-900">
-                      No assets found
-                    </h3>
-                    <p className="text-slate-600 text-base max-w-md">
-                      {searchTerm 
-                        ? 'Try adjusting your search or filter criteria'
-                        : userProject 
-                        ? `No assets found for project: ${userProject}`
-                        : 'No assets are currently available'
-                      }
-                    </p>
+                                         <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                       No assets found
+                     </h3>
+                     <p className="text-gray-600 dark:text-slate-300 text-base max-w-md">
+                       {searchTerm 
+                         ? 'Try adjusting your search or filter criteria'
+                         : userProject 
+                         ? `No assets found for project: ${userProject}`
+                         : 'No assets are currently available'
+                       }
+                     </p>
                     <Button 
                       onClick={() => setSearchTerm('')}
                       variant="outline"
                       size="sm"
-                      className="border-slate-300 text-slate-700 hover:bg-slate-50 font-medium px-6 py-2 rounded-lg"
+                      className="border-blue-300 text-blue-300 hover:bg-blue-900/20 font-medium px-6 py-2 rounded-lg"
                     >
                       Clear All Filters
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'
-              : 'space-y-3 sm:space-y-4'
-            }>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {viewMode === 'grid' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
               {filteredAssets.map((asset) => (
-                viewMode === 'grid' 
-                  ? <AssetCard 
+                        <AssetCard 
                       key={asset._id} 
                       asset={asset}
                       onShowDetails={(asset) => {
@@ -736,21 +728,90 @@ Timestamps:
                       onShowMoreOptions={setShowMoreOptions}
                       onShowDigitalAsset={showDigitalAssetModal}
                     />
-                  : <AssetListItem 
-                      key={asset._id} 
-                      asset={asset}
-                      onShowDetails={(asset) => {
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-200 dark:border-gray-700">
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Asset ID</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Type</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Brand/Model</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Status</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Location</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredAssets.map((asset) => (
+                            <tr key={asset._id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                              <td className="p-3">
+                                <div className="font-medium text-gray-900 dark:text-white">{asset.tagId}</div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">{asset.subcategory}</div>
+                              </td>
+                              <td className="p-3">
+                                <span className="text-gray-900 dark:text-white">{asset.assetType}</span>
+                              </td>
+                              <td className="p-3">
+                                <div className="text-gray-900 dark:text-white">{asset.brand}</div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">{asset.model}</div>
+                              </td>
+                              <td className="p-3">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  asset.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200' :
+                                  asset.status === 'inactive' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200' :
+                                  'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200'
+                                }`}>
+                                  {asset.status}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                {asset.location ? (
+                                  <div className="text-sm">
+                                    <div className="text-gray-900 dark:text-white">{asset.location.building}</div>
+                                    <div className="text-gray-600 dark:text-gray-400">Floor {asset.location.floor}, Room {asset.location.room}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-600 dark:text-gray-400 text-sm">Not assigned</span>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
                         setScannedAsset(asset)
                         setShowScannedAssetModal(true)
                       }}
-                      onDownload={downloadAssetInfo}
-                      onShowMoreOptions={setShowMoreOptions}
-                      onShowDigitalAsset={showDigitalAssetModal}
-                    />
-              ))}
+                                    className="h-8 px-2 text-xs border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                                  >
+                                    <Eye className="w-3 h-3 mr-1" />
+                                    View
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => downloadAssetInfo(asset)}
+                                    className="h-8 px-2 text-xs border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                                  >
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Info
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
             </div>
           )}
-        </main>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Modals */}
@@ -796,12 +857,12 @@ Timestamps:
       {/* Scanned Asset Details Modal */}
       {showScannedAssetModal && scannedAsset && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg sm:max-w-xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-lg sm:max-w-xl w-full max-h-[90vh] overflow-hidden">
             {/* Simple Modal Header */}
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Eye className="w-5 h-5 text-gray-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Asset Details</h3>
+                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Asset Details</h3>
               </div>
               <Button
                 variant="ghost"
@@ -817,9 +878,9 @@ Timestamps:
             <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(90vh-80px)]">
               {/* Asset Header */}
               <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-1">{scannedAsset.tagId}</h2>
-                <p className="text-sm text-gray-600">{scannedAsset.assetType}</p>
-                <p className="text-sm text-gray-600">{scannedAsset.brand} • {scannedAsset.model}</p>
+                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{scannedAsset.tagId}</h2>
+                 <p className="text-sm text-gray-600 dark:text-gray-300">{scannedAsset.assetType}</p>
+                 <p className="text-sm text-gray-600 dark:text-gray-300">{scannedAsset.brand} • {scannedAsset.model}</p>
                 <div className="mt-2">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     {scannedAsset.status}
@@ -832,18 +893,18 @@ Timestamps:
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Asset Details</h4>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Priority:</span>
-                      <span className="font-medium text-gray-900 capitalize">{scannedAsset.priority}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Assigned To:</span>
-                      <span className="font-medium text-gray-900 max-w-[120px] truncate">
-                        {typeof scannedAsset.assignedTo === 'string' 
-                          ? scannedAsset.assignedTo 
-                          : scannedAsset.assignedTo?.name || 'N/A'}
-                      </span>
-                    </div>
+                                         <div className="flex justify-between">
+                       <span className="text-gray-500 dark:text-gray-400">Priority:</span>
+                       <span className="font-medium text-gray-900 dark:text-white capitalize">{scannedAsset.priority}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-500 dark:text-gray-400">Assigned To:</span>
+                       <span className="font-medium text-gray-900 dark:text-white max-w-[120px] truncate">
+                         {typeof scannedAsset.assignedTo === 'string' 
+                           ? scannedAsset.assignedTo 
+                           : scannedAsset.assignedTo?.name || 'N/A'}
+                       </span>
+                     </div>
                   </div>
                 </div>
                 
@@ -851,18 +912,18 @@ Timestamps:
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Location</h4>
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Building:</span>
-                        <span className="font-medium text-gray-900">{scannedAsset.location.building}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Floor:</span>
-                        <span className="font-medium text-gray-900">{scannedAsset.location.floor}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Room:</span>
-                        <span className="font-medium text-gray-900">{scannedAsset.location.room}</span>
-                      </div>
+                                           <div className="flex justify-between">
+                       <span className="text-gray-500 dark:text-gray-400">Building:</span>
+                       <span className="font-medium text-gray-900 dark:text-white">{scannedAsset.location.building}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-500 dark:text-gray-400">Floor:</span>
+                       <span className="font-medium text-gray-900 dark:text-white">{scannedAsset.location.floor}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-500 dark:text-gray-400">Room:</span>
+                       <span className="font-medium text-gray-900 dark:text-white">{scannedAsset.location.room}</span>
+                     </div>
                     </div>
                   </div>
                 )}
@@ -966,9 +1027,9 @@ Timestamps:
       {/* More Options Modal */}
       {showMoreOptions && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
-            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">More Options</h3>
+                   <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-sm w-full">
+           <div className="px-4 py-3 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
+             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">More Options</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -990,22 +1051,22 @@ Timestamps:
                     setShowScannedAssetModal(true)
                   }
                 }}
-                className="w-full justify-start h-10 text-slate-700 hover:bg-blue-50 hover:text-blue-600"
-              >
-                <Eye className="w-4 h-4 mr-3" />
-                View Details
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const asset = assets.find(a => a._id === showMoreOptions)
-                  if (asset) {
-                    setShowMoreOptions(null)
-                    downloadAssetInfo(asset)
-                  }
-                }}
-                className="w-full justify-start h-10 text-slate-700 hover:bg-green-50 hover:text-green-600"
+                                 className="w-full justify-start h-10 text-slate-700 dark:text-gray-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+               >
+                 <Eye className="w-4 h-4 mr-3" />
+                 View Details
+               </Button>
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 onClick={() => {
+                   const asset = assets.find(a => a._id === showMoreOptions)
+                   if (asset) {
+                     setShowMoreOptions(null)
+                     downloadAssetInfo(asset)
+                   }
+                 }}
+                 className="w-full justify-start h-10 text-slate-700 dark:text-gray-300 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400"
               >
                 <Download className="w-4 h-4 mr-3" />
                 Download Info

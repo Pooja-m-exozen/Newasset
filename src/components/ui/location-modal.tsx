@@ -183,15 +183,6 @@ export const LocationModal: React.FC<LocationModalProps> = ({
     }
   };
 
-  const getModalIcon = () => {
-    switch (mode) {
-      case 'create': return 'bg-green-500';
-      case 'edit': return 'bg-blue-500';
-      case 'view': return 'bg-purple-500';
-      default: return 'bg-green-500';
-    }
-  };
-
   const openInMaps = () => {
     if (formData.coordinates.latitude && formData.coordinates.longitude) {
       const url = `https://www.google.com/maps?q=${formData.coordinates.latitude},${formData.coordinates.longitude}`;
@@ -201,275 +192,237 @@ export const LocationModal: React.FC<LocationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col w-[95vw] sm:w-auto">
-        {mode !== 'view' && (
-          <DialogHeader className="flex-shrink-0 pb-4">
-            <div className="text-center">
-              <div className="mx-auto mb-4">
-                <div className={`w-12 h-12 sm:w-16 sm:h-16 ${getModalIcon()} rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg`}>
-                  <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                </div>
-              </div>
-              <DialogTitle className="text-lg sm:text-xl font-semibold">
-                {getModalTitle()}
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-sm sm:text-base">
-                {mode === 'create' ? 'Enter the location details below' : 'Update the location information'}
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-        )}
-        
+      <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">
+            {getModalTitle()}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === 'create' ? 'Enter location details below' : 
+             mode === 'edit' ? 'Update location information' : 
+             'View location details'}
+          </DialogDescription>
+        </DialogHeader>
+
         {mode === 'view' ? (
-          <ScrollArea className="flex-1 max-h-[60vh]">
+          <ScrollArea className="max-h-[60vh]">
             <LocationDetails location={location} onClose={onClose} />
           </ScrollArea>
         ) : (
-          <div className="flex flex-col h-full">
-            <ScrollArea className="flex-1 max-h-[60vh]">
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                {/* Basic Information */}
-                <div className="bg-muted/50 rounded-lg p-4 sm:p-6 border border-border">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Building className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                    </div>
-                    <h3 className="text-base sm:text-lg font-semibold">Basic Information</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <Label htmlFor="name" className="text-sm font-semibold mb-2 block">
-                        Location Name *
-                      </Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => {
-                          setFormData({ ...formData, name: e.target.value });
-                          setFormErrors(prev => ({ ...prev, name: '' }));
-                        }}
-                        placeholder="Enter location name"
-                        required
-                        className={`h-10 sm:h-11 ${formErrors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                      />
-                      {formErrors.name && (
-                        <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {formErrors.name}
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="type" className="text-sm font-semibold mb-2 block">
-                        Location Type *
-                      </Label>
-                      <Input
-                        id="type"
-                        value={formData.type}
-                        onChange={(e) => {
-                          setFormData({ ...formData, type: e.target.value });
-                          setFormErrors(prev => ({ ...prev, type: '' }));
-                        }}
-                        placeholder="e.g., Office, Warehouse, Factory"
-                        required
-                        className={`h-10 sm:h-11 ${formErrors.type ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                      />
-                      {formErrors.type && (
-                        <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {formErrors.type}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-2">Basic Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Location Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      setFormErrors(prev => ({ ...prev, name: '' }));
+                    }}
+                    placeholder="Enter location name"
+                    className={formErrors.name ? 'border-red-500' : ''}
+                  />
+                  {formErrors.name && (
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {formErrors.name}
+                    </p>
+                  )}
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="type">Location Type *</Label>
+                  <Input
+                    id="type"
+                    value={formData.type}
+                    onChange={(e) => {
+                      setFormData({ ...formData, type: e.target.value });
+                      setFormErrors(prev => ({ ...prev, type: '' }));
+                    }}
+                    placeholder="e.g., Office, Warehouse"
+                    className={formErrors.type ? 'border-red-500' : ''}
+                  />
+                  {formErrors.type && (
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {formErrors.type}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
 
-                {/* Location Details */}
-                <div className="bg-muted/50 rounded-lg p-4 sm:p-6 border border-border">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
-                    </div>
-                    <h3 className="text-base sm:text-lg font-semibold">Location Details</h3>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="address" className="text-sm font-semibold mb-2 block">
-                        Address *
-                        {enableGeocoding && (
-                          <span className="ml-2 text-xs text-green-600 flex items-center">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            Auto-geocode
-                          </span>
-                        )}
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="address"
-                          value={formData.address}
-                          onChange={(e) => handleAddressChange(e.target.value)}
-                          placeholder="Enter full address"
-                          required
-                          className={`h-10 sm:h-11 pr-10 ${formErrors.address ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                        />
-                        {geocodingLoading && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-green-500" />
-                          </div>
-                        )}
-                      </div>
-                      {formErrors.address && (
-                        <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {formErrors.address}
-                        </p>
-                      )}
-                      {geocodingError && (
-                        <p className="text-sm text-amber-600 mt-2 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {geocodingError}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Coordinates Display */}
-                    {coordinatesFound && (
-                      <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 sm:p-4 border border-green-200 dark:border-green-800">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                            <div>
-                              <p className="text-sm font-medium text-green-800 dark:text-green-300">Coordinates Found</p>
-                              <p className="text-xs text-green-600 dark:text-green-400">
-                                Lat: {formData.coordinates.latitude.toFixed(6)}, 
-                                Lng: {formData.coordinates.longitude.toFixed(6)}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={openInMaps}
-                            className="text-green-600 border-green-300 hover:bg-green-100 w-full sm:w-auto"
-                          >
-                            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                            <span className="hidden sm:inline">View on Map</span>
-                            <span className="sm:hidden">View Map</span>
-                          </Button>
-                        </div>
+            {/* Location Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-2">Location Details</h3>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="address">
+                    Address *
+                    {enableGeocoding && (
+                      <span className="ml-2 text-xs text-gray-500">(Auto-geocode enabled)</span>
+                    )}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => handleAddressChange(e.target.value)}
+                      placeholder="Enter full address"
+                      className={`pr-10 ${formErrors.address ? 'border-red-500' : ''}`}
+                    />
+                    {geocodingLoading && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
                       </div>
                     )}
                   </div>
+                  {formErrors.address && (
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {formErrors.address}
+                    </p>
+                  )}
+                  {geocodingError && (
+                    <p className="text-sm text-amber-600 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {geocodingError}
+                    </p>
+                  )}
                 </div>
 
-                {/* Location Options */}
-                <div className="bg-muted/50 rounded-lg p-4 sm:p-6 border border-border">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Navigation className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
+                {/* Current Location Button */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Navigation className="w-5 h-5 text-gray-600" />
+                      <div>
+                        <p className="font-medium">Use Current Location</p>
+                        <p className="text-sm text-gray-600">Get coordinates from GPS</p>
+                      </div>
                     </div>
-                    <h3 className="text-base sm:text-lg font-semibold">Location Options</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={getCurrentLocation}
+                      disabled={locationLoading}
+                    >
+                      {locationLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Getting...
+                        </>
+                      ) : (
+                        'Get Location'
+                      )}
+                    </Button>
                   </div>
+                  {locationError && (
+                    <p className="text-sm text-red-500 flex items-center gap-1 mt-3">
+                      <AlertCircle className="w-4 h-4" />
+                      {locationError}
+                    </p>
+                  )}
+                </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3 p-3 sm:p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <Checkbox
-                        id="geocoding"
-                        checked={enableGeocoding}
-                        onCheckedChange={(checked) => setEnableGeocoding(checked as boolean)}
-                        className="border-blue-300 mt-0.5"
-                      />
-                      <Label htmlFor="geocoding" className="text-sm font-medium leading-relaxed">
-                        Automatically get coordinates from address
-                      </Label>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <div className="flex items-center space-x-3">
-                        <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-                        <span className="text-sm font-medium">Use current location</span>
+                {/* Coordinates Display */}
+                {coordinatesFound && (
+                  <div className="border rounded-lg p-4 bg-green-50 border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-green-800">Coordinates Found</p>
+                          <p className="text-sm text-green-600 font-mono">
+                            Lat: {formData.coordinates.latitude.toFixed(6)}, 
+                            Lng: {formData.coordinates.longitude.toFixed(6)}
+                          </p>
+                        </div>
                       </div>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={getCurrentLocation}
-                        disabled={locationLoading}
-                        className="text-sm bg-white border-green-300 hover:border-green-500 text-green-700 w-full sm:w-auto"
+                        onClick={openInMaps}
+                        className="text-green-700 border-green-300 hover:bg-green-100"
                       >
-                        {locationLoading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            <span className="hidden sm:inline">Getting...</span>
-                            <span className="sm:hidden">Getting...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Navigation className="w-4 h-4 mr-2" />
-                            <span className="hidden sm:inline">Get Location</span>
-                            <span className="sm:hidden">Get Location</span>
-                          </>
-                        )}
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        View Map
                       </Button>
-                    </div>
-                    {locationError && (
-                      <p className="text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {locationError}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Form Validation Errors */}
-                {formErrors.coordinates && (
-                  <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5 text-red-600" />
-                      <p className="text-sm text-red-700 dark:text-red-300">
-                        {formErrors.coordinates}
-                      </p>
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
 
-                {/* Hidden coordinates for form submission */}
-                <input type="hidden" value={formData.coordinates.latitude} />
-                <input type="hidden" value={formData.coordinates.longitude} />
-              </form>
-            </ScrollArea>
-            
-            {/* Fixed Footer */}
-            <div className="flex-shrink-0 flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-border mt-6">
+            {/* Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-2">Settings</h3>
+              
+              <div className="flex items-start space-x-3 p-4 border rounded-lg bg-gray-50">
+                <Checkbox
+                  id="geocoding"
+                  checked={enableGeocoding}
+                  onCheckedChange={(checked) => setEnableGeocoding(checked as boolean)}
+                />
+                <div>
+                  <Label htmlFor="geocoding" className="font-medium">
+                    Automatic Coordinate Detection
+                  </Label>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Automatically convert addresses to GPS coordinates
+                  </p>
+                </div>
+              </div>
+
+              {/* Form Validation Errors */}
+              {formErrors.coordinates && (
+                <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <p className="text-sm text-red-700">
+                      {formErrors.coordinates}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Hidden coordinates for form submission */}
+              <input type="hidden" value={formData.coordinates.latitude} />
+              <input type="hidden" value={formData.coordinates.longitude} />
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={onClose}
-                className="px-6 order-2 sm:order-1"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={loading || geocodingLoading || locationLoading}
-                onClick={handleSubmit}
-                className="px-6 order-1 sm:order-2"
               >
                 {loading ? 'Saving...' : mode === 'create' ? 'Create Location' : 'Update Location'}
               </Button>
             </div>
-          </div>
+          </form>
         )}
       </DialogContent>
     </Dialog>
   );
 };
 
-// Enhanced Location Details Component
+// Simple Location Details Component
 const LocationDetails = ({ location, onClose }: { location: Location | null | undefined; onClose: () => void }) => {
   if (!location) return null;
 
@@ -482,154 +435,76 @@ const LocationDetails = ({ location, onClose }: { location: Location | null | un
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Header */}
-      <div className="text-center pb-6 border-b border-border">
-        <div className="mx-auto mb-4">
-          <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
-            <MapPin className="w-10 h-10 text-white" />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold">{location.name}</h2>
-          <Badge className="bg-green-100 text-green-800 text-sm px-3 py-1">
-            {location.type}
-          </Badge>
-        </div>
-      </div>
-
-      {/* Location Information Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Basic Information Card */}
-        <div className="bg-muted/30 rounded-lg p-6 border border-border">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Building className="w-5 h-5 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-semibold">Location Details</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Name</Label>
-              <p className="text-base font-medium mt-1">{location.name}</p>
-            </div>
-            
-            <div>
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Type</Label>
-              <Badge variant="outline" className="mt-1">
-                {location.type}
-              </Badge>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Created</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <p className="text-sm">{new Date(location.createdAt).toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Address Information Card */}
-        <div className="bg-muted/30 rounded-lg p-6 border border-border">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-green-600" />
-            </div>
-            <h3 className="text-lg font-semibold">Address</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Full Address</Label>
-              <p className="text-base font-medium mt-1">{location.address}</p>
-            </div>
-            
-            {location.coordinates && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Latitude</Label>
-                  <p className="text-sm font-mono mt-1">{location.coordinates.latitude.toFixed(6)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Longitude</Label>
-                  <p className="text-sm font-mono mt-1">{location.coordinates.longitude.toFixed(6)}</p>
-                </div>
-              </div>
-            )}
-
-            {location.coordinates && (
-              <Button
-                variant="outline"
-                onClick={openInMaps}
-                className="w-full mt-2 text-green-600 border-green-300 hover:bg-green-100"
-              >
-                <Map className="w-4 h-4 mr-2" />
-                View on Google Maps
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Additional Information */}
-      <div className="bg-muted/30 rounded-lg p-6 border border-border">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-            <Info className="w-5 h-5 text-purple-600" />
-          </div>
-          <h3 className="text-lg font-semibold">Additional Information</h3>
-        </div>
+      {/* Basic Information */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium border-b pb-2">Location Information</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <MapPin className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</p>
-              <p className="text-sm font-medium">Active</p>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-sm font-medium text-gray-600">Name</Label>
+            <p className="font-medium mt-1">{location.name}</p>
           </div>
           
-          <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border">
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-4 h-4 text-green-600" />
+          <div>
+            <Label className="text-sm font-medium text-gray-600">Type</Label>
+            <Badge variant="outline" className="mt-1">
+              {location.type}
+            </Badge>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-600">Created</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              <p className="text-sm">{new Date(location.createdAt).toLocaleDateString()}</p>
             </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Verified</p>
-              <p className="text-sm font-medium">Yes</p>
-            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Address Information */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium border-b pb-2">Address & Coordinates</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium text-gray-600">Full Address</Label>
+            <p className="font-medium mt-1">{location.address}</p>
           </div>
           
-          <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border">
-            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Globe className="w-4 h-4 text-orange-600" />
+          {location.coordinates && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Latitude</Label>
+                <p className="font-mono text-sm mt-1">{location.coordinates.latitude.toFixed(6)}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Longitude</Label>
+                <p className="font-mono text-sm mt-1">{location.coordinates.longitude.toFixed(6)}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Coordinates</p>
-              <p className="text-sm font-medium">
-                {location.coordinates && location.coordinates.latitude ? 'Available' : 'Not Available'}
-              </p>
-            </div>
-          </div>
+          )}
+
+          {location.coordinates && (
+            <Button
+              variant="outline"
+              onClick={openInMaps}
+              className="w-full"
+            >
+              <Map className="w-4 h-4 mr-2" />
+              View on Google Maps
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-border">
+      <div className="flex justify-end pt-4 border-t">
         <Button 
           variant="outline" 
           onClick={onClose}
-          className="px-6 order-2 sm:order-1"
         >
           Close
-        </Button>
-        <Button 
-          className="px-6 order-1 sm:order-2"
-        >
-          Edit Location
         </Button>
       </div>
     </div>

@@ -397,7 +397,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
 
 
-  const handleInputChange = (field: string, value: string | string[]) => {
+  const handleInputChange = (field: string, value: string | string[] | Record<string, string>) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setFormData(prev => ({
@@ -423,6 +423,12 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           }
         }
       }
+    } else if (field === 'customFields' && typeof value === 'object' && !Array.isArray(value)) {
+      // Handle customFields object updates
+      setFormData(prev => ({
+        ...prev,
+        customFields: { ...prev.customFields, ...value }
+      }));
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
       
@@ -1455,7 +1461,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   <Input
                     id="vendorName"
                     value={formData.customFields['Vendor Name'] || ''}
-                    onChange={(e) => handleInputChange('customFields', { ...formData.customFields, 'Vendor Name': e.target.value })}
+                    onChange={(e) => handleInputChange('customFields', { 'Vendor Name': e.target.value })}
                     placeholder="e.g., Kone"
                     className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
                   />
@@ -1466,7 +1472,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   <Input
                     id="hsn"
                     value={formData.customFields['HSN'] || ''}
-                    onChange={(e) => handleInputChange('customFields', { ...formData.customFields, 'HSN': e.target.value })}
+                    onChange={(e) => handleInputChange('customFields', { 'HSN': e.target.value })}
                     placeholder="e.g., 998718"
                     className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
                   />
@@ -1477,7 +1483,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   <Input
                     id="rateUOM"
                     value={formData.customFields['Rate//UOM'] || ''}
-                    onChange={(e) => handleInputChange('customFields', { ...formData.customFields, 'Rate//UOM': e.target.value })}
+                    onChange={(e) => handleInputChange('customFields', { 'Rate//UOM': e.target.value })}
                     placeholder="e.g., 20967.45"
                     className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
                   />
@@ -1488,7 +1494,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   <Input
                     id="baseValue"
                     value={formData.customFields['Base value'] || ''}
-                    onChange={(e) => handleInputChange('customFields', { ...formData.customFields, 'Base value': e.target.value })}
+                    onChange={(e) => handleInputChange('customFields', { 'Base value': e.target.value })}
                     placeholder="e.g., 20967.45"
                     className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
                   />

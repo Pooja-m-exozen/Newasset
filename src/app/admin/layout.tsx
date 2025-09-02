@@ -3,7 +3,7 @@
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { useAuth } from "@/contexts/AuthContext"
 import { AdminDashboardProvider } from "@/contexts/AdminDashboard"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Header from "@/components/header"
 
@@ -14,7 +14,6 @@ export default function AdminLayout({
 }) {
   const { user, isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
-  const [isDarkMode, setIsDarkMode] = useState(false)
 
   useEffect(() => {
     // Check for system preference or stored theme preference
@@ -22,10 +21,8 @@ export default function AdminLayout({
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     
     if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
-      setIsDarkMode(true)
       document.documentElement.classList.add('dark')
     } else {
-      setIsDarkMode(false)
       document.documentElement.classList.remove('dark')
     }
   }, [])

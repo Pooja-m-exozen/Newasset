@@ -125,8 +125,15 @@ export function SuccessModal({
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
             <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-1">Asset Found! 🎉</h2>
-          <p className="text-green-100 font-medium">Scanner successfully identified asset</p>
+          <h2 className="text-2xl font-bold text-white mb-1">
+            {asset.assetType === 'Scanned Asset' ? 'QR Code Scanned! 🎉' : 'Asset Found! 🎉'}
+          </h2>
+          <p className="text-green-100 font-medium">
+            {asset.assetType === 'Scanned Asset' 
+              ? 'QR code data successfully extracted and processed' 
+              : 'Scanner successfully identified asset'
+            }
+          </p>
         </div>
 
         {/* Asset Details */}
@@ -159,6 +166,24 @@ export function SuccessModal({
             </div>
           </div>
 
+          {/* Scanned QR Code Data */}
+          {asset.assetType === 'Scanned Asset' && (
+            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+                <span className="text-xs text-purple-600 uppercase tracking-wide font-medium">Scanned Data</span>
+              </div>
+              <div className="text-sm text-purple-800">
+                <div className="font-medium break-all">{asset.tagId}</div>
+                <div className="text-purple-600 text-xs mt-1">
+                  Scanned at: {new Date().toLocaleString()}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Location Info */}
           <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
             <div className="flex items-center gap-2 mb-2">
@@ -172,7 +197,12 @@ export function SuccessModal({
               </div>
             ) : (
               <div className="text-sm text-blue-800 text-center">
-                <div className="text-blue-600">Location information not available</div>
+                <div className="text-blue-600">
+                  {asset.assetType === 'Scanned Asset' 
+                    ? 'Location information not available for scanned QR code' 
+                    : 'Location information not available'
+                  }
+                </div>
               </div>
             )}
           </div>

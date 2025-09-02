@@ -12,7 +12,6 @@ import Image from 'next/image'
 // Import extracted components
 import ChecklistViewModal from '@/components/ui/checklist-view-modal'
 import { ScannerModal } from '@/components/ui/scanner-modal-component'
-import { SuccessModal } from '@/components/ui/success-modal-component'
 import { SuccessToast } from '@/components/ui/success-toast'
 import { ErrorDisplay } from '@/components/ui/error-display'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -85,106 +84,7 @@ interface Checklist {
   }
 }
 
-// Create a compatible type for SuccessModal that maps Checklist to Asset-like structure
-type ChecklistAsAsset = {
-  _id: string
-  tagId: string
-  assetType: string
-  subcategory: string
-  brand: string
-  model: string
-  status: string
-  priority: string
-  location: {
-    latitude: string
-    longitude: string
-    floor: string
-    room: string
-    building: string
-  } | null
-  project?: {
-    projectId: string
-    projectName: string
-  } | null
-  compliance: {
-    certifications: string[]
-    expiryDates: string[]
-    regulatoryRequirements: string[]
-  }
-  digitalAssets: {
-    qrCode: {
-      url: string
-      data: Record<string, unknown> | null
-      generatedAt: string
-    }
-    barcode: {
-      url: string
-      data: string
-      generatedAt: string
-    }
-    nfcData: {
-      url: string
-      data: Record<string, unknown> | null
-      generatedAt: string
-    }
-  }
-  assignedTo: {
-    _id: string
-    name: string
-    email: string
-  } | string
-  createdAt: string
-  updatedAt: string
-}
 
-
-
-// Function to convert Checklist to Asset-like structure for SuccessModal
-const convertChecklistToAsset = (checklist: Checklist): ChecklistAsAsset => {
-  return {
-    _id: checklist._id,
-    tagId: checklist._id, // Use ID as tag
-    assetType: checklist.type,
-    subcategory: 'Checklist',
-    brand: 'Facilio',
-    model: 'Standard Checklist',
-    status: checklist.status,
-    priority: checklist.priority,
-    location: {
-      latitude: '0',
-      longitude: '0',
-      floor: checklist.location.floor,
-      room: checklist.location.zone,
-      building: checklist.location.building
-    },
-    project: null,
-    compliance: {
-      certifications: [],
-      expiryDates: [],
-      regulatoryRequirements: []
-    },
-    digitalAssets: {
-      qrCode: {
-        url: checklist.qrCode.url,
-        data: { checklistData: checklist.qrCode.data },
-        generatedAt: checklist.qrCode.generatedAt
-      },
-      barcode: {
-        url: '',
-        data: checklist._id,
-        generatedAt: checklist.qrCode.generatedAt
-      },
-      nfcData: {
-        url: '',
-        data: { checklistId: checklist._id, title: checklist.title },
-        generatedAt: checklist.qrCode.generatedAt
-      }
-    },
-    assignedTo: checklist.createdBy,
-    createdAt: checklist.createdAt,
-    updatedAt: checklist.updatedAt
-  }
-}
 
 export default function ViewerChecklists() {
   const [checklists, setChecklists] = useState<Checklist[]>([])
@@ -214,7 +114,6 @@ export default function ViewerChecklists() {
   // Enhanced modal states
   const [showChecklistViewModal, setShowChecklistViewModal] = useState(false)
   const [selectedChecklist, setSelectedChecklist] = useState<Checklist | null>(null)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [successChecklist, setSuccessChecklist] = useState<Checklist | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -463,7 +362,6 @@ Timestamps:
       
       if (foundChecklist) {
         setSuccessChecklist(foundChecklist)
-        setShowSuccessModal(true)
         setShowScanner(false)
         setToastMessage(`✅ Checklist found: ${foundChecklist.title}`)
         setShowSuccessToast(true)
@@ -504,7 +402,6 @@ Timestamps:
         }
         
         setSuccessChecklist(simulatedChecklist)
-        setShowSuccessModal(true)
         setShowScanner(false)
         setToastMessage(`✅ New checklist scanned: ${checklistId}`)
             setShowSuccessToast(true)
@@ -582,34 +479,35 @@ Timestamps:
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background to-muted">
+    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="flex-1 overflow-auto">
-        {/* Main Content */}
-        <main className="p-4 sm:p-8 space-y-6 sm:space-y-8">
-          {/* Enhanced Header - Matching manage users page style */}
-          <header className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-b border-border px-4 sm:px-6 py-6 shadow-sm">
-            <div className="flex items-center justify-between">
+        {/* ERP Style Header */}
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
                   <CheckSquare className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                     Checklist Management
                   </h1>
-                  <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
                     View and manage facility checklists with QR scanning capabilities
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-green-700 dark:text-green-300 font-medium">Live</span>
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
                 </div>
               </div>
             </div>
           </header>
+
+        {/* Main Content */}
+        <main className="p-4 sm:p-6 space-y-4 sm:space-y-6">
 
           {/* Enhanced Header Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -924,24 +822,7 @@ Timestamps:
         mode="checklists"
       />
 
-      <SuccessModal
-        isOpen={showSuccessModal}
-        asset={successChecklist ? convertChecklistToAsset(successChecklist) : null}
-        onClose={() => {
-          setShowSuccessModal(false)
-          setSuccessChecklist(null)
-        }}
-        onViewDetails={(assetData: ChecklistAsAsset) => {
-          setShowSuccessModal(false)
-          setSuccessChecklist(null)
-          // Find the original checklist by ID
-          const originalChecklist = checklists.find(c => c._id === assetData._id)
-          if (originalChecklist) {
-            setSelectedChecklist(originalChecklist)
-            setShowChecklistViewModal(true)
-          }
-        }}
-      />
+
 
       {/* QR Code Modal */}
       {showQRModal && selectedQRData && (
@@ -1045,17 +926,18 @@ Timestamps:
         </div>
       )}
 
-      {/* Scanner Response Modal */}
+      {/* Enhanced Scanner Response Modal - Mobile & Web Responsive */}
       {showScannerResponse && scannedData && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border-2 border-green-200 dark:border-green-700">
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 px-6 py-4 border-b border-green-200 dark:border-green-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <Scan className="h-6 w-6 text-green-600" />
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden border-2 border-green-200 dark:border-green-700">
+            {/* Header - Responsive */}
+            <div className="bg-gradient-to-r from-green-400 to-emerald-500 dark:from-green-600 dark:to-emerald-600 px-4 sm:px-6 py-3 sm:py-4 text-center">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg">
+                    <Scan className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <h3 className="text-lg sm:text-xl font-bold text-white">
                     Scanner Response
                   </h3>
                 </div>
@@ -1063,50 +945,50 @@ Timestamps:
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowScannerResponse(false)}
-                  className="h-10 w-10 p-0 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg"
+                  className="h-8 w-8 sm:h-10 sm:w-10 p-0 hover:bg-white/20 rounded-lg text-white"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
-                </div>
               </div>
 
-            <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-              {/* Scan Result Header */}
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+              {/* Success Icon and Message */}
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-lg">
+                <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  QR Code Successfully Scanned!
+              <h4 className="text-lg sm:text-xl font-bold text-white mb-1">
+                QR Code Successfully Scanned! 🎉
                 </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-green-100 text-sm sm:text-base font-medium">
                   Checklist information has been detected and processed
                 </p>
             </div>
 
-              {/* Scanned Data Display */}
-              <div className="space-y-4">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800/30">
+            {/* Content - Responsive */}
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(95vh-200px)] sm:max-h-[calc(90vh-200px)]">
+              {/* Scanned Information Card */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-3 sm:p-4 border border-blue-200 dark:border-blue-800/30">
                   <h5 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
                     <QrCode className="h-4 w-4" />
                     Scanned Information
                   </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Checklist ID</p>
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">{scannedData.checklistId}</p>
+                
+                {/* Mobile-first responsive grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-blue-200/50">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Checklist ID</p>
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 break-all">{scannedData.checklistId}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Title</p>
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">{scannedData.title}</p>
+                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-blue-200/50">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Type</p>
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">{scannedData.type}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Type</p>
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">{scannedData.type}</p>
+                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-blue-200/50 sm:col-span-2">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Title</p>
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">{scannedData.title}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Building</p>
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-blue-200/50 sm:col-span-2">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Building</p>
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
                         {typeof scannedData.location === 'object' && 'building' in scannedData.location && scannedData.location.building 
                           ? String(scannedData.location.building)
                           : 'N/A'}
@@ -1115,30 +997,70 @@ Timestamps:
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3">
+              {/* Additional Info if available */}
+              {successChecklist && (
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-xl p-3 sm:p-4 border border-purple-200 dark:border-purple-800/30">
+                  <h5 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-3 flex items-center gap-2">
+                    <CheckSquare className="h-4 w-4" />
+                    Additional Details
+                  </h5>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-purple-200/50">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mb-1 font-medium">Status</p>
+                      <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 capitalize">{successChecklist.status}</p>
+                    </div>
+                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-purple-200/50">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mb-1 font-medium">Priority</p>
+                      <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 capitalize">{successChecklist.priority}</p>
+                    </div>
+                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-purple-200/50 sm:col-span-2">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mb-1 font-medium">Items Count</p>
+                      <p className="text-sm font-semibold text-purple-800 dark:text-purple-200">{successChecklist.items.length} inspection items</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons - Responsive */}
+            <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2 sm:space-y-3">
                   <Button 
                     onClick={() => {
                       setShowScannerResponse(false)
                       if (successChecklist) {
-                        setShowSuccessModal(true)
+                    setSelectedChecklist(successChecklist)
+                    setShowChecklistViewModal(true)
                       }
                     }}
-                    className="flex-1 h-11 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full h-10 sm:h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Full Details
                 </Button>
                 <Button 
                     variant="outline"
-                    onClick={() => setShowScannerResponse(false)}
-                    className="flex-1 h-11 border-green-300 text-green-700 hover:bg-green-50"
+                onClick={() => {
+                  setShowScannerResponse(false)
+                  // Store the scanned data for future reference
+                  if (scannedData) {
+                    const scanHistory = JSON.parse(localStorage.getItem('checklistScanHistory') || '[]')
+                    scanHistory.unshift({
+                      ...scannedData,
+                      scannedAt: new Date().toISOString(),
+                      id: Date.now()
+                    })
+                    // Keep only last 10 scans
+                    if (scanHistory.length > 10) {
+                      scanHistory.splice(10)
+                    }
+                    localStorage.setItem('checklistScanHistory', JSON.stringify(scanHistory))
+                  }
+                }}
+                className="w-full h-10 sm:h-11 border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Continue
                 </Button>
-                </div>
-              </div>
             </div>
           </div>
         </div>

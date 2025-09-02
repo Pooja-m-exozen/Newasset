@@ -230,8 +230,10 @@ export function DigitalAssetModal({
 
   useEffect(() => {
     loadModalImages()
-    
-    // Cleanup blob URLs
+  }, [loadModalImages])
+
+  // Separate useEffect for cleanup
+  useEffect(() => {
     return () => {
       if (modalQrImgSrc && modalQrImgSrc.startsWith('blob:')) {
         URL.revokeObjectURL(modalQrImgSrc)
@@ -240,7 +242,7 @@ export function DigitalAssetModal({
         URL.revokeObjectURL(modalBarcodeImgSrc)
       }
     }
-  }, [loadModalImages])
+  }, [modalQrImgSrc, modalBarcodeImgSrc])
 
   const handleClose = () => {
     // Cleanup blob URLs before closing

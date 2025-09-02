@@ -205,34 +205,81 @@ export default function AssetsPage() {
   // Handle scanned QR code result
   const handleScannedResult = (assetId: string) => {
     try {
+      console.log('Processing scanned result:', assetId)
+      
       // Try to find a real asset from the current list
-      const availableAssets = assets.filter(asset => 
-        asset.digitalAssets?.qrCode || 
-        asset.digitalAssets?.barcode || 
-        asset.digitalAssets?.nfcData
-      )
-      
-      let foundAsset = assets.find(asset => 
-        asset.tagId === assetId || 
-        asset.digitalAssets?.qrCode?.data?.t === assetId ||
-        asset.digitalAssets?.nfcData?.data?.id === assetId
-      )
-      
-      // If no exact match, pick a random asset for demonstration
-      if (!foundAsset && availableAssets.length > 0) {
-        foundAsset = availableAssets[Math.floor(Math.random() * availableAssets.length)]
-      }
+      const foundAsset = assets.find(asset => {
+        // Check multiple possible matches
+        const matches = [
+          asset.tagId === assetId,
+          asset._id === assetId,
+          asset.digitalAssets?.qrCode?.data?.t === assetId,
+          asset.digitalAssets?.qrCode?.data?.a === assetId,
+          asset.digitalAssets?.nfcData?.data?.id === assetId,
+          // Check if QR code data contains the scanned ID
+          asset.digitalAssets?.qrCode?.data ? 
+            JSON.stringify(asset.digitalAssets.qrCode.data).includes(assetId) : false,
+          // Check if scanned ID contains asset tag
+          typeof assetId === 'string' && assetId.includes(asset.tagId),
+          // Check if asset tag contains scanned ID
+          asset.tagId.includes(assetId)
+        ]
+        
+        console.log(`Checking asset ${asset.tagId}:`, matches)
+        return matches.some(match => match)
+      })
       
       if (foundAsset) {
+        console.log('Asset found:', foundAsset.tagId)
         setScannedResult(`✅ Asset found: ${foundAsset.tagId}`)
         setSuccessAsset(foundAsset)
         setShowSuccessModal(true)
         setShowScanner(false)
       } else {
-        setScannedResult(`❌ Asset not found: ${assetId}`)
-        setTimeout(() => {
-          alert(`Asset with ID "${assetId}" not found in current view.`)
-        }, 100)
+        console.log('No asset found for scanned ID:', assetId)
+        // Create a simulated asset with the actual scanned data
+        const simulatedAsset: Asset = {
+          _id: `SCANNED_${Date.now()}`,
+          tagId: assetId,
+          assetType: 'Scanned Asset',
+          subcategory: 'QR Code',
+          brand: 'Unknown',
+          model: 'Scanned',
+          status: 'active',
+          priority: 'medium',
+          location: null,
+          project: null,
+          compliance: {
+            certifications: [],
+            expiryDates: [],
+            regulatoryRequirements: []
+          },
+          digitalAssets: {
+            qrCode: {
+              url: '',
+              data: { t: assetId, c: 'scanned' },
+              generatedAt: new Date().toISOString()
+            },
+            barcode: {
+              url: '',
+              data: assetId,
+              generatedAt: new Date().toISOString()
+            },
+            nfcData: {
+              url: '',
+              data: { id: assetId, timestamp: new Date().toISOString() },
+              generatedAt: new Date().toISOString()
+            }
+          },
+          assignedTo: 'Scanner',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+        
+        setScannedResult(`ℹ️ Scanned QR Code: ${assetId}`)
+        setSuccessAsset(simulatedAsset)
+        setShowSuccessModal(true)
+        setShowScanner(false)
       }
     } catch (error) {
       console.error('Error processing scanned result:', error)
@@ -442,18 +489,15 @@ Timestamps:
 
   // Cleanup blob URLs when modal closes
   useEffect(() => {
-    if (!showScannedAssetModal) {
-      // Reset image states when modal closes
+    return () => {
       if (viewModalQrImgSrc && viewModalQrImgSrc.startsWith('blob:')) {
         URL.revokeObjectURL(viewModalQrImgSrc)
-        setViewModalQrImgSrc(null)
       }
       if (viewModalBarcodeImgSrc && viewModalBarcodeImgSrc.startsWith('blob:')) {
         URL.revokeObjectURL(viewModalBarcodeImgSrc)
-        setViewModalBarcodeImgSrc(null)
       }
     }
-  }, [showScannedAssetModal, viewModalQrImgSrc, viewModalBarcodeImgSrc])
+  }, [viewModalQrImgSrc, viewModalBarcodeImgSrc])
 
   // Filter assets based on search
   useEffect(() => {
@@ -529,51 +573,39 @@ Timestamps:
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Page Header */}
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-lg flex items-center justify-center shadow-lg">
-                  <Building className="w-5 h-5 text-white" />
+    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+      <div className="flex-1 overflow-auto">
+        {/* ERP Style Header */}
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
+                <Building className="w-6 h-6 text-white" />
               </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                   Asset Management
                 </h1>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 mt-1 leading-relaxed">
-                  {userProject ? `Managing assets for ${userProject}` : 'Manage facility assets with advanced scanning capabilities'}
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
+                  Manage facility assets with advanced scanning capabilities
                 </p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
               </div>
             </div>
+          </div>
+        </header>
 
-          {/* Main Content Card */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-4 sm:p-6">
-              {/* Header Section */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
-                      <Building className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                        Asset Management Tools
-                </span>
-              </div>
-            </div>
-                  <p className="text-sm text-muted-foreground">
-                    Manage your facility assets with scanning capabilities
-                  </p>
-                </div>
-              </div>
-
-
-              {/* Asset Stats and Controls */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        {/* Main Content */}
+        <main className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          {/* Project Info Banner */}
+         
+          {/* Enhanced Header Section */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
@@ -589,6 +621,9 @@ Timestamps:
                   </span>
                 </div>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Manage your facility assets with scanning capabilities
+              </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <Button 
@@ -596,14 +631,14 @@ Timestamps:
                 size="sm"
                 onClick={fetchAssets}
                 disabled={isLoading}
-                className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 dark:hover:border-blue-700 text-xs sm:text-sm"
+                className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 text-xs sm:text-sm"
               >
                 <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Refresh</span>
               </Button>
               
-                  {/* View Mode Toggle */}
-                             <div className="flex items-center bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
+              {/* View Mode Toggle - Mobile Responsive */}
+              <div className="flex items-center bg-white rounded-lg border border-slate-200 p-1 shadow-sm">
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
@@ -628,7 +663,7 @@ Timestamps:
                   setScannerKey(prev => prev + 1)
                   setShowScanner(true)
                 }}
-                    className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
+                className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
               >
                 <Scan className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Scan QR</span>
@@ -637,13 +672,13 @@ Timestamps:
             </div>
           </div>
 
-                                           {/* Search Container */}
-              <Card className="border-0 shadow-sm mb-6">
-                <CardContent className="p-0">
-                  <div className="space-y-3 sm:space-y-4 p-6">
+          {/* Enhanced Search Container - Mobile Responsive */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-3 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Search Section */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4">
-                      <div className="w-full max-w-md">
+                  <div className="w-full">
                     <Label className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Search Assets</Label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
@@ -657,7 +692,7 @@ Timestamps:
                   </div>
                 </div>
 
-                    {/* Search Results Info */}
+                {/* Search Results Info - Mobile Responsive */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Building className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -684,40 +719,44 @@ Timestamps:
 
           {/* Assets Display */}
           {filteredAssets.length === 0 ? (
-                <div className="p-12 text-center">
+            <Card className="shadow-lg bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl">
+              <CardContent className="p-12 text-center">
                 <div className="flex flex-col items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Search className="h-10 w-10 text-blue-600" />
+                  <div className="w-20 h-20 bg-gradient-to-r from-slate-100 to-blue-100 rounded-full flex items-center justify-center">
+                    <Search className="h-10 w-10 text-slate-400" />
                   </div>
                   <div className="space-y-3">
-                                         <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                       No assets found
-                     </h3>
-                     <p className="text-gray-600 dark:text-slate-300 text-base max-w-md">
-                       {searchTerm 
-                         ? 'Try adjusting your search or filter criteria'
-                         : userProject 
-                         ? `No assets found for project: ${userProject}`
-                         : 'No assets are currently available'
-                       }
-                     </p>
+                    <h3 className="text-2xl font-bold text-slate-900">
+                      No assets found
+                    </h3>
+                    <p className="text-slate-600 text-base max-w-md">
+                      {searchTerm 
+                        ? 'Try adjusting your search or filter criteria'
+                        : userProject 
+                        ? `No assets found for project: ${userProject}`
+                        : 'No assets are currently available'
+                      }
+                    </p>
                     <Button 
                       onClick={() => setSearchTerm('')}
                       variant="outline"
                       size="sm"
-                      className="border-blue-300 text-blue-300 hover:bg-blue-900/20 font-medium px-6 py-2 rounded-lg"
+                      className="border-slate-300 text-slate-700 hover:bg-slate-50 font-medium px-6 py-2 rounded-lg"
                     >
                       Clear All Filters
                     </Button>
                   </div>
                 </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+              </CardContent>
+            </Card>
+          ) : (
+            <div className={viewMode === 'grid' 
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'
+              : 'space-y-3 sm:space-y-4'
+            }>
               {filteredAssets.map((asset) => (
-                        <AssetCard 
+                viewMode === 'grid' 
+                  ? <AssetCard 
                       key={asset._id} 
                       asset={asset}
                       onShowDetails={(asset) => {
@@ -728,90 +767,21 @@ Timestamps:
                       onShowMoreOptions={setShowMoreOptions}
                       onShowDigitalAsset={showDigitalAssetModal}
                     />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b border-gray-200 dark:border-gray-700">
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Asset ID</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Type</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Brand/Model</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Status</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Location</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredAssets.map((asset) => (
-                            <tr key={asset._id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                              <td className="p-3">
-                                <div className="font-medium text-gray-900 dark:text-white">{asset.tagId}</div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">{asset.subcategory}</div>
-                              </td>
-                              <td className="p-3">
-                                <span className="text-gray-900 dark:text-white">{asset.assetType}</span>
-                              </td>
-                              <td className="p-3">
-                                <div className="text-gray-900 dark:text-white">{asset.brand}</div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">{asset.model}</div>
-                              </td>
-                              <td className="p-3">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                  asset.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200' :
-                                  asset.status === 'inactive' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200' :
-                                  'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200'
-                                }`}>
-                                  {asset.status}
-                                </span>
-                              </td>
-                              <td className="p-3">
-                                {asset.location ? (
-                                  <div className="text-sm">
-                                    <div className="text-gray-900 dark:text-white">{asset.location.building}</div>
-                                    <div className="text-gray-600 dark:text-gray-400">Floor {asset.location.floor}, Room {asset.location.room}</div>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-600 dark:text-gray-400 text-sm">Not assigned</span>
-                                )}
-                              </td>
-                              <td className="p-3">
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
+                  : <AssetListItem 
+                      key={asset._id} 
+                      asset={asset}
+                      onShowDetails={(asset) => {
                         setScannedAsset(asset)
                         setShowScannedAssetModal(true)
                       }}
-                                    className="h-8 px-2 text-xs border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-                                  >
-                                    <Eye className="w-3 h-3 mr-1" />
-                                    View
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => downloadAssetInfo(asset)}
-                                    className="h-8 px-2 text-xs border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-                                  >
-                                    <Download className="w-3 h-3 mr-1" />
-                                    Info
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      onDownload={downloadAssetInfo}
+                      onShowMoreOptions={setShowMoreOptions}
+                      onShowDigitalAsset={showDigitalAssetModal}
+                    />
+              ))}
             </div>
           )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        </main>
       </div>
 
       {/* Modals */}
@@ -857,12 +827,12 @@ Timestamps:
       {/* Scanned Asset Details Modal */}
       {showScannedAssetModal && scannedAsset && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-lg sm:max-w-xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-lg shadow-lg max-w-lg sm:max-w-xl w-full max-h-[90vh] overflow-hidden">
             {/* Simple Modal Header */}
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Eye className="w-5 h-5 text-gray-600" />
-                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Asset Details</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Asset Details</h3>
               </div>
               <Button
                 variant="ghost"
@@ -878,9 +848,9 @@ Timestamps:
             <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(90vh-80px)]">
               {/* Asset Header */}
               <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{scannedAsset.tagId}</h2>
-                 <p className="text-sm text-gray-600 dark:text-gray-300">{scannedAsset.assetType}</p>
-                 <p className="text-sm text-gray-600 dark:text-gray-300">{scannedAsset.brand} • {scannedAsset.model}</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">{scannedAsset.tagId}</h2>
+                <p className="text-sm text-gray-600">{scannedAsset.assetType}</p>
+                <p className="text-sm text-gray-600">{scannedAsset.brand} • {scannedAsset.model}</p>
                 <div className="mt-2">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     {scannedAsset.status}
@@ -893,18 +863,18 @@ Timestamps:
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Asset Details</h4>
                   <div className="space-y-2 text-sm">
-                                         <div className="flex justify-between">
-                       <span className="text-gray-500 dark:text-gray-400">Priority:</span>
-                       <span className="font-medium text-gray-900 dark:text-white capitalize">{scannedAsset.priority}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-gray-500 dark:text-gray-400">Assigned To:</span>
-                       <span className="font-medium text-gray-900 dark:text-white max-w-[120px] truncate">
-                         {typeof scannedAsset.assignedTo === 'string' 
-                           ? scannedAsset.assignedTo 
-                           : scannedAsset.assignedTo?.name || 'N/A'}
-                       </span>
-                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Priority:</span>
+                      <span className="font-medium text-gray-900 capitalize">{scannedAsset.priority}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Assigned To:</span>
+                      <span className="font-medium text-gray-900 max-w-[120px] truncate">
+                        {typeof scannedAsset.assignedTo === 'string' 
+                          ? scannedAsset.assignedTo 
+                          : scannedAsset.assignedTo?.name || 'N/A'}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
@@ -912,18 +882,18 @@ Timestamps:
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Location</h4>
                     <div className="space-y-2 text-sm">
-                                           <div className="flex justify-between">
-                       <span className="text-gray-500 dark:text-gray-400">Building:</span>
-                       <span className="font-medium text-gray-900 dark:text-white">{scannedAsset.location.building}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-gray-500 dark:text-gray-400">Floor:</span>
-                       <span className="font-medium text-gray-900 dark:text-white">{scannedAsset.location.floor}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-gray-500 dark:text-gray-400">Room:</span>
-                       <span className="font-medium text-gray-900 dark:text-white">{scannedAsset.location.room}</span>
-                     </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Building:</span>
+                        <span className="font-medium text-gray-900">{scannedAsset.location.building}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Floor:</span>
+                        <span className="font-medium text-gray-900">{scannedAsset.location.floor}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Room:</span>
+                        <span className="font-medium text-gray-900">{scannedAsset.location.room}</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1027,9 +997,9 @@ Timestamps:
       {/* More Options Modal */}
       {showMoreOptions && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                   <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-sm w-full">
-           <div className="px-4 py-3 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
-             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">More Options</h3>
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">More Options</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1051,22 +1021,22 @@ Timestamps:
                     setShowScannedAssetModal(true)
                   }
                 }}
-                                 className="w-full justify-start h-10 text-slate-700 dark:text-gray-300 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
-               >
-                 <Eye className="w-4 h-4 mr-3" />
-                 View Details
-               </Button>
-               <Button
-                 variant="ghost"
-                 size="sm"
-                 onClick={() => {
-                   const asset = assets.find(a => a._id === showMoreOptions)
-                   if (asset) {
-                     setShowMoreOptions(null)
-                     downloadAssetInfo(asset)
-                   }
-                 }}
-                 className="w-full justify-start h-10 text-slate-700 dark:text-gray-300 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400"
+                className="w-full justify-start h-10 text-slate-700 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <Eye className="w-4 h-4 mr-3" />
+                View Details
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const asset = assets.find(a => a._id === showMoreOptions)
+                  if (asset) {
+                    setShowMoreOptions(null)
+                    downloadAssetInfo(asset)
+                  }
+                }}
+                className="w-full justify-start h-10 text-slate-700 hover:bg-green-50 hover:text-green-600"
               >
                 <Download className="w-4 h-4 mr-3" />
                 Download Info

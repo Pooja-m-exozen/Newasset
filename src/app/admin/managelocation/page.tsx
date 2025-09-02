@@ -12,7 +12,6 @@ import {
   Download,
   Search,
   MapPin,
-  Building,
   Eye,
   Edit,
   Trash2,
@@ -20,8 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  Globe,
-  Navigation,
   Loader2
 } from 'lucide-react';
 import { Location, CreateLocationRequest, UpdateLocationRequest } from '../../../lib/location';
@@ -66,7 +63,7 @@ const LocationManagementContent = () => {
     if (locations.length === 0 && !loading) {
       fetchLocations();
     }
-  }, []);
+  }, [locations.length, loading, fetchLocations]);
 
   const handleDelete = useCallback((location: Location) => {
     setLocationToDelete(location);
@@ -187,11 +184,7 @@ const LocationManagementContent = () => {
     return `${Math.floor(diffInHours / 24)} days ago`;
   }, []);
 
-  const statistics = useMemo(() => ({
-    totalLocations: locations.length,
-    officeCount: locations.filter(l => l.type.toLowerCase() === 'office').length,
-    warehouseCount: locations.filter(l => l.type.toLowerCase() === 'warehouse').length
-  }), [locations]);
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">

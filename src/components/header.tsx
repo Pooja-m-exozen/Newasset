@@ -3,6 +3,7 @@
 import { useAuth } from "@/contexts/AuthContext"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useRouter, usePathname } from "next/navigation"
+import Image from "next/image"
 import {
   Building2,
   Home,
@@ -22,7 +23,6 @@ export default function Header() {
   const pathname = usePathname()
 
   // Determine user role and show appropriate navigation
-  const isViewer = user?.role === 'viewer'
   const isAdmin = user?.role === 'admin'
 
   const navigationItems = [
@@ -76,7 +76,8 @@ export default function Header() {
       id: "view-reports",
       label: "Reports",
       icon: FileText,
-      href: isAdmin ? "/admin/viewalllogs/assets-logs" : "/viewer/reports"
+      href: "/admin/viewalllogs/assets-logs",
+      adminOnly: true
     }
   ]
 
@@ -92,9 +93,11 @@ export default function Header() {
           {/* Left Side - Logo & Brand */}
           <div className="flex items-center space-x-4">
             <div className="relative">
-              <img 
+              <Image 
                 src="/exozen_logo.png" 
                 alt="Exozen Logo" 
+                width={40}
+                height={40}
                 className="w-10 h-10 object-contain"
               />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>

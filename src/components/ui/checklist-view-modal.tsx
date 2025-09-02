@@ -8,21 +8,16 @@ import { Badge } from '@/components/ui/badge'
 import { 
   X, 
   Download, 
-  Building, 
   MapPin, 
   User, 
   CheckSquare,
-  Clock,
   Tag,
   FileText,
   Eye,
   Loader2,
   Copy,
   Scan,
-  QrCode as QrCodeIcon,
-  Share2,
-  Printer,
-  ExternalLink
+  QrCode as QrCodeIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScannerModal } from './scanner-modal-component'

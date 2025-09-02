@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -164,7 +164,7 @@ export default function AssetsPage() {
   }
 
   // Load scanner images for view modal
-  const loadViewModalImages = async (asset: Asset) => {
+  const loadViewModalImages = useCallback(async (asset: Asset) => {
     // Load QR Code
     if (asset.digitalAssets?.qrCode?.url) {
       setViewModalQrLoading(true)
@@ -200,39 +200,86 @@ export default function AssetsPage() {
         setViewModalBarcodeLoading(false)
       }
     }
-  }
+  }, [])
 
   // Handle scanned QR code result
   const handleScannedResult = (assetId: string) => {
     try {
+      console.log('Processing scanned result:', assetId)
+      
       // Try to find a real asset from the current list
-      const availableAssets = assets.filter(asset => 
-        asset.digitalAssets?.qrCode || 
-        asset.digitalAssets?.barcode || 
-        asset.digitalAssets?.nfcData
-      )
-      
-      let foundAsset = assets.find(asset => 
-        asset.tagId === assetId || 
-        asset.digitalAssets?.qrCode?.data?.t === assetId ||
-        asset.digitalAssets?.nfcData?.data?.id === assetId
-      )
-      
-      // If no exact match, pick a random asset for demonstration
-      if (!foundAsset && availableAssets.length > 0) {
-        foundAsset = availableAssets[Math.floor(Math.random() * availableAssets.length)]
-      }
+      const foundAsset = assets.find(asset => {
+        // Check multiple possible matches
+        const matches = [
+          asset.tagId === assetId,
+          asset._id === assetId,
+          asset.digitalAssets?.qrCode?.data?.t === assetId,
+          asset.digitalAssets?.qrCode?.data?.a === assetId,
+          asset.digitalAssets?.nfcData?.data?.id === assetId,
+          // Check if QR code data contains the scanned ID
+          asset.digitalAssets?.qrCode?.data ? 
+            JSON.stringify(asset.digitalAssets.qrCode.data).includes(assetId) : false,
+          // Check if scanned ID contains asset tag
+          typeof assetId === 'string' && assetId.includes(asset.tagId),
+          // Check if asset tag contains scanned ID
+          asset.tagId.includes(assetId)
+        ]
+        
+        console.log(`Checking asset ${asset.tagId}:`, matches)
+        return matches.some(match => match)
+      })
       
       if (foundAsset) {
+        console.log('Asset found:', foundAsset.tagId)
         setScannedResult(`✅ Asset found: ${foundAsset.tagId}`)
         setSuccessAsset(foundAsset)
         setShowSuccessModal(true)
         setShowScanner(false)
       } else {
-        setScannedResult(`❌ Asset not found: ${assetId}`)
-        setTimeout(() => {
-          alert(`Asset with ID "${assetId}" not found in current view.`)
-        }, 100)
+        console.log('No asset found for scanned ID:', assetId)
+        // Create a simulated asset with the actual scanned data
+        const simulatedAsset: Asset = {
+          _id: `SCANNED_${Date.now()}`,
+          tagId: assetId,
+          assetType: 'Scanned Asset',
+          subcategory: 'QR Code',
+          brand: 'Unknown',
+          model: 'Scanned',
+          status: 'active',
+          priority: 'medium',
+          location: null,
+          project: null,
+          compliance: {
+            certifications: [],
+            expiryDates: [],
+            regulatoryRequirements: []
+          },
+          digitalAssets: {
+            qrCode: {
+              url: '',
+              data: { t: assetId, c: 'scanned' },
+              generatedAt: new Date().toISOString()
+            },
+            barcode: {
+              url: '',
+              data: assetId,
+              generatedAt: new Date().toISOString()
+            },
+            nfcData: {
+              url: '',
+              data: { id: assetId, timestamp: new Date().toISOString() },
+              generatedAt: new Date().toISOString()
+            }
+          },
+          assignedTo: 'Scanner',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+        
+        setScannedResult(`ℹ️ Scanned QR Code: ${assetId}`)
+        setSuccessAsset(simulatedAsset)
+        setShowSuccessModal(true)
+        setShowScanner(false)
       }
     } catch (error) {
       console.error('Error processing scanned result:', error)
@@ -438,8 +485,10 @@ Timestamps:
     if (scannedAsset && showScannedAssetModal) {
       loadViewModalImages(scannedAsset)
     }
+  }, [scannedAsset, showScannedAssetModal, loadViewModalImages])
     
     // Cleanup blob URLs when modal closes
+  useEffect(() => {
     return () => {
       if (viewModalQrImgSrc && viewModalQrImgSrc.startsWith('blob:')) {
         URL.revokeObjectURL(viewModalQrImgSrc)
@@ -448,7 +497,7 @@ Timestamps:
         URL.revokeObjectURL(viewModalBarcodeImgSrc)
       }
     }
-  }, [scannedAsset, showScannedAssetModal, viewModalQrImgSrc, viewModalBarcodeImgSrc])
+  }, [viewModalQrImgSrc, viewModalBarcodeImgSrc])
 
   // Filter assets based on search
   useEffect(() => {
@@ -524,50 +573,37 @@ Timestamps:
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background to-muted">
+    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="flex-1 overflow-auto">
-        {/* Enhanced Header - Mobile Responsive */}
-        <header className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/20 dark:via-indigo-950/20 dark:to-purple-950/20 border-b border-border px-3 sm:px-6 py-4 sm:py-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-                <Building className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        {/* ERP Style Header */}
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
+                <Building className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                   Asset Management
                 </h1>
-                <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1 hidden sm:block">
-                  {userProject ? `Managing assets for ${userProject}` : 'Manage facility assets with advanced scanning capabilities'}
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
+                  Manage facility assets with advanced scanning capabilities
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
-              <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-700 dark:text-green-300 font-medium">Live</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
               </div>
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+        <main className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Project Info Banner */}
-          {userProject && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Currently managing assets for project: <span className="font-bold">{userProject}</span>
-                </span>
-              </div>
-            </div>
-          )}
+         
           {/* Enhanced Header Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-2">

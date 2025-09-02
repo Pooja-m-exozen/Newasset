@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { 
@@ -13,7 +14,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Zap,
   ChevronDown,
   ChevronUp,
   FileDigit,
@@ -135,7 +135,7 @@ export default function Sidebar({ className }: SidebarProps) {
       {
         id: "viewer-checklist",
         label: "View checklist",
-        icon: MapPin,
+        icon: CheckSquare,
         href: "/viewer/checklist",
         description: "View checklist information"
       }
@@ -239,9 +239,11 @@ export default function Sidebar({ className }: SidebarProps) {
         {!isCollapsed && (
           <div className="flex items-center space-x-3">
             <div className="w-7 h-7 flex items-center justify-center">
-              <img 
+              <Image 
                 src="/exozen_logo.png" 
                 alt="Exozen Logo" 
+                width={28}
+                height={28}
                 className="w-7 h-7 object-contain"
               />
             </div>

@@ -306,177 +306,213 @@ function AssetsLogsContent() {
   // Custom table component for the specific columns
   const ProjectAssetsTable = ({ assets }: { assets: Asset[] }) => {
     return (
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
         {/* Mobile Card View */}
-        <div className="block lg:hidden space-y-4 p-4">
-          {assets.map((asset, index) => (
-            <div key={asset._id} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                    {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
-                      className: "w-4 h-4 text-white"
-                    })}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
-                      {asset.brand} {asset.model || ''}
-                    </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      {asset.assetType}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(asset.status || 'active')}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewDetails(asset)}
-                    className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    title="View Details"
-                  >
-                    <MoreHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-500 dark:text-slate-400">Tag ID:</span>
-                  <div className="font-mono font-semibold text-slate-900 dark:text-slate-100">
-                    {asset.tagId || 'N/A'}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-slate-500 dark:text-slate-400">Vendor:</span>
-                  <div className="font-medium text-slate-900 dark:text-slate-100">
-                    {(() => {
-                      const vendorName = asset.customFields?.['Vendor Name'];
-                      return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
-                    })()}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-slate-500 dark:text-slate-400">Location:</span>
-                  <div className="font-medium text-slate-900 dark:text-slate-100">
-                    {formatLocation(asset.location)}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-slate-500 dark:text-slate-400">Serial:</span>
-                  <div className="font-medium text-slate-900 dark:text-slate-100">
-                    {asset.serialNumber || 'N/A'}
-                  </div>
-                </div>
+        <div className="block lg:hidden">
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 px-4 py-3 border-b border-slate-200 dark:border-slate-600">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Asset Inventory</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                  {assets.length} assets
+                </span>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Desktop Table View */}
-        <table className="hidden lg:table w-full">
-          <thead>
-            <tr className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 border-b border-border">
-              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">S.No</th>
-              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Asset Details</th>
-              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Asset Tag & Serial</th>
-              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Vendor</th>
-              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Category</th>
-              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Location</th>
-              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Status</th>
-              <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assets.map((asset, index) => (
-              <tr key={asset._id} className="border-b border-border/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all duration-200">
-                <td className="p-4 text-sm text-slate-600 dark:text-slate-400 font-medium">
-                  {index + 1}
-                </td>
-                <td className="p-4">
+          </div>
+          <div className="space-y-3 p-4">
+            {assets.map((asset) => (
+              <div key={asset._id} className="group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-4 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200">
+                {/* Asset Header */}
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                    <div className="p-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg shadow-sm">
                       {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
-                        className: "w-4 h-4 text-white"
+                        className: "w-5 h-5 text-white"
                       })}
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900 dark:text-slate-100">
+                      <div className="font-semibold text-slate-900 dark:text-slate-100 text-base">
                         {asset.brand} {asset.model || ''}
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        {asset.assetType}
+                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                        {asset.assetType} • {asset.tagId || 'No Tag'}
                       </div>
                     </div>
                   </div>
-                </td>
-                <td className="p-4">
-                  <div className="space-y-1">
-                    <div className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {asset.tagId || 'N/A'}
-                    </div>
-                    {asset.serialNumber && (
-                      <div className="text-xs text-slate-500 dark:text-slate-400">
-                        SN: {asset.serialNumber}
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="text-sm text-slate-900 dark:text-slate-100 font-medium">
-                    {(() => {
-                      const vendorName = asset.customFields?.['Vendor Name'];
-                      return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
-                    })()}
-                  </div>
-                  {asset.customFields?.['HSN'] && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      HSN: {String(asset.customFields['HSN'])}
-                    </div>
-                  )}
-                </td>
-                <td className="p-4">
-                  <Badge variant="outline" className="text-xs font-medium border-slate-200 dark:border-slate-700">
-                    {asset.assetType || 'Unknown'}
-                  </Badge>
-                </td>
-                <td className="p-4">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-400" />
-                    <div className="text-sm text-slate-900 dark:text-slate-100">
-                      {formatLocation(asset.location)}
-                    </div>
-                  </div>
-                </td>
-                <td className="p-4">
-                  {getStatusBadge(asset.status || 'active')}
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2">
+                    {getStatusBadge(asset.status || 'active')}
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleViewDetails(asset)}
-                      className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    >
-                      <Eye className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewDetails(asset)}
-                      className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      className="h-9 w-9 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                       title="View Details"
                     >
-                      <MoreHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                      <Eye className="w-4 h-4" />
                     </Button>
                   </div>
-                </td>
-              </tr>
+                </div>
+                
+                {/* Asset Details Grid */}
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Tag ID</span>
+                    <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                      {asset.tagId || 'N/A'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Vendor</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100 text-sm">
+                      {(() => {
+                        const vendorName = asset.customFields?.['Vendor Name'];
+                        return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
+                      })()}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Location</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100 text-sm text-right max-w-[60%] truncate">
+                      {formatLocation(asset.location)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Serial Number</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100 text-sm">
+                      {asset.serialNumber || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block">
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 px-6 py-4 border-b border-slate-200 dark:border-slate-600">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Asset Inventory</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                  {assets.length} assets
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-600">
+                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 w-16">#</th>
+                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 min-w-[200px]">Asset Details</th>
+                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 min-w-[150px]">Tag & Serial</th>
+                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 min-w-[120px]">Vendor</th>
+                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 w-32">Category</th>
+                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 min-w-[180px]">Location</th>
+                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 w-28">Status</th>
+                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 w-24">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assets.map((asset, index) => (
+                  <tr key={asset._id} className="group border-b border-slate-200/50 dark:border-slate-700/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all duration-200">
+                    <td className="p-4 text-sm text-slate-600 dark:text-slate-400 font-medium">
+                      <div className="flex items-center justify-center w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full text-xs font-semibold">
+                        {index + 1}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg shadow-sm">
+                          {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
+                            className: "w-5 h-5 text-white"
+                          })}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
+                            {asset.brand} {asset.model || ''}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            {asset.assetType}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="space-y-1">
+                        <div className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {asset.tagId || 'N/A'}
+                        </div>
+                        {asset.serialNumber && (
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            SN: {asset.serialNumber}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="text-sm text-slate-900 dark:text-slate-100 font-medium">
+                        {(() => {
+                          const vendorName = asset.customFields?.['Vendor Name'];
+                          return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
+                        })()}
+                      </div>
+                      {asset.customFields?.['HSN'] && (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          HSN: {String(asset.customFields['HSN'])}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <Badge variant="outline" className="text-xs font-medium border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                        {asset.assetType || 'Unknown'}
+                      </Badge>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <div className="text-sm text-slate-900 dark:text-slate-100 truncate">
+                          {formatLocation(asset.location)}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      {getStatusBadge(asset.status || 'active')}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(asset)}
+                          className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(asset)}
+                          className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="More Options"
+                        >
+                          <MoreHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
@@ -594,11 +630,13 @@ function AssetsLogsContent() {
                   assets={filteredAssets}
                   filename={`${user?.projectName || 'project'}-${selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'all'}-asset-details.pdf`}
                   selectedAssetType={selectedAssetType}
+                  projectName={user?.projectName || 'Unknown Project'}
                   onDownload={handlePDFDownload}
                 />
                 <AssetExcelDownload
                   assets={filteredAssets}
-                  filename="assets-logs-report.xlsx"
+                  filename={`${user?.projectName || 'project'}-assets-report.xlsx`}
+                  projectName={user?.projectName || 'Unknown Project'}
                   onDownload={handleExcelDownload}
                 />
               </div>

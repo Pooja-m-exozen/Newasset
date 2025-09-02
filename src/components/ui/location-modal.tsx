@@ -7,7 +7,7 @@ import { Badge } from './badge';
 import { Checkbox } from './checkbox';
 import { ScrollArea } from './scroll-area';
 import { Location, CreateLocationRequest, geocodeAddress } from '../../lib/location';
-import { MapPin, Loader2, Navigation, Globe, Info, CheckCircle, Building, X, AlertCircle, Calendar, Map, ExternalLink } from 'lucide-react';
+import { Loader2, Navigation, CheckCircle, AlertCircle, Calendar, Map, ExternalLink } from 'lucide-react';
 
 interface LocationModalProps {
   isOpen: boolean;

@@ -8,6 +8,7 @@ interface AssetPDFDownloadProps {
   assets: Asset[];
   filename?: string;
   selectedAssetType?: string;
+  projectName?: string;
   onDownload?: () => void;
 }
 
@@ -35,6 +36,7 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
   assets,
   filename = 'assets-report.pdf',
   selectedAssetType = 'all',
+  projectName = 'Unknown Project',
   onDownload
 }) => {
   const downloadPDF = async () => {
@@ -69,6 +71,12 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
         doc.text('ZEN', 22, 21);
       }
       
+      // Add project name below logo
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text(projectName, 15, 35);
+      
       // Add dynamic title based on selected asset type
       const titleText = selectedAssetType !== 'all' 
         ? `${selectedAssetType.toUpperCase()} ASSET DETAILS`
@@ -79,10 +87,10 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
       doc.setTextColor(0, 0, 0);
       doc.text(titleText, 150, 28, { align: 'center' });
       
-             // Add date
-       doc.setFontSize(11);
-       doc.setFont('helvetica', 'normal');
-       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 38);
+      // Add date
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 45);
        
        // Calculate asset counts by category for later use
        const assetCounts: { [key: string]: number } = {};
@@ -102,7 +110,7 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
        ];
        
        const startX = 15;
-       const startY = 50; // Moved back up since no summary above table
+       const startY = 55; // Adjusted for project name and date
       const rowHeight = 12;
       const headerHeight = 10;
       const totalTableWidth = columns.reduce((sum, col) => sum + col.width, 0);
@@ -304,12 +312,20 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
   );
 };
 
-// Excel download utility for assets
-export const AssetExcelDownload: React.FC<{
+interface AssetExcelDownloadProps {
   assets: Asset[];
   filename?: string;
+  projectName?: string;
   onDownload?: () => void;
-}> = ({ assets, filename = 'assets-report.xlsx', onDownload }) => {
+}
+
+// Excel download utility for assets
+export const AssetExcelDownload: React.FC<AssetExcelDownloadProps> = ({ 
+  assets, 
+  filename = 'assets-report.xlsx', 
+  projectName = 'Unknown Project', 
+  onDownload 
+}) => {
   const downloadExcel = async () => {
     try {
       // Dynamic import to avoid SSR issues
@@ -376,6 +392,9 @@ export const AssetExcelDownload: React.FC<{
       });
       
       const summaryData = [
+        { 'Summary': `Project: ${projectName}`, 'Count': '' },
+        { 'Summary': `Generated: ${new Date().toLocaleDateString()}`, 'Count': '' },
+        { 'Summary': '', 'Count': '' }, // Empty row for spacing
         { 'Summary': 'Total Assets', 'Count': assets.length },
         { 'Summary': '', 'Count': '' }, // Empty row for spacing
         ...Object.entries(assetCounts).map(([category, count]) => ({

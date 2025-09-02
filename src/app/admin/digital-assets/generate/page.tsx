@@ -81,18 +81,18 @@ export default function GeneratePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Digital Asset Generation</h1>
-                <p className="text-gray-600 mt-1">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Digital Asset Generation</h1>
+                <p className="text-gray-600 dark:text-gray-300 mt-1">
                   Create, manage, and track QR codes, barcodes, and NFC data for your assets
                 </p>
               </div>
@@ -100,12 +100,12 @@ export default function GeneratePage() {
           </div>
 
           {/* Main Content Card */}
-          <Card>
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardContent className="p-6">
               {/* Header Section */}
               <div className="mb-6">
-                <h2 className="text-lg font-medium text-gray-700 mb-2">Asset Generation Tools</h2>
-                <p className="text-sm text-gray-600">
+                <h2 className="text-lg font-medium text-gray-700 dark:text-gray-200 mb-2">Asset Generation Tools</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Choose from multiple asset generation methods and management tools
                 </p>
               </div>
@@ -114,21 +114,21 @@ export default function GeneratePage() {
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 
                 {/* Tab Headers */}
-                <div className="border-b bg-gray-50">
+                <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                   <div className="px-6 py-4">
                     <TabsList className="grid w-full grid-cols-5 h-auto bg-transparent border-0 p-0 rounded-lg gap-2">
                       {tabConfig.map((tab) => (
                         <TabsTrigger 
                           key={tab.value}
                           value={tab.value} 
-                          className="flex flex-col items-center justify-center space-y-2 px-4 py-6 text-center text-sm font-medium transition-all duration-200 data-[state=active]:bg-white data-[state=active]:shadow-sm hover:bg-gray-100 rounded-lg border border-transparent hover:border-gray-200"
+                          className="flex flex-col items-center justify-center space-y-2 px-4 py-6 text-center text-sm font-medium transition-all duration-200 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
                         >
                           <div className={`p-3 rounded-lg ${tab.color} shadow-sm`}>
                             <tab.icon className="h-6 w-6 text-white" />
                           </div>
                           <div>
-                            <span className="block font-semibold">{tab.title}</span>
-                            <p className="text-xs text-gray-500">{tab.subtitle}</p>
+                            <span className="block font-semibold text-gray-900 dark:text-white">{tab.title}</span>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{tab.subtitle}</p>
                           </div>
                         </TabsTrigger>
                       ))}
@@ -145,8 +145,8 @@ export default function GeneratePage() {
                           <Package className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <h2 className="text-xl font-semibold">Bulk Asset Generation</h2>
-                          <p className="text-gray-600">Generate multiple digital assets efficiently with batch processing</p>
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Bulk Asset Generation</h2>
+                          <p className="text-gray-600 dark:text-gray-300">Generate multiple digital assets efficiently with batch processing</p>
                         </div>
                       </div>
                     </div>
@@ -160,8 +160,8 @@ export default function GeneratePage() {
                           <QrCode className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <h2 className="text-xl font-semibold">QR Code Generator</h2>
-                          <p className="text-gray-600">Create high-quality QR codes for instant asset identification</p>
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">QR Code Generator</h2>
+                          <p className="text-gray-600 dark:text-gray-300">Create high-quality QR codes for instant asset identification</p>
                         </div>
                       </div>
                     </div>
@@ -175,8 +175,8 @@ export default function GeneratePage() {
                           <Barcode className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <h2 className="text-xl font-semibold">Barcode Generator</h2>
-                          <p className="text-gray-600">Generate various barcode formats for industrial applications</p>
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Barcode Generator</h2>
+                          <p className="text-gray-600 dark:text-gray-300">Generate various barcode formats for industrial applications</p>
                         </div>
                       </div>
                     </div>
@@ -190,8 +190,8 @@ export default function GeneratePage() {
                           <Wifi className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <h2 className="text-xl font-semibold">NFC Data Generator</h2>
-                          <p className="text-gray-600">Create NFC data for contactless asset communication</p>
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">NFC Data Generator</h2>
+                          <p className="text-gray-600 dark:text-gray-300">Create NFC data for contactless asset communication</p>
                         </div>
                       </div>
                     </div>
@@ -205,26 +205,26 @@ export default function GeneratePage() {
                           <Database className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <h2 className="text-xl font-semibold">Asset Viewer</h2>
-                          <p className="text-gray-600">Browse and manage all your digital assets with advanced filtering</p>
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Asset Viewer</h2>
+                          <p className="text-gray-600 dark:text-gray-300">Browse and manage all your digital assets with advanced filtering</p>
                         </div>
                       </div>
                       
                       {/* Feature badges */}
                       <div className="flex flex-wrap gap-2 mt-4">
-                        <Badge variant="secondary" className="flex items-center gap-1">
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600">
                           <Users className="h-3 w-3" />
                           Multi-User Access
                         </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600">
                           <Database className="h-3 w-3" />
                           Centralized Storage
                         </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600">
                           <Activity className="h-3 w-3" />
                           Real-time Updates
                         </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-1">
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600">
                           <BarChart className="h-3 w-3" />
                           Advanced Analytics
                         </Badge>

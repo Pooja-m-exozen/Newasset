@@ -3,22 +3,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Progress } from '@/components/ui/progress'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AssetViewModal } from '@/components/ui/asset-view-modal'
 import { Asset } from '@/lib/adminasset'
 import { 
   Building2, Search, Eye, Package, User, CheckCircle, AlertTriangle, 
-  Clock, CheckSquare, TrendingUp, Activity, RefreshCw, BarChart3, 
-  PieChart, Target, Zap, FileText, QrCode, Download, Share2, X,
-  Gauge, MapPin, ArrowUpRight, ArrowDownRight, Star, Award,
-  Database, Server, Network, HardDrive, Monitor, Smartphone, Tablet,
-  Menu, X as CloseIcon, Plus, Filter
+  CheckSquare, RefreshCw, BarChart3, Target, Download, MapPin
 } from 'lucide-react'
 
 interface Checklist {
@@ -32,18 +25,15 @@ interface Checklist {
 }
 
 export default function ViewerDashboard() {
-  const { user } = useAuth()
   const { theme } = useTheme()
   const [assets, setAssets] = useState<Asset[]>([])
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState('overview')
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [error, setError] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [showAssetModal, setShowAssetModal] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Fetch real-time data from API

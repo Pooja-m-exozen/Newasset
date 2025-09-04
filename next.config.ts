@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  basePath: '/v1/asset',
   images: {
     remotePatterns: [
       {
@@ -8,6 +9,10 @@ const nextConfig: NextConfig = {
         hostname: '192.168.0.5',
         port: '5021',
         pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'digitalasset.zenapi.co.in',
       },
     ],
   },

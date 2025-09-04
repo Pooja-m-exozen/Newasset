@@ -16,7 +16,7 @@ import { QrCode, Barcode, Wifi, Info, Hash, MapPin, Settings, Package, CheckCirc
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 // API Base URL constant
-const API_BASE_URL = 'http://192.168.0.5:5021'
+const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
 
 interface BulkDigitalAssetsGeneratorProps {
   className?: string;
@@ -79,7 +79,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
         return
       }
 
-      const response = await fetch('http://192.168.0.5:5021/api/assets', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/assets', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -140,7 +140,7 @@ export function PermissionsUI({
     setRolesError(null)
 
     try {
-      const response = await fetch(`http://192.168.0.5:5021/api/roles`, {
+      const response = await fetch(`https://digitalasset.zenapi.co.in/api/roles`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
@@ -184,7 +184,7 @@ export function PermissionsUI({
 
     try {
       // Try the original working endpoint first
-      const url = `http://192.168.0.5:5021/api/admin/permissions/assets/${selectedRole.toLowerCase()}`
+      const url = `https://digitalasset.zenapi.co.in/api/admin/permissions/assets/${selectedRole.toLowerCase()}`
       console.log('Fetching permissions from:', url)
       
       const response = await fetch(url, {
@@ -206,7 +206,7 @@ export function PermissionsUI({
         const roleData = roles.find(role => role.name === selectedRole)
         if (roleData) {
           const roleId = roleData._id
-          const alternativeUrl = `http://192.168.0.5:5021/api/roles/${roleId}/permissions`
+          const alternativeUrl = `https://digitalasset.zenapi.co.in/api/roles/${roleId}/permissions`
           console.log('Trying alternative URL:', alternativeUrl)
           
           const altResponse = await fetch(alternativeUrl, {
@@ -310,10 +310,10 @@ export function PermissionsUI({
         permissions: updatedPermissions
       }
 
-      console.log('Making PUT request to:', `http://192.168.0.5:5021/api/roles/${roleId}/permissions`)
+      console.log('Making PUT request to:', `https://digitalasset.zenapi.co.in/api/roles/${roleId}/permissions`)
       console.log('Request body:', JSON.stringify(requestBody, null, 2))
       
-      const response = await fetch(`http://192.168.0.5:5021/api/roles/${roleId}/permissions`, {
+      const response = await fetch(`https://digitalasset.zenapi.co.in/api/roles/${roleId}/permissions`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${bearerToken}`,

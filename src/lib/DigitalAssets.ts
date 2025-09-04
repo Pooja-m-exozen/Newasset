@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://192.168.0.5:5021/api'
+const API_BASE_URL = 'https://digitalasset.zenapi.co.in/api'
 
 // Simple asset ID resolver - handles both tagId and _id inputs
 const getAssetId = async (input: string): Promise<string> => {

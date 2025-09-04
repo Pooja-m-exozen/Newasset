@@ -1,5 +1,5 @@
 // Report utility functions and API calls
-const API_BASE_URL = 'http://192.168.0.5:5021/api'
+const API_BASE_URL = 'https://digitalasset.zenapi.co.in/api'
 
 // Get token from localStorage
 const getAuthToken = (): string | null => {

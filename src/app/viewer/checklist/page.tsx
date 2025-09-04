@@ -136,7 +136,7 @@ export default function ViewerChecklists() {
         return
       }
 
-      const response = await fetch('http://192.168.0.5:5021/api/checklists', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/checklists', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -238,7 +238,7 @@ export default function ViewerChecklists() {
     setQrImageLoading(true)
     setQrImageError(false)
     
-    const testImageUrl = checklist.qrCode.url.startsWith('http') ? checklist.qrCode.url : `http://192.168.0.5:5021${checklist.qrCode.url}`
+    const testImageUrl = checklist.qrCode.url.startsWith('http') ? checklist.qrCode.url : `https://digitalasset.zenapi.co.in${checklist.qrCode.url}`
     
     fetch(testImageUrl, {
       method: 'GET',
@@ -862,7 +862,7 @@ Timestamps:
                   )}
                   
                   <Image 
-                    src={selectedQRData.blobUrl || (selectedQRData.url.startsWith('http') ? selectedQRData.url : `http://192.168.0.5:5021${selectedQRData.url}`)}
+                    src={selectedQRData.blobUrl || (selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in${selectedQRData.url}`)}
                     alt="QR Code"
                     width={256}
                     height={256}
@@ -885,7 +885,7 @@ Timestamps:
                   <Button 
                     onClick={() => {
                       const link = document.createElement('a');
-                      const imageUrl = selectedQRData.blobUrl || (selectedQRData.url.startsWith('http') ? selectedQRData.url : `http://192.168.0.5:5021${selectedQRData.url}`);
+                      const imageUrl = selectedQRData.blobUrl || (selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in${selectedQRData.url}`);
                       link.href = imageUrl;
                       link.download = 'checklist-qr.png';
                       link.click();

@@ -409,7 +409,7 @@ export function EnhancedDashboard({
         throw new Error('Authentication token not found')
       }
       
-      const response = await fetch(`http://192.168.0.5:5021/api/automation/alerts/statistics?dateFrom=${dateFrom}&dateTo=${dateTo}&alertType=performance_threshold`, {
+      const response = await fetch(`https://digitalasset.zenapi.co.in/api/automation/alerts/statistics?dateFrom=${dateFrom}&dateTo=${dateTo}&alertType=performance_threshold`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -480,7 +480,7 @@ export function EnhancedDashboard({
         cooldown: ruleForm.cooldown
       }
       
-      const response = await fetch('http://192.168.0.5:5021/api/automation/alerts/rules', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/automation/alerts/rules', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

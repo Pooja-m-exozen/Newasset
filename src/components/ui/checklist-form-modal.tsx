@@ -208,7 +208,7 @@ export default function ChecklistFormModal({
             priority: formData.priority
           }
 
-          response = await fetch(`http://192.168.0.5:5021/api/checklists/${editingChecklist._id}`, {
+          response = await fetch(`https://digitalasset.zenapi.co.in/api/checklists/${editingChecklist._id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -221,7 +221,7 @@ export default function ChecklistFormModal({
           // CREATE MODE: Use POST method to create new checklist
           console.log('Creating new checklist')
           
-          response = await fetch('http://192.168.0.5:5021/api/checklists', {
+          response = await fetch('https://digitalasset.zenapi.co.in/api/checklists', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -430,7 +430,7 @@ export default function ChecklistFormModal({
             updatedAt: new Date().toISOString()
           }
 
-          const response = await fetch('http://192.168.0.5:5021/api/checklists', {
+          const response = await fetch('https://digitalasset.zenapi.co.in/api/checklists', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

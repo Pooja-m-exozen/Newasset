@@ -133,7 +133,7 @@ export function DigitalAssetModal({
         return
       }
 
-      const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+      const qrUrl = `https://digitalasset.zenapi.co.in${asset.digitalAssets.qrCode.url}`
       const response = await fetch(qrUrl)
       
       if (!response.ok) {
@@ -163,7 +163,7 @@ export function DigitalAssetModal({
         return
       }
 
-      const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+      const barcodeUrl = `https://digitalasset.zenapi.co.in${asset.digitalAssets.barcode.url}`
       const response = await fetch(barcodeUrl)
       
       if (!response.ok) {
@@ -191,7 +191,7 @@ export function DigitalAssetModal({
     if (asset.digitalAssets?.qrCode?.url) {
       setModalQrLoading(true)
       try {
-        const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+        const qrUrl = `https://digitalasset.zenapi.co.in${asset.digitalAssets.qrCode.url}`
         console.log('Loading modal QR Code:', qrUrl)
         const response = await fetch(qrUrl)
         if (!response.ok) throw new Error('QR fetch failed')
@@ -211,7 +211,7 @@ export function DigitalAssetModal({
     if (asset.digitalAssets?.barcode?.url) {
       setModalBarcodeLoading(true)
       try {
-        const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+        const barcodeUrl = `https://digitalasset.zenapi.co.in${asset.digitalAssets.barcode.url}`
         console.log('Loading modal Barcode:', barcodeUrl)
         const response = await fetch(barcodeUrl)
         if (!response.ok) throw new Error('Barcode fetch failed')

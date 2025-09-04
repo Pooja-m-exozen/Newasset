@@ -44,7 +44,7 @@ export default function ViewerDashboard() {
         throw new Error('Authentication token not found')
       }
 
-      const response = await fetch('http://192.168.0.5:5021/api/assets', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/assets', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -93,7 +93,7 @@ export default function ViewerDashboard() {
         throw new Error('Authentication token not found')
       }
 
-      const response = await fetch('http://192.168.0.5:5021/api/checklists', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/checklists', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

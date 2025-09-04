@@ -64,7 +64,7 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
         return
       }
 
-      const response = await fetch('http://192.168.0.5:5021/api/assets', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/assets', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

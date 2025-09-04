@@ -143,7 +143,7 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
       let assetId = qrCodeData
       
       // Handle different QR code data formats
-      if (qrCodeData.includes('http://192.168.0.5:5021/uploads/digital-assets/qr_')) {
+      if (qrCodeData.includes('https://digitalasset.zenapi.co.in/uploads/digital-assets/qr_')) {
         // Extract tagId from the specific path format
         const pathMatch = qrCodeData.match(/qr_([^_]+)_\d+\.png/)
         if (pathMatch) {
@@ -170,7 +170,7 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
       
       // Generate the correct QR code path using the specific format
       const timestamp = Date.now()
-      const qrCodePath = `http://192.168.0.5:5021/uploads/digital-assets/qr_${asset.tagId}_${timestamp}.png`
+      const qrCodePath = `https://digitalasset.zenapi.co.in/uploads/digital-assets/qr_${asset.tagId}_${timestamp}.png`
       
       console.log('🖼️ Generated QR code path:', qrCodePath)
       
@@ -253,7 +253,7 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
   // Test function for manual QR code processing (for development)
   const testQRCodeProcessing = () => {
     // Test with the specific path format you provided
-    const testQRData = 'http://192.168.0.5:5021/uploads/digital-assets/qr_ASSET555_1754296433008.png'
+    const testQRData = 'https://digitalasset.zenapi.co.in/uploads/digital-assets/qr_ASSET555_1754296433008.png'
     processScannedCode(testQRData)
   }
 
@@ -356,7 +356,7 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
                   Test ASSET555
                 </Button>
                 <Button 
-                  onClick={() => setManualInput('http://192.168.0.5:5021/uploads/digital-assets/qr_ASSET555_1754296433008.png')}
+                  onClick={() => setManualInput('https://digitalasset.zenapi.co.in/uploads/digital-assets/qr_ASSET555_1754296433008.png')}
                   variant="outline"
                   size="sm"
                   className="text-xs"
@@ -556,7 +556,7 @@ export function QRCodeScanner({ className }: QRCodeScannerProps) {
                       onError={(e) => {
                         console.error('Failed to load QR code image:', currentScannedAsset.qrCodeUrl)
                         // Try alternative path format
-                        const alternativePath = `http://192.168.0.5:5021/uploads/digital-assets/qr_${currentScannedAsset.asset.tagId}_${Date.now()}.png`
+                        const alternativePath = `https://digitalasset.zenapi.co.in/uploads/digital-assets/qr_${currentScannedAsset.asset.tagId}_${Date.now()}.png`
                         e.currentTarget.src = alternativePath
                       }}
                       onLoad={() => {

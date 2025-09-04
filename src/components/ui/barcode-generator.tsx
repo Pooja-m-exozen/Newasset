@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import Image from 'next/image'
 
 // API Base URL constant
-const API_BASE_URL = 'http://192.168.0.5:5021'
+const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
 
 interface BarcodeGeneratorProps {
   className?: string;
@@ -84,7 +84,7 @@ export function BarcodeGenerator({ className }: BarcodeGeneratorProps) {
         return
       }
 
-      const response = await fetch('http://192.168.0.5:5021/api/assets', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/assets', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

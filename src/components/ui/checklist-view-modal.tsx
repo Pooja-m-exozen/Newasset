@@ -94,7 +94,7 @@ export default function ChecklistViewModal({ isOpen, onClose, checklist, onCheck
   const [scannedResult, setScannedResult] = useState<string | null>(null)
   const [showScanResultPopup, setShowScanResultPopup] = useState(false)
 
-  const API_BASE_URL = 'http://192.168.0.5:5021'
+  const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
   const hasQRCode = checklist?.qrCode?.url
 
   // Auto-refresh checklist data when modal opens to show latest information

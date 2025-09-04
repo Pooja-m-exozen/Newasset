@@ -40,6 +40,7 @@ interface AssetFormData {
   tagId: string;
   assetType: string;
   subcategory: string;
+  mobilityCategory: string;
   brand: string;
   model: string;
   serialNumber: string;
@@ -97,7 +98,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const { user } = useAuth();
   // Form state
   const [formData, setFormData] = useState({
-    tagId: '', assetType: '', subcategory: '', brand: '', model: '', serialNumber: '', capacity: '', yearOfInstallation: '',
+    tagId: '', assetType: '', subcategory: '', mobilityCategory: '', brand: '', model: '', serialNumber: '', capacity: '', yearOfInstallation: '',
     project: { projectId: '', projectName: '' }, assignedTo: '', priority: '', status: '', digitalTagType: '',
     tags: [] as string[], notes: '', customFields: {} as Record<string, string>,
     location: { latitude: '0', longitude: '0', building: '', floor: '', room: '' }
@@ -141,7 +142,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const fetchProjects = useCallback(async () => {
     setLoadingProjects(true);
     try {
-      const response = await fetch('http://192.168.0.5:5021/api/projects', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/projects', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
@@ -177,7 +178,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       }
 
       // Try to fetch users with project filter first
-      let response = await fetch(`http://192.168.0.5:5021/api/admin?projectName=${encodeURIComponent(user.projectName)}`, {
+      let response = await fetch(`https://digitalasset.zenapi.co.in/api/admin?projectName=${encodeURIComponent(user.projectName)}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
@@ -199,7 +200,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       } else {
         // Fallback: fetch all users and filter client-side
         console.log('Project filter query failed, falling back to client-side filtering');
-        response = await fetch('http://192.168.0.5:5021/api/admin', {
+        response = await fetch('https://digitalasset.zenapi.co.in/api/admin', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'application/json'
@@ -233,7 +234,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     setLoadingUsers(true);
     try {
       // Try to fetch users with project filter first
-      let response = await fetch(`http://192.168.0.5:5021/api/admin?projectName=${encodeURIComponent(projectName)}`, {
+      let response = await fetch(`https://digitalasset.zenapi.co.in/api/admin?projectName=${encodeURIComponent(projectName)}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
@@ -255,7 +256,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       } else {
         // Fallback: fetch all users and filter client-side
         console.log('Project filter query failed, falling back to client-side filtering');
-        response = await fetch('http://192.168.0.5:5021/api/admin', {
+        response = await fetch('https://digitalasset.zenapi.co.in/api/admin', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'application/json'
@@ -339,7 +340,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       if (asset && mode === 'edit') {
         // Edit mode: populate with existing asset data
         setFormData({
-          tagId: asset.tagId || '', assetType: asset.assetType || '', subcategory: asset.subcategory || '',
+          tagId: asset.tagId || '', assetType: asset.assetType || '', subcategory: asset.subcategory || '', mobilityCategory: asset.mobilityCategory || '',
           brand: asset.brand || '', model: asset.model || '', serialNumber: asset.serialNumber || '',
           capacity: asset.capacity || '', yearOfInstallation: asset.yearOfInstallation || '',
           project: { projectId: asset.project?.projectId || '', projectName: asset.project?.projectName || '' },
@@ -649,6 +650,11 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       return;
     }
     
+    if (!formData.mobilityCategory?.trim()) {
+      alert('Please select a mobility category for this asset.');
+      return;
+    }
+    
     // Validate project data is set from logged-in user
     if (!formData.project.projectName) {
       alert('Please select a project for this asset.');
@@ -935,6 +941,32 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   placeholder="e.g., computer"
                   className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="mobilityCategory" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Mobility Category *</Label>
+                <Select 
+                  value={formData.mobilityCategory} 
+                  onValueChange={(value) => handleInputChange('mobilityCategory', value)}
+                >
+                  <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                    <SelectValue placeholder="Select mobility category" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <SelectItem value="movable" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-green-600 rounded-sm"></div>
+                        <span>Movable</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="immovable" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-red-600 rounded-sm"></div>
+                        <span>Immovable</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>

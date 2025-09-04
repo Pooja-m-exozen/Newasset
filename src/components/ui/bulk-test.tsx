@@ -28,7 +28,7 @@ export function BulkTest() {
     try {
       // Test 1: API Connection
       console.log('🧪 Testing API connection...')
-      const connectionTest = await fetch('http://192.168.0.5:5021/api/health', {
+      const connectionTest = await fetch('https://digitalasset.zenapi.co.in/api/health', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,

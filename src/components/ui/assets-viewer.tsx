@@ -28,7 +28,7 @@ import NextImage from 'next/image'
  
 
 // API Base URL constant
-const API_BASE_URL = 'http://192.168.0.5:5021/api'
+const API_BASE_URL = 'https://digitalasset.zenapi.co.in/api'
 
 interface AssetsResponse {
   success?: boolean
@@ -134,19 +134,19 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
   // Helper to extract safely stored digital asset URLs for display
   const getQrUrl = (asset: Asset): string | null => {
     return asset?.digitalAssets?.qrCode?.url 
-      ? `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}` 
+      ? `https://digitalasset.zenapi.co.in${asset.digitalAssets.qrCode.url}` 
       : null
   }
 
   const getBarcodeUrl = (asset: Asset): string | null => {
     return asset?.digitalAssets?.barcode?.url 
-      ? `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}` 
+      ? `https://digitalasset.zenapi.co.in${asset.digitalAssets.barcode.url}` 
       : null
   }
 
   const getNfcUrl = (asset: Asset): string | null => {
     return asset?.digitalAssets?.nfcData?.url 
-      ? `http://192.168.0.5:5021${asset.digitalAssets.nfcData.url}` 
+      ? `https://digitalasset.zenapi.co.in${asset.digitalAssets.nfcData.url}` 
       : null
   }
 

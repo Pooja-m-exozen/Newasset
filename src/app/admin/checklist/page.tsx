@@ -126,7 +126,7 @@ export default function ChecklistPage() {
           return
         }
 
-        const response = await fetch('http://192.168.0.5:5021/api/checklists', {
+        const response = await fetch('https://digitalasset.zenapi.co.in/api/checklists', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -171,7 +171,7 @@ export default function ChecklistPage() {
           return
         }
 
-        const response = await fetch('http://192.168.0.5:5021/api/checklists', {
+        const response = await fetch('https://digitalasset.zenapi.co.in/api/checklists', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -265,7 +265,7 @@ export default function ChecklistPage() {
         return
       }
 
-      const response = await fetch(`http://192.168.0.5:5021/api/checklists/${id}`, {
+      const response = await fetch(`https://digitalasset.zenapi.co.in/api/checklists/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

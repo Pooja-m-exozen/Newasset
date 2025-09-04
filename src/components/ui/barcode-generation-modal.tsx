@@ -18,7 +18,7 @@ interface BarcodeGenerationModalProps {
   onGenerated: (updatedAsset: Asset) => void
 }
 
-const API_BASE_URL = 'http://192.168.0.5:5021'
+const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
 
 const BARCODE_FORMATS = [
   { value: 'code128', label: 'Code 128', description: 'Most common format, supports all ASCII characters' },

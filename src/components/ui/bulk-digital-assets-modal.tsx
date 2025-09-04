@@ -30,7 +30,7 @@ interface BulkDigitalAssetsModalProps {
   onGenerated: (updatedAsset: Asset) => void
 }
 
-const API_BASE_URL = 'http://192.168.0.5:5021'
+const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
 
 interface DigitalAssetResult {
   type: 'qr' | 'barcode' | 'nfc'

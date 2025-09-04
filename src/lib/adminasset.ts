@@ -1,6 +1,6 @@
-const API_BASE_URL = 'http://192.168.0.5:5021/api'
+const API_BASE_URL = 'https://digitalasset.zenapi.co.in/api'
 
-// Types for Asset Management
+// Types for Asset Management - Updated with mobilityCategory
 export interface Location {
   latitude: string;
   longitude: string;
@@ -104,6 +104,7 @@ export interface Asset {
   tagId: string;
   assetType: string;
   subcategory?: string;
+  mobilityCategory?: string;
   brand: string;
   model?: string;
   serialNumber?: string;

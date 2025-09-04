@@ -119,7 +119,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const API_BASE_URL = 'http://192.168.0.5:5021';
+  const API_BASE_URL = 'https://digitalasset.zenapi.co.in';
   const hasDigitalAssets = asset?.digitalAssets?.qrCode;
   const qrCodeData = asset?.digitalAssets?.qrCode?.data;
 

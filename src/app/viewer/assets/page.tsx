@@ -169,7 +169,7 @@ export default function AssetsPage() {
     if (asset.digitalAssets?.qrCode?.url) {
       setViewModalQrLoading(true)
       try {
-        const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+        const qrUrl = `https://digitalasset.zenapi.co.in${asset.digitalAssets.qrCode.url}`
         const response = await fetch(qrUrl)
         if (!response.ok) throw new Error('QR fetch failed')
         const blob = await response.blob()
@@ -187,7 +187,7 @@ export default function AssetsPage() {
     if (asset.digitalAssets?.barcode?.url) {
       setViewModalBarcodeLoading(true)
       try {
-        const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+        const barcodeUrl = `https://digitalasset.zenapi.co.in${asset.digitalAssets.barcode.url}`
         const response = await fetch(barcodeUrl)
         if (!response.ok) throw new Error('Barcode fetch failed')
         const blob = await response.blob()
@@ -313,9 +313,9 @@ Project:
 - Project Name: ${asset.project?.projectName || 'N/A'}
 
 Digital Assets:
-- QR Code: ${asset.digitalAssets?.qrCode?.url ? `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}` : 'N/A'}
-- Barcode: ${asset.digitalAssets?.barcode?.url ? `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}` : 'N/A'}
-- NFC Data: ${asset.digitalAssets?.nfcData?.url ? `http://192.168.0.5:5021${asset.digitalAssets.nfcData.url}` : 'N/A'}
+- QR Code: ${asset.digitalAssets?.qrCode?.url ? `https://digitalasset.zenapi.co.in${asset.digitalAssets.qrCode.url}` : 'N/A'}
+- Barcode: ${asset.digitalAssets?.barcode?.url ? `https://digitalasset.zenapi.co.in${asset.digitalAssets.barcode.url}` : 'N/A'}
+- NFC Data: ${asset.digitalAssets?.nfcData?.url ? `https://digitalasset.zenapi.co.in${asset.digitalAssets.nfcData.url}` : 'N/A'}
 
 Timestamps:
 - Created: ${new Date(asset.createdAt).toLocaleString()}
@@ -345,7 +345,7 @@ Timestamps:
         return
       }
 
-      const qrUrl = `http://192.168.0.5:5021${asset.digitalAssets.qrCode.url}`
+      const qrUrl = `https://digitalasset.zenapi.co.in${asset.digitalAssets.qrCode.url}`
       const response = await fetch(qrUrl)
       
       if (!response.ok) {
@@ -375,7 +375,7 @@ Timestamps:
         return
       }
 
-      const barcodeUrl = `http://192.168.0.5:5021${asset.digitalAssets.barcode.url}`
+      const barcodeUrl = `https://digitalasset.zenapi.co.in${asset.digitalAssets.barcode.url}`
       const response = await fetch(barcodeUrl)
       
       if (!response.ok) {
@@ -412,7 +412,7 @@ Timestamps:
       const userProjectName = localStorage.getItem('userProject') || sessionStorage.getItem('userProject')
       setUserProject(userProjectName)
       
-      const response = await fetch('http://192.168.0.5:5021/api/assets', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/assets', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

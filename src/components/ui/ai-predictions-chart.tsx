@@ -78,7 +78,6 @@ export function AIPredictionsChart({
       low: predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length
     }
 
-    // Asset type distribution - dynamic detection from actual data
     const assetTypeCounts: Record<string, number> = {}
     predictions.forEach((p: Prediction) => {
       const assetType = p.assetType || 'Unknown'

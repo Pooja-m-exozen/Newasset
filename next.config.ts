@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // basePath: '/v1/asset', // Commented out for development
+  // Only apply basePath in production
+  ...(process.env.NODE_ENV === 'production' && { basePath: '/v1/asset' }),
   images: {
     remotePatterns: [
       {

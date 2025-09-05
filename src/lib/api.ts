@@ -1,5 +1,7 @@
 // API service for authentication
-const API_BASE_URL = 'https://digitalasset.zenapi.co.in/api'
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://digitalasset.zenapi.co.in/api'
+  : 'https://digitalasset.zenapi.co.in/api'
 
 export interface LoginRequest {
   email: string

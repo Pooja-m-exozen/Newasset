@@ -128,7 +128,36 @@ For testing purposes, you can use these demo credentials:
 
 ## API Configuration
 
-The application expects the API to be running at `http://localhost:3001/api` by default. You can change this by setting the `NEXT_PUBLIC_API_URL` environment variable.
+The application is configured to work with the production API at `https://digitalasset.zenapi.co.in/api`. 
+
+### Environment Configuration
+
+- **Development**: Runs locally at `http://localhost:3000` (no basePath)
+- **Production**: Deployed at `https://exozen.co.in/v1/asset` (with basePath automatically applied)
+
+### Deployment Configuration
+
+The application automatically handles different environments:
+
+1. **Development**: No basePath, accessible at `http://localhost:3000/login`
+2. **Production**: BasePath `/v1/asset` automatically applied, accessible at `https://exozen.co.in/v1/asset/login`
+3. **API Endpoints**: All API calls point to `https://digitalasset.zenapi.co.in/api`
+4. **Routing**: Uses Next.js router for proper basePath handling
+
+### Troubleshooting Login Issues
+
+**Local Development (http://localhost:3000):**
+- Login page should be accessible at `http://localhost:3000/login`
+- No basePath applied in development mode
+
+**Production (https://exozen.co.in/v1/asset):**
+- Login page should be accessible at `https://exozen.co.in/v1/asset/login`
+- BasePath is automatically applied in production mode
+
+**Common Issues:**
+1. If you get "page not found" locally, restart the development server after config changes
+2. Ensure the application is deployed at the correct path: `https://exozen.co.in/v1/asset`
+3. Check that all redirects use Next.js router instead of `window.location.href`
 
 ### Expected API Response Format
 

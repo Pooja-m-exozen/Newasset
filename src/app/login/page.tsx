@@ -10,6 +10,7 @@ import { Eye, EyeOff, ArrowRight, History, Calendar, Lock, Mail, Shield, Zap, Bu
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
 import { useToast, ToastContainer } from "@/components/ui/toast"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 export default function LoginPage() {
@@ -23,6 +24,7 @@ export default function LoginPage() {
 
   const { login } = useAuth()
   const { toasts, addToast, removeToast } = useToast()
+  const router = useRouter()
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -72,9 +74,9 @@ export default function LoginPage() {
       // Use the user data returned from login function
       setTimeout(() => {
         if (loginResult?.role === 'viewer') {
-          window.location.href = "/viewer/dashboard"
+          router.push("/viewer/dashboard")
         } else {
-          window.location.href = "/admin/dashboard"
+          router.push("/admin/dashboard")
         }
       }, 2000)
 

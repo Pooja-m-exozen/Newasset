@@ -79,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('userProject')
     localStorage.removeItem('rememberMe')
     setUser(null)
+    // Use window.location for logout to ensure complete page reload and clear any cached state
     window.location.href = '/login'
   }
 

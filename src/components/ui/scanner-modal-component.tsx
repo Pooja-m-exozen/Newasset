@@ -161,8 +161,14 @@ export function ScannerModal({
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const scaledCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationIdRef = useRef<number | null>(null)
   const [copied, setCopied] = useState(false)
+  const processingFrameRef = useRef(false)
+  // Use native BarcodeDetector if available for faster/more reliable scanning
+  const barcodeDetectorRef = useRef<null | { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> }>(null)
+  const lastProcessTimeRef = useRef(0)
+  const PROCESS_INTERVAL_MS = 80
 
   // Debug logging for assets
   useEffect(() => {
@@ -198,6 +204,51 @@ export function ScannerModal({
           await videoRef.current.play()
           // Set camera as ready after video starts playing
           setIsCameraReady(true)
+          // Try to enable continuous focus/zoom if supported for better clarity
+          try {
+            const [track] = stream.getVideoTracks()
+            const capabilitiesUnknown = (track.getCapabilities && track.getCapabilities()) as unknown
+            if (capabilitiesUnknown && typeof capabilitiesUnknown === 'object') {
+              const capabilities = capabilitiesUnknown as Record<string, unknown>
+              const advanced: Array<Record<string, unknown>> = []
+              if (Object.prototype.hasOwnProperty.call(capabilities, 'focusMode')) {
+                const adv: Record<string, unknown> = {}
+                adv['focusMode'] = 'continuous'
+                advanced.push(adv)
+              }
+              if (Object.prototype.hasOwnProperty.call(capabilities, 'zoom')) {
+                const caps = capabilitiesUnknown as { zoom?: { max?: number; min?: number } }
+                const desired = Math.min((caps.zoom?.max ?? 2), 2)
+                const advZoom: Record<string, unknown> = {}
+                advZoom['zoom'] = desired
+                advanced.push(advZoom)
+              }
+              // Try enabling torch if available (helps in low light)
+              if (Object.prototype.hasOwnProperty.call(capabilities, 'torch')) {
+                const advTorch: Record<string, unknown> = {}
+                advTorch['torch'] = true
+                advanced.push(advTorch)
+              }
+              if (advanced.length > 0) {
+                await track.applyConstraints({ advanced } as unknown as MediaTrackConstraints)
+              }
+            }
+          } catch (e) {
+            // Ignore capability errors silently
+          }
+          // Initialize BarcodeDetector if supported
+          try {
+            if (typeof window !== 'undefined') {
+              const maybeDetector = (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector
+              if (maybeDetector) {
+                barcodeDetectorRef.current = new maybeDetector({ formats: ['qr_code'] })
+              } else {
+                barcodeDetectorRef.current = null
+              }
+            }
+          } catch {
+            barcodeDetectorRef.current = null
+          }
           // Kick off live scan loop
           if (animationIdRef.current) {
             cancelAnimationFrame(animationIdRef.current)
@@ -238,7 +289,7 @@ export function ScannerModal({
   }
 
   // Live scan loop using requestAnimationFrame
-  const scanVideoFrame = () => {
+  const scanVideoFrame = async () => {
     try {
       if (!isScanning || !videoRef.current) {
         return
@@ -247,11 +298,25 @@ export function ScannerModal({
       const video = videoRef.current
       // Ensure we have enough data to process
       if (video.readyState >= 2 /* HAVE_CURRENT_DATA */) {
+        if (processingFrameRef.current) {
+          return
+        }
+        const now = performance.now()
+        if (now - lastProcessTimeRef.current < PROCESS_INTERVAL_MS) {
+          return
+        }
+        lastProcessTimeRef.current = now
+        processingFrameRef.current = true
         // Prepare canvas
         let canvas = canvasRef.current
         if (!canvas) {
           canvas = document.createElement('canvas')
           canvasRef.current = canvas
+        }
+        let scaledCanvas = scaledCanvasRef.current
+        if (!scaledCanvas) {
+          scaledCanvas = document.createElement('canvas')
+          scaledCanvasRef.current = scaledCanvas
         }
         const width = video.videoWidth
         const height = video.videoHeight
@@ -261,8 +326,43 @@ export function ScannerModal({
           const ctx = canvas.getContext('2d')
           if (ctx) {
             ctx.drawImage(video, 0, 0, width, height)
-            const imageData = ctx.getImageData(0, 0, width, height)
-            const code = jsQR(imageData.data, imageData.width, imageData.height)
+            // Prefer native BarcodeDetector when available
+            const detector = barcodeDetectorRef.current
+            if (detector) {
+              try {
+                const results = await detector.detect(video)
+                if (results && results.length > 0 && results[0].rawValue) {
+                  finalizeLiveScan(results[0].rawValue)
+                  return
+                }
+              } catch {
+                // Ignore detector errors; fallback to jsQR
+              }
+            }
+            // Fallback: jsQR on scaled frame for performance
+            const targetWidth = Math.min(720, width)
+            const scale = targetWidth / width
+            const targetHeight = Math.floor(height * scale)
+            if (scaledCanvas.width !== targetWidth) scaledCanvas.width = targetWidth
+            if (scaledCanvas.height !== targetHeight) scaledCanvas.height = targetHeight
+            const sctx = scaledCanvas.getContext('2d')
+            let code = null as ReturnType<typeof jsQR> | null
+            if (sctx) {
+              sctx.drawImage(canvas, 0, 0, width, height, 0, 0, targetWidth, targetHeight)
+              const scaledImage = sctx.getImageData(0, 0, targetWidth, targetHeight)
+              code = jsQR(scaledImage.data, scaledImage.width, scaledImage.height)
+            }
+            if (!code) {
+              // Secondary attempt: center crop on scaled canvas for better signal
+              if (sctx) {
+                const cropW = Math.floor(targetWidth * 0.7)
+                const cropH = Math.floor(targetHeight * 0.7)
+                const cropX = Math.floor((targetWidth - cropW) / 2)
+                const cropY = Math.floor((targetHeight - cropH) / 2)
+                const cropped = sctx.getImageData(cropX, cropY, cropW, cropH)
+                code = jsQR(cropped.data, cropped.width, cropped.height)
+              }
+            }
             if (code && code.data) {
               finalizeLiveScan(code.data)
               return
@@ -273,6 +373,7 @@ export function ScannerModal({
     } catch (err) {
       console.error('Live scan error:', err)
     } finally {
+      processingFrameRef.current = false
       animationIdRef.current = requestAnimationFrame(scanVideoFrame)
     }
   }

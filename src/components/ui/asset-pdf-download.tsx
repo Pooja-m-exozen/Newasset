@@ -50,7 +50,7 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
       try {
         // Load and add the actual logo image
         const logoImg = new Image();
-        logoImg.src = '/exozen_logo1.png';
+        logoImg.src = process.env.NODE_ENV === 'production' ? '/v1/asset/exozen_logo1.png' : '/exozen_logo1.png';
         
         // Wait for image to load
         await new Promise((resolve, reject) => {

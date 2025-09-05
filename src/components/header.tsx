@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
+import { getAssetPath } from "@/lib/asset-utils"
 import {
   Building2,
   Home,
@@ -94,7 +95,7 @@ export default function Header() {
           <div className="flex items-center space-x-4">
             <div className="relative">
               <Image 
-                src="/exozen_logo.png" 
+                src={getAssetPath("/exozen_logo.png")} 
                 alt="Exozen Logo" 
                 width={40}
                 height={40}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
+import { getAssetPath } from "@/lib/asset-utils"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { 
@@ -240,7 +241,7 @@ export default function Sidebar({ className }: SidebarProps) {
           <div className="flex items-center space-x-3">
             <div className="w-7 h-7 flex items-center justify-center">
               <Image 
-                src="/exozen_logo.png" 
+                src={getAssetPath("/exozen_logo.png")} 
                 alt="Exozen Logo" 
                 width={28}
                 height={28}

@@ -945,28 +945,41 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
               <div>
                 <Label htmlFor="mobilityCategory" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Mobility Category *</Label>
-                <Select 
-                  value={formData.mobilityCategory} 
-                  onValueChange={(value) => handleInputChange('mobilityCategory', value)}
-                >
-                  <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                    <SelectValue placeholder="Select mobility category" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                    <SelectItem value="movable" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                <div className="space-y-2">
+                  <Select 
+                    value={formData.mobilityCategory} 
+                    onValueChange={(value) => handleInputChange('mobilityCategory', value)}
+                  >
+                    <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                      <SelectValue placeholder="Select mobility category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                      <SelectItem value="movable" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-green-600 rounded-sm"></div>
+                          <span>Movable</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="immovable" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-red-600 rounded-sm"></div>
+                          <span>Immovable</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {formData.mobilityCategory && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Preview:</span>
                       <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-green-600 rounded-sm"></div>
-                        <span>Movable</span>
+                        <div className={`w-3 h-3 rounded-sm ${formData.mobilityCategory === 'movable' ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                          {formData.mobilityCategory}
+                        </span>
                       </div>
-                    </SelectItem>
-                    <SelectItem value="immovable" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-red-600 rounded-sm"></div>
-                        <span>Immovable</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>

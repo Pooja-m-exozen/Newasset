@@ -409,6 +409,7 @@ const AssetsList: React.FC = () => {
                     <TableRow className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
                       <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Asset ID</TableHead>
                       <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Brand & Model</TableHead>
+                      <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Mobility Category</TableHead>
                       <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Assigned To</TableHead>
                       <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Status</TableHead>
                       <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Priority</TableHead>
@@ -453,6 +454,14 @@ const AssetsList: React.FC = () => {
                         <TableCell className="py-4 px-6">
                           <div className="text-sm font-semibold text-gray-900 dark:text-white">{asset.brand} {asset.model}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{asset.serialNumber}</div>
+                        </TableCell>
+                        <TableCell className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-sm ${asset.mobilityCategory === 'movable' ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                            <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                              {asset.mobilityCategory || 'Not Set'}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell className="py-4 px-6">
                           <div className="text-sm font-semibold text-gray-900 dark:text-white">{asset.assignedTo?.name || 'Unassigned'}</div>

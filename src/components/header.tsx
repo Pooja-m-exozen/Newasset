@@ -99,6 +99,7 @@ export default function Header() {
                 width={40}
                 height={40}
                 className="w-10 h-10 object-contain"
+                priority
               />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
             </div>

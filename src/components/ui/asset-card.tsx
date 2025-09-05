@@ -62,6 +62,12 @@ export const AssetCard: React.FC<AssetCardProps> = ({
               <Tag className="w-4 h-4" />
               <span>{asset.assetType}</span>
             </div>
+            {asset.mobilityCategory && (
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-sm ${asset.mobilityCategory === 'movable' ? 'bg-green-600' : 'bg-red-600'}`}></div>
+                <span className="capitalize">{asset.mobilityCategory}</span>
+              </div>
+            )}
             {asset.location && (
               <div className="flex items-center space-x-2">
                 <MapPin className="w-4 h-4" />

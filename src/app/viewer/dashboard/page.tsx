@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'

@@ -18,7 +18,8 @@ import {
   ChevronDown,
   ChevronUp,
   FileDigit,
-  CheckSquare
+  CheckSquare,
+  QrCode
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -99,6 +100,13 @@ export default function Sidebar({ className }: SidebarProps) {
         icon: CheckSquare,
         href: "/admin/checklist",
         description: "Task checklists and inspections"
+      },
+      {
+        id: "qr-scanner",
+        label: "QR Scanner",
+        icon: QrCode,
+        href: "/admin/checklist/scan",
+        description: "Scan QR codes to execute checklists"
       },
       {
         id: "view-assets",

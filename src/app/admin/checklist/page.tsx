@@ -13,7 +13,8 @@ import {
   Building, 
   MapPin,
   RefreshCw,
-  Eye
+  Eye,
+  QrCode
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ChecklistFormModal from '@/components/ui/checklist-form-modal'
@@ -391,6 +392,14 @@ export default function ChecklistPage() {
               </div>
               
               <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => window.location.href = '/admin/checklist/scan'}
+                  variant="outline"
+                  className="flex items-center gap-2 border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-400 text-blue-700 dark:text-blue-300"
+                >
+                  <QrCode className="w-4 h-4" />
+                  Scan QR Code
+                </Button>
                 <Button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"

@@ -160,6 +160,9 @@ export function ScannerModal({
   } | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const animationIdRef = useRef<number | null>(null)
+  const [copied, setCopied] = useState(false)
 
   // Debug logging for assets
   useEffect(() => {
@@ -195,6 +198,12 @@ export function ScannerModal({
           await videoRef.current.play()
           // Set camera as ready after video starts playing
           setIsCameraReady(true)
+          // Kick off live scan loop
+          if (animationIdRef.current) {
+            cancelAnimationFrame(animationIdRef.current)
+            animationIdRef.current = null
+          }
+          animationIdRef.current = requestAnimationFrame(scanVideoFrame)
         } catch (playError) {
           console.error('Error playing video:', playError)
           throw new Error('Unable to start camera stream')
@@ -210,6 +219,10 @@ export function ScannerModal({
   }
 
   const stopScanner = () => {
+    if (animationIdRef.current) {
+      cancelAnimationFrame(animationIdRef.current)
+      animationIdRef.current = null
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
         track.stop()
@@ -222,6 +235,125 @@ export function ScannerModal({
     }
     setIsScanning(false)
     setIsCameraReady(false)
+  }
+
+  // Live scan loop using requestAnimationFrame
+  const scanVideoFrame = () => {
+    try {
+      if (!isScanning || !videoRef.current) {
+        return
+      }
+
+      const video = videoRef.current
+      // Ensure we have enough data to process
+      if (video.readyState >= 2 /* HAVE_CURRENT_DATA */) {
+        // Prepare canvas
+        let canvas = canvasRef.current
+        if (!canvas) {
+          canvas = document.createElement('canvas')
+          canvasRef.current = canvas
+        }
+        const width = video.videoWidth
+        const height = video.videoHeight
+        if (width && height) {
+          if (canvas.width !== width) canvas.width = width
+          if (canvas.height !== height) canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, width, height)
+            const imageData = ctx.getImageData(0, 0, width, height)
+            const code = jsQR(imageData.data, imageData.width, imageData.height)
+            if (code && code.data) {
+              finalizeLiveScan(code.data)
+              return
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Live scan error:', err)
+    } finally {
+      animationIdRef.current = requestAnimationFrame(scanVideoFrame)
+    }
+  }
+
+  const finalizeLiveScan = (scannedQRContent: string) => {
+    try {
+      if (mode === 'checklists') {
+        const foundChecklist = checklists.find(checklist => 
+          checklist._id === scannedQRContent ||
+          checklist.qrCode?.data === scannedQRContent ||
+          checklist.qrCode?.data?.includes(scannedQRContent) ||
+          scannedQRContent.includes(checklist.qrCode?.data || '')
+        )
+
+        if (foundChecklist) {
+          setScanResult({
+            success: true,
+            assetId: scannedQRContent,
+            asset: foundChecklist,
+            message: `✅ Checklist found: ${foundChecklist.title}`,
+            qrImageData: undefined
+          })
+          onScanResult(scannedQRContent)
+        } else {
+          setScanResult({
+            success: false,
+            assetId: scannedQRContent,
+            message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Checklist not found in system`,
+            qrImageData: undefined
+          })
+        }
+      } else {
+        const foundAsset = assets.find(asset => {
+          const matches = [
+            asset.tagId === scannedQRContent,
+            asset._id === scannedQRContent,
+            asset.digitalAssets?.qrCode?.data?.t === scannedQRContent,
+            asset.digitalAssets?.qrCode?.data?.a === scannedQRContent,
+            asset.digitalAssets?.nfcData?.data?.id === scannedQRContent,
+            asset.tagId.includes(scannedQRContent),
+            scannedQRContent.includes(asset.tagId)
+          ]
+          return matches.some(Boolean)
+        })
+
+        if (foundAsset) {
+          setScanResult({
+            success: true,
+            assetId: scannedQRContent,
+            asset: foundAsset,
+            message: `✅ Asset found: ${foundAsset.tagId}`,
+            qrImageData: undefined
+          })
+          onScanResult(scannedQRContent)
+        } else {
+          setScanResult({
+            success: false,
+            assetId: scannedQRContent,
+            message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Asset not registered in system`,
+            qrImageData: undefined
+          })
+        }
+      }
+    } finally {
+      stopScanner()
+    }
+  }
+
+  const copyScannedCode = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1200)
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
+  }
+
+  const scanAnother = () => {
+    setScanResult(null)
+    startScanner()
   }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -580,6 +712,8 @@ export function ScannerModal({
                         playsInline
                         muted
                       />
+                      {/* Hidden canvas used for decoding frames */}
+                      <canvas ref={canvasRef} className="hidden" />
                       <div className="absolute inset-0 border-2 border-green-400 border-dashed rounded-xl m-4 pointer-events-none">
                         <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-green-400"></div>
                         <div className="absolute top-2 right-2 w-6 h-6 border-r-2 border-t-2 border-green-400"></div>
@@ -937,10 +1071,26 @@ export function ScannerModal({
 
                         {/* Simple Action Buttons */}
                         <div className="flex flex-col space-y-2 pt-4">
-                          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Full Details
-                          </Button>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => onScanResult(scanResult.assetId)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Details
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                              onClick={() => copyScannedCode(scanResult.assetId)}
+                            >
+                              {copied ? 'Copied!' : 'Copy Code'}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                              onClick={scanAnother}
+                            >
+                              Scan Another
+                            </Button>
+                          </div>
                           <Button 
                             variant="outline" 
                             className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"

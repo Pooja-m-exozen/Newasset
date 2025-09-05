@@ -240,7 +240,7 @@ export default function Sidebar({ className }: SidebarProps) {
           <div className="flex items-center space-x-3">
             <div className="w-7 h-7 flex items-center justify-center">
               <Image 
-              src="v1/asset/exozen_logo.png" 
+                src="/exozen_logo.png" 
                 alt="Exozen Logo" 
                 width={28}
                 height={28}

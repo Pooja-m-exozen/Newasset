@@ -94,7 +94,7 @@ export default function Header() {
           <div className="flex items-center space-x-4">
             <div className="relative">
               <Image 
-                src="v1/asset/exozen_logo.png" 
+                src="/exozen_logo.png" 
                 alt="Exozen Logo" 
                 width={40}
                 height={40}

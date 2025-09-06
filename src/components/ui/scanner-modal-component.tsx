@@ -995,16 +995,6 @@ export function ScannerModal({
                       >
                         Stop Camera
                       </Button>
-                      <Button 
-                        onClick={() => {
-                          console.log('Manual test - simulating QR detection')
-                          finalizeLiveScan('TEST_QR_CODE_123')
-                        }}
-                        variant="outline"
-                        className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
-                      >
-                        Test Scan
-                      </Button>
                     </div>
                   </div>
                 )}

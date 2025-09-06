@@ -122,6 +122,8 @@ export function ScannerModal({
   const [isCameraReady, setIsCameraReady] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<File | null>(null)
   const [uploadPreview, setUploadPreview] = useState<string | null>(null)
+  const [scanningError, setScanningError] = useState<string | null>(null)
+  const [scanAttempts, setScanAttempts] = useState(0)
   const [scanResult, setScanResult] = useState<{
     success: boolean
     assetId: string
@@ -169,6 +171,7 @@ export function ScannerModal({
   const barcodeDetectorRef = useRef<null | { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> }>(null)
   const lastProcessTimeRef = useRef(0)
   const PROCESS_INTERVAL_MS = 80
+  const MAX_SCAN_ATTEMPTS = 200 // Stop after ~16 seconds (200 * 80ms)
 
   // Debug logging for assets
   useEffect(() => {
@@ -183,6 +186,8 @@ export function ScannerModal({
     try {
       setIsScanning(true)
       setIsCameraReady(false)
+      setScanningError(null)
+      setScanAttempts(0)
       
       // Check if camera is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -257,7 +262,7 @@ export function ScannerModal({
     } catch (error) {
       console.error('Error starting scanner:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unable to access camera'
-      alert(`Camera Error: ${errorMessage}. Please check permissions and try again.`)
+      setScanningError(`Camera Error: ${errorMessage}. Please check permissions and try again.`)
       setIsScanning(false)
       setIsCameraReady(false)
     }
@@ -280,6 +285,8 @@ export function ScannerModal({
     }
     setIsScanning(false)
     setIsCameraReady(false)
+    setScanningError(null)
+    setScanAttempts(0)
   }
 
   // Live scan loop using requestAnimationFrame
@@ -301,6 +308,18 @@ export function ScannerModal({
         }
         lastProcessTimeRef.current = now
         processingFrameRef.current = true
+        
+        // Increment scan attempts for timeout detection
+        setScanAttempts(prev => {
+          const newAttempts = prev + 1
+          // Auto-stop if too many attempts without success
+          if (newAttempts > MAX_SCAN_ATTEMPTS) {
+            setScanningError('No QR code detected. Please ensure the QR code is clearly visible and try again.')
+            stopScanner()
+            return newAttempts
+          }
+          return newAttempts
+        })
         // Prepare canvas
         let canvas = canvasRef.current
         if (!canvas) {
@@ -366,6 +385,7 @@ export function ScannerModal({
       }
     } catch (err) {
       console.error('Live scan error:', err)
+      setScanningError('Scanner error occurred. Please try again.')
     } finally {
       processingFrameRef.current = false
       animationIdRef.current = requestAnimationFrame(scanVideoFrame)
@@ -735,6 +755,8 @@ export function ScannerModal({
     setUploadPreview(null)
     setIsScanning(false)
     setIsCameraReady(false)
+    setScanningError(null)
+    setScanAttempts(0)
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
@@ -845,6 +867,30 @@ export function ScannerModal({
                       )}
                     </div>
                     
+                    {/* Scanning Status and Error Messages */}
+                    {scanningError && (
+                      <div className="bg-red-50 rounded-lg p-3 border border-red-200 mb-4">
+                        <div className="flex items-center gap-2 text-red-700">
+                          <X className="w-4 h-4" />
+                          <span className="text-sm font-medium">Scanner Error</span>
+                        </div>
+                        <p className="text-xs text-red-600 mt-1">{scanningError}</p>
+                      </div>
+                    )}
+
+                    {/* Scanning Progress Feedback */}
+                    {isScanning && !scanningError && scanAttempts > 50 && (
+                      <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200 mb-4">
+                        <div className="flex items-center gap-2 text-yellow-700">
+                          <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="text-sm font-medium">Looking for QR Code...</span>
+                        </div>
+                        <p className="text-xs text-yellow-600 mt-1">
+                          Make sure the QR code is clearly visible and well-lit
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex gap-3">
                       <Button 
                         onClick={stopScanner}

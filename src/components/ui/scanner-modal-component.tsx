@@ -181,6 +181,34 @@ export function ScannerModal({
     }
   }, [assets])
 
+  // Test QR detection function
+  const testQRDetection = () => {
+    console.log('Testing QR detection...')
+    console.log('jsQR available:', typeof jsQR)
+    console.log('BarcodeDetector available:', typeof window !== 'undefined' && 'BarcodeDetector' in window)
+    
+    // Test jsQR with a simple canvas
+    try {
+      const testCanvas = document.createElement('canvas')
+      testCanvas.width = 100
+      testCanvas.height = 100
+      const testCtx = testCanvas.getContext('2d')
+      if (testCtx) {
+        testCtx.fillStyle = 'white'
+        testCtx.fillRect(0, 0, 100, 100)
+        const testImageData = testCtx.getImageData(0, 0, 100, 100)
+        const testResult = jsQR(testImageData.data, testImageData.width, testImageData.height)
+        console.log('jsQR test result:', testResult)
+      }
+    } catch (error) {
+      console.error('jsQR test error:', error)
+    }
+  }
+
+  useEffect(() => {
+    testQRDetection()
+  }, [])
+
   // Scanner functions
   const startScanner = async () => {
     try {
@@ -299,7 +327,7 @@ export function ScannerModal({
 
       const video = videoRef.current
       // Ensure we have enough data to process
-      if (video.readyState >= 2 /* HAVE_CURRENT_DATA */) {
+      if (video.readyState >= 2 /* HAVE_CURRENT_DATA */ && video.videoWidth > 0 && video.videoHeight > 0) {
         if (processingFrameRef.current) {
           return
         }
@@ -321,6 +349,11 @@ export function ScannerModal({
           }
           return newAttempts
         })
+        
+        // Debug logging every 100 attempts
+        if (scanAttempts % 100 === 0) {
+          console.log(`Scanning attempt ${scanAttempts}, video ready: ${video.readyState}, dimensions: ${video.videoWidth}x${video.videoHeight}`)
+        }
         // Prepare canvas
         let canvas = canvasRef.current
         if (!canvas) {
@@ -332,14 +365,20 @@ export function ScannerModal({
           scaledCanvas = document.createElement('canvas')
           scaledCanvasRef.current = scaledCanvas
         }
-        const width = video.videoWidth
-        const height = video.videoHeight
-        if (width && height) {
+        const width = video.videoWidth || video.clientWidth
+        const height = video.videoHeight || video.clientHeight
+        console.log(`Video dimensions: ${width}x${height}, readyState: ${video.readyState}`)
+        
+        if (width && height && width > 0 && height > 0) {
           if (canvas.width !== width) canvas.width = width
           if (canvas.height !== height) canvas.height = height
           const ctx = canvas.getContext('2d')
           if (ctx) {
             ctx.drawImage(video, 0, 0, width, height)
+            // Only log canvas drawing every 100 attempts to avoid spam
+            if (scanAttempts % 100 === 0) {
+              console.log('Canvas drawn successfully, size:', canvas.width, 'x', canvas.height)
+            }
             // Prefer native BarcodeDetector when available (fastest method)
             const detector = barcodeDetectorRef.current
             if (detector) {
@@ -415,6 +454,11 @@ export function ScannerModal({
             }
           }
         }
+      } else {
+        // Fallback: try to scan even if video dimensions are not perfect
+        if (video.readyState >= 1 && scanAttempts % 50 === 0) {
+          console.log('Video not ready for processing, readyState:', video.readyState, 'dimensions:', video.videoWidth, 'x', video.videoHeight)
+        }
       }
     } catch (err) {
       console.error('Live scan error:', err)
@@ -423,6 +467,59 @@ export function ScannerModal({
       processingFrameRef.current = false
       animationIdRef.current = requestAnimationFrame(scanVideoFrame)
     }
+  }
+
+  // Normalized matching function for QR codes
+  const normalize = (val?: string | null) =>
+    (val || '').toString().trim().toLowerCase()
+
+  const findMatchingAsset = (scannedQRContent: string) => {
+    const scanned = normalize(scannedQRContent)
+    
+    return assets.find(asset => {
+      const candidates = [
+        asset._id,
+        asset.tagId,
+        asset.digitalAssets?.qrCode?.data?.t,
+        asset.digitalAssets?.qrCode?.data?.a,
+        asset.digitalAssets?.qrCode?.data?.s,
+        asset.digitalAssets?.qrCode?.data?.b,
+        asset.digitalAssets?.qrCode?.data?.m,
+        asset.digitalAssets?.qrCode?.data?.st,
+        asset.digitalAssets?.qrCode?.data?.p,
+        asset.digitalAssets?.qrCode?.data?.u,
+        asset.digitalAssets?.qrCode?.data?.pr,
+        asset.digitalAssets?.qrCode?.data?.lm,
+        asset.digitalAssets?.qrCode?.data?.nm,
+        asset.digitalAssets?.qrCode?.data?.url,
+        asset.digitalAssets?.nfcData?.data?.id,
+        asset.digitalAssets?.nfcData?.data?.type,
+        asset.digitalAssets?.nfcData?.data?.assetType,
+        asset.digitalAssets?.nfcData?.data?.brand,
+        asset.digitalAssets?.nfcData?.data?.model,
+        asset.digitalAssets?.nfcData?.data?.status,
+        asset.digitalAssets?.nfcData?.data?.priority,
+      ].map(normalize)
+
+      return candidates.some(c => c && (c === scanned || scanned.includes(c) || c.includes(scanned)))
+    })
+  }
+
+  const findMatchingChecklist = (scannedQRContent: string) => {
+    const scanned = normalize(scannedQRContent)
+    
+    return checklists.find(checklist => {
+      const candidates = [
+        checklist._id,
+        checklist.qrCode?.data,
+        checklist.title,
+        checklist.type,
+        checklist.status,
+        checklist.priority,
+      ].map(normalize)
+
+      return candidates.some(c => c && (c === scanned || scanned.includes(c) || c.includes(scanned)))
+    })
   }
 
   const finalizeLiveScan = (scannedQRContent: string) => {
@@ -447,12 +544,7 @@ export function ScannerModal({
       }
 
       if (mode === 'checklists') {
-        const foundChecklist = checklists.find(checklist => 
-          checklist._id === scannedQRContent ||
-          checklist.qrCode?.data === scannedQRContent ||
-          checklist.qrCode?.data?.includes(scannedQRContent) ||
-          scannedQRContent.includes(checklist.qrCode?.data || '')
-        )
+        const foundChecklist = findMatchingChecklist(scannedQRContent)
 
         if (foundChecklist) {
           setScanResult({
@@ -472,18 +564,7 @@ export function ScannerModal({
           })
         }
       } else {
-        const foundAsset = assets.find(asset => {
-          const matches = [
-            asset.tagId === scannedQRContent,
-            asset._id === scannedQRContent,
-            asset.digitalAssets?.qrCode?.data?.t === scannedQRContent,
-            asset.digitalAssets?.qrCode?.data?.a === scannedQRContent,
-            asset.digitalAssets?.nfcData?.data?.id === scannedQRContent,
-            asset.tagId.includes(scannedQRContent),
-            scannedQRContent.includes(asset.tagId)
-          ]
-          return matches.some(Boolean)
-        })
+        const foundAsset = findMatchingAsset(scannedQRContent)
 
         if (foundAsset) {
           setScanResult({
@@ -575,12 +656,7 @@ export function ScannerModal({
         
         if (mode === 'checklists') {
           // Handle checklist scanning
-          const foundChecklist = checklists.find(checklist => 
-            checklist._id === scannedQRContent ||
-            checklist.qrCode?.data === scannedQRContent ||
-            checklist.qrCode?.data?.includes(scannedQRContent) ||
-            scannedQRContent.includes(checklist.qrCode?.data || '')
-          )
+          const foundChecklist = findMatchingChecklist(scannedQRContent)
           
           if (foundChecklist) {
             // Checklist found - show success
@@ -608,20 +684,7 @@ export function ScannerModal({
           console.log('Searching for asset with content:', scannedQRContent)
           console.log('Available assets:', assets.length)
           
-          const foundAsset = assets.find(asset => {
-            const matches = [
-              asset.tagId === scannedQRContent,
-              asset._id === scannedQRContent,
-              asset.digitalAssets?.qrCode?.data?.t === scannedQRContent,
-              asset.digitalAssets?.qrCode?.data?.a === scannedQRContent,
-              asset.digitalAssets?.nfcData?.data?.id === scannedQRContent,
-              asset.tagId.includes(scannedQRContent),
-            scannedQRContent.includes(asset.tagId)
-            ]
-            
-            console.log('Asset', asset.tagId, 'matches:', matches)
-            return matches.some(match => match)
-          })
+          const foundAsset = findMatchingAsset(scannedQRContent)
           
           if (foundAsset) {
             // Asset found - show success
@@ -931,6 +994,16 @@ export function ScannerModal({
                         className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
                       >
                         Stop Camera
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          console.log('Manual test - simulating QR detection')
+                          finalizeLiveScan('TEST_QR_CODE_123')
+                        }}
+                        variant="outline"
+                        className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                      >
+                        Test Scan
                       </Button>
                     </div>
                   </div>

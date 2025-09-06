@@ -217,27 +217,55 @@ export function ScannerModal({
       setScanningError(null)
       setScanAttempts(0)
       
+      console.log('Starting camera initialization...')
+      
       // Check if camera is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Camera not supported in this browser')
       }
       
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1920, min: 640 },
-          height: { ideal: 1080, min: 480 },
-          frameRate: { ideal: 30, min: 15 }
-        } 
-      })
+      // Try camera access with timeout
+      let stream: MediaStream
+      try {
+        const cameraPromise = navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
+          } 
+        })
+        
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Camera access timeout')), 10000)
+        )
+        
+        stream = await Promise.race([cameraPromise, timeoutPromise])
+      } catch (error) {
+        console.warn('Primary camera request failed, trying fallback...', error)
+        // Fallback to simpler camera request
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true 
+        })
+      }
       
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         try {
           await videoRef.current.play()
-          // Set camera as ready after video starts playing
-          setIsCameraReady(true)
+          console.log('Video started playing successfully')
+          
+          // Wait a bit for video to be ready
+          setTimeout(() => {
+            if (videoRef.current && videoRef.current.readyState >= 2) {
+              setIsCameraReady(true)
+              console.log('Camera marked as ready')
+            } else {
+              console.warn('Video not ready after timeout, but continuing...')
+              setIsCameraReady(true)
+            }
+          }, 1000)
+          
           // Try to enable continuous focus/zoom if supported for better clarity
           try {
             const [track] = stream.getVideoTracks()
@@ -262,6 +290,7 @@ export function ScannerModal({
               }
             }
           } catch (e) {
+            console.warn('Camera capabilities error:', e)
             // Ignore capability errors silently
           }
           // Initialize BarcodeDetector if supported
@@ -285,7 +314,7 @@ export function ScannerModal({
           animationIdRef.current = requestAnimationFrame(scanVideoFrame)
         } catch (playError) {
           console.error('Error playing video:', playError)
-          throw new Error('Unable to start camera stream')
+          throw new Error('Unable to start camera stream. Please check camera permissions.')
         }
       }
     } catch (error) {

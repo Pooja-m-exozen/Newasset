@@ -170,8 +170,8 @@ export function ScannerModal({
   // Use native BarcodeDetector if available for faster/more reliable scanning
   const barcodeDetectorRef = useRef<null | { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> }>(null)
   const lastProcessTimeRef = useRef(0)
-  const PROCESS_INTERVAL_MS = 80
-  const MAX_SCAN_ATTEMPTS = 200 // Stop after ~16 seconds (200 * 80ms)
+  const PROCESS_INTERVAL_MS = 16 // Reduced to ~60fps for maximum responsiveness
+  const MAX_SCAN_ATTEMPTS = 300 // Increased attempts since we scan more frequently
 
   // Debug logging for assets
   useEffect(() => {
@@ -197,8 +197,9 @@ export function ScannerModal({
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920, min: 640 },
+          height: { ideal: 1080, min: 480 },
+          frameRate: { ideal: 30, min: 15 }
         } 
       })
       
@@ -339,44 +340,76 @@ export function ScannerModal({
           const ctx = canvas.getContext('2d')
           if (ctx) {
             ctx.drawImage(video, 0, 0, width, height)
-            // Prefer native BarcodeDetector when available
+            // Prefer native BarcodeDetector when available (fastest method)
             const detector = barcodeDetectorRef.current
             if (detector) {
               try {
                 const results = await detector.detect(video)
                 if (results && results.length > 0 && results[0].rawValue) {
+                  console.log('QR detected via BarcodeDetector:', results[0].rawValue)
                   finalizeLiveScan(results[0].rawValue)
                   return
                 }
-              } catch {
+              } catch (error) {
+                console.warn('BarcodeDetector error:', error)
                 // Ignore detector errors; fallback to jsQR
               }
             }
-            // Fallback: jsQR on scaled frame for performance
-            const targetWidth = Math.min(720, width)
+            // Optimized jsQR scanning with multiple attempts for better detection
+            const targetWidth = Math.min(640, width) // Reduced from 720 for faster processing
             const scale = targetWidth / width
             const targetHeight = Math.floor(height * scale)
             if (scaledCanvas.width !== targetWidth) scaledCanvas.width = targetWidth
             if (scaledCanvas.height !== targetHeight) scaledCanvas.height = targetHeight
             const sctx = scaledCanvas.getContext('2d')
             let code = null as ReturnType<typeof jsQR> | null
+            
             if (sctx) {
+              // First attempt: full scaled image
               sctx.drawImage(canvas, 0, 0, width, height, 0, 0, targetWidth, targetHeight)
               const scaledImage = sctx.getImageData(0, 0, targetWidth, targetHeight)
               code = jsQR(scaledImage.data, scaledImage.width, scaledImage.height)
-            }
-            if (!code) {
-              // Secondary attempt: center crop on scaled canvas for better signal
-              if (sctx) {
-                const cropW = Math.floor(targetWidth * 0.7)
-                const cropH = Math.floor(targetHeight * 0.7)
+              
+              // Second attempt: center crop for better signal
+              if (!code) {
+                const cropW = Math.floor(targetWidth * 0.8)
+                const cropH = Math.floor(targetHeight * 0.8)
                 const cropX = Math.floor((targetWidth - cropW) / 2)
                 const cropY = Math.floor((targetHeight - cropH) / 2)
                 const cropped = sctx.getImageData(cropX, cropY, cropW, cropH)
                 code = jsQR(cropped.data, cropped.width, cropped.height)
               }
+              
+              // Third attempt: smaller crop for very small QR codes
+              if (!code) {
+                const cropW = Math.floor(targetWidth * 0.6)
+                const cropH = Math.floor(targetHeight * 0.6)
+                const cropX = Math.floor((targetWidth - cropW) / 2)
+                const cropY = Math.floor((targetHeight - cropH) / 2)
+                const cropped = sctx.getImageData(cropX, cropY, cropW, cropH)
+                code = jsQR(cropped.data, cropped.width, cropped.height)
+              }
+              
+              // Fourth attempt: quarter sections for edge cases
+              if (!code) {
+                const quarterW = Math.floor(targetWidth / 2)
+                const quarterH = Math.floor(targetHeight / 2)
+                const sections = [
+                  { x: 0, y: 0 },
+                  { x: quarterW, y: 0 },
+                  { x: 0, y: quarterH },
+                  { x: quarterW, y: quarterH }
+                ]
+                
+                for (const section of sections) {
+                  const sectionImage = sctx.getImageData(section.x, section.y, quarterW, quarterH)
+                  code = jsQR(sectionImage.data, sectionImage.width, sectionImage.height)
+                  if (code) break
+                }
+              }
             }
             if (code && code.data) {
+              console.log('QR detected via jsQR:', code.data)
               finalizeLiveScan(code.data)
               return
             }
@@ -879,7 +912,7 @@ export function ScannerModal({
                     )}
 
                     {/* Scanning Progress Feedback */}
-                    {isScanning && !scanningError && scanAttempts > 50 && (
+                    {isScanning && !scanningError && scanAttempts > 30 && (
                       <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200 mb-4">
                         <div className="flex items-center gap-2 text-yellow-700">
                           <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>

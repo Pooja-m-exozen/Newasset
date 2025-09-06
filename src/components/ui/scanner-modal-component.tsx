@@ -223,12 +223,6 @@ export function ScannerModal({
                 advZoom['zoom'] = desired
                 advanced.push(advZoom)
               }
-              // Try enabling torch if available (helps in low light)
-              if (Object.prototype.hasOwnProperty.call(capabilities, 'torch')) {
-                const advTorch: Record<string, unknown> = {}
-                advTorch['torch'] = true
-                advanced.push(advTorch)
-              }
               if (advanced.length > 0) {
                 await track.applyConstraints({ advanced } as unknown as MediaTrackConstraints)
               }
@@ -380,6 +374,25 @@ export function ScannerModal({
 
   const finalizeLiveScan = (scannedQRContent: string) => {
     try {
+      // Capture the current video frame as QR code image
+      let qrImageData: string | undefined = undefined
+      if (videoRef.current && canvasRef.current) {
+        try {
+          const canvas = canvasRef.current
+          const video = videoRef.current
+          const ctx = canvas.getContext('2d')
+          
+          if (ctx) {
+            // Draw current video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            // Convert to data URL for QR code image
+            qrImageData = canvas.toDataURL('image/png')
+          }
+        } catch (error) {
+          console.warn('Could not capture QR code image:', error)
+        }
+      }
+
       if (mode === 'checklists') {
         const foundChecklist = checklists.find(checklist => 
           checklist._id === scannedQRContent ||
@@ -394,7 +407,7 @@ export function ScannerModal({
             assetId: scannedQRContent,
             asset: foundChecklist,
             message: `✅ Checklist found: ${foundChecklist.title}`,
-            qrImageData: undefined
+            qrImageData: qrImageData
           })
           onScanResult(scannedQRContent)
         } else {
@@ -402,7 +415,7 @@ export function ScannerModal({
             success: false,
             assetId: scannedQRContent,
             message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Checklist not found in system`,
-            qrImageData: undefined
+            qrImageData: qrImageData
           })
         }
       } else {
@@ -425,7 +438,7 @@ export function ScannerModal({
             assetId: scannedQRContent,
             asset: foundAsset,
             message: `✅ Asset found: ${foundAsset.tagId}`,
-            qrImageData: undefined
+            qrImageData: qrImageData
           })
           onScanResult(scannedQRContent)
         } else {
@@ -433,7 +446,7 @@ export function ScannerModal({
             success: false,
             assetId: scannedQRContent,
             message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Asset not registered in system`,
-            qrImageData: undefined
+            qrImageData: qrImageData
           })
         }
       }

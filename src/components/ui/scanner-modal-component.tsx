@@ -14,14 +14,19 @@ import {
   MapPin,
   Eye,
   CheckSquare,
-  User
+  User,
+  Calendar,
+  Clock,
+  QrCode
 } from 'lucide-react'
 import jsQR from 'jsqr'
 
 interface ScannerModalProps {
   isOpen: boolean
   onClose: () => void
-  onScanResult: (result: string) => void
+  // After a successful scan, we pass back the full entity (e.g., checklist)
+  // so the parent can store it locally without another GET
+  onScanResult: (result: unknown) => void
   scannedResult?: string | null
   assets?: Array<{
     _id: string
@@ -94,6 +99,7 @@ interface ScannerModalProps {
   checklists?: Array<{
     _id: string
     title: string
+    description?: string
     qrCode: {
       data: string
       url: string
@@ -106,8 +112,19 @@ interface ScannerModalProps {
     type: string
     status: string
     priority: string
+    frequency?: string
+    items?: Array<{
+      _id: string
+      serialNumber: number
+      inspectionItem: string
+      details: string
+      status?: 'pending' | 'completed' | 'failed' | 'not_applicable'
+      remarks?: string
+    }>
   }>
   mode?: 'assets' | 'checklists'
+  // When true, do not create sample checklists and only match within provided lists
+  strictChecklistsOnly?: boolean
 }
 
 export function ScannerModal({ 
@@ -116,7 +133,8 @@ export function ScannerModal({
   onScanResult, 
   assets = [],
   checklists = [],
-  mode = 'assets'
+  mode = 'assets',
+  strictChecklistsOnly = false
 }: ScannerModalProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [isCameraReady, setIsCameraReady] = useState(false)
@@ -167,6 +185,122 @@ export function ScannerModal({
   const animationIdRef = useRef<number | null>(null)
   const [copied, setCopied] = useState(false)
   const processingFrameRef = useRef(false)
+  
+  // Checklist execution state
+  const [checklistItems, setChecklistItems] = useState<Record<string, { status: 'pending' | 'completed' | 'failed' | 'not_applicable', remarks: string }>>({})
+  // Period/grid ticking state
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily')
+  const [ticks, setTicks] = useState<Record<string, Record<number, boolean>>>({})
+  const [month, setMonth] = useState<number>(new Date().getMonth())
+  const [year, setYear] = useState<number>(new Date().getFullYear())
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const [cellSize, setCellSize] = useState<number>(28)
+  
+  // Initialize checklist items when scan result changes
+  useEffect(() => {
+    if (scanResult?.success && mode === 'checklists' && scanResult.asset?.items) {
+      console.log('Initializing checklist items:', scanResult.asset.items)
+      const initialItems: Record<string, { status: 'pending' | 'completed' | 'failed' | 'not_applicable', remarks: string }> = {}
+      const initialTicks: Record<string, Record<number, boolean>> = {}
+      scanResult.asset.items.forEach((item, index) => {
+        const itemId = item._id || `item_${index}`
+        initialItems[itemId] = { status: 'pending', remarks: '' }
+        initialTicks[itemId] = {}
+      })
+      setChecklistItems(initialItems)
+      setTicks(initialTicks)
+    }
+  }, [scanResult, mode])
+
+  // Helpers to generate day labels based on period
+  const getDayLabels = (): string[] => {
+    if (period === 'daily') return ['1']
+    if (period === 'weekly') return ['1','2','3','4','5','6','7']
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    return Array.from({ length: daysInMonth }, (_, i) => String(i + 1))
+  }
+
+  const dayLabels = getDayLabels()
+
+  const toggleTick = (itemId: string, dayIndex: number) => {
+    setTicks(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], [dayIndex]: !prev[itemId]?.[dayIndex] }
+    }))
+  }
+
+  // Responsive cell size for mobile vs desktop
+  useEffect(() => {
+    const updateSize = () => {
+      const width = typeof window !== 'undefined' ? window.innerWidth : 1024
+      setCellSize(width < 640 ? 22 : 28)
+    }
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
+  
+  // Debug scan result changes
+  useEffect(() => {
+    if (scanResult) {
+      console.log('Scan result changed:', {
+        success: scanResult.success,
+        mode,
+        hasAsset: !!scanResult.asset,
+        hasItems: !!scanResult.asset?.items,
+        itemsCount: scanResult.asset?.items?.length || 0
+      })
+    }
+  }, [scanResult, mode])
+  
+  // Handle checklist item status change
+  const handleItemStatusChange = (itemId: string, status: 'completed' | 'failed' | 'not_applicable') => {
+    setChecklistItems(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], status }
+    }))
+  }
+  
+  // Handle remarks change
+  const handleRemarksChange = (itemId: string, remarks: string) => {
+    setChecklistItems(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], remarks }
+    }))
+  }
+  
+  // Get completion statistics
+  const getCompletionStats = () => {
+    const items = Object.values(checklistItems)
+    const total = items.length
+    const completed = items.filter(item => item.status === 'completed').length
+    const failed = items.filter(item => item.status === 'failed').length
+    const notApplicable = items.filter(item => item.status === 'not_applicable').length
+    const pending = total - completed - failed - notApplicable
+    return { total, completed, failed, notApplicable, pending }
+  }
+  
+  // Handle saving checklist progress
+  const handleSaveProgress = () => {
+    const stats = getCompletionStats()
+    const progressData = {
+      checklistId: scanResult?.assetId,
+      checklistTitle: scanResult?.asset?.title,
+      completedAt: new Date().toISOString(),
+      stats,
+      items: checklistItems,
+      location: scanResult?.asset?.location
+    }
+    
+    console.log('Saving checklist progress:', progressData)
+    
+    // Here you would typically save to your backend
+    // For now, we'll just show a success message
+    alert(`Checklist progress saved!\nCompleted: ${stats.completed}/${stats.total} items`)
+    
+    // Call the scan result handler to close the modal or navigate
+    onScanResult(scanResult?.assetId || '')
+  }
   // Use native BarcodeDetector if available for faster/more reliable scanning
   const barcodeDetectorRef = useRef<null | { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> }>(null)
   const lastProcessTimeRef = useRef(0)
@@ -502,6 +636,48 @@ export function ScannerModal({
   const normalize = (val?: string | null) =>
     (val || '').toString().trim().toLowerCase()
 
+  // Extract useful tokens from scanned string (ids from URLs/JSON)
+  const extractTokensFromScannedContent = (raw: string): string[] => {
+    const tokens: string[] = []
+    const input = (raw || '').trim()
+    if (!input) return tokens
+    tokens.push(input)
+    // Try JSON payload
+    try {
+      const obj = JSON.parse(input)
+      if (obj && typeof obj === 'object') {
+        const guessKeys = ['_id','id','checklistId','cid','qr','data']
+        for (const k of guessKeys) {
+          const v = (obj as Record<string, unknown>)[k]
+          if (typeof v === 'string') tokens.push(v)
+          if (v && typeof v === 'object') {
+            const inner = (v as Record<string, unknown>)
+            for (const ik of guessKeys) {
+              const iv = inner[ik]
+              if (typeof iv === 'string') tokens.push(iv)
+            }
+          }
+        }
+      }
+    } catch {}
+    // Try URL parsing
+    try {
+      const url = new URL(input)
+      const lastSeg = url.pathname.split('/').filter(Boolean).pop()
+      if (lastSeg) tokens.push(lastSeg)
+      const searchKeys = ['id','_id','checklistId','cid','ref']
+      for (const k of searchKeys) {
+        const v = url.searchParams.get(k)
+        if (v) tokens.push(v)
+      }
+    } catch {}
+    // Also include alnum-only token
+    const alnum = input.replace(/[^a-z0-9]/gi,'')
+    if (alnum && alnum.length >= 6) tokens.push(alnum)
+    // Deduplicate
+    return Array.from(new Set(tokens.map(t => t.toString())))
+  }
+
   const findMatchingAsset = (scannedQRContent: string) => {
     const scanned = normalize(scannedQRContent)
     
@@ -536,19 +712,39 @@ export function ScannerModal({
 
   const findMatchingChecklist = (scannedQRContent: string) => {
     const scanned = normalize(scannedQRContent)
+    console.log('Searching for checklist with content:', scanned)
+    console.log('Available checklists:', checklists.length)
+    const tokenSet = extractTokensFromScannedContent(scannedQRContent)
+    const tokens = tokenSet.map(normalize)
     
-    return checklists.find(checklist => {
+    const found = checklists.find(checklist => {
+      const urlLast = (() => {
+        const u = checklist.qrCode?.url
+        if (!u) return undefined
+        try {
+          const parsed = new URL(u.startsWith('http') ? u : `https://domain/${u.replace(/^\//,'')}`)
+          return parsed.pathname.split('/').filter(Boolean).pop()
+        } catch {
+          return undefined
+        }
+      })()
+      // Only match on strong identifiers from QR data or IDs
       const candidates = [
         checklist._id,
         checklist.qrCode?.data,
-        checklist.title,
-        checklist.type,
-        checklist.status,
-        checklist.priority,
+        checklist.qrCode?.url,
+        urlLast,
       ].map(normalize)
 
-      return candidates.some(c => c && (c === scanned || scanned.includes(c) || c.includes(scanned)))
+      const match = candidates.some(c => c && (c === scanned || scanned.includes(c) || c.includes(scanned) || tokens.some(t => c === t || c.includes(t) || t.includes(c))))
+      if (match) {
+        console.log('Found matching checklist:', checklist)
+      }
+      return match
     })
+    
+    console.log('Checklist search result:', found ? 'Found' : 'Not found')
+    return found
   }
 
   const finalizeLiveScan = (scannedQRContent: string) => {
@@ -576,6 +772,8 @@ export function ScannerModal({
         const foundChecklist = findMatchingChecklist(scannedQRContent)
 
         if (foundChecklist) {
+          console.log('Found checklist:', foundChecklist)
+          console.log('Checklist items:', foundChecklist.items)
           setScanResult({
             success: true,
             assetId: scannedQRContent,
@@ -583,14 +781,88 @@ export function ScannerModal({
             message: `✅ Checklist found: ${foundChecklist.title}`,
             qrImageData: qrImageData
           })
-          onScanResult(scannedQRContent)
+          // Return the full checklist to parent for local storage
+          onScanResult(foundChecklist)
+        } else if (!strictChecklistsOnly) {
+          // QR code found but checklist not in system - create sample checklist
+          console.log('QR code found but no matching checklist - creating sample')
+          const sampleChecklist = {
+            _id: `SAMPLE_${Date.now()}`,
+            title: `Scanned Checklist: ${scannedQRContent}`,
+            description: `This checklist was scanned from QR code: ${scannedQRContent}`,
+            qrCode: {
+              data: scannedQRContent,
+              url: ''
+            },
+            location: {
+              building: 'Scanned Location',
+              floor: 'N/A',
+              zone: 'N/A'
+            },
+            type: 'Scanned',
+            status: 'active',
+            priority: 'medium',
+            frequency: 'daily',
+            items: [
+              {
+                _id: 'sample_1',
+                serialNumber: 1,
+                inspectionItem: 'Check Diesel Level',
+                details: 'Ensure diesel level is at least 1/2 of tank capacity',
+                status: 'pending' as const,
+                remarks: ''
+              },
+              {
+                _id: 'sample_2',
+                serialNumber: 2,
+                inspectionItem: 'Check Battery Voltage',
+                details: 'Verify battery voltage is between 24V-28V',
+                status: 'pending' as const,
+                remarks: ''
+              },
+              {
+                _id: 'sample_3',
+                serialNumber: 3,
+                inspectionItem: 'Check Engine Oil Level',
+                details: 'Ensure oil level is between L & H marks',
+                status: 'pending' as const,
+                remarks: ''
+              },
+              {
+                _id: 'sample_4',
+                serialNumber: 4,
+                inspectionItem: 'Check Water Temperature',
+                details: 'Verify temperature is below 42°C',
+                status: 'pending' as const,
+                remarks: ''
+              },
+              {
+                _id: 'sample_5',
+                serialNumber: 5,
+                inspectionItem: 'Inspect for Oil Leakages',
+                details: 'Check all hoses and pipes for oil leaks',
+                status: 'pending' as const,
+                remarks: ''
+              }
+            ]
+          }
+          
+          setScanResult({
+            success: true,
+            assetId: scannedQRContent,
+            asset: sampleChecklist,
+            message: `✅ QR Code scanned: "${scannedQRContent}" - Sample checklist created`,
+            qrImageData: qrImageData
+          })
         } else {
           setScanResult({
             success: false,
             assetId: scannedQRContent,
-            message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Checklist not found in system`,
+            message: '❌ Wrong checklist - not matching any provided checklist',
             qrImageData: qrImageData
           })
+          // Inform parent about mismatch so it can update UI
+          onScanResult({ __type: 'error', reason: 'not_matching', raw: scannedQRContent })
         }
       } else {
         const foundAsset = findMatchingAsset(scannedQRContent)
@@ -697,16 +969,88 @@ export function ScannerModal({
               message: `✅ Checklist found: ${foundChecklist.title}`,
               qrImageData: qrImageData
             })
-            onScanResult(scannedQRContent)
+            onScanResult(foundChecklist)
+          } else if (!strictChecklistsOnly) {
+            // QR code found but checklist not in system - create sample checklist
+            console.log('QR code found but no matching checklist - creating sample')
+            const sampleChecklist = {
+              _id: `SAMPLE_${Date.now()}`,
+              title: `Scanned Checklist: ${scannedQRContent}`,
+              description: `This checklist was scanned from QR code: ${scannedQRContent}`,
+              qrCode: {
+                data: scannedQRContent,
+                url: ''
+              },
+              location: {
+                building: 'Scanned Location',
+                floor: 'N/A',
+                zone: 'N/A'
+              },
+              type: 'Scanned',
+              status: 'active',
+              priority: 'medium',
+              frequency: 'daily',
+              items: [
+                {
+                  _id: 'sample_1',
+                  serialNumber: 1,
+                  inspectionItem: 'Check Diesel Level',
+                  details: 'Ensure diesel level is at least 1/2 of tank capacity',
+                  status: 'pending' as const,
+                  remarks: ''
+                },
+                {
+                  _id: 'sample_2',
+                  serialNumber: 2,
+                  inspectionItem: 'Check Battery Voltage',
+                  details: 'Verify battery voltage is between 24V-28V',
+                  status: 'pending' as const,
+                  remarks: ''
+                },
+                {
+                  _id: 'sample_3',
+                  serialNumber: 3,
+                  inspectionItem: 'Check Engine Oil Level',
+                  details: 'Ensure oil level is between L & H marks',
+                  status: 'pending' as const,
+                  remarks: ''
+                },
+                {
+                  _id: 'sample_4',
+                  serialNumber: 4,
+                  inspectionItem: 'Check Water Temperature',
+                  details: 'Verify temperature is below 42°C',
+                  status: 'pending' as const,
+                  remarks: ''
+                },
+                {
+                  _id: 'sample_5',
+                  serialNumber: 5,
+                  inspectionItem: 'Inspect for Oil Leakages',
+                  details: 'Check all hoses and pipes for oil leaks',
+                  status: 'pending' as const,
+                  remarks: ''
+                }
+              ]
+            }
+            
+            setScanResult({
+              success: true,
+              assetId: scannedQRContent,
+              asset: sampleChecklist,
+              message: `✅ QR Code scanned: "${scannedQRContent}" - Sample checklist created`,
+              qrImageData: qrImageData
+            })
+            onScanResult(sampleChecklist)
           } else {
-            // QR code found but checklist not in system - show info
-            console.log('QR code found but no matching checklist')
             setScanResult({
               success: false,
               assetId: scannedQRContent,
-              message: `ℹ️ QR Code scanned successfully: "${scannedQRContent}" - Checklist not found in system`,
+              message: '❌ Wrong checklist - not matching any provided checklist',
               qrImageData: qrImageData
             })
+            // Notify parent so page can clear/reflect mismatch
+            onScanResult({ __type: 'error', reason: 'not_matching', raw: scannedQRContent })
           }
         } else {
           // Handle asset scanning
@@ -909,8 +1253,8 @@ export function ScannerModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-3 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -934,6 +1278,7 @@ export function ScannerModal({
 
         {/* Modal Content */}
         <div className="p-6">
+          {(!scanResult || scanResult.isProcessing) && (
           <Tabs defaultValue="scanner" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="scanner" className="flex items-center gap-2">
@@ -1110,9 +1455,116 @@ export function ScannerModal({
               </div>
             </TabsContent>
           </Tabs>
+          )}
 
-          {/* Simplified Scan Result */}
-          {scanResult && (
+          {/* Simplified Checklist Execution Interface */}
+          {scanResult && mode === 'checklists' && scanResult.success && scanResult.asset ? (
+            <div className="mt-4 space-y-4">
+              {/* Simple Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <CheckSquare className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">{scanResult.asset.title}</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={period}
+                    onChange={(e) => setPeriod(e.target.value as 'daily'|'weekly'|'monthly')}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    aria-label="Select frequency"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                  <select
+                    value={month}
+                    onChange={(e) => setMonth(Number(e.target.value))}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    aria-label="Select month"
+                  >
+                    {monthNames.map((m, idx) => (
+                      <option key={m} value={idx}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={year}
+                    onChange={(e) => setYear(Number(e.target.value))}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    aria-label="Select year"
+                  >
+                    {Array.from({length: 7}, (_,i) => new Date().getFullYear() - 3 + i).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  <Button variant="outline" size="sm" onClick={() => onScanResult('')}>Close</Button>
+                </div>
+              </div>
+
+              {/* Simple Checklist Table */}
+              {scanResult.asset.items && scanResult.asset.items.length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left w-10">#</th>
+                        <th className="px-3 py-2 text-left w-56">Activity</th>
+                        <th className="px-3 py-2 text-left">
+                          <div
+                            className="grid overflow-x-auto pr-2"
+                            style={{ gridTemplateColumns: `repeat(${dayLabels.length}, minmax(${cellSize}px, 1fr))` }}
+                          >
+                        {dayLabels.map((lbl, idx) => (
+                              <div key={idx} className="flex items-center justify-center text-xs font-semibold text-gray-700 border border-gray-300 bg-white/70">
+                                {lbl}
+                              </div>
+                        ))}
+                      </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                    {scanResult.asset.items.map((item, index) => {
+                      const itemId = item._id || `item_${index}`
+                      return (
+                          <tr key={itemId}>
+                            <td className="px-3 py-2 align-top">{item.serialNumber || index + 1}</td>
+                            <td className="px-3 py-2 align-top">
+                            <div className="font-medium text-gray-900">{item.inspectionItem}</div>
+                            {item.details && <div className="text-xs text-gray-500">{item.details}</div>}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div
+                                className="grid overflow-x-auto pr-2"
+                                style={{ gridTemplateColumns: `repeat(${dayLabels.length}, minmax(${cellSize}px, 1fr))` }}
+                              >
+                              {dayLabels.map((_, dayIdx) => (
+                                  <div key={dayIdx} className="flex items-center justify-center border border-gray-300 bg-white" style={{ height: cellSize }}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!ticks[itemId]?.[dayIdx]}
+                                  onChange={() => toggleTick(itemId, dayIdx)}
+                                      className="w-4 h-4 accent-blue-600 focus:ring-2 focus:ring-blue-400"
+                                />
+                                  </div>
+                              ))}
+                            </div>
+                            </td>
+                          </tr>
+                      )
+                    })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {/* Simple Actions */}
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" size="sm" onClick={() => onScanResult('')}>Close</Button>
+                <Button size="sm" onClick={handleSaveProgress}>Save ({getCompletionStats().completed}/{getCompletionStats().total})</Button>
+              </div>
+            </div>
+          ) : scanResult && (
+            /* Other scan results (assets, errors, etc.) */
             <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm">
               {/* Simple Header Section */}
               <div className={`p-4 border-b border-gray-200 ${
@@ -1250,57 +1702,7 @@ export function ScannerModal({
                           </div>
                         </div>
 
-                        {mode === 'checklists' ? (
-                          /* Simple Checklist Details */
-                          <div className="space-y-4">
-                            {/* Checklist Properties Grid */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="bg-gray-50 rounded-md p-3">
-                                <span className="text-xs text-gray-500 uppercase">Type</span>
-                                <p className="text-sm font-medium text-gray-900">{scanResult.asset.type}</p>
-                              </div>
-                              <div className="bg-gray-50 rounded-md p-3">
-                                <span className="text-xs text-gray-500 uppercase">Status</span>
-                                <p className="text-sm font-medium text-gray-900 capitalize">{scanResult.asset.status}</p>
-                              </div>
-                              <div className="bg-gray-50 rounded-md p-3">
-                                <span className="text-xs text-gray-500 uppercase">Priority</span>
-                                <p className="text-sm font-medium text-gray-900 capitalize">{scanResult.asset.priority}</p>
-                              </div>
-                              <div className="bg-gray-50 rounded-md p-3">
-                                <span className="text-xs text-gray-500 uppercase">Title</span>
-                                <p className="text-sm font-medium text-gray-900">{scanResult.asset.title}</p>
-                              </div>
-                            </div>
-
-                            {/* Simple Location Details */}
-                            {scanResult.asset.location && (
-                              <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <MapPin className="w-4 h-4 text-gray-600" />
-                                  <span className="text-sm font-medium text-gray-700 uppercase">Location</span>
-                                </div>
-                                <div className="text-sm text-gray-900">
-                                  <div>{scanResult.asset.location.building}</div>
-                                  <div>Floor {scanResult.asset.location.floor} • Zone {scanResult.asset.location.zone}</div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Simple Inspection Items Count */}
-                            {scanResult.asset.items && (
-                              <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <CheckSquare className="w-4 h-4 text-gray-600" />
-                                  <span className="text-sm font-medium text-gray-700 uppercase">Inspection Items</span>
-                                </div>
-                                <div className="text-sm text-gray-900">
-                                  <span className="font-medium">{scanResult.asset.items.length}</span> items to inspect
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
+                        {mode === 'assets' ? (
                           /* Simple Asset Details */
                           <div className="space-y-4">
                             {/* Asset Properties Grid */}
@@ -1352,10 +1754,33 @@ export function ScannerModal({
                               </div>
                             )}
                           </div>
+                        ) : (
+                          /* Default case for other modes */
+                          <div className="text-center py-8">
+                            <p className="text-gray-500">No asset details available</p>
+                          </div>
                         )}
 
-                        {/* Simple Action Buttons */}
+                        {/* Enhanced Action Buttons for Asset */}
                         <div className="flex flex-col space-y-2 pt-4">
+                          {mode === 'assets' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <Button 
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                                onClick={() => onScanResult(scanResult.assetId)}
+                              >
+                                <Calendar className="w-4 h-4 mr-2" />
+                                Open Calendar Checklist
+                              </Button>
+                              <Button 
+                                className="w-full bg-green-600 hover:bg-green-700 text-white" 
+                                onClick={() => onScanResult(scanResult.assetId)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Full Details
+                              </Button>
+                            </div>
+                          ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => onScanResult(scanResult.assetId)}>
                               <Eye className="w-4 h-4 mr-2" />
@@ -1376,6 +1801,25 @@ export function ScannerModal({
                               Scan Another
                             </Button>
                           </div>
+                          )}
+                          
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+                              onClick={() => copyScannedCode(scanResult.assetId)}
+                            >
+                              {copied ? 'Copied!' : 'Copy QR Data'}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+                              onClick={scanAnother}
+                            >
+                              Scan Another
+                            </Button>
+                          </div>
+                          
                           <Button 
                             variant="outline" 
                             className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -1384,7 +1828,7 @@ export function ScannerModal({
                               onScanResult('')
                             }}
                           >
-                            Close
+                            Close Scanner
                           </Button>
                         </div>
                       </div>

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,74 +14,23 @@ import { ScannerModal } from '@/components/ui/scanner-modal-component'
 import { SuccessToast } from '@/components/ui/success-toast'
 import { ErrorDisplay } from '@/components/ui/error-display'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { EmptyState } from '@/components/ui/empty-state'
-import { ViewModeToggle } from '@/components/ui/view-mode-toggle'
+import CalendarChecklistModal from '@/components/ui/calendar-checklist-modal'
 
 import { 
-  MapPin, 
   Building2, 
   Package, 
-  Search, 
   Calendar,
-  Clock,
-  User,
   QrCode,
   Eye,
   Download,
-  RefreshCw,
   X,
   Scan,
   CheckCircle,
   CheckSquare,
-  Share2,
-  Archive,
-  Edit,
-  Target,
   MoreHorizontal
 } from 'lucide-react'
 
-interface ChecklistItem {
-  serialNumber: number
-  inspectionItem: string
-  details: string
-  status: string
-  remarks: string
-  _id: string
-}
-
-interface Location {
-  floor: string
-  building: string
-  zone: string
-}
-
-interface CreatedBy {
-  _id: string
-  name: string
-  email: string
-}
-
-interface Checklist {
-  _id: string
-  title: string
-  description: string
-  type: string
-  frequency: string
-  items: ChecklistItem[]
-  location: Location
-  createdBy: CreatedBy
-  assignedTo: string[]
-  status: 'active' | 'completed' | 'archived'
-  priority: string
-  tags: string[]
-  createdAt: string
-  updatedAt: string
-  qrCode: {
-    url: string
-    data: string
-    generatedAt: string
-  }
-}
+import { Checklist, ChecklistItem, Location, CreatedBy } from '@/types/checklist'
 
 
 
@@ -90,16 +38,26 @@ export default function ViewerChecklists() {
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [filteredChecklists, setFilteredChecklists] = useState<Checklist[]>([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
   const [showTokenInput, setShowTokenInput] = useState(false)
   const [authToken, setAuthToken] = useState('')
   const [showQRModal, setShowQRModal] = useState(false)
   const [selectedQRData, setSelectedQRData] = useState<{url: string, data: string, blobUrl?: string} | null>(null)
   const [qrImageLoading, setQrImageLoading] = useState(false)
   const [qrImageError, setQrImageError] = useState(false)
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
+  
+  // Checklist completion state
+  const [checklistStatus, setChecklistStatus] = useState<Record<string, 'pending' | 'completed' | 'failed'>>({})
+  // Store scanned results locally on this page (not in table rows)
+  const [recentScans, setRecentScans] = useState<Checklist[]>([])
+  // Inline sheet state
+  const [inlinePeriod, setInlinePeriod] = useState<'daily'|'weekly'|'monthly'>('daily')
+  const [inlineTicks, setInlineTicks] = useState<Record<string, Record<number, boolean>>>({})
+  const [inlineNotes, setInlineNotes] = useState<Record<string, Record<number, string>>>({})
+  const [inlineMonth, setInlineMonth] = useState<number>(new Date().getMonth())
+  const [inlineYear, setInlineYear] = useState<number>(new Date().getFullYear())
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const [inlineCellSize, setInlineCellSize] = useState<number>(28)
   
   // Modal states
   const [showScanner, setShowScanner] = useState(false)
@@ -118,6 +76,10 @@ export default function ViewerChecklists() {
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [showScannerResponse, setShowScannerResponse] = useState(false)
+  
+  // Calendar modal states
+  const [showCalendarModal, setShowCalendarModal] = useState(false)
+  const [calendarChecklist, setCalendarChecklist] = useState<Checklist | null>(null)
 
 
 
@@ -167,19 +129,79 @@ export default function ViewerChecklists() {
     }
   }, [authToken])
 
-  const filterChecklists = useCallback(() => {
-    const filtered = checklists.filter(checklist => {
-      const matchesSearch = checklist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          checklist.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          checklist.location.building.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          checklist.location.floor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          checklist.location.zone.toLowerCase().includes(searchTerm.toLowerCase())
-      
-      return matchesSearch
-    })
-    
-    setFilteredChecklists(filtered)
-  }, [checklists, searchTerm])
+  // Set filtered checklists to all checklists since we removed search
+  useEffect(() => {
+    setFilteredChecklists(checklists)
+  }, [checklists])
+
+  // Toggle checklist status (Yes/No functionality)
+  const toggleChecklistStatus = (checklistId: string, status: 'completed' | 'failed') => {
+    setChecklistStatus(prev => ({
+      ...prev,
+      [checklistId]: status
+    }))
+  }
+
+  // Get current status for a checklist
+  const getChecklistStatus = (checklistId: string) => {
+    return checklistStatus[checklistId] || 'pending'
+  }
+
+  // Right-click add/edit note in a cell
+  const handleCellRightClick = (itemId: string, day: number, e: React.MouseEvent) => {
+    e.preventDefault()
+    const current = inlineNotes[itemId]?.[day] || ''
+    const value = window.prompt('Enter note/value for this cell', current)
+    if (value !== null) {
+      setInlineNotes(prev => ({
+        ...prev,
+        [itemId]: {
+          ...(prev[itemId] || {}),
+          [day]: value
+        }
+      }))
+    }
+  }
+
+  // Get checkbox status
+  const getCheckboxStatus = (itemId: string, day: number) => {
+    return inlineTicks[itemId]?.[day] || false
+  }
+
+  const getCellNote = (itemId: string, day: number) => {
+    return inlineNotes[itemId]?.[day] || ''
+  }
+
+  const updateCellNote = (itemId: string, day: number, value: string) => {
+    setInlineNotes(prev => ({
+      ...prev,
+      [itemId]: {
+        ...(prev[itemId] || {}),
+        [day]: value
+      }
+    }))
+  }
+
+  // Open calendar modal for checklist
+  const openCalendarModal = (checklist: Checklist) => {
+    setCalendarChecklist(checklist)
+    setShowCalendarModal(true)
+  }
+
+  // Handle calendar modal save
+  const handleCalendarSave = (data: any) => {
+    console.log('Calendar data saved:', data)
+    setToastMessage('Checklist progress saved successfully!')
+    setShowSuccessToast(true)
+  }
+
+  // Handle calendar modal complete
+  const handleCalendarComplete = (data: any) => {
+    console.log('Calendar data completed:', data)
+    setToastMessage('Checklist completed successfully!')
+    setShowSuccessToast(true)
+    setShowCalendarModal(false)
+  }
 
   const closeQRModal = useCallback(() => {
     if (selectedQRData?.blobUrl) {
@@ -195,9 +217,44 @@ export default function ViewerChecklists() {
     fetchChecklists()
   }, [fetchChecklists])
 
+  // helper: persist recent scans (page-level only)
+  const saveRecentScan = (checklist: Checklist) => {
+    setRecentScans(prev => {
+      const next = [checklist, ...prev].slice(0, 20)
+      try {
+        localStorage.setItem('recentChecklistScans', JSON.stringify(next))
+      } catch {}
+      return next
+    })
+    // init ticks for inline grid
+    const t: Record<string, Record<number, boolean>> = {}
+    const n: Record<string, Record<number, string>> = {}
+    checklist.items?.forEach((it, idx) => {
+      const id = (it as any)._id || `item_${idx}`
+      t[id] = {}
+      n[id] = {}
+    })
+    setInlineTicks(t)
+    setInlineNotes(n)
+  }
+
+  const getInlineDayLabels = (): string[] => {
+    if (inlinePeriod === 'daily') return ['1']
+    if (inlinePeriod === 'weekly') return ['1','2','3','4','5','6','7']
+    const daysInMonth = new Date(inlineYear, inlineMonth + 1, 0).getDate()
+    return Array.from({ length: daysInMonth }, (_, i) => String(i + 1))
+  }
+
+  // Responsive cell size for mobile vs desktop
   useEffect(() => {
-    filterChecklists()
-  }, [filterChecklists])
+    const updateSize = () => {
+      const width = typeof window !== 'undefined' ? window.innerWidth : 1024
+      setInlineCellSize(width < 640 ? 20 : 24)
+    }
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -217,11 +274,6 @@ export default function ViewerChecklists() {
     }
   }, [showQRModal, closeQRModal])
 
-  const handleRefresh = async () => {
-    setRefreshing(true)
-    await fetchChecklists()
-    setRefreshing(false)
-  }
 
 
 
@@ -337,8 +389,162 @@ Timestamps:
     }
   }
 
-  const handleScannedResult = (checklistId: string) => {
+  const downloadChecklistPDF = async (checklist: Checklist) => {
     try {
+      const jsPDF = (await import('jspdf')).default
+      const doc = new jsPDF('landscape')
+
+      const safe = (v: unknown) => (v === undefined || v === null ? '' : String(v))
+
+      // Title
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Checklist: ${safe(checklist.title)}`.slice(0, 120), 14, 16)
+
+      // Meta row (single line summary akin to page header)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      const meta = [
+        `Type: ${safe(checklist.type)}`,
+        `Frequency: ${safe(checklist.frequency)}`,
+        `Priority: ${safe(checklist.priority)}`,
+        `Status: ${safe(checklist.status)}`,
+        `Period: ${inlinePeriod}`,
+        `Month/Year: ${monthNames[inlineMonth]} ${inlineYear}`
+      ].join('  |  ')
+      doc.text(doc.splitTextToSize(meta, 280), 14, 24)
+
+      // Table like the main page (#, Activity, dynamic day columns)
+      const headers = ['#', 'Activity']
+      const dayLabels = getInlineDayLabels()
+      const allHeaders = headers.concat(dayLabels)
+
+      // Layout
+      const startX = 12
+      let y = 34
+      const rowH = 8
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const rightMargin = 12
+      const bottomMargin = 14
+
+      // Column widths: fixed for first two, remaining evenly share leftover
+      const colW0 = 10 // #
+      const colW1 = 60 // Activity
+      const remainingW = pageW - rightMargin - startX - colW0 - colW1
+      const dayColW = Math.max(10, Math.min(remainingW / dayLabels.length, 20))
+      // If too many days to fit, split across vertical pages with header reprint
+
+      const drawHeader = () => {
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(9)
+        let x = startX
+        // #
+        doc.rect(x, y, colW0, rowH)
+        doc.text('#', x + 2, y + 5)
+        x += colW0
+        // Activity
+        doc.rect(x, y, colW1, rowH)
+        doc.text('Activity', x + 2, y + 5)
+        x += colW1
+        // Days
+        for (let i = 0; i < dayLabels.length; i += 1) {
+          doc.rect(x, y, dayColW, rowH)
+          const lbl = String(dayLabels[i])
+          const textW = doc.getTextWidth(lbl)
+          const tx = x + (dayColW - textW) / 2
+          doc.text(lbl, tx, y + 5)
+          x += dayColW
+          if (x > pageW - rightMargin - dayColW / 2) break
+        }
+        y += rowH
+        doc.setFont('helvetica', 'normal')
+      }
+
+      const ensureSpace = (needed: number) => {
+        if (y + needed > pageH - bottomMargin) {
+          doc.addPage('landscape')
+          y = 20
+          // Reprint title light on continuation pages
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(10)
+          doc.text(`Checklist: ${safe(checklist.title)}`.slice(0, 120), startX, y)
+          y += 6
+          drawHeader()
+        }
+      }
+
+      // Initial header
+      drawHeader()
+
+      const items = checklist.items || []
+      items.forEach((it, idx) => {
+        ensureSpace(rowH)
+        let x = startX
+        // #
+        doc.rect(x, y, colW0, rowH)
+        doc.text(String(it.serialNumber || idx + 1), x + 2, y + 5)
+        x += colW0
+        // Activity
+        doc.rect(x, y, colW1, rowH)
+        const act = String(it.inspectionItem || '')
+        const clipped = doc.splitTextToSize(act, colW1 - 2)
+        doc.text(clipped[0] || '', x + 2, y + 5)
+        x += colW1
+        // Days with notes mirroring UI state (previously ticks)
+        for (let i = 0; i < dayLabels.length; i += 1) {
+          doc.rect(x, y, dayColW, rowH)
+          const itemId = (it as any)._id || `item_${idx}`
+          const note = (inlineNotes[itemId]?.[i] || '').toString()
+          if (note) {
+            const txt = doc.splitTextToSize(note, dayColW - 2)
+            // show first line to keep row height stable
+            doc.text(txt[0], x + 1, y + 5)
+          }
+          x += dayColW
+          if (x > pageW - rightMargin - dayColW / 2) break
+        }
+        y += rowH
+      })
+
+      const filename = `checklist_${safe(checklist.title).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+      doc.save(filename)
+      setToastMessage('Checklist PDF downloaded successfully!')
+      setShowSuccessToast(true)
+    } catch (e) {
+      console.error('Error generating checklist PDF:', e)
+      setError('Failed to generate Checklist PDF')
+    }
+  }
+
+  // Accept either an ID string or a full checklist object from the scanner
+  const handleScannedResult = (payload: unknown) => {
+    try {
+      // Handle explicit mismatch notification
+      if (payload && typeof payload === 'object' && (payload as any).__type === 'error') {
+        setSuccessChecklist(null)
+        setToastMessage('❌ Wrong checklist - not matching any provided checklist')
+        setShowSuccessToast(true)
+        return
+      }
+      // If we receive a full object, store it directly and exit (no GET)
+      if (payload && typeof payload === 'object' && payload !== null && (payload as any)._id) {
+        const full = payload as Checklist
+        setSuccessChecklist(full)
+        setScannedData({
+          checklistId: full._id,
+          title: full.title,
+          type: full.type,
+          location: full.location as Location | Record<string, unknown>,
+          url: full.qrCode?.url || ''
+        })
+        saveRecentScan(full)
+        // Close scanner and show inline sheet UI instead of popup
+        setShowScanner(false)
+        return
+      }
+
+      const checklistId = String(payload || '')
       // First try to find by exact ID match
       let foundChecklist = checklists.find(checklist => 
         checklist._id === checklistId
@@ -361,8 +567,8 @@ Timestamps:
       }
       
       if (foundChecklist) {
+        console.log('Found checklist in handleScannedResult:', foundChecklist)
         setSuccessChecklist(foundChecklist)
-        setShowScanner(false)
         setToastMessage(`✅ Checklist found: ${foundChecklist.title}`)
         setShowSuccessToast(true)
         
@@ -374,49 +580,16 @@ Timestamps:
           location: foundChecklist.location as Location | Record<string, unknown>,
           url: foundChecklist.qrCode?.url || ''
         })
-        
-        // Show scanner response
-        setShowScannerResponse(true)
-      } else {
-        // Create a simulated checklist for display
-        const simulatedChecklist = {
-          _id: `SCANNED_${Date.now()}`,
-          title: `Scanned Checklist: ${checklistId}`,
-          description: `This checklist was scanned from QR code: ${checklistId}`,
-          type: 'Scanned',
-          frequency: 'On-demand',
-          items: [],
-          location: { building: 'Scanned', floor: 'N/A', zone: 'N/A' },
-          createdBy: { _id: 'scanner', name: 'QR Scanner', email: 'scanner@facilio.com' },
-          assignedTo: [],
-          status: 'active' as const,
-          priority: 'medium',
-          tags: ['scanned', 'qr-code'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          qrCode: {
-            url: '',
-            data: checklistId,
-            generatedAt: new Date().toISOString()
-          }
-        }
-        
-        setSuccessChecklist(simulatedChecklist)
+        saveRecentScan(foundChecklist)
+        // Close scanner and show inline grid
         setShowScanner(false)
-        setToastMessage(`✅ New checklist scanned: ${checklistId}`)
-            setShowSuccessToast(true)
-            
-        // Set scanned data
-        setScannedData({
-          checklistId: checklistId,
-          title: `Scanned: ${checklistId}`,
-          type: 'Scanned',
-          location: { building: 'Scanned', floor: 'N/A', zone: 'N/A' },
-          url: ''
-        })
-        
-        // Show scanner response
-        setShowScannerResponse(true)
+      } else {
+        // No match -> clear inline grid and show wrong checklist message
+        setSuccessChecklist(null)
+        setToastMessage('❌ Wrong checklist - not matching any provided checklist')
+        setShowSuccessToast(true)
+        // Keep scanner open to try again
+        setShowScanner(true)
       }
     } catch (error) {
       console.error('Error processing scanned result:', error)
@@ -479,326 +652,166 @@ Timestamps:
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
-      <div className="flex-1 overflow-auto">
-        {/* ERP Style Header */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
-                  <CheckSquare className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/** Precompute day labels for consistent grid templates */}
+          {(() => null)()}
+          {/* Recent Scans (local) panel intentionally removed from UI */}
+          {/* QR Scanner Section */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <QrCode className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-                    Checklist Management
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                    QR Code Scanner
                   </h1>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
-                    View and manage facility checklists with QR scanning capabilities
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Scan QR codes to view and manage checklists
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
-                </div>
-              </div>
-            </div>
-          </header>
-
-        {/* Main Content */}
-        <main className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-
-          {/* Enhanced Header Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
-                  <CheckSquare className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                    {filteredChecklists.length} Checklists
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-950/20 rounded-full">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                    {checklists.filter(c => c.status === 'active').length} Active
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 dark:bg-purple-950/20 rounded-full">
-                  <Target className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                    {checklists.filter(c => c.priority === 'high').length} High Priority
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Manage your facility checklists with advanced scanning and monitoring capabilities
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleRefresh} 
-                disabled={refreshing}
-                className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
               
-              <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+              <Button 
+                onClick={() => setShowScanner(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-12 px-6"
+              >
+                <Scan className="w-5 h-5" />
+                Scan QR Code
+              </Button>
             </div>
           </div>
 
-          {/* Enhanced Search and Filters */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {/* Search Section */}
-                <div className="flex items-end gap-4">
-                  <div className="w-full max-w-md">
-                    <Label className="text-sm font-medium text-muted-foreground mb-2">Search Checklists</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by title, description, or location..."
-                        className="pl-10 h-11 text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowScanner(true)}
-                      className="flex items-center gap-2 h-11 px-4 bg-green-50 hover:bg-green-100 border-green-200 text-green-700 hover:text-green-800"
-                    >
-                      <Scan className="w-4 h-4" />
-                      <span>Scan QR</span>
-                    </Button>
-                  </div>
+          {/* Inline Sheet - visible when a scan exists */}
+          {successChecklist && (
+            <div className="mb-8 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{successChecklist.title}</h3>
+                <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => downloadChecklistPDF(successChecklist)}
+                  variant="outline"
+                  className="h-9 px-3"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </Button>
+                <select
+                  value={inlinePeriod}
+                  onChange={(e) => setInlinePeriod(e.target.value as 'daily'|'weekly'|'monthly')}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+                  <select
+                    value={inlineMonth}
+                    onChange={(e) => setInlineMonth(Number(e.target.value))}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    aria-label="Select month"
+                  >
+                    {monthNames.map((m, idx) => (
+                      <option key={m} value={idx}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={inlineYear}
+                    onChange={(e) => setInlineYear(Number(e.target.value))}
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    aria-label="Select year"
+                  >
+                    {Array.from({length: 7}, (_,i) => new Date().getFullYear() - 3 + i).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
                 </div>
-
-                {/* Search Results Info */}
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <CheckSquare className="w-4 h-4" />
-                    <span>
-                      Showing {filteredChecklists.length} of {checklists.length} checklists
-                      {searchTerm && ` matching "${searchTerm}"`}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>Real-time search</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Checklists Display */}
-          {filteredChecklists.length === 0 ? (
-            <EmptyState
-              title="No checklists found"
-              description={
-                searchTerm 
-                  ? 'Try adjusting your search criteria'
-                  : 'No checklists are currently available'
-              }
-              actionText="Clear Search"
-              onAction={() => {
-                    setSearchTerm('')
-                  }}
-            />
-          ) : (
-            <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6'
-              : 'space-y-3 sm:space-y-4'
-            }>
-              {filteredChecklists.map((checklist) => (
-                <Card key={checklist._id} className="bg-white dark:bg-gray-800 border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer group overflow-hidden bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-                  {/* Priority Indicator Bar */}
-                  <div className={`h-1.5 w-full ${
-                    checklist.priority === 'high' ? 'bg-gradient-to-r from-red-500 to-pink-500' :
-                    checklist.priority === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                    'bg-gradient-to-r from-green-500 to-emerald-500'
-                  }`}></div>
-                  
-                  <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4 px-3 sm:px-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0 pr-2 sm:pr-3">
-                        <CardTitle className="text-base sm:text-lg font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-blue-600 transition-colors mb-1">
-                          {checklist.title}
-                        </CardTitle>
-                        <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                          {checklist.description}
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end space-y-1 ml-2 flex-shrink-0">
-                        <Badge className={`${
-                          checklist.priority === 'high' ? 'bg-gradient-to-r from-red-100 to-pink-100 text-red-800 border-red-300 shadow-sm' :
-                          checklist.priority === 'medium' ? 'bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800 border-yellow-300 shadow-sm' :
-                          'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-300 shadow-sm'
-                        } text-xs px-2 py-1 font-semibold border`}>
-                          {checklist.priority}
-                        </Badge>
-                        <Badge className={`${
-                          checklist.status === 'active' ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 border-blue-300 shadow-sm' :
-                          checklist.status === 'completed' ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-300 shadow-sm' :
-                          'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-800 border-gray-300 shadow-sm'
-                        } text-xs px-2 py-1 font-semibold border`}>
-                          {checklist.status}
-                        </Badge>
-                      </div>
                     </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-2 sm:space-y-3 pb-3 sm:pb-4 px-3 sm:px-6">
-                    {/* Location Section */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-3 border border-blue-200 dark:border-blue-800/30 shadow-sm">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                          <MapPin className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                        </div>
-                        <span className="text-xs font-semibold text-blue-800 dark:text-blue-300">Location</span>
-                      </div>
-                      <div className="ml-5 space-y-1">
-                        <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400">
-                          <Building2 className="h-3 w-3" />
-                          <span className="font-medium">{checklist.location.building}</span>
-                        </div>
-                        <div className="text-xs text-blue-600 dark:text-blue-500 ml-5">
-                          Floor {checklist.location.floor} • Zone {checklist.location.zone}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Details Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800 dark:to-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                          <Calendar className="h-3 w-3 text-gray-600 flex-shrink-0" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Type</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{checklist.type}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800 dark:to-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                        <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                          <Clock className="h-3 w-3 text-gray-600 flex-shrink-0" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Frequency</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{checklist.frequency}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Inspection Items */}
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-xl border border-purple-200 dark:border-purple-800/30 shadow-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                          <CheckSquare className="h-3 w-3 text-purple-600" />
-                        </div>
-                        <span className="text-xs font-medium text-purple-800 dark:text-purple-300">
-                          {checklist.items.length} inspection items
-                        </span>
-                      </div>
-                      <Badge variant="outline" className="text-xs px-2 py-1 border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/20 shadow-sm">
-                        {checklist.type}
-                      </Badge>
-                    </div>
-
-                    {/* Tags */}
-                    {checklist.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {checklist.tags.slice(0, 3).map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs px-2 py-1 bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border-gray-300 shadow-sm">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {checklist.tags.length > 3 && (
-                          <Badge className="text-xs px-2 py-1 bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border-gray-300 shadow-sm">
-                            +{checklist.tags.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Creator Info */}
-                    <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800 dark:to-slate-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                      <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                        <User className="h-3 w-3 text-gray-600 flex-shrink-0" />
-                      </div>
-                      <span className="text-xs text-gray-700 dark:text-gray-300">
-                        Created by <span className="font-medium">{checklist.createdBy.name}</span>
-                      </span>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex space-x-2 pt-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1 h-8 sm:h-9 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 border-blue-300 text-blue-700 text-xs shadow-sm hover:shadow-md transition-all duration-200"
-                        onClick={() => showChecklistDetails(checklist)}
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        <span className="hidden sm:inline">View</span>
-                        <span className="sm:hidden">V</span>
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1 h-8 sm:h-9 hover:bg-green-50 hover:text-green-600 hover:border-green-300 border-green-300 text-green-700 text-xs shadow-sm hover:shadow-md transition-all duration-200"
-                        onClick={() => handleQRClick(checklist)}
-                      >
-                        <QrCode className="h-3 w-3 mr-1" />
-                        <span className="hidden sm:inline">QR</span>
-                        <span className="sm:hidden">Q</span>
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="outline" className="h-8 sm:h-9 px-2 border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm hover:shadow-md transition-all duration-200">
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem onClick={() => downloadChecklistInfo(checklist)}>
-                            <Download className="h-3 w-3 mr-2" />
-                            Download Info
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => showChecklistDetails(checklist)}>
-                            <Eye className="h-3 w-3 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => console.log('Edit checklist:', checklist._id)}>
-                            <Edit className="h-3 w-3 mr-2" />
-                            Edit Checklist
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => console.log('Share checklist:', checklist._id)}>
-                            <Share2 className="h-3 w-3 mr-2" />
-                            Share
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => console.log('Archive checklist:', checklist._id)} className="text-red-600">
-                            <Archive className="h-3 w-3 mr-2" />
-                            Archive
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm border border-gray-400 border-collapse">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="px-1.5 py-1 text-left border border-gray-400">#</th>
+                      <th className="px-1.5 py-1 text-left border border-gray-400">Activity</th>
+                      <th className="px-1.5 py-1 text-left border border-gray-400">
+                        {(() => {
+                          const inlineDayLabels = getInlineDayLabels()
+                          return (
+                            <div
+                              className="grid overflow-x-auto pr-2"
+                              style={{ gridTemplateColumns: `repeat(${inlineDayLabels.length}, minmax(${inlineCellSize}px, 1fr))` }}
+                            >
+                              {inlineDayLabels.map((lbl, idx) => (
+                                <div key={idx} className="flex items-center justify-center border border-gray-400 bg-white">
+                                  <span className="text-center text-xs font-semibold text-gray-700">
+                                    {lbl}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        })()}
+                      </th>
+                  </tr>
+                </thead>
+                  <tbody>
+                    {successChecklist.items?.map((it, idx) => {
+                      const itemId = (it as any)._id || `item_${idx}`
+                      return (
+                        <tr key={itemId}>
+                          <td className="px-1.5 py-1 border border-gray-400">{it.serialNumber || idx + 1}</td>
+                          <td className="px-1.5 py-1 border border-gray-400">
+                            <div className="font-medium">{it.inspectionItem}</div>
+                          </td>
+                          <td className="px-1.5 py-1 border border-gray-400">
+                            {(() => {
+                              const inlineDayLabels = getInlineDayLabels()
+                              return (
+                                <div
+                                  className="grid overflow-x-auto pr-2"
+                                  style={{ gridTemplateColumns: `repeat(${inlineDayLabels.length}, minmax(${inlineCellSize}px, 1fr))` }}
+                                >
+                                  {inlineDayLabels.map((_, i) => {
+                                    const note = getCellNote(itemId, i)
+                                    return (
+                                      <div
+                                        key={i}
+                                        className="flex items-center justify-center border border-gray-400 bg-white relative p-0"
+                                        style={{ height: inlineCellSize * 1.5, minHeight: 42 }}
+                                      >
+                                        <input
+                                          type="text"
+                                          value={note}
+                                          onChange={(e) => updateCellNote(itemId, i, e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              ;(e.target as HTMLInputElement).blur()
+                                            }
+                                          }}
+                                          className="w-full h-full px-1 text-xs text-gray-800 focus:outline-none"
+                                          placeholder=""
+                                        />
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )
+                            })()}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+              </table>
+            </div>
             </div>
           )}
-        </main>
+
+          {/* Checklist table removed per request */}
+        </div>
       </div>
 
       {/* Enhanced Modals */}
@@ -818,8 +831,20 @@ Timestamps:
         onClose={() => setShowScanner(false)}
         onScanResult={handleScannedResult}
         scannedResult={scannedData ? `Found: ${scannedData.title}` : null}
-        checklists={checklists}
+        checklists={checklists.map(checklist => ({
+          _id: checklist._id,
+          title: checklist.title,
+          description: checklist.description,
+          qrCode: checklist.qrCode,
+          location: checklist.location,
+          type: checklist.type,
+          status: checklist.status,
+          priority: checklist.priority,
+          frequency: checklist.frequency,
+          items: checklist.items
+        }))}
         mode="checklists"
+        strictChecklistsOnly={true}
       />
 
 
@@ -926,145 +951,15 @@ Timestamps:
         </div>
       )}
 
-      {/* Enhanced Scanner Response Modal - Mobile & Web Responsive */}
-      {showScannerResponse && scannedData && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden border-2 border-green-200 dark:border-green-700">
-            {/* Header - Responsive */}
-            <div className="bg-gradient-to-r from-green-400 to-emerald-500 dark:from-green-600 dark:to-emerald-600 px-4 sm:px-6 py-3 sm:py-4 text-center">
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg">
-                    <Scan className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white">
-                    Scanner Response
-                  </h3>
-                </div>
-                  <Button 
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowScannerResponse(false)}
-                  className="h-8 w-8 sm:h-10 sm:w-10 p-0 hover:bg-white/20 rounded-lg text-white"
-                >
-                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </Button>
-              </div>
 
-              {/* Success Icon and Message */}
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-lg">
-                <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
-                </div>
-              <h4 className="text-lg sm:text-xl font-bold text-white mb-1">
-                QR Code Successfully Scanned! 🎉
-                </h4>
-              <p className="text-green-100 text-sm sm:text-base font-medium">
-                  Checklist information has been detected and processed
-                </p>
-            </div>
-
-            {/* Content - Responsive */}
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(95vh-200px)] sm:max-h-[calc(90vh-200px)]">
-              {/* Scanned Information Card */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-3 sm:p-4 border border-blue-200 dark:border-blue-800/30">
-                  <h5 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
-                    <QrCode className="h-4 w-4" />
-                    Scanned Information
-                  </h5>
-                
-                {/* Mobile-first responsive grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-blue-200/50">
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Checklist ID</p>
-                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 break-all">{scannedData.checklistId}</p>
-                    </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-blue-200/50">
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Type</p>
-                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">{scannedData.type}</p>
-                    </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-blue-200/50 sm:col-span-2">
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Title</p>
-                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">{scannedData.title}</p>
-                    </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-blue-200/50 sm:col-span-2">
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-medium">Building</p>
-                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                        {typeof scannedData.location === 'object' && 'building' in scannedData.location && scannedData.location.building 
-                          ? String(scannedData.location.building)
-                          : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-              {/* Additional Info if available */}
-              {successChecklist && (
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-xl p-3 sm:p-4 border border-purple-200 dark:border-purple-800/30">
-                  <h5 className="text-sm font-semibold text-purple-800 dark:text-purple-300 mb-3 flex items-center gap-2">
-                    <CheckSquare className="h-4 w-4" />
-                    Additional Details
-                  </h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-purple-200/50">
-                      <p className="text-xs text-purple-600 dark:text-purple-400 mb-1 font-medium">Status</p>
-                      <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 capitalize">{successChecklist.status}</p>
-                    </div>
-                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-purple-200/50">
-                      <p className="text-xs text-purple-600 dark:text-purple-400 mb-1 font-medium">Priority</p>
-                      <p className="text-sm font-semibold text-purple-800 dark:text-purple-200 capitalize">{successChecklist.priority}</p>
-                    </div>
-                    <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-purple-200/50 sm:col-span-2">
-                      <p className="text-xs text-purple-600 dark:text-purple-400 mb-1 font-medium">Items Count</p>
-                      <p className="text-sm font-semibold text-purple-800 dark:text-purple-200">{successChecklist.items.length} inspection items</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons - Responsive */}
-            <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-2 sm:space-y-3">
-                  <Button 
-                    onClick={() => {
-                      setShowScannerResponse(false)
-                      if (successChecklist) {
-                    setSelectedChecklist(successChecklist)
-                    setShowChecklistViewModal(true)
-                      }
-                    }}
-                className="w-full h-10 sm:h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Full Details
-                </Button>
-                <Button 
-                    variant="outline"
-                onClick={() => {
-                  setShowScannerResponse(false)
-                  // Store the scanned data for future reference
-                  if (scannedData) {
-                    const scanHistory = JSON.parse(localStorage.getItem('checklistScanHistory') || '[]')
-                    scanHistory.unshift({
-                      ...scannedData,
-                      scannedAt: new Date().toISOString(),
-                      id: Date.now()
-                    })
-                    // Keep only last 10 scans
-                    if (scanHistory.length > 10) {
-                      scanHistory.splice(10)
-                    }
-                    localStorage.setItem('checklistScanHistory', JSON.stringify(scanHistory))
-                  }
-                }}
-                className="w-full h-10 sm:h-11 border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Continue
-                </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Calendar Checklist Modal */}
+      <CalendarChecklistModal
+        isOpen={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
+        checklist={calendarChecklist}
+        onSave={handleCalendarSave}
+        onComplete={handleCalendarComplete}
+      />
 
       {/* Success Toast */}
       {showSuccessToast && (

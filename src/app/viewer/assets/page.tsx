@@ -789,7 +789,13 @@ Timestamps:
         key={scannerKey}
         isOpen={showScanner}
         onClose={() => setShowScanner(false)}
-        onScanResult={handleScannedResult}
+        onScanResult={(result) => {
+          if (typeof result === 'string') {
+            handleScannedResult(result)
+          } else {
+            console.warn('Unexpected scan result type', result)
+          }
+        }}
         scannedResult={scannedResult}
         assets={assets}
         mode="assets"

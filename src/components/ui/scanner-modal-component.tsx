@@ -15,18 +15,16 @@ import {
   Eye,
   CheckSquare,
   User,
-  Calendar,
-  Clock,
-  QrCode
+  Calendar
 } from 'lucide-react'
 import jsQR from 'jsqr'
 
 interface ScannerModalProps {
   isOpen: boolean
-  onClose: () => void
+  onCloseAction: () => void
   // After a successful scan, we pass back the full entity (e.g., checklist)
   // so the parent can store it locally without another GET
-  onScanResult: (result: unknown) => void
+  onScanResultAction: (result: unknown) => void
   scannedResult?: string | null
   assets?: Array<{
     _id: string
@@ -129,8 +127,8 @@ interface ScannerModalProps {
 
 export function ScannerModal({ 
   isOpen, 
-  onClose, 
-  onScanResult, 
+  onCloseAction, 
+  onScanResultAction, 
   assets = [],
   checklists = [],
   mode = 'assets',
@@ -254,20 +252,10 @@ export function ScannerModal({
   }, [scanResult, mode])
   
   // Handle checklist item status change
-  const handleItemStatusChange = (itemId: string, status: 'completed' | 'failed' | 'not_applicable') => {
-    setChecklistItems(prev => ({
-      ...prev,
-      [itemId]: { ...prev[itemId], status }
-    }))
-  }
+  // removed unused handleItemStatusChange
   
   // Handle remarks change
-  const handleRemarksChange = (itemId: string, remarks: string) => {
-    setChecklistItems(prev => ({
-      ...prev,
-      [itemId]: { ...prev[itemId], remarks }
-    }))
-  }
+  // removed unused handleRemarksChange
   
   // Get completion statistics
   const getCompletionStats = () => {
@@ -299,7 +287,7 @@ export function ScannerModal({
     alert(`Checklist progress saved!\nCompleted: ${stats.completed}/${stats.total} items`)
     
     // Call the scan result handler to close the modal or navigate
-    onScanResult(scanResult?.assetId || '')
+    onScanResultAction(scanResult?.assetId || '')
   }
   // Use native BarcodeDetector if available for faster/more reliable scanning
   const barcodeDetectorRef = useRef<null | { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> }>(null)
@@ -782,7 +770,7 @@ export function ScannerModal({
             qrImageData: qrImageData
           })
           // Return the full checklist to parent for local storage
-          onScanResult(foundChecklist)
+          onScanResultAction(foundChecklist)
         } else if (!strictChecklistsOnly) {
           // QR code found but checklist not in system - create sample checklist
           console.log('QR code found but no matching checklist - creating sample')
@@ -862,7 +850,7 @@ export function ScannerModal({
             qrImageData: qrImageData
           })
           // Inform parent about mismatch so it can update UI
-          onScanResult({ __type: 'error', reason: 'not_matching', raw: scannedQRContent })
+          onScanResultAction({ __type: 'error', reason: 'not_matching', raw: scannedQRContent })
         }
       } else {
         const foundAsset = findMatchingAsset(scannedQRContent)
@@ -875,7 +863,7 @@ export function ScannerModal({
             message: `✅ Asset found: ${foundAsset.tagId}`,
             qrImageData: qrImageData
           })
-          onScanResult(scannedQRContent)
+          onScanResultAction(scannedQRContent)
         } else {
           setScanResult({
             success: false,
@@ -969,7 +957,7 @@ export function ScannerModal({
               message: `✅ Checklist found: ${foundChecklist.title}`,
               qrImageData: qrImageData
             })
-            onScanResult(foundChecklist)
+            onScanResultAction(foundChecklist)
           } else if (!strictChecklistsOnly) {
             // QR code found but checklist not in system - create sample checklist
             console.log('QR code found but no matching checklist - creating sample')
@@ -1041,7 +1029,7 @@ export function ScannerModal({
               message: `✅ QR Code scanned: "${scannedQRContent}" - Sample checklist created`,
               qrImageData: qrImageData
             })
-            onScanResult(sampleChecklist)
+            onScanResultAction(sampleChecklist)
           } else {
             setScanResult({
               success: false,
@@ -1050,7 +1038,7 @@ export function ScannerModal({
               qrImageData: qrImageData
             })
             // Notify parent so page can clear/reflect mismatch
-            onScanResult({ __type: 'error', reason: 'not_matching', raw: scannedQRContent })
+            onScanResultAction({ __type: 'error', reason: 'not_matching', raw: scannedQRContent })
           }
         } else {
           // Handle asset scanning
@@ -1069,7 +1057,7 @@ export function ScannerModal({
               message: `✅ Asset found: ${foundAsset.tagId}`,
               qrImageData: qrImageData
             })
-            onScanResult(scannedQRContent)
+            onScanResultAction(scannedQRContent)
           } else {
             // QR code found but asset not in system - show info
             console.log('QR code found but no matching asset')
@@ -1237,7 +1225,7 @@ export function ScannerModal({
 
   const handleClose = () => {
     resetScannerState()
-    onClose()
+    onCloseAction()
   }
 
   // Clear results when modal opens/closes
@@ -1497,7 +1485,7 @@ export function ScannerModal({
                       <option key={y} value={y}>{y}</option>
                     ))}
                   </select>
-                  <Button variant="outline" size="sm" onClick={() => onScanResult('')}>Close</Button>
+                  <Button variant="outline" size="sm" onClick={() => onScanResultAction('')}>Close</Button>
                 </div>
               </div>
 
@@ -1559,7 +1547,7 @@ export function ScannerModal({
               )}
               {/* Simple Actions */}
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" size="sm" onClick={() => onScanResult('')}>Close</Button>
+                <Button variant="outline" size="sm" onClick={() => onScanResultAction('')}>Close</Button>
                 <Button size="sm" onClick={handleSaveProgress}>Save ({getCompletionStats().completed}/{getCompletionStats().total})</Button>
               </div>
             </div>
@@ -1767,14 +1755,14 @@ export function ScannerModal({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <Button 
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
-                                onClick={() => onScanResult(scanResult.assetId)}
+                                onClick={() => onScanResultAction(scanResult.assetId)}
                               >
                                 <Calendar className="w-4 h-4 mr-2" />
                                 Open Calendar Checklist
                               </Button>
                               <Button 
                                 className="w-full bg-green-600 hover:bg-green-700 text-white" 
-                                onClick={() => onScanResult(scanResult.assetId)}
+                                onClick={() => onScanResultAction(scanResult.assetId)}
                               >
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Full Details
@@ -1782,7 +1770,7 @@ export function ScannerModal({
                             </div>
                           ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => onScanResult(scanResult.assetId)}>
+                            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => onScanResultAction(scanResult.assetId)}>
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
                             </Button>
@@ -1825,7 +1813,7 @@ export function ScannerModal({
                             className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
                             onClick={() => {
                               setScanResult(null)
-                              onScanResult('')
+                              onScanResultAction('')
                             }}
                           >
                             Close Scanner
@@ -1935,7 +1923,7 @@ export function ScannerModal({
                           className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
                           onClick={() => {
                             setScanResult(null)
-                            onScanResult('')
+                            onScanResultAction('')
                           }}
                         >
                           Try Another Image

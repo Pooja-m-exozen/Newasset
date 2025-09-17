@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
+
 import { 
   X, 
   Download, 
@@ -828,9 +829,9 @@ This report was generated from the FacilioTrack Checklist Management System.`
       </DialogContent>
 
       {/* Scanner Modal */}
-      <ScannerModal
-        isOpen={scannerModalOpen}
-        onClose={() => setScannerModalOpen(false)}
+      {/* <ScannerModal
+        onopenChange={scannerModalOpen}
+        onOpenChange={setScannerModalOpen}
         onScanResult={handleScanResult}
         scannedResult={scannedResult}
         checklists={[{
@@ -850,7 +851,7 @@ This report was generated from the FacilioTrack Checklist Management System.`
           priority: checklist.priority
         }]}
         mode="checklists"
-      />
+      /> */}
 
       {/* Enhanced Scan Result Popup */}
       {showScanResultPopup && scannedResult && (

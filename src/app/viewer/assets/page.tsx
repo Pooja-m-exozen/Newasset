@@ -486,8 +486,8 @@ Timestamps:
       loadViewModalImages(scannedAsset)
     }
   }, [scannedAsset, showScannedAssetModal, loadViewModalImages])
-    
-    // Cleanup blob URLs when modal closes
+
+  // Cleanup blob URLs when modal closes
   useEffect(() => {
     return () => {
       if (viewModalQrImgSrc && viewModalQrImgSrc.startsWith('blob:')) {
@@ -788,12 +788,10 @@ Timestamps:
       <ScannerModal
         key={scannerKey}
         isOpen={showScanner}
-        onClose={() => setShowScanner(false)}
-        onScanResult={(result) => {
+        onCloseAction={() => setShowScanner(false)}
+        onScanResultAction={(result) => {
           if (typeof result === 'string') {
             handleScannedResult(result)
-          } else {
-            console.warn('Unexpected scan result type', result)
           }
         }}
         scannedResult={scannedResult}

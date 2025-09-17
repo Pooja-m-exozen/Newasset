@@ -9,8 +9,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { 
   X, 
-  CheckCircle, 
-  XCircle, 
   Calendar, 
   Building2, 
   MapPin,
@@ -20,19 +18,27 @@ import {
   CheckSquare
 } from 'lucide-react'
 
-import { Checklist, ChecklistItem } from '@/types/checklist'
+import { Checklist } from '@/types/checklist'
 
 // Override the status type for calendar modal to include in_progress
 interface CalendarChecklist extends Omit<Checklist, 'status'> {
   status: 'active' | 'completed' | 'archived' | 'in_progress'
 }
 
+interface CalendarActionPayload {
+  checklist: CalendarChecklist | null
+  dayData: DayData[]
+  inspectorName: string
+  inspectorId: string
+  frequency: 'daily' | 'weekly' | 'monthly'
+}
+
 interface CalendarChecklistModalProps {
   isOpen: boolean
-  onClose: () => void
+  onCloseAction: () => void
   checklist: CalendarChecklist | null
-  onSave?: (data: any) => void
-  onComplete?: (data: any) => void
+  onSave?: (data: CalendarActionPayload) => void
+  onComplete?: (data: CalendarActionPayload) => void
 }
 
 interface DayStatus {
@@ -49,14 +55,13 @@ interface DayData {
 
 export default function CalendarChecklistModal({ 
   isOpen, 
-  onClose, 
+  onCloseAction, 
   checklist, 
   onSave, 
   onComplete 
 }: CalendarChecklistModalProps) {
   const [selectedFrequency, setSelectedFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily')
-  const [selectedDate, setSelectedDate] = useState<string>('')
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
+  const [currentMonth] = useState<Date>(new Date())
   const [dayData, setDayData] = useState<DayData[]>([])
   const [inspectorName, setInspectorName] = useState('')
   const [inspectorId, setInspectorId] = useState('')
@@ -108,7 +113,7 @@ export default function CalendarChecklistModal({
       }))
       setDayData(initialDayData)
     }
-  }, [checklist, dates, selectedFrequency, currentMonth])
+  }, [checklist, dates, selectedFrequency, currentMonth, inspectorName])
 
   const handleItemStatusChange = (date: string, itemId: string, status: 'completed' | 'failed' | 'not_applicable' | 'pending') => {
     setDayData(prev => prev.map(day => 
@@ -182,7 +187,7 @@ export default function CalendarChecklistModal({
   if (!checklist) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onCloseAction}>
       <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden">
         <DialogHeader className="pb-4">
           <div className="flex items-center justify-between">
@@ -199,7 +204,7 @@ export default function CalendarChecklistModal({
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={onCloseAction}>
               <X className="w-5 h-5" />
             </Button>
           </div>
@@ -338,7 +343,7 @@ export default function CalendarChecklistModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {checklist.items.map((item, itemIndex) => (
+                    {checklist.items.map((item) => (
                       <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                         <td className="border border-gray-300 dark:border-gray-600 p-2 text-center text-sm font-medium">
                           {item.serialNumber}
@@ -457,7 +462,7 @@ export default function CalendarChecklistModal({
             {dates.length} {selectedFrequency === 'daily' ? 'day' : selectedFrequency === 'weekly' ? 'days' : 'days'} selected
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onCloseAction}>
               Cancel
             </Button>
             <Button onClick={handleSave} className="flex items-center gap-2">

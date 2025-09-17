@@ -1,11 +1,10 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+ 
+ 
 import Image from 'next/image'
 
 // Import extracted components
@@ -17,26 +16,20 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import CalendarChecklistModal from '@/components/ui/calendar-checklist-modal'
 
 import { 
-  Building2, 
   Package, 
-  Calendar,
   QrCode,
-  Eye,
   Download,
   X,
-  Scan,
-  CheckCircle,
-  CheckSquare,
-  MoreHorizontal
+  Scan
 } from 'lucide-react'
 
-import { Checklist, ChecklistItem, Location, CreatedBy } from '@/types/checklist'
+import { Checklist, ChecklistItem, Location } from '@/types/checklist'
 
 
 
 export default function ViewerChecklists() {
   const [checklists, setChecklists] = useState<Checklist[]>([])
-  const [filteredChecklists, setFilteredChecklists] = useState<Checklist[]>([])
+  
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showTokenInput, setShowTokenInput] = useState(false)
@@ -47,12 +40,11 @@ export default function ViewerChecklists() {
   const [qrImageError, setQrImageError] = useState(false)
   
   // Checklist completion state
-  const [checklistStatus, setChecklistStatus] = useState<Record<string, 'pending' | 'completed' | 'failed'>>({})
+  
   // Store scanned results locally on this page (not in table rows)
-  const [recentScans, setRecentScans] = useState<Checklist[]>([])
+  
   // Inline sheet state
   const [inlinePeriod, setInlinePeriod] = useState<'daily'|'weekly'|'monthly'>('daily')
-  const [inlineTicks, setInlineTicks] = useState<Record<string, Record<number, boolean>>>({})
   const [inlineNotes, setInlineNotes] = useState<Record<string, Record<number, string>>>({})
   const [inlineMonth, setInlineMonth] = useState<number>(new Date().getMonth())
   const [inlineYear, setInlineYear] = useState<number>(new Date().getFullYear())
@@ -75,11 +67,11 @@ export default function ViewerChecklists() {
   const [successChecklist, setSuccessChecklist] = useState<Checklist | null>(null)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
-  const [showScannerResponse, setShowScannerResponse] = useState(false)
+  
   
   // Calendar modal states
   const [showCalendarModal, setShowCalendarModal] = useState(false)
-  const [calendarChecklist, setCalendarChecklist] = useState<Checklist | null>(null)
+  const [calendarChecklist] = useState<Checklist | null>(null)
 
 
 
@@ -129,44 +121,9 @@ export default function ViewerChecklists() {
     }
   }, [authToken])
 
-  // Set filtered checklists to all checklists since we removed search
-  useEffect(() => {
-    setFilteredChecklists(checklists)
-  }, [checklists])
+  
 
-  // Toggle checklist status (Yes/No functionality)
-  const toggleChecklistStatus = (checklistId: string, status: 'completed' | 'failed') => {
-    setChecklistStatus(prev => ({
-      ...prev,
-      [checklistId]: status
-    }))
-  }
-
-  // Get current status for a checklist
-  const getChecklistStatus = (checklistId: string) => {
-    return checklistStatus[checklistId] || 'pending'
-  }
-
-  // Right-click add/edit note in a cell
-  const handleCellRightClick = (itemId: string, day: number, e: React.MouseEvent) => {
-    e.preventDefault()
-    const current = inlineNotes[itemId]?.[day] || ''
-    const value = window.prompt('Enter note/value for this cell', current)
-    if (value !== null) {
-      setInlineNotes(prev => ({
-        ...prev,
-        [itemId]: {
-          ...(prev[itemId] || {}),
-          [day]: value
-        }
-      }))
-    }
-  }
-
-  // Get checkbox status
-  const getCheckboxStatus = (itemId: string, day: number) => {
-    return inlineTicks[itemId]?.[day] || false
-  }
+  
 
   const getCellNote = (itemId: string, day: number) => {
     return inlineNotes[itemId]?.[day] || ''
@@ -182,21 +139,17 @@ export default function ViewerChecklists() {
     }))
   }
 
-  // Open calendar modal for checklist
-  const openCalendarModal = (checklist: Checklist) => {
-    setCalendarChecklist(checklist)
-    setShowCalendarModal(true)
-  }
+  
 
   // Handle calendar modal save
-  const handleCalendarSave = (data: any) => {
+  const handleCalendarSave = (data: unknown) => {
     console.log('Calendar data saved:', data)
     setToastMessage('Checklist progress saved successfully!')
     setShowSuccessToast(true)
   }
 
   // Handle calendar modal complete
-  const handleCalendarComplete = (data: any) => {
+  const handleCalendarComplete = (data: unknown) => {
     console.log('Calendar data completed:', data)
     setToastMessage('Checklist completed successfully!')
     setShowSuccessToast(true)
@@ -219,23 +172,19 @@ export default function ViewerChecklists() {
 
   // helper: persist recent scans (page-level only)
   const saveRecentScan = (checklist: Checklist) => {
-    setRecentScans(prev => {
-      const next = [checklist, ...prev].slice(0, 20)
       try {
+      const raw = localStorage.getItem('recentChecklistScans')
+      const prev: Checklist[] = raw ? JSON.parse(raw) : []
+      const next = [checklist, ...prev].slice(0, 20)
         localStorage.setItem('recentChecklistScans', JSON.stringify(next))
       } catch {}
-      return next
+    // init notes for inline grid
+    const notesByItemId: Record<string, Record<number, string>> = {}
+    checklist.items?.forEach((it: ChecklistItem, idx: number) => {
+      const id = it?._id || `item_${idx}`
+      notesByItemId[id] = {}
     })
-    // init ticks for inline grid
-    const t: Record<string, Record<number, boolean>> = {}
-    const n: Record<string, Record<number, string>> = {}
-    checklist.items?.forEach((it, idx) => {
-      const id = (it as any)._id || `item_${idx}`
-      t[id] = {}
-      n[id] = {}
-    })
-    setInlineTicks(t)
-    setInlineNotes(n)
+    setInlineNotes(notesByItemId)
   }
 
   const getInlineDayLabels = (): string[] => {
@@ -281,48 +230,7 @@ export default function ViewerChecklists() {
 
 
 
-  const handleQRClick = (checklist: Checklist) => {
-    setSelectedQRData({
-      url: checklist.qrCode.url,
-      data: checklist.qrCode.data
-    })
-    setShowQRModal(true)
-    setQrImageLoading(true)
-    setQrImageError(false)
-    
-    const testImageUrl = checklist.qrCode.url.startsWith('http') ? checklist.qrCode.url : `https://digitalasset.zenapi.co.in${checklist.qrCode.url}`
-    
-    fetch(testImageUrl, {
-      method: 'GET',
-      mode: 'cors',
-      headers: {
-        'Accept': 'image/*',
-      }
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      return response.blob()
-    })
-    .then(blob => {
-      const imageUrl = URL.createObjectURL(blob)
-      setSelectedQRData(prev => prev ? { ...prev, blobUrl: imageUrl } : null)
-      setQrImageLoading(false)
-    })
-    .catch(() => {
-      const testImg = new window.Image()
-      testImg.crossOrigin = 'anonymous'
-      testImg.onload = () => {
-        setQrImageLoading(false)
-      }
-      testImg.onerror = () => {
-        setQrImageLoading(false)
-        setQrImageError(true)
-      }
-      testImg.src = testImageUrl
-    })
-  }
+  
 
   const handleModalBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -330,64 +238,7 @@ export default function ViewerChecklists() {
     }
   }
 
-  // Enhanced handlers
-  const showChecklistDetails = (checklist: Checklist) => {
-    setSelectedChecklist(checklist)
-    setShowChecklistViewModal(true)
-  }
-
-  const downloadChecklistInfo = (checklist: Checklist) => {
-    try {
-      const checklistInfo = `
-Checklist Information
-====================
-
-Basic Details:
-- Title: ${checklist.title}
-- Description: ${checklist.description}
-- Type: ${checklist.type}
-- Frequency: ${checklist.frequency}
-- Status: ${checklist.status}
-- Priority: ${checklist.priority}
-- Created By: ${checklist.createdBy.name} (${checklist.createdBy.email})
-
-Location:
-- Building: ${checklist.location.building}
-- Floor: ${checklist.location.floor}
-- Zone: ${checklist.location.zone}
-
-Inspection Items: ${checklist.items.length}
-${checklist.items.map((item, index) => `
-${index + 1}. ${item.inspectionItem}
-   Details: ${item.details}
-   Status: ${item.status}
-   Remarks: ${item.remarks}
-`).join('')}
-
-Tags: ${checklist.tags.join(', ')}
-
-Timestamps:
-- Created: ${new Date(checklist.createdAt).toLocaleString()}
-- Updated: ${new Date(checklist.updatedAt).toLocaleString()}
-      `.trim()
-
-      const blob = new Blob([checklistInfo], { type: 'text/plain' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `checklist_${checklist.title.replace(/[^a-zA-Z0-9]/g, '_')}_info.txt`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      
-      setToastMessage('Checklist information downloaded successfully!')
-      setShowSuccessToast(true)
-    } catch (error) {
-      console.error('Error downloading checklist info:', error)
-      setError('Failed to download checklist information')
-    }
-  }
+  
 
   const downloadChecklistPDF = async (checklist: Checklist) => {
     try {
@@ -401,111 +252,86 @@ Timestamps:
       doc.setFont('helvetica', 'bold')
       doc.text(`Checklist: ${safe(checklist.title)}`.slice(0, 120), 14, 16)
 
-      // Meta row (single line summary akin to page header)
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      const meta = [
-        `Type: ${safe(checklist.type)}`,
-        `Frequency: ${safe(checklist.frequency)}`,
-        `Priority: ${safe(checklist.priority)}`,
-        `Status: ${safe(checklist.status)}`,
-        `Period: ${inlinePeriod}`,
-        `Month/Year: ${monthNames[inlineMonth]} ${inlineYear}`
-      ].join('  |  ')
-      doc.text(doc.splitTextToSize(meta, 280), 14, 24)
+      // Removed meta row per request to keep PDF cleaner
 
-      // Table like the main page (#, Activity, dynamic day columns)
-      const headers = ['#', 'Activity']
+      // SINGLE-PAGE FIT: draw all columns and rows on one landscape page
       const dayLabels = getInlineDayLabels()
-      const allHeaders = headers.concat(dayLabels)
+      const items = checklist.items || []
 
-      // Layout
+      // Geometry and sizing
       const startX = 12
       let y = 34
-      const rowH = 8
       const pageW = doc.internal.pageSize.getWidth()
       const pageH = doc.internal.pageSize.getHeight()
       const rightMargin = 12
       const bottomMargin = 14
+      const topAreaUsed = y
 
-      // Column widths: fixed for first two, remaining evenly share leftover
-      const colW0 = 10 // #
-      const colW1 = 60 // Activity
-      const remainingW = pageW - rightMargin - startX - colW0 - colW1
-      const dayColW = Math.max(10, Math.min(remainingW / dayLabels.length, 20))
-      // If too many days to fit, split across vertical pages with header reprint
+      // Compute row height to fit all rows + header
+      const availableH = pageH - bottomMargin - topAreaUsed
+      const rowH = Math.max(5, Math.floor(availableH / (items.length + 1)))
 
-      const drawHeader = () => {
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(9)
-        let x = startX
+      // Initial small fonts for dense layout
+      doc.setFontSize(8)
+
+      // Compute column widths to fit all day columns
+      const colW0 = 8 // #
+      let colW1 = 50 // Activity tentative
+      let remainingW = pageW - rightMargin - startX - colW0 - colW1
+      let dayColW = Math.max(5, Math.floor(remainingW / Math.max(1, dayLabels.length)))
+      // If activity becomes too small, rebalance
+      const minActivity = 35
+      if (dayColW < 5) dayColW = 5
+      colW1 = Math.max(minActivity, pageW - rightMargin - startX - colW0 - dayColW * dayLabels.length)
+      remainingW = pageW - rightMargin - startX - colW0 - colW1
+      dayColW = Math.max(5, Math.floor(remainingW / Math.max(1, dayLabels.length)))
+
+      // Header
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      let x = startX
+      doc.rect(x, y, colW0, rowH)
+      doc.text('#', x + 1.5, y + rowH - 2)
+      x += colW0
+      doc.rect(x, y, colW1, rowH)
+      doc.text('Activity', x + 1.5, y + rowH - 2)
+      x += colW1
+      for (let i = 0; i < dayLabels.length; i += 1) {
+        doc.rect(x, y, dayColW, rowH)
+        const lbl = String(dayLabels[i])
+        const tw = doc.getTextWidth(lbl)
+        const tx = x + Math.max(1, (dayColW - tw) / 2)
+        doc.text(lbl, tx, y + rowH - 2)
+        x += dayColW
+      }
+      y += rowH
+      doc.setFont('helvetica', 'normal')
+
+      // Rows (one line per cell; clip with splitTextToSize and use first line)
+      for (let idx = 0; idx < items.length; idx += 1) {
+        const it = items[idx]
+        x = startX
         // #
         doc.rect(x, y, colW0, rowH)
-        doc.text('#', x + 2, y + 5)
-        x += colW0
-        // Activity
-        doc.rect(x, y, colW1, rowH)
-        doc.text('Activity', x + 2, y + 5)
-        x += colW1
-        // Days
-        for (let i = 0; i < dayLabels.length; i += 1) {
-          doc.rect(x, y, dayColW, rowH)
-          const lbl = String(dayLabels[i])
-          const textW = doc.getTextWidth(lbl)
-          const tx = x + (dayColW - textW) / 2
-          doc.text(lbl, tx, y + 5)
-          x += dayColW
-          if (x > pageW - rightMargin - dayColW / 2) break
-        }
-        y += rowH
-        doc.setFont('helvetica', 'normal')
-      }
-
-      const ensureSpace = (needed: number) => {
-        if (y + needed > pageH - bottomMargin) {
-          doc.addPage('landscape')
-          y = 20
-          // Reprint title light on continuation pages
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(10)
-          doc.text(`Checklist: ${safe(checklist.title)}`.slice(0, 120), startX, y)
-          y += 6
-          drawHeader()
-        }
-      }
-
-      // Initial header
-      drawHeader()
-
-      const items = checklist.items || []
-      items.forEach((it, idx) => {
-        ensureSpace(rowH)
-        let x = startX
-        // #
-        doc.rect(x, y, colW0, rowH)
-        doc.text(String(it.serialNumber || idx + 1), x + 2, y + 5)
+        doc.text(String(it.serialNumber || idx + 1), x + 1.5, y + rowH - 2)
         x += colW0
         // Activity
         doc.rect(x, y, colW1, rowH)
         const act = String(it.inspectionItem || '')
-        const clipped = doc.splitTextToSize(act, colW1 - 2)
-        doc.text(clipped[0] || '', x + 2, y + 5)
+        const actLine = (doc.splitTextToSize(act, colW1 - 2)[0] || '')
+        doc.text(actLine, x + 1.5, y + rowH - 2)
         x += colW1
-        // Days with notes mirroring UI state (previously ticks)
+        // Days
+        const itemId = (it as ChecklistItem)._id || `item_${idx}`
         for (let i = 0; i < dayLabels.length; i += 1) {
           doc.rect(x, y, dayColW, rowH)
-          const itemId = (it as any)._id || `item_${idx}`
           const note = (inlineNotes[itemId]?.[i] || '').toString()
-          if (note) {
-            const txt = doc.splitTextToSize(note, dayColW - 2)
-            // show first line to keep row height stable
-            doc.text(txt[0], x + 1, y + 5)
-          }
+          const line = (doc.splitTextToSize(note, dayColW - 2)[0] || '')
+          if (line) doc.text(line, x + 1, y + rowH - 2)
           x += dayColW
-          if (x > pageW - rightMargin - dayColW / 2) break
         }
         y += rowH
-      })
+      }
 
       const filename = `checklist_${safe(checklist.title).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
       doc.save(filename)
@@ -521,14 +347,24 @@ Timestamps:
   const handleScannedResult = (payload: unknown) => {
     try {
       // Handle explicit mismatch notification
-      if (payload && typeof payload === 'object' && (payload as any).__type === 'error') {
+      if (
+        payload &&
+        typeof payload === 'object' &&
+        '__type' in (payload as Record<string, unknown>) &&
+        (payload as Record<string, unknown>).__type === 'error'
+      ) {
         setSuccessChecklist(null)
         setToastMessage('❌ Wrong checklist - not matching any provided checklist')
         setShowSuccessToast(true)
         return
       }
       // If we receive a full object, store it directly and exit (no GET)
-      if (payload && typeof payload === 'object' && payload !== null && (payload as any)._id) {
+      if (
+        payload &&
+        typeof payload === 'object' &&
+        payload !== null &&
+        '_id' in (payload as Record<string, unknown>)
+      ) {
         const full = payload as Checklist
         setSuccessChecklist(full)
         setScannedData({
@@ -758,8 +594,8 @@ Timestamps:
                   </tr>
                 </thead>
                   <tbody>
-                    {successChecklist.items?.map((it, idx) => {
-                      const itemId = (it as any)._id || `item_${idx}`
+                    {successChecklist.items?.map((it: ChecklistItem, idx: number) => {
+                      const itemId = it?._id || `item_${idx}`
                       return (
                         <tr key={itemId}>
                           <td className="px-1.5 py-1 border border-gray-400">{it.serialNumber || idx + 1}</td>
@@ -828,8 +664,8 @@ Timestamps:
 
       <ScannerModal
         isOpen={showScanner}
-        onClose={() => setShowScanner(false)}
-        onScanResult={handleScannedResult}
+        onCloseAction={() => setShowScanner(false)}
+        onScanResultAction={handleScannedResult}
         scannedResult={scannedData ? `Found: ${scannedData.title}` : null}
         checklists={checklists.map(checklist => ({
           _id: checklist._id,
@@ -955,7 +791,7 @@ Timestamps:
       {/* Calendar Checklist Modal */}
       <CalendarChecklistModal
         isOpen={showCalendarModal}
-        onClose={() => setShowCalendarModal(false)}
+        onCloseAction={() => setShowCalendarModal(false)}
         checklist={calendarChecklist}
         onSave={handleCalendarSave}
         onComplete={handleCalendarComplete}

@@ -788,8 +788,12 @@ Timestamps:
       <ScannerModal
         key={scannerKey}
         isOpen={showScanner}
-        onClose={() => setShowScanner(false)}
-        onScanResult={handleScannedResult}
+        onCloseAction={() => setShowScanner(false)}
+        onScanResultAction={(result) => {
+          if (typeof result === 'string') {
+            handleScannedResult(result)
+          }
+        }}
         scannedResult={scannedResult}
         assets={assets}
         mode="assets"

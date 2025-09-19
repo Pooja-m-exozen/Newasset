@@ -346,14 +346,15 @@ export function ScannerModal({
         throw new Error('Camera not supported in this browser')
       }
       
-      // Try camera access with timeout
+      // Try camera access with timeout and enhanced settings for better QR scanning
       let stream: MediaStream
       try {
         const cameraPromise = navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: 'environment',
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 }
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            frameRate: { ideal: 30, min: 15 }
           } 
         })
         
@@ -364,10 +365,22 @@ export function ScannerModal({
         stream = await Promise.race([cameraPromise, timeoutPromise])
       } catch (error) {
         console.warn('Primary camera request failed, trying fallback...', error)
-        // Fallback to simpler camera request
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true 
-        })
+        try {
+          // Second fallback with medium quality
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: 'environment',
+              width: { ideal: 1280, min: 640 },
+              height: { ideal: 720, min: 480 }
+            } 
+          })
+        } catch (secondError) {
+          console.warn('Second camera request failed, trying basic fallback...', secondError)
+          // Final fallback to basic camera request
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true 
+          })
+        }
       }
       
       streamRef.current = stream
@@ -395,20 +408,40 @@ export function ScannerModal({
             if (capabilitiesUnknown && typeof capabilitiesUnknown === 'object') {
               const capabilities = capabilitiesUnknown as Record<string, unknown>
               const advanced: Array<Record<string, unknown>> = []
+              
+              // Enhanced focus settings for better QR scanning
               if (Object.prototype.hasOwnProperty.call(capabilities, 'focusMode')) {
                 const adv: Record<string, unknown> = {}
                 adv['focusMode'] = 'continuous'
                 advanced.push(adv)
               }
+              
+              // Enhanced zoom settings for better QR scanning
               if (Object.prototype.hasOwnProperty.call(capabilities, 'zoom')) {
                 const caps = capabilitiesUnknown as { zoom?: { max?: number; min?: number } }
-                const desired = Math.min((caps.zoom?.max ?? 2), 2)
+                const desired = Math.min((caps.zoom?.max ?? 3), 3) // Increased zoom for better scanning
                 const advZoom: Record<string, unknown> = {}
                 advZoom['zoom'] = desired
                 advanced.push(advZoom)
               }
+              
+              // Enhanced exposure settings for better contrast
+              if (Object.prototype.hasOwnProperty.call(capabilities, 'exposureMode')) {
+                const adv: Record<string, unknown> = {}
+                adv['exposureMode'] = 'continuous'
+                advanced.push(adv)
+              }
+              
+              // Enhanced white balance for better color accuracy
+              if (Object.prototype.hasOwnProperty.call(capabilities, 'whiteBalanceMode')) {
+                const adv: Record<string, unknown> = {}
+                adv['whiteBalanceMode'] = 'continuous'
+                advanced.push(adv)
+              }
+              
               if (advanced.length > 0) {
                 await track.applyConstraints({ advanced } as unknown as MediaTrackConstraints)
+                console.log('Applied camera enhancements for better QR scanning')
               }
             }
           } catch (e) {
@@ -505,6 +538,7 @@ export function ScannerModal({
         if (scanAttempts % 100 === 0) {
           console.log(`Scanning attempt ${scanAttempts}, video ready: ${video.readyState}, dimensions: ${video.videoWidth}x${video.videoHeight}`)
         }
+        
         // Prepare canvas
         let canvas = canvasRef.current
         if (!canvas) {
@@ -516,9 +550,9 @@ export function ScannerModal({
           scaledCanvas = document.createElement('canvas')
           scaledCanvasRef.current = scaledCanvas
         }
+        
         const width = video.videoWidth || video.clientWidth
         const height = video.videoHeight || video.clientHeight
-        console.log(`Video dimensions: ${width}x${height}, readyState: ${video.readyState}`)
         
         if (width && height && width > 0 && height > 0) {
           if (canvas.width !== width) canvas.width = width
@@ -526,10 +560,7 @@ export function ScannerModal({
           const ctx = canvas.getContext('2d')
           if (ctx) {
             ctx.drawImage(video, 0, 0, width, height)
-            // Only log canvas drawing every 100 attempts to avoid spam
-            if (scanAttempts % 100 === 0) {
-              console.log('Canvas drawn successfully, size:', canvas.width, 'x', canvas.height)
-            }
+            
             // Prefer native BarcodeDetector when available (fastest method)
             const detector = barcodeDetectorRef.current
             if (detector) {
@@ -545,63 +576,108 @@ export function ScannerModal({
                 // Ignore detector errors; fallback to jsQR
               }
             }
-            // Optimized jsQR scanning with multiple attempts for better detection
-            const targetWidth = Math.min(640, width) // Reduced from 720 for faster processing
-            const scale = targetWidth / width
-            const targetHeight = Math.floor(height * scale)
-            if (scaledCanvas.width !== targetWidth) scaledCanvas.width = targetWidth
-            if (scaledCanvas.height !== targetHeight) scaledCanvas.height = targetHeight
+            
+            // Enhanced jsQR scanning with multiple scales and regions for different QR code sizes
             const sctx = scaledCanvas.getContext('2d')
             let code = null as ReturnType<typeof jsQR> | null
             
             if (sctx) {
-              // First attempt: full scaled image
-              sctx.drawImage(canvas, 0, 0, width, height, 0, 0, targetWidth, targetHeight)
-              const scaledImage = sctx.getImageData(0, 0, targetWidth, targetHeight)
-              code = jsQR(scaledImage.data, scaledImage.width, scaledImage.height)
+              // Define multiple scales to handle different QR code sizes
+              const scales = [
+                { scale: 1.0, name: 'original' },      // Full size
+                { scale: 0.8, name: 'large' },         // Large QR codes
+                { scale: 0.6, name: 'medium' },        // Medium QR codes
+                { scale: 0.4, name: 'small' },         // Small QR codes
+                { scale: 0.2, name: 'tiny' },          // Very small QR codes
+                { scale: 1.2, name: 'upscaled' }       // Upscaled for very small codes
+              ]
               
-              // Second attempt: center crop for better signal
-              if (!code) {
-                const cropW = Math.floor(targetWidth * 0.8)
-                const cropH = Math.floor(targetHeight * 0.8)
-                const cropX = Math.floor((targetWidth - cropW) / 2)
-                const cropY = Math.floor((targetHeight - cropH) / 2)
-                const cropped = sctx.getImageData(cropX, cropY, cropW, cropH)
-                code = jsQR(cropped.data, cropped.width, cropped.height)
-              }
-              
-              // Third attempt: smaller crop for very small QR codes
-              if (!code) {
-                const cropW = Math.floor(targetWidth * 0.6)
-                const cropH = Math.floor(targetHeight * 0.6)
-                const cropX = Math.floor((targetWidth - cropW) / 2)
-                const cropY = Math.floor((targetHeight - cropH) / 2)
-                const cropped = sctx.getImageData(cropX, cropY, cropW, cropH)
-                code = jsQR(cropped.data, cropped.width, cropped.height)
-              }
-              
-              // Fourth attempt: quarter sections for edge cases
-              if (!code) {
-                const quarterW = Math.floor(targetWidth / 2)
-                const quarterH = Math.floor(targetHeight / 2)
-                const sections = [
-                  { x: 0, y: 0 },
-                  { x: quarterW, y: 0 },
-                  { x: 0, y: quarterH },
-                  { x: quarterW, y: quarterH }
+              // Try each scale
+              for (const { scale, name } of scales) {
+                const targetWidth = Math.floor(width * scale)
+                const targetHeight = Math.floor(height * scale)
+                
+                // Ensure minimum size for detection
+                if (targetWidth < 100 || targetHeight < 100) continue
+                
+                if (scaledCanvas.width !== targetWidth) scaledCanvas.width = targetWidth
+                if (scaledCanvas.height !== targetHeight) scaledCanvas.height = targetHeight
+                
+                // Draw scaled image
+                sctx.drawImage(canvas, 0, 0, width, height, 0, 0, targetWidth, targetHeight)
+                const scaledImage = sctx.getImageData(0, 0, targetWidth, targetHeight)
+                code = jsQR(scaledImage.data, scaledImage.width, scaledImage.height)
+                
+                if (code && code.data) {
+                  console.log(`QR detected via jsQR at ${name} scale:`, code.data)
+                  finalizeLiveScan(code.data)
+                  return
+                }
+                
+                // If not found at this scale, try different regions for this scale
+                const regions = [
+                  { x: 0, y: 0, w: 1, h: 1, name: 'full' },
+                  { x: 0.1, y: 0.1, w: 0.8, h: 0.8, name: 'center' },
+                  { x: 0.2, y: 0.2, w: 0.6, h: 0.6, name: 'inner' },
+                  { x: 0, y: 0, w: 0.5, h: 0.5, name: 'top-left' },
+                  { x: 0.5, y: 0, w: 0.5, h: 0.5, name: 'top-right' },
+                  { x: 0, y: 0.5, w: 0.5, h: 0.5, name: 'bottom-left' },
+                  { x: 0.5, y: 0.5, w: 0.5, h: 0.5, name: 'bottom-right' }
                 ]
                 
-                for (const section of sections) {
-                  const sectionImage = sctx.getImageData(section.x, section.y, quarterW, quarterH)
-                  code = jsQR(sectionImage.data, sectionImage.width, sectionImage.height)
-                  if (code) break
+                for (const region of regions) {
+                  const cropX = Math.floor(targetWidth * region.x)
+                  const cropY = Math.floor(targetHeight * region.y)
+                  const cropW = Math.floor(targetWidth * region.w)
+                  const cropH = Math.floor(targetHeight * region.h)
+                  
+                  // Ensure crop dimensions are valid
+                  if (cropW < 50 || cropH < 50) continue
+                  
+                  const cropped = sctx.getImageData(cropX, cropY, cropW, cropH)
+                  code = jsQR(cropped.data, cropped.width, cropped.height)
+                  
+                  if (code && code.data) {
+                    console.log(`QR detected via jsQR at ${name} scale, ${region.name} region:`, code.data)
+                    finalizeLiveScan(code.data)
+                    return
+                  }
                 }
               }
-            }
-            if (code && code.data) {
-              console.log('QR detected via jsQR:', code.data)
-              finalizeLiveScan(code.data)
-              return
+              
+              // Final attempt: try with enhanced contrast and brightness adjustments
+              if (!code) {
+                const targetWidth = Math.min(800, width)
+                const scale = targetWidth / width
+                const targetHeight = Math.floor(height * scale)
+                
+                if (scaledCanvas.width !== targetWidth) scaledCanvas.width = targetWidth
+                if (scaledCanvas.height !== targetHeight) scaledCanvas.height = targetHeight
+                
+                sctx.drawImage(canvas, 0, 0, width, height, 0, 0, targetWidth, targetHeight)
+                const imageData = sctx.getImageData(0, 0, targetWidth, targetHeight)
+                
+                // Apply contrast enhancement
+                const enhancedData = new Uint8ClampedArray(imageData.data)
+                for (let i = 0; i < enhancedData.length; i += 4) {
+                  // Convert to grayscale and enhance contrast
+                  const gray = Math.round(0.299 * enhancedData[i] + 0.587 * enhancedData[i + 1] + 0.114 * enhancedData[i + 2])
+                  const enhanced = gray > 128 ? 255 : 0
+                  enhancedData[i] = enhanced     // R
+                  enhancedData[i + 1] = enhanced // G
+                  enhancedData[i + 2] = enhanced // B
+                  // Alpha stays the same
+                }
+                
+                const enhancedImageData = new ImageData(enhancedData, targetWidth, targetHeight)
+                code = jsQR(enhancedImageData.data, enhancedImageData.width, enhancedImageData.height)
+                
+                if (code && code.data) {
+                  console.log('QR detected via jsQR with enhanced contrast:', code.data)
+                  finalizeLiveScan(code.data)
+                  return
+                }
+              }
             }
           }
         }
@@ -1336,16 +1412,37 @@ export function ScannerModal({
                       </div>
                     )}
 
-                    {/* Scanning Progress Feedback */}
-                    {isScanning && !scanningError && scanAttempts > 30 && (
-                      <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200 mb-4">
-                        <div className="flex items-center gap-2 text-yellow-700">
-                          <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span className="text-sm font-medium">Looking for QR Code...</span>
+                    {/* Enhanced Scanning Progress Feedback */}
+                    {isScanning && !scanningError && (
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 mb-4">
+                        <div className="flex items-center gap-2 text-blue-700">
+                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="text-sm font-medium">
+                            {scanAttempts < 30 ? 'Initializing Scanner...' : 
+                             scanAttempts < 100 ? 'Scanning for QR Code...' : 
+                             scanAttempts < 200 ? 'Looking for QR Code...' : 
+                             'Still searching...'}
+                          </span>
                         </div>
-                        <p className="text-xs text-yellow-600 mt-1">
-                          Make sure the QR code is clearly visible and well-lit
+                        <p className="text-xs text-blue-600 mt-1">
+                          {scanAttempts < 30 ? 'Setting up camera and detection algorithms' :
+                           scanAttempts < 100 ? 'Point camera at QR code - works with any size' :
+                           scanAttempts < 200 ? 'Make sure QR code is clearly visible and well-lit' :
+                           'Try adjusting distance or lighting for better detection'}
                         </p>
+                        {scanAttempts > 50 && (
+                          <div className="mt-2">
+                            <div className="w-full bg-blue-200 rounded-full h-1.5">
+                              <div 
+                                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                                style={{ width: `${Math.min((scanAttempts / MAX_SCAN_ATTEMPTS) * 100, 100)}%` }}
+                              ></div>
+                            </div>
+                            <p className="text-xs text-blue-500 mt-1 text-center">
+                              {Math.round((scanAttempts / MAX_SCAN_ATTEMPTS) * 100)}% complete
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
 

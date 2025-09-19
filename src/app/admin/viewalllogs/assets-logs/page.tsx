@@ -99,36 +99,58 @@ function AssetsLogsContent() {
         throw new Error('Authentication token not found');
       }
 
-      const response = await fetch(`${API_BASE_URL}/assets`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please login again.');
-        }
-        throw new Error(`Failed to fetch assets: ${response.status}`);
-      }
-
-      const data: AssetsResponse = await response.json();
-      
+      // Try to fetch all assets with a high limit first
       let allAssets: Asset[] = [];
-      
-      // Extract assets from response
-      if (data.success && data.assets) {
-        allAssets = data.assets;
-      } else if (data.assets) {
-        allAssets = data.assets;
-      } else if (Array.isArray(data)) {
-        allAssets = data;
-      } else {
-        const possibleAssets = data.data || data.items || data.results || [];
-        if (Array.isArray(possibleAssets)) {
-          allAssets = possibleAssets as Asset[];
+      let page = 1;
+      const limit = 1000; // High limit to get all records
+      let hasMoreData = true;
+
+      while (hasMoreData) {
+        const response = await fetch(`${API_BASE_URL}/assets?limit=${limit}&page=${page}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Authentication failed. Please login again.');
+          }
+          throw new Error(`Failed to fetch assets: ${response.status}`);
+        }
+
+        const data: AssetsResponse = await response.json();
+        
+        let pageAssets: Asset[] = [];
+        
+        // Extract assets from response
+        if (data.success && data.assets) {
+          pageAssets = data.assets;
+        } else if (data.assets) {
+          pageAssets = data.assets;
+        } else if (Array.isArray(data)) {
+          pageAssets = data;
+        } else {
+          const possibleAssets = data.data || data.items || data.results || [];
+          if (Array.isArray(possibleAssets)) {
+            pageAssets = possibleAssets as Asset[];
+          }
+        }
+
+        // If we got fewer assets than the limit, we've reached the end
+        if (pageAssets.length < limit) {
+          hasMoreData = false;
+        }
+
+        allAssets = [...allAssets, ...pageAssets];
+        page++;
+
+        // Safety check to prevent infinite loops
+        if (page > 100) {
+          console.warn('Reached maximum page limit (100), stopping pagination');
+          break;
         }
       }
 

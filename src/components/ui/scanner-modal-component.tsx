@@ -292,8 +292,9 @@ export function ScannerModal({
   // Use native BarcodeDetector if available for faster/more reliable scanning
   const barcodeDetectorRef = useRef<null | { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> }>(null)
   const lastProcessTimeRef = useRef(0)
-  const PROCESS_INTERVAL_MS = 16 // Reduced to ~60fps for maximum responsiveness
-  const MAX_SCAN_ATTEMPTS = 300 // Increased attempts since we scan more frequently
+  const PROCESS_INTERVAL_MS = 8 // Increased to ~120fps for maximum responsiveness
+  const MAX_SCAN_ATTEMPTS = 200 // Reduced attempts since we scan more frequently
+  const FAST_SCAN_INTERVAL_MS = 4 // Ultra-fast scanning for first 50 attempts
 
   // Debug logging for assets
   useEffect(() => {
@@ -390,7 +391,7 @@ export function ScannerModal({
           await videoRef.current.play()
           console.log('Video started playing successfully')
           
-          // Wait a bit for video to be ready
+          // Start scanning immediately for faster response
           setTimeout(() => {
             if (videoRef.current && videoRef.current.readyState >= 2) {
               setIsCameraReady(true)
@@ -399,7 +400,7 @@ export function ScannerModal({
               console.warn('Video not ready after timeout, but continuing...')
               setIsCameraReady(true)
             }
-          }, 1000)
+          }, 500) // Reduced from 1000ms to 500ms for faster startup
           
           // Try to enable continuous focus/zoom if supported for better clarity
           try {
@@ -516,7 +517,9 @@ export function ScannerModal({
           return
         }
         const now = performance.now()
-        if (now - lastProcessTimeRef.current < PROCESS_INTERVAL_MS) {
+        // Use faster scanning for first 50 attempts, then normal speed
+        const currentInterval = scanAttempts < 50 ? FAST_SCAN_INTERVAL_MS : PROCESS_INTERVAL_MS
+        if (now - lastProcessTimeRef.current < currentInterval) {
           return
         }
         lastProcessTimeRef.current = now
@@ -577,13 +580,17 @@ export function ScannerModal({
               }
             }
             
-            // Enhanced jsQR scanning with multiple scales and regions for different QR code sizes
+            // Optimized jsQR scanning with priority-based detection for speed
             const sctx = scaledCanvas.getContext('2d')
             let code = null as ReturnType<typeof jsQR> | null
             
             if (sctx) {
-              // Define multiple scales to handle different QR code sizes
-              const scales = [
+              // Prioritize most common scales first for faster detection
+              const scales = scanAttempts < 30 ? [
+                { scale: 1.0, name: 'original' },      // Full size - most common
+                { scale: 0.8, name: 'large' },         // Large QR codes
+                { scale: 0.6, name: 'medium' }         // Medium QR codes
+              ] : [
                 { scale: 1.0, name: 'original' },      // Full size
                 { scale: 0.8, name: 'large' },         // Large QR codes
                 { scale: 0.6, name: 'medium' },        // Medium QR codes
@@ -615,7 +622,11 @@ export function ScannerModal({
                 }
                 
                 // If not found at this scale, try different regions for this scale
-                const regions = [
+                // Use fewer regions for faster initial scanning
+                const regions = scanAttempts < 50 ? [
+                  { x: 0, y: 0, w: 1, h: 1, name: 'full' },
+                  { x: 0.1, y: 0.1, w: 0.8, h: 0.8, name: 'center' }
+                ] : [
                   { x: 0, y: 0, w: 1, h: 1, name: 'full' },
                   { x: 0.1, y: 0.1, w: 0.8, h: 0.8, name: 'center' },
                   { x: 0.2, y: 0.2, w: 0.6, h: 0.6, name: 'inner' },
@@ -646,7 +657,8 @@ export function ScannerModal({
               }
               
               // Final attempt: try with enhanced contrast and brightness adjustments
-              if (!code) {
+              // Skip this for first 30 attempts to prioritize speed
+              if (!code && scanAttempts >= 30) {
                 const targetWidth = Math.min(800, width)
                 const scale = targetWidth / width
                 const targetHeight = Math.floor(height * scale)
@@ -813,6 +825,9 @@ export function ScannerModal({
 
   const finalizeLiveScan = (scannedQRContent: string) => {
     try {
+      // Show immediate success feedback
+      console.log('QR Code detected successfully!', scannedQRContent)
+      
       // Capture the current video frame as QR code image
       let qrImageData: string | undefined = undefined
       if (videoRef.current && canvasRef.current) {
@@ -1317,8 +1332,8 @@ export function ScannerModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-6">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1358,8 +1373,9 @@ export function ScannerModal({
             <TabsContent value="scanner" className="space-y-4">
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">Camera Scanner</h3>
-                  <p className="text-sm text-slate-600">Point your camera at a QR code to scan</p>
+                  <h3 className="text-xl font-semibold text-slate-900 mb-2">High-Quality Camera Scanner</h3>
+                  <p className="text-sm text-slate-600">Large viewfinder for better QR code capture and processing</p>
+                  <p className="text-xs text-slate-500 mt-1">Works with QR codes of any size - from tiny to large displays</p>
                 </div>
                 
                 {!isScanning ? (
@@ -1377,25 +1393,36 @@ export function ScannerModal({
                     <div className="relative bg-black rounded-xl overflow-hidden">
                       <video
                         ref={videoRef}
-                        className="w-full h-64 object-cover"
+                        className="w-full h-96 sm:h-[500px] md:h-[600px] lg:h-[700px] object-cover"
                         autoPlay
                         playsInline
                         muted
                       />
                       {/* Hidden canvas used for decoding frames */}
                       <canvas ref={canvasRef} className="hidden" />
-                      <div className="absolute inset-0 border-2 border-green-400 border-dashed rounded-xl m-4 pointer-events-none">
-                        <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-green-400"></div>
-                        <div className="absolute top-2 right-2 w-6 h-6 border-r-2 border-t-2 border-green-400"></div>
-                        <div className="absolute bottom-2 left-2 w-6 h-6 border-l-2 border-b-2 border-green-400"></div>
-                        <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-green-400"></div>
+                      <div className="absolute inset-0 border-2 border-green-400 border-dashed rounded-xl m-6 pointer-events-none">
+                        <div className="absolute top-3 left-3 w-12 h-12 border-l-4 border-t-4 border-green-400"></div>
+                        <div className="absolute top-3 right-3 w-12 h-12 border-r-4 border-t-4 border-green-400"></div>
+                        <div className="absolute bottom-3 left-3 w-12 h-12 border-l-4 border-b-4 border-green-400"></div>
+                        <div className="absolute bottom-3 right-3 w-12 h-12 border-r-4 border-b-4 border-green-400"></div>
+                        {/* Center crosshair for better targeting */}
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 border-2 border-green-400 rounded-full opacity-50"></div>
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-green-400 rounded-full"></div>
+                        {/* Scanning instructions overlay */}
+                        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                          Point camera at QR code - works with any size
+                        </div>
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-xs">
+                          Hold steady for better detection
+                        </div>
                       </div>
                       {/* Loading overlay - only show when camera is not ready */}
                       {!isCameraReady && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <div className="text-center text-white">
-                            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                            <p className="text-sm">Starting camera...</p>
+                            <div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                            <p className="text-lg font-medium">Starting camera...</p>
+                            <p className="text-sm text-gray-300 mt-1">Preparing high-quality scanner</p>
                           </div>
                         </div>
                       )}
@@ -1425,10 +1452,11 @@ export function ScannerModal({
                           </span>
                         </div>
                         <p className="text-xs text-blue-600 mt-1">
-                          {scanAttempts < 30 ? 'Setting up camera and detection algorithms' :
-                           scanAttempts < 100 ? 'Point camera at QR code - works with any size' :
-                           scanAttempts < 200 ? 'Make sure QR code is clearly visible and well-lit' :
-                           'Try adjusting distance or lighting for better detection'}
+                          {scanAttempts < 10 ? 'Fast scanning mode - ultra-responsive detection' :
+                           scanAttempts < 30 ? 'High-speed scanning - point camera at QR code' :
+                           scanAttempts < 100 ? 'Standard scanning - works with any size QR code' :
+                           scanAttempts < 150 ? 'Enhanced scanning - make sure QR code is clearly visible' :
+                           'Comprehensive scanning - try adjusting distance or lighting'}
                         </p>
                         {scanAttempts > 50 && (
                           <div className="mt-2">

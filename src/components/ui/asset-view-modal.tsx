@@ -594,21 +594,34 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                   )}
                 </div>
                 
-                {/* Vendor Information Row */}
-                {asset?.customFields && (asset.customFields['Vendor Name'] || asset.customFields['HSN']) && (
+                {/* Custom Fields Row */}
+                {asset?.customFields && Object.keys(asset.customFields).length > 0 && (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-                    {asset.customFields['Vendor Name'] && (
-                      <InfoCard icon={Package} title="Vendor" value={asset.customFields['Vendor Name']} bgColor="from-blue-500 to-indigo-600" />
-                    )}
-                    {asset.customFields['HSN'] && (
-                      <InfoCard icon={Hash} title="HSN Code" value={asset.customFields['HSN']} bgColor="from-green-500 to-emerald-600" />
-                    )}
-                    {asset.customFields['Rate//UOM'] && (
-                      <InfoCard icon={Database} title="Rate/UOM" value={asset.customFields['Rate//UOM']} bgColor="from-purple-500 to-violet-600" />
-                    )}
-                    {asset.customFields['Base value'] && (
-                      <InfoCard icon={Database} title="Base Value" value={asset.customFields['Base value']} bgColor="from-amber-500 to-orange-600" />
-                    )}
+                    {Object.entries(asset.customFields)
+                      .filter(([key, value]) => value && value !== '' && value !== null && value !== undefined)
+                      .slice(0, 4) // Show only first 4 custom fields in hero section
+                      .map(([key, value], index) => {
+                        const iconVariations = [Package, Hash, Database, Tag];
+                        const bgColorVariations = [
+                          "from-blue-500 to-indigo-600",
+                          "from-green-500 to-emerald-600", 
+                          "from-purple-500 to-violet-600",
+                          "from-amber-500 to-orange-600"
+                        ];
+                        
+                        const Icon = iconVariations[index % iconVariations.length];
+                        const bgColor = bgColorVariations[index % bgColorVariations.length];
+                        
+                        return (
+                          <InfoCard 
+                            key={key}
+                            icon={Icon} 
+                            title={key} 
+                            value={String(value)} 
+                            bgColor={bgColor} 
+                          />
+                        );
+                      })}
                   </div>
                 )}
                 
@@ -744,28 +757,43 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                   </div>
                 )}
 
-                {/* Vendor & Financial Information Card */}
+                {/* Custom Fields Card */}
                 {asset?.customFields && Object.keys(asset.customFields).length > 0 && (
                   <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
                     <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
                       <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
                         <Package className="w-4 h-4 text-white" />
                       </div>
-                      Vendor & Financial Information
+                      Custom Fields
                     </h4>
                     <div className="space-y-2">
-                      {asset.customFields['Vendor Name'] && (
-                        <DetailRow label="Vendor Name" value={String(asset.customFields['Vendor Name'])} bgColor="from-slate-50 to-blue-50" />
-                      )}
-                      {asset.customFields['HSN'] && (
-                        <DetailRow label="HSN Code" value={String(asset.customFields['HSN'])} bgColor="from-slate-50 to-green-50" />
-                      )}
-                      {asset.customFields['Rate//UOM'] && (
-                        <DetailRow label="Rate/UOM" value={String(asset.customFields['Rate//UOM'])} bgColor="from-slate-50 to-purple-50" />
-                      )}
-                      {asset.customFields['Base value'] && (
-                        <DetailRow label="Base Value" value={String(asset.customFields['Base value'])} bgColor="from-slate-50 to-orange-50" />
-                      )}
+                      {Object.entries(asset.customFields).map(([key, value], index) => {
+                        // Skip if value is empty, null, or undefined
+                        if (!value || value === '' || value === null || value === undefined) return null;
+                        
+                        // Define color variations for different field types
+                        const colorVariations = [
+                          "from-slate-50 to-blue-50",
+                          "from-slate-50 to-green-50", 
+                          "from-slate-50 to-purple-50",
+                          "from-slate-50 to-orange-50",
+                          "from-slate-50 to-teal-50",
+                          "from-slate-50 to-rose-50",
+                          "from-slate-50 to-indigo-50",
+                          "from-slate-50 to-amber-50"
+                        ];
+                        
+                        const bgColor = colorVariations[index % colorVariations.length];
+                        
+                        return (
+                          <DetailRow 
+                            key={key} 
+                            label={key} 
+                            value={String(value)} 
+                            bgColor={bgColor}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 )}

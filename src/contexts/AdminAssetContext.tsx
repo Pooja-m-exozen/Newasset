@@ -4,7 +4,7 @@ import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { 
   assetApi, 
   Asset, 
-  // AssetsResponse, 
+  AssetsResponse, 
   AssetType, 
   AssetTypesResponse, 
   CreateAssetTypeRequest, 
@@ -166,19 +166,38 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
       console.log('Fetching assets with projectName:', projectName);
       console.log('Note: We will fetch all assets and filter by project on frontend');
       
-      // Always fetch all assets since we're doing project filtering on the frontend
-      // This ensures we have all the data needed for proper filtering
-      const response = await assetApi.getAllAssets();
-      console.log('getAllAssets response:', response);
+      // Fetch all pages of assets to get complete dataset
+      let allAssets: Asset[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
       
-      if (response.success) {
-        console.log('Setting all assets in state:', response.assets);
-        console.log('Assets will be filtered by project on the frontend');
-        dispatch({ type: 'SET_ASSETS', payload: response.assets });
-      } else {
-        console.error('Failed to fetch assets:', response);
-        dispatch({ type: 'SET_ERROR', payload: 'Failed to fetch assets' });
+      do {
+        console.log(`Fetching page ${currentPage} of assets...`);
+        const response = await (assetApi as typeof assetApi & { getAllAssets: (page: number, limit: number) => Promise<AssetsResponse> }).getAllAssets(currentPage, 100); // Use large page size to minimize requests
+        console.log(`Page ${currentPage} response:`, response);
+        
+        if (response.success && response.assets) {
+          allAssets = [...allAssets, ...response.assets];
+          totalPages = response.pagination?.pages || 1;
+          currentPage++;
+        } else {
+          console.error('Failed to fetch assets on page:', currentPage, response);
+          break;
+        }
+      } while (currentPage <= totalPages);
+      
+      console.log(`Fetched ${allAssets.length} total assets across ${totalPages} pages`);
+      console.log('Setting all assets in state:', allAssets);
+      console.log('Assets will be filtered by project on the frontend');
+      
+      // Log pagination info for debugging
+      if (allAssets.length > 0) {
+        console.log('First asset:', allAssets[0]);
+        console.log('Last asset:', allAssets[allAssets.length - 1]);
+        console.log('Asset IDs:', allAssets.map(a => a.tagId).slice(0, 10), allAssets.length > 10 ? '...' : '');
       }
+      
+      dispatch({ type: 'SET_ASSETS', payload: allAssets });
     } catch (error) {
       console.error('Error in fetchAssets:', error);
       const errorMessage = error instanceof Error ? error.message : 'An error occurred while fetching assets';

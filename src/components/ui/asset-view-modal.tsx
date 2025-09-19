@@ -598,7 +598,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                 {asset?.customFields && Object.keys(asset.customFields).length > 0 && (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
                     {Object.entries(asset.customFields)
-                      .filter(([key, value]) => value && value !== '' && value !== null && value !== undefined)
+                      .filter(([ value]) => value && value !== '' && value !== null && value !== undefined)
                       .slice(0, 4) // Show only first 4 custom fields in hero section
                       .map(([key, value], index) => {
                         const iconVariations = [Package, Hash, Database, Tag];

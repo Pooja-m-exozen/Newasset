@@ -21,7 +21,6 @@ import {
   QrCode as QrCodeIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ScannerModal } from './scanner-modal-component'
 import Image from 'next/image'
 
 interface ChecklistItem {
@@ -91,7 +90,6 @@ const STATUS_COLORS = {
 export default function ChecklistViewModal({ isOpen, onClose, checklist, onChecklistUpdated }: ChecklistViewModalProps) {
   const [generatingQR, setGeneratingQR] = useState(false)
   const [qrGenerationError, setQrGenerationError] = useState<string | null>(null)
-  const [scannerModalOpen, setScannerModalOpen] = useState(false)
   const [scannedResult, setScannedResult] = useState<string | null>(null)
   const [showScanResultPopup, setShowScanResultPopup] = useState(false)
 
@@ -274,11 +272,6 @@ Result: ${scannedResult}`
     }
   }
 
-  const handleScanResult = (result: string) => {
-    setScannedResult(result)
-    // You can add additional logic here to handle the scan result
-    console.log('Scan result received:', result)
-  }
 
   // Function to parse JSON scan results and display them in readable format
   const parseScanResult = (result: string) => {
@@ -573,7 +566,7 @@ This report was generated from the FacilioTrack Checklist Management System.`
 
                 {/* Scanner Button */}
                 <Button 
-                  onClick={() => setScannerModalOpen(true)}
+                  onClick={() => {}}
                   size="default"
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                 >
@@ -661,7 +654,7 @@ This report was generated from the FacilioTrack Checklist Management System.`
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setScannerModalOpen(true)}
+                        onClick={() => {}}
                         className="flex-1 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
                       >
                         <Scan className="w-3 h-3 mr-1" />
@@ -918,7 +911,7 @@ This report was generated from the FacilioTrack Checklist Management System.`
                     Clear Result
                   </Button>
                   <Button
-                    onClick={() => setScannerModalOpen(true)}
+                    onClick={() => {}}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm"
                   >
                     <Scan className="w-4 h-4 mr-2" />

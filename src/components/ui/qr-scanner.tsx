@@ -28,6 +28,42 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
   const streamRef = useRef<MediaStream | null>(null)
   const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  const scanQRCode = () => {
+    if (!isScanning || !videoRef.current || !canvasRef.current) return
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
+
+    if (!context) return
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+
+    // Draw current video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    // Get image data
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+
+    // Real QR code detection
+    const detectedQR = detectQRPattern(imageData)
+    
+    if (detectedQR) {
+      if (debugMode) console.log('QR Code detected from camera:', detectedQR)
+      onScan(detectedQR)
+      stopScanning()
+      onClose()
+      return
+    }
+
+    // Continue scanning
+    if (isScanning) {
+      requestAnimationFrame(scanQRCode)
+    }
+  }
+
   const startScanning = useCallback(async () => {
     try {
       setError(null)
@@ -55,7 +91,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
       setIsScanning(false)
       onError?.('Camera access denied')
     }
-  }, [onError])
+  }, [onError, scanQRCode])
 
   const stopScanning = useCallback(() => {
     setIsScanning(false)
@@ -97,42 +133,6 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
   }, [isOpen, startScanning, stopScanning])
 
   // Removed duplicate declarations of startScanning and stopScanning
-
-  const scanQRCode = () => {
-    if (!isScanning || !videoRef.current || !canvasRef.current) return
-
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const context = canvas.getContext('2d')
-
-    if (!context) return
-
-    // Set canvas size to match video
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // Get image data
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-
-    // Real QR code detection
-    const detectedQR = detectQRPattern(imageData)
-    
-    if (detectedQR) {
-      if (debugMode) console.log('QR Code detected from camera:', detectedQR)
-      onScan(detectedQR)
-      stopScanning()
-      onClose()
-      return
-    }
-
-    // Continue scanning
-    if (isScanning) {
-      requestAnimationFrame(scanQRCode)
-    }
-  }
 
   const handleManualInput = () => {
     const manualCode = prompt('Enter checklist code manually:')

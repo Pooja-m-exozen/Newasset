@@ -134,9 +134,17 @@ export interface Asset {
   __v?: number;
 }
 
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
 export interface AssetsResponse {
   success: boolean;
   assets: Asset[];
+  pagination?: PaginationInfo;
 }
 
 // Project interfaces
@@ -538,8 +546,12 @@ export const assetApi = {
   },
 
   // Get all assets
-  getAllAssets: async (): Promise<AssetsResponse> => {
-    return apiRequest<AssetsResponse>('/assets');
+  getAllAssets: async (page: number = 1, limit: number = 10): Promise<AssetsResponse> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+    return apiRequest<AssetsResponse>(`/assets?${params.toString()}`);
   },
 
   // Get assets by project

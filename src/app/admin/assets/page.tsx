@@ -122,17 +122,9 @@ interface Asset {
   updatedAt: string
 }
 
-interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  pages: number
-}
-
 interface ApiResponse {
   success: boolean
   assets: Asset[]
-  pagination?: PaginationInfo
 }
 
 export default function AssetsPage() {
@@ -143,11 +135,6 @@ export default function AssetsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [userProject, setUserProject] = useState<string | null>(null)
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null)
   
   // Modal states
   const [showScanner, setShowScanner] = useState(false)
@@ -411,7 +398,7 @@ Timestamps:
   }
 
   // Fetch assets from API and filter by user's project
-  const fetchAssets = async (page: number = currentPage, limit: number = itemsPerPage) => {
+  const fetchAssets = async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -425,59 +412,71 @@ Timestamps:
       const userProjectName = localStorage.getItem('userProject') || sessionStorage.getItem('userProject')
       setUserProject(userProjectName)
       
-      // Build query parameters with pagination
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString()
-      })
-      
-      const response = await fetch(`https://digitalasset.zenapi.co.in/api/assets?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      
-      if (response.status === 401) {
-        localStorage.removeItem('authToken')
-        throw new Error('Authentication failed. Please login again.')
-      }
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data: ApiResponse = await response.json()
-      if (data.success) {
-        const allAssets = data.assets
+      // Try to fetch all assets with pagination
+      let allAssets: Asset[] = [];
+      let page = 1;
+      const limit = 1000; // High limit to get all records
+      let hasMoreData = true;
+
+      while (hasMoreData) {
+        const response = await fetch(`https://digitalasset.zenapi.co.in/api/assets?limit=${limit}&page=${page}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
         
-        // Update pagination info
-        if (data.pagination) {
-          setPagination(data.pagination)
+        if (response.status === 401) {
+          localStorage.removeItem('authToken')
+          throw new Error('Authentication failed. Please login again.')
         }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const data: ApiResponse = await response.json()
+        
+        if (data.success) {
+          const pageAssets = data.assets || [];
+          
+          // If we got fewer assets than the limit, we've reached the end
+          if (pageAssets.length < limit) {
+            hasMoreData = false;
+          }
 
-        // Filter assets by user's project if userProjectName is available
-        if (userProjectName) {
-          const projectAssets = allAssets.filter(asset => {
-            // Check both the old projectName property and the new nested project structure
-            const assetProjectName = asset.project?.projectName || asset.projectName
-            return assetProjectName === userProjectName
-          })
+          allAssets = [...allAssets, ...pageAssets];
+          page++;
 
-          if (projectAssets.length === 0) {
-            setError(`No assets found for your project: ${userProjectName}`)
-          } else {
-            setAssets(projectAssets)
-            setFilteredAssets(projectAssets)
+          // Safety check to prevent infinite loops
+          if (page > 100) {
+            console.warn('Reached maximum page limit (100), stopping pagination');
+            break;
           }
         } else {
-          // If no project info, show all assets (fallback)
-          setAssets(allAssets)
-          setFilteredAssets(allAssets)
+          throw new Error('Failed to fetch assets')
+        }
+      }
+
+      // Filter assets by user's project if userProjectName is available
+      if (userProjectName) {
+        const projectAssets = allAssets.filter(asset => {
+          // Check both the old projectName property and the new nested project structure
+          const assetProjectName = asset.project?.projectName || asset.projectName
+          return assetProjectName === userProjectName
+        })
+
+        if (projectAssets.length === 0) {
+          setError(`No assets found for your project: ${userProjectName}`)
+        } else {
+          setAssets(projectAssets)
+          setFilteredAssets(projectAssets)
         }
       } else {
-        throw new Error('Failed to fetch assets')
+        // If no project info, show all assets (fallback)
+        setAssets(allAssets)
+        setFilteredAssets(allAssets)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred'
@@ -494,18 +493,6 @@ Timestamps:
     }
   }
 
-  // Pagination handlers
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-    fetchAssets(page, itemsPerPage)
-  }
-
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage)
-    setCurrentPage(1) // Reset to first page
-    fetchAssets(1, newItemsPerPage)
-  }
-
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (token) {
@@ -514,7 +501,7 @@ Timestamps:
       setError('Authentication required. Please login.')
       setIsLoading(false)
     }
-  }, [fetchAssets])
+  }, [])
 
   // Load scanner images when asset modal opens
   useEffect(() => {
@@ -551,12 +538,7 @@ Timestamps:
     }
 
     setFilteredAssets(filtered)
-    
-    // Reset to page 1 when search term changes
-    if (searchTerm && currentPage !== 1) {
-      setCurrentPage(1)
-    }
-  }, [assets, searchTerm, currentPage])
+  }, [assets, searchTerm])
 
   // Loading state
   if (isLoading) {
@@ -600,7 +582,7 @@ Timestamps:
                     Go to Login
                   </Button>
                 ) : (
-                  <Button onClick={() => fetchAssets(1, 10)} variant="outline" size="lg" className="px-8 font-semibold">
+                  <Button onClick={fetchAssets} variant="outline" size="lg" className="px-8 font-semibold">
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Try Again
                   </Button>
@@ -652,7 +634,7 @@ Timestamps:
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
                   <Building className="w-4 h-4 text-blue-600" />
                   <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                    {pagination ? `${pagination.total} Total Assets` : `${filteredAssets.length} Assets`}
+                    {filteredAssets.length} Assets
                   </span>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-950/20 rounded-full">
@@ -670,10 +652,7 @@ Timestamps:
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => {
-                  setCurrentPage(1)
-                  fetchAssets(1, itemsPerPage)
-                }}
+                onClick={fetchAssets}
                 disabled={isLoading}
                 className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 text-xs sm:text-sm"
               >
@@ -741,21 +720,9 @@ Timestamps:
                   <div className="flex items-center gap-2">
                     <Building className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span className="text-xs sm:text-sm">
-                      {pagination ? (
-                        <>
-                          Page {pagination.page} of {pagination.pages} 
-                          ({pagination.total} total assets)
-                          {searchTerm && (
-                            <span className="hidden sm:inline"> matching &quot;{searchTerm}&quot;</span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {filteredAssets.length} of {assets.length} assets
-                          {searchTerm && (
-                            <span className="hidden sm:inline"> matching &quot;{searchTerm}&quot;</span>
-                          )}
-                        </>
+                      {filteredAssets.length} of {assets.length} assets
+                      {searchTerm && (
+                        <span className="hidden sm:inline"> matching &quot;{searchTerm}&quot;</span>
                       )}
                       {userProject && (
                         <span className="ml-2 text-blue-600 dark:text-blue-400 text-xs">
@@ -836,107 +803,6 @@ Timestamps:
                     />
               ))}
             </div>
-          )}
-
-          {/* Pagination Controls */}
-          {pagination && pagination.pages > 1 && (
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  {/* Items per page selector */}
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm text-muted-foreground">Items per page:</Label>
-                    <select
-                      value={itemsPerPage}
-                      onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value={5}>5</option>
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
-                    </select>
-                  </div>
-
-                  {/* Pagination info */}
-                  <div className="text-sm text-muted-foreground">
-                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, pagination.total)} of {pagination.total} assets
-                  </div>
-
-                  {/* Page navigation */}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(1)}
-                      disabled={currentPage === 1}
-                      className="h-8 w-8 p-0"
-                    >
-                      «
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="h-8 w-8 p-0"
-                    >
-                      ‹
-                    </Button>
-                    
-                    {/* Page numbers */}
-                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                      let pageNum;
-                      if (pagination.pages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= pagination.pages - 2) {
-                        pageNum = pagination.pages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`h-8 w-8 p-0 ${
-                            currentPage === pageNum 
-                              ? "bg-blue-600 text-white hover:bg-blue-700" 
-                              : "hover:bg-gray-50"
-                          }`}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === pagination.pages}
-                      className="h-8 w-8 p-0"
-                    >
-                      ›
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.pages)}
-                      disabled={currentPage === pagination.pages}
-                      className="h-8 w-8 p-0"
-                    >
-                      »
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           )}
         </main>
       </div>

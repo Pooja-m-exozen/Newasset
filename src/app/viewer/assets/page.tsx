@@ -412,48 +412,71 @@ Timestamps:
       const userProjectName = localStorage.getItem('userProject') || sessionStorage.getItem('userProject')
       setUserProject(userProjectName)
       
-      const response = await fetch('https://digitalasset.zenapi.co.in/api/assets', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      
-      if (response.status === 401) {
-        localStorage.removeItem('authToken')
-        throw new Error('Authentication failed. Please login again.')
-      }
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data: ApiResponse = await response.json()
-      if (data.success) {
-        const allAssets = data.assets
+      // Try to fetch all assets with pagination
+      let allAssets: Asset[] = [];
+      let page = 1;
+      const limit = 1000; // High limit to get all records
+      let hasMoreData = true;
 
-        // Filter assets by user's project if userProjectName is available
-        if (userProjectName) {
-          const projectAssets = allAssets.filter(asset => {
-            // Check both the old projectName property and the new nested project structure
-            const assetProjectName = asset.project?.projectName || asset.projectName
-            return assetProjectName === userProjectName
-          })
+      while (hasMoreData) {
+        const response = await fetch(`https://digitalasset.zenapi.co.in/api/assets?limit=${limit}&page=${page}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        if (response.status === 401) {
+          localStorage.removeItem('authToken')
+          throw new Error('Authentication failed. Please login again.')
+        }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const data: ApiResponse = await response.json()
+        
+        if (data.success) {
+          const pageAssets = data.assets || [];
+          
+          // If we got fewer assets than the limit, we've reached the end
+          if (pageAssets.length < limit) {
+            hasMoreData = false;
+          }
 
-          if (projectAssets.length === 0) {
-            setError(`No assets found for your project: ${userProjectName}`)
-          } else {
-            setAssets(projectAssets)
-            setFilteredAssets(projectAssets)
+          allAssets = [...allAssets, ...pageAssets];
+          page++;
+
+          // Safety check to prevent infinite loops
+          if (page > 100) {
+            console.warn('Reached maximum page limit (100), stopping pagination');
+            break;
           }
         } else {
-          // If no project info, show all assets (fallback)
-          setAssets(allAssets)
-          setFilteredAssets(allAssets)
+          throw new Error('Failed to fetch assets')
+        }
+      }
+
+      // Filter assets by user's project if userProjectName is available
+      if (userProjectName) {
+        const projectAssets = allAssets.filter(asset => {
+          // Check both the old projectName property and the new nested project structure
+          const assetProjectName = asset.project?.projectName || asset.projectName
+          return assetProjectName === userProjectName
+        })
+
+        if (projectAssets.length === 0) {
+          setError(`No assets found for your project: ${userProjectName}`)
+        } else {
+          setAssets(projectAssets)
+          setFilteredAssets(projectAssets)
         }
       } else {
-        throw new Error('Failed to fetch assets')
+        // If no project info, show all assets (fallback)
+        setAssets(allAssets)
+        setFilteredAssets(allAssets)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred'

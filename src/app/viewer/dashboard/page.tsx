@@ -43,7 +43,7 @@ export default function ViewerDashboard() {
         throw new Error('Authentication token not found')
       }
 
-      const response = await fetch('https://digitalasset.zenapi.co.in/api/assets', {
+      const response = await fetch('https://digitalasset.zenapi.co.in/api/assets?page=1&limit=1000', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -195,7 +195,7 @@ export default function ViewerDashboard() {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-gray-200 border-t-gray-600 rounded-full animate-spin mx-auto mb-4"></div>
           <h3 className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Loading Dashboard...</h3>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mt-2`}>Please wait while we load your assets</p>
+          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mt-2`}>Please wait while we load all your assets</p>
         </div>
       </div>
     )
@@ -265,6 +265,7 @@ export default function ViewerDashboard() {
                 <div className="text-right">
                   <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardStats.totalAssets}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Assets</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">All assets loaded</p>
                 </div>
               </div>
             </CardContent>
@@ -489,7 +490,7 @@ export default function ViewerDashboard() {
               <div className="flex items-center space-x-3">
                 <CardTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
                   <Package className="h-6 w-6 mr-3 text-gray-600 dark:text-gray-400" />
-                  Asset Inventory
+                  Asset Inventory ({dashboardStats.totalAssets} Total)
                   {localStorage.getItem('userProject') && (
                     <span className="ml-3 text-sm text-gray-500 dark:text-gray-400 font-normal bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
                       {localStorage.getItem('userProject')}
@@ -510,7 +511,7 @@ export default function ViewerDashboard() {
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredAssets.length}</span> of {assets.length} assets
+                    Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredAssets.length}</span> of <span className="font-semibold text-gray-900 dark:text-white">{assets.length}</span> total assets
                   </div>
                   <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-all duration-200">
                     <Download className="h-4 w-4 mr-2" />

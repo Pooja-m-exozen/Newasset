@@ -94,19 +94,44 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
        
        // Calculate asset counts by category for later use
        const assetCounts: { [key: string]: number } = {};
-       assets.forEach(asset => {
+       const mobilityCounts: { [key: string]: number } = {};
+       
+       // Debug: Log the assets being processed
+       console.log('PDF Download - Total assets received:', assets.length);
+       console.log('PDF Download - First few assets:', assets.slice(0, 3).map(a => ({ tagId: a.tagId, assetType: a.assetType })));
+       
+       // Count unique TAG IDs - this is the true asset count
+       const uniqueTagIds = [...new Set(assets.map(asset => asset.tagId))];
+       console.log('PDF Download - Unique TAG IDs count:', uniqueTagIds.length);
+       console.log('PDF Download - First few TAG IDs:', uniqueTagIds.slice(0, 5));
+       
+       // Remove duplicates based on tagId to ensure accurate counting
+       const uniqueAssets = assets.filter((asset, index, self) => 
+         index === self.findIndex(a => a.tagId === asset.tagId)
+       );
+       
+       console.log('PDF Download - Unique assets after deduplication:', uniqueAssets.length);
+       
+       uniqueAssets.forEach(asset => {
          const category = asset.assetType || 'Unknown';
          assetCounts[category] = (assetCounts[category] || 0) + 1;
+         
+         const mobilityCategory = asset.mobilityCategory || 'Not Set';
+         mobilityCounts[mobilityCategory] = (mobilityCounts[mobilityCategory] || 0) + 1;
        });
+       
+       console.log('PDF Download - Asset counts:', assetCounts);
+       console.log('PDF Download - Mobility counts:', mobilityCounts);
        
        // Define table structure with the exact columns you requested
        const columns = [
          { header: 'S.No', key: 'sno', width: 20 },
-         { header: 'Asset Name', key: 'assetName', width: 65 },
-         { header: 'Asset Tag Number', key: 'tagId', width: 55 },
-         { header: 'Vendor Name', key: 'vendorName', width: 45 },
-         { header: 'Asset Category', key: 'assetType', width: 40 },
-         { header: 'Location', key: 'location', width: 65 }
+         { header: 'Serial Number', key: 'serialNumber', width: 60 },
+         { header: 'Asset Tag Number', key: 'tagId', width: 50 },
+         { header: 'Vendor Name', key: 'vendorName', width: 40 },
+         { header: 'Asset Category', key: 'assetType', width: 35 },
+         { header: 'Mobility Category', key: 'mobilityCategory', width: 35 },
+         { header: 'Location', key: 'location', width: 60 }
        ];
        
        const startX = 15;
@@ -139,12 +164,12 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
         currentX += column.width;
       });
       
-      // Process assets and create table rows
+      // Process unique assets and create table rows
       let currentY = startY + headerHeight;
       let pageNumber = 1;
       
-      for (let i = 0; i < assets.length; i++) {
-        const asset = assets[i];
+      for (let i = 0; i < uniqueAssets.length; i++) {
+        const asset = uniqueAssets[i];
         
         // Check if we need a new page
         if (currentY > 190) {
@@ -191,10 +216,11 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
         // Prepare row data with the exact format you requested
         const rowData = [
           (i + 1).toString(), // S.No
-          `${asset.brand || ''} ${asset.model || ''}`.trim() || asset.assetType || 'N/A', // Asset Name
+          asset.serialNumber || 'N/A', // Serial Number
           asset.tagId || 'N/A', // Asset Tag Number
           asset.customFields?.['Vendor Name'] || asset.brand || 'N/A', // Vendor Name
           asset.assetType || 'N/A', // Asset Category
+          asset.mobilityCategory ? asset.mobilityCategory.charAt(0).toUpperCase() + asset.mobilityCategory.slice(1) : 'Not Set', // Mobility Category
           formatLocationForPDF(asset.location) // Location
         ];
         
@@ -241,34 +267,62 @@ export const AssetPDFDownload: React.FC<AssetPDFDownloadProps> = ({
        doc.setDrawColor(200, 200, 200);
        doc.line(startX, currentY, startX + totalTableWidth, currentY);
        
-               // Add simple summary section below the table
-        const summaryStartY = currentY + 15;
-        
-        // Summary title
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0, 0, 0);
-        doc.text('ASSET SUMMARY', startX + 5, summaryStartY);
-        
-        // Summary content
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        
-        let summaryContentY = summaryStartY + 15;
-        const summaryContentX = startX + 5;
-        
-        // Total assets
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Total Assets: ${assets.length}`, summaryContentX, summaryContentY);
-        
-        // Category counts
-        summaryContentY += 8;
-        Object.entries(assetCounts).forEach(([category, count]) => {
-          const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
-          doc.text(`${formattedCategory}: ${count}`, summaryContentX, summaryContentY);
-          summaryContentY += 6;
-        });
+       // Check if we need a new page for summary
+       if (currentY > 150) {
+         doc.addPage('landscape');
+         currentY = 20;
+       }
+       
+       // Add simplified summary section
+       const summaryStartY = currentY + 20;
+       
+       // Simple header
+       doc.setFontSize(14);
+       doc.setFont('helvetica', 'bold');
+       doc.setTextColor(0, 0, 0);
+       doc.text('ASSET SUMMARY', startX + 5, summaryStartY);
+       
+       // Summary content
+       let summaryContentY = summaryStartY + 15;
+       const summaryContentX = startX + 5;
+       
+       // Total assets
+       doc.setFontSize(11);
+       doc.setFont('helvetica', 'bold');
+       doc.text(`Total Assets: ${uniqueTagIds.length}`, summaryContentX, summaryContentY);
+       
+       summaryContentY += 8;
+       doc.setFont('helvetica', 'normal');
+       doc.text(`Project: ${projectName}`, summaryContentX, summaryContentY);
+       
+       summaryContentY += 6;
+       doc.text(`Generated: ${new Date().toLocaleDateString()}`, summaryContentX, summaryContentY);
+       
+       // Asset categories
+       summaryContentY += 10;
+       doc.setFont('helvetica', 'bold');
+       doc.text('Asset Categories:', summaryContentX, summaryContentY);
+       
+       summaryContentY += 8;
+       doc.setFont('helvetica', 'normal');
+       Object.entries(assetCounts).forEach(([category, count]) => {
+         const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+         doc.text(`${formattedCategory}: ${count}`, summaryContentX, summaryContentY);
+         summaryContentY += 6;
+       });
+       
+       // Mobility categories
+       summaryContentY += 8;
+       doc.setFont('helvetica', 'bold');
+       doc.text('Mobility Categories:', summaryContentX, summaryContentY);
+       
+       summaryContentY += 8;
+       doc.setFont('helvetica', 'normal');
+       Object.entries(mobilityCounts).forEach(([mobilityCategory, count]) => {
+         const formattedMobility = mobilityCategory.charAt(0).toUpperCase() + mobilityCategory.slice(1).toLowerCase();
+         doc.text(`${formattedMobility}: ${count}`, summaryContentX, summaryContentY);
+         summaryContentY += 6;
+       });
        
        // Save the PDF
        doc.save(filename);
@@ -331,8 +385,21 @@ export const AssetExcelDownload: React.FC<AssetExcelDownloadProps> = ({
       // Dynamic import to avoid SSR issues
       const XLSX = await import('xlsx');
       
-      // Prepare data for Excel with all asset information
-      const excelData = await Promise.all(assets.map(async (asset) => {
+      // Count unique TAG IDs - this is the true asset count
+      const uniqueTagIds = [...new Set(assets.map(asset => asset.tagId))];
+      console.log('Excel Download - Unique TAG IDs count:', uniqueTagIds.length);
+      console.log('Excel Download - First few TAG IDs:', uniqueTagIds.slice(0, 5));
+      
+      // Remove duplicates based on tagId to ensure accurate counting
+      const uniqueAssets = assets.filter((asset, index, self) => 
+        index === self.findIndex(a => a.tagId === asset.tagId)
+      );
+      
+      console.log('Excel Download - Total assets received:', assets.length);
+      console.log('Excel Download - Unique assets after deduplication:', uniqueAssets.length);
+      
+      // Prepare data for Excel with all unique asset information
+      const excelData = await Promise.all(uniqueAssets.map(async (asset) => {
         // Get reverse geocoded address
         let fullAddress = 'Address not available';
         if (asset.location) {
@@ -345,11 +412,12 @@ export const AssetExcelDownload: React.FC<AssetExcelDownloadProps> = ({
         
                  return {
            'Tag ID': asset.tagId,
+           'Serial Number': asset.serialNumber || '',
            'Asset Type': asset.assetType,
            'Subcategory': asset.subcategory || '',
+           'Mobility Category': asset.mobilityCategory ? asset.mobilityCategory.charAt(0).toUpperCase() + asset.mobilityCategory.slice(1) : 'Not Set',
            'Brand': asset.brand,
            'Model': asset.model || '',
-           'Serial Number': asset.serialNumber || '',
            'Capacity': asset.capacity || '',
            'Year of Installation': asset.yearOfInstallation || '',
            'Project Name': asset.project?.projectName || asset.projectName || '',
@@ -384,21 +452,32 @@ export const AssetExcelDownload: React.FC<AssetExcelDownloadProps> = ({
       // Create workbook and worksheet
       const workbook = XLSX.utils.book_new();
       
-      // Create summary data
+      // Create summary data using unique assets
       const assetCounts: { [key: string]: number } = {};
-      assets.forEach(asset => {
+      const mobilityCounts: { [key: string]: number } = {};
+      uniqueAssets.forEach(asset => {
         const category = asset.assetType || 'Unknown';
         assetCounts[category] = (assetCounts[category] || 0) + 1;
+        
+        const mobilityCategory = asset.mobilityCategory || 'Not Set';
+        mobilityCounts[mobilityCategory] = (mobilityCounts[mobilityCategory] || 0) + 1;
       });
       
       const summaryData = [
         { 'Summary': `Project: ${projectName}`, 'Count': '' },
         { 'Summary': `Generated: ${new Date().toLocaleDateString()}`, 'Count': '' },
         { 'Summary': '', 'Count': '' }, // Empty row for spacing
-        { 'Summary': 'Total Assets', 'Count': assets.length },
+        { 'Summary': 'Total Assets (Unique TAG IDs)', 'Count': uniqueTagIds.length },
         { 'Summary': '', 'Count': '' }, // Empty row for spacing
+        { 'Summary': 'Asset Categories:', 'Count': '' },
         ...Object.entries(assetCounts).map(([category, count]) => ({
-          'Summary': `${category}`,
+          'Summary': `  ${category}`,
+          'Count': count
+        })),
+        { 'Summary': '', 'Count': '' }, // Empty row for spacing
+        { 'Summary': 'Mobility Categories:', 'Count': '' },
+        ...Object.entries(mobilityCounts).map(([mobilityCategory, count]) => ({
+          'Summary': `  ${mobilityCategory.charAt(0).toUpperCase() + mobilityCategory.slice(1)}`,
           'Count': count
         }))
       ];

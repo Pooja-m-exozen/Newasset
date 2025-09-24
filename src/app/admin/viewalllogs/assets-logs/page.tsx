@@ -191,7 +191,20 @@ function AssetsLogsContent() {
       } : undefined
     }));
     
-    let filtered = filterAssets(transformedAssets as Asset[], searchTerm, 'all', 'all', 'all');
+    // Count unique TAG IDs - this is the true asset count
+    const uniqueTagIds = [...new Set(transformedAssets.map(asset => asset.tagId))];
+    console.log('Assets Logs - Unique TAG IDs count:', uniqueTagIds.length);
+    console.log('Assets Logs - First few TAG IDs:', uniqueTagIds.slice(0, 5));
+    
+    // Remove duplicates based on tagId first
+    const uniqueAssets = transformedAssets.filter((asset, index, self) => 
+      index === self.findIndex(a => a.tagId === asset.tagId)
+    );
+    
+    console.log('Assets Logs - Original assets:', projectAssets.length);
+    console.log('Assets Logs - Unique assets after deduplication:', uniqueAssets.length);
+    
+    let filtered = filterAssets(uniqueAssets as Asset[], searchTerm, 'all', 'all', 'all');
     
     // Additional filtering by selected asset type
     if (selectedAssetType !== 'all') {

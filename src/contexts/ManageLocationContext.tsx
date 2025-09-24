@@ -47,7 +47,7 @@ interface ManageLocationProviderProps {
 
 export const ManageLocationProvider: React.FC<ManageLocationProviderProps> = ({ children }) => {
   const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -57,9 +57,12 @@ export const ManageLocationProvider: React.FC<ManageLocationProviderProps> = ({ 
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching locations...');
       const data = await getLocations();
+      console.log('Locations fetched:', data);
       setLocations(data);
     } catch (err) {
+      console.error('Error fetching locations:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch locations');
     } finally {
       setLoading(false);

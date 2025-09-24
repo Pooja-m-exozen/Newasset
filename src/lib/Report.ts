@@ -61,6 +61,7 @@ export interface Asset {
   tagId: string;
   assetType: string;
   subcategory?: string;
+  mobilityCategory?: string;
   brand: string;
   model?: string;
   serialNumber?: string;

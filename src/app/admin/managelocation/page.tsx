@@ -38,6 +38,7 @@ const LocationManagementContent = () => {
   const {
     locations,
     loading,
+    error,
     selectedLocation,
     isModalOpen,
     modalMode,
@@ -59,11 +60,12 @@ const LocationManagementContent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  useEffect(() => {
-    if (locations.length === 0 && !loading) {
-      fetchLocations();
-    }
-  }, [locations.length, loading, fetchLocations]);
+  // Remove the duplicate fetchLocations call since the context already handles this
+  // useEffect(() => {
+  //   if (locations.length === 0 && !loading) {
+  //     fetchLocations();
+  //   }
+  // }, [locations.length, loading, fetchLocations]);
 
   const handleDelete = useCallback((location: Location) => {
     setLocationToDelete(location);
@@ -288,12 +290,25 @@ const LocationManagementContent = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-muted-foreground">
-                        {sortedLocations.length} locations
-                      </span>
-                    </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-muted-foreground">
+                    {sortedLocations.length} locations
+                  </span>
+                  <Button 
+                    onClick={fetchLocations}
+                    variant="ghost"
+                    size="sm"
+                    className="ml-2"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <span>Refresh</span>
+                    )}
+                  </Button>
+                </div>
                   </CardTitle>
                 </CardHeader>
                 
@@ -303,6 +318,20 @@ const LocationManagementContent = () => {
                       <div className="flex items-center gap-3">
                         <Loader2 className="w-6 h-6 animate-spin text-green-500" />
                         <span className="text-muted-foreground">Loading locations...</span>
+                      </div>
+                    </div>
+                  ) : error ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-center">
+                        <div className="text-red-500 mb-2">Error loading locations</div>
+                        <div className="text-sm text-muted-foreground mb-4">{error}</div>
+                        <Button 
+                          onClick={fetchLocations}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Retry
+                        </Button>
                       </div>
                     </div>
                   ) : (

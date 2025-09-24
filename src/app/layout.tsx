@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FacilioTrack - Facility Management Platform",
+  title: "Exozen - Asset Management System",
   description: "Comprehensive facility management platform for smart asset tracking and maintenance",
 };
 

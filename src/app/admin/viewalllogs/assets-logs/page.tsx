@@ -31,7 +31,9 @@ import {
   Eye,
   MoreHorizontal,
   PieChart,
-  Database
+  Database,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 // API Base URL constant
@@ -57,6 +59,8 @@ function AssetsLogsContent() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Fetch asset types from API
   const fetchAssetTypes = useCallback(async () => {
@@ -231,11 +235,38 @@ function AssetsLogsContent() {
     return filtered;
   }, [projectAssets, searchTerm, selectedAssetType, sortBy, sortOrder]);
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAssets = filteredAssets.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedAssetType, sortBy, sortOrder]);
+
   const handleClearFilters = () => {
     setSearchTerm('');
     setSelectedAssetType('all');
     setSortBy('updatedAt');
     setSortOrder('desc');
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
   };
 
   const handleViewDetails = (asset: Asset) => {
@@ -552,6 +583,107 @@ function AssetsLogsContent() {
     );
   };
 
+  // Pagination Component
+  const PaginationComponent = () => {
+    if (totalPages <= 1) return null;
+
+    const getPageNumbers = () => {
+      const pages = [];
+      const maxVisiblePages = 5;
+      
+      if (totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        if (currentPage <= 3) {
+          for (let i = 1; i <= 4; i++) {
+            pages.push(i);
+          }
+          pages.push('...');
+          pages.push(totalPages);
+        } else if (currentPage >= totalPages - 2) {
+          pages.push(1);
+          pages.push('...');
+          for (let i = totalPages - 3; i <= totalPages; i++) {
+            pages.push(i);
+          }
+        } else {
+          pages.push(1);
+          pages.push('...');
+          for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+            pages.push(i);
+          }
+          pages.push('...');
+          pages.push(totalPages);
+        }
+      }
+      
+      return pages;
+    };
+
+    return (
+      <div className="flex items-center justify-between px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-600">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+          <span>Showing</span>
+          <span className="font-semibold text-slate-900 dark:text-slate-100">
+            {startIndex + 1}-{Math.min(endIndex, filteredAssets.length)}
+          </span>
+          <span>of</span>
+          <span className="font-semibold text-slate-900 dark:text-slate-100">
+            {filteredAssets.length}
+          </span>
+          <span>assets</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreviousPage}
+            disabled={currentPage === 1}
+            className="h-8 w-8 p-0 border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {getPageNumbers().map((page, index) => (
+              <React.Fragment key={index}>
+                {page === '...' ? (
+                  <span className="px-2 py-1 text-slate-500 dark:text-slate-400">...</span>
+                ) : (
+                  <Button
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(page as number)}
+                    className={`h-8 w-8 p-0 text-sm ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {page}
+                  </Button>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+            className="h-8 w-8 p-0 border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -736,7 +868,8 @@ function AssetsLogsContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <ProjectAssetsTable assets={filteredAssets} />
+              <ProjectAssetsTable assets={paginatedAssets} />
+              <PaginationComponent />
             </CardContent>
           </Card>
         ) : (
@@ -758,9 +891,10 @@ function AssetsLogsContent() {
             </CardHeader>
             <CardContent>
               <AssetGrid
-                assets={filteredAssets}
+                assets={paginatedAssets}
                 onViewDetails={handleViewDetails}
               />
+              <PaginationComponent />
             </CardContent>
           </Card>
         )}

@@ -25,7 +25,17 @@ import {
   Scan,
   Eye,
   Download,
-  X
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  MoreVertical,
+  Filter,
+  Calendar,
+  MapPin,
+  User,
+  Tag,
+  Package
 } from 'lucide-react'
 
 interface Asset {
@@ -133,8 +143,14 @@ export default function AssetsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('table')
   const [userProject, setUserProject] = useState<string | null>(null)
+  
+  // Table sorting and filtering states
+  const [sortField, setSortField] = useState<keyof Asset>('tagId')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
   
   // Modal states
   const [showScanner, setShowScanner] = useState(false)
@@ -161,6 +177,45 @@ export default function AssetsPage() {
   // Simplified handlers
   const showDigitalAssetModal = (asset: Asset, type: 'qrCode' | 'barcode' | 'nfcData') => {
     setDigitalAssetModal({ asset, type })
+  }
+
+  // Table sorting function
+  const handleSort = (field: keyof Asset) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  // Get sort icon
+  const getSortIcon = (field: keyof Asset) => {
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+      : <ArrowDown className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+  }
+
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
+      case 'inactive': return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-600'
+      case 'maintenance': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
+      case 'retired': return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700'
+      default: return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700'
+    }
+  }
+
+  // Get priority badge color
+  const getPriorityBadgeColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'high': return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700'
+      case 'medium': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
+      case 'low': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
+      default: return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-600'
+    }
   }
 
   // Load scanner images for view modal
@@ -522,10 +577,11 @@ Timestamps:
     }
   }, [viewModalQrImgSrc, viewModalBarcodeImgSrc])
 
-  // Filter assets based on search
+  // Filter and sort assets
   useEffect(() => {
     let filtered = assets
 
+    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(asset =>
         asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -537,8 +593,40 @@ Timestamps:
       )
     }
 
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(asset => asset.status.toLowerCase() === statusFilter.toLowerCase())
+    }
+
+    // Apply priority filter
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(asset => asset.priority.toLowerCase() === priorityFilter.toLowerCase())
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue = a[sortField]
+      let bValue = b[sortField]
+
+      // Handle nested objects
+      if (sortField === 'assignedTo') {
+        aValue = typeof a.assignedTo === 'string' ? a.assignedTo : a.assignedTo?.name || ''
+        bValue = typeof b.assignedTo === 'string' ? b.assignedTo : b.assignedTo?.name || ''
+      } else if (sortField === 'location') {
+        aValue = a.location?.building || ''
+        bValue = b.location?.building || ''
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase())
+        return sortDirection === 'asc' ? comparison : -comparison
+      }
+
+      return 0
+    })
+
     setFilteredAssets(filtered)
-  }, [assets, searchTerm])
+  }, [assets, searchTerm, statusFilter, priorityFilter, sortField, sortDirection])
 
   // Loading state
   if (isLoading) {
@@ -598,23 +686,89 @@ Timestamps:
   return (
     <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="flex-1 overflow-auto">
-        {/* ERP Style Header */}
+        {/* Consolidated Header */}
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
-                <Building className="w-6 h-6 text-white" />
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Left Section - Title and Badges */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
+                  <Building className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                    Asset Management
+                  </h1>
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
+                    Manage facility assets with advanced scanning capabilities
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-                  Asset Management
-                </h1>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
-                  Manage facility assets with advanced scanning capabilities
-                </p>
+              
+              {/* Asset Count Badges */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                  <Building className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                    {filteredAssets.length} Assets
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                    {assets.filter(a => a.status === 'active').length} Active
+                  </span>
+                </div>
               </div>
             </div>
+            
+            {/* Right Section - Controls */}
             <div className="flex items-center gap-3">
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-1 shadow-sm">
+                <Button
+                  variant={viewMode === 'table' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                  className="rounded-md font-medium p-2"
+                  title="Table View"
+                >
+                  <Package className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="rounded-md font-medium p-2"
+                  title="Grid View"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="rounded-md font-medium p-2"
+                  title="List View"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <Button 
+                size="sm"
+                onClick={() => {
+                  setScannerKey(prev => prev + 1)
+                  setShowScanner(true)
+                }}
+                className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Scan className="w-4 h-4" />
+                <span className="hidden sm:inline">Scan QR</span>
+                <span className="sm:hidden">Scan</span>
+              </Button>
+              
+              {/* Live Status */}
               <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
                 <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
                 <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
@@ -627,113 +781,63 @@ Timestamps:
         <main className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Project Info Banner */}
          
-          {/* Enhanced Header Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
-                  <Building className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                    {filteredAssets.length} Assets
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-950/20 rounded-full">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                    {assets.filter(a => a.status === 'active').length} Active
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Manage your facility assets with scanning capabilities
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={fetchAssets}
-                disabled={isLoading}
-                className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 text-xs sm:text-sm"
-              >
-                <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="hidden md:inline">Refresh</span>
-              </Button>
-              
-              {/* View Mode Toggle - Mobile Responsive */}
-              <div className="flex items-center bg-white rounded-lg border border-slate-200 p-1 shadow-sm">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-md font-medium p-1.5 sm:p-2"
-                >
-                  <Grid3X3 className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-md font-medium p-1.5 sm:p-2"
-                >
-                  <List className="w-3 h-3 sm:w-4 sm:h-4" />
-                </Button>
-              </div>
-              
-              <Button 
-                size="sm"
-                onClick={() => {
-                  setScannerKey(prev => prev + 1)
-                  setShowScanner(true)
-                }}
-                className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 text-xs sm:text-sm px-2 sm:px-3"
-              >
-                <Scan className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Scan QR</span>
-                <span className="sm:hidden">Scan</span>
-              </Button>
-            </div>
-          </div>
 
-          {/* Enhanced Search Container - Mobile Responsive */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-3 sm:p-6">
-              <div className="space-y-3 sm:space-y-4">
-                {/* Search Section */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4">
-                  <div className="w-full">
-                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Search Assets</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by ID, type, brand..."
-                        className="pl-8 sm:pl-10 h-9 sm:h-11 text-xs sm:text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
+          {/* Compact Search Container */}
+          <Card className="border-0 shadow-sm bg-white dark:bg-gray-800">
+            <CardContent className="p-4">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-4">
+                {/* Search Input */}
+                <div className="flex-1 min-w-0">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <Input
+                      placeholder="Search by ID, type, brand..."
+                      className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                   </div>
                 </div>
-
-                {/* Search Results Info - Mobile Responsive */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm text-muted-foreground">
+                
+                {/* Filters - Only show in table mode */}
+                {viewMode === 'table' && (
                   <div className="flex items-center gap-2">
-                    <Building className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="text-xs sm:text-sm">
-                      {filteredAssets.length} of {assets.length} assets
-                      {searchTerm && (
-                        <span className="hidden sm:inline"> matching &quot;{searchTerm}&quot;</span>
-                      )}
-                      {userProject && (
-                        <span className="ml-2 text-blue-600 dark:text-blue-400 text-xs">
-                          (filtered by project: {userProject})
-                        </span>
-                      )}
+                    <Filter className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="text-sm border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-[120px]"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="retired">Retired</option>
+                    </select>
+                    <select
+                      value={priorityFilter}
+                      onChange={(e) => setPriorityFilter(e.target.value)}
+                      className="text-sm border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-[120px]"
+                    >
+                      <option value="all">All Priority</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Results Info */}
+                <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    <span className="font-medium">
+                      {filteredAssets.length} of {assets.length}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs sm:text-sm">Real-time</span>
+                    <span>Live</span>
                   </div>
                 </div>
               </div>
@@ -761,7 +865,11 @@ Timestamps:
                       }
                     </p>
                     <Button 
-                      onClick={() => setSearchTerm('')}
+                      onClick={() => {
+                        setSearchTerm('')
+                        setStatusFilter('all')
+                        setPriorityFilter('all')
+                      }}
                       variant="outline"
                       size="sm"
                       className="border-slate-300 text-slate-700 hover:bg-slate-50 font-medium px-6 py-2 rounded-lg"
@@ -772,7 +880,215 @@ Timestamps:
                 </div>
               </CardContent>
             </Card>
+          ) : viewMode === 'table' ? (
+            /* Table View */
+            <Card className="shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                      <tr>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('tagId')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            <Tag className="w-4 h-4" />
+                            Asset ID
+                            {getSortIcon('tagId')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('assetType')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            <Package className="w-4 h-4" />
+                            Type
+                            {getSortIcon('assetType')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('brand')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            Brand
+                            {getSortIcon('brand')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('model')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            Model
+                            {getSortIcon('model')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('status')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            Status
+                            {getSortIcon('status')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('priority')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            Priority
+                            {getSortIcon('priority')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('location')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            Location
+                            {getSortIcon('location')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('assignedTo')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            <User className="w-4 h-4" />
+                            Assigned To
+                            {getSortIcon('assignedTo')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('createdAt')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          >
+                            <Calendar className="w-4 h-4" />
+                            Created
+                            {getSortIcon('createdAt')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-center">
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                          </span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {filteredAssets.map((asset) => (
+                        <tr key={asset._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <td className="px-4 py-4">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0">
+                                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                  <Tag className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                </div>
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  {asset.tagId}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {asset.subcategory}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900 dark:text-gray-100">{asset.assetType}</div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900 dark:text-gray-100">{asset.brand}</div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900 dark:text-gray-100">{asset.model}</div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeColor(asset.status)}`}>
+                              {asset.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityBadgeColor(asset.priority)}`}>
+                              {asset.priority}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900 dark:text-gray-100">
+                              {asset.location ? (
+                                <div>
+                                  <div className="font-medium">{asset.location.building}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {asset.location.floor} • {asset.location.room}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">Not assigned</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900 dark:text-gray-100">
+                              {typeof asset.assignedTo === 'string' 
+                                ? asset.assignedTo 
+                                : asset.assignedTo?.name || 'Unassigned'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900 dark:text-gray-100">
+                              {new Date(asset.createdAt).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setScannedAsset(asset)
+                                  setShowScannedAssetModal(true)
+                                }}
+                                className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => downloadAssetInfo(asset)}
+                                className="h-8 w-8 p-0 hover:bg-green-50 dark:hover:bg-green-900 hover:text-green-600 dark:hover:text-green-400"
+                                title="Download Info"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowMoreOptions(asset._id)}
+                                className="h-8 w-8 p-0 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-300"
+                                title="More Options"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
+            /* Grid/List View */
             <div className={viewMode === 'grid' 
               ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'
               : 'space-y-3 sm:space-y-4'

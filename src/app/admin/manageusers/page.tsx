@@ -415,23 +415,54 @@ export default function AdminManageUsersPage() {
     <ProtectedRoute>
       <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
         <div className="flex-1 overflow-auto">
-          {/* ERP Style Header */}
+          {/* Consolidated Header */}
           <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
-                  <Users className="w-6 h-6 text-white" />
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              {/* Left Section - Title, Badges and Description */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                      User Management
+                    </h1>
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
+                      Manage your team members, roles, and access permissions
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-                    User Management
-                  </h1>
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
-                    Manage users, roles, and permissions with advanced controls
-                  </p>
+                
+                {/* User Count Badges */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                      {sortedUsers.length} Users
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                    <UserCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                      {users.filter(u => u.status === 'active').length} Active
+                    </span>
+                  </div>
                 </div>
               </div>
+              
+              {/* Right Section - Controls */}
               <div className="flex items-center gap-3">
+                <Button 
+                  size="sm"
+                  onClick={() => setShowCreateUserModal(true)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Add User</span>
+                </Button>
+                
+                {/* Live Status */}
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
                   <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
                   <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
@@ -456,107 +487,60 @@ export default function AdminManageUsersPage() {
               </div>
             ) : (
               <>
-                {/* Enhanced Header Section */}
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 rounded-full">
-                        <Users className="w-4 h-4 text-blue-800 dark:text-blue-300" />
-                        <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                          {sortedUsers.length} Users
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 rounded-full">
-                        <UserCheck className="w-4 h-4 text-green-800 dark:text-green-300" />
-                        <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                          {users.filter(u => u.status === 'active').length} Active
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Manage your team members, roles, and access permissions
-                    </p>
-                  </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    setIsLoading(true)
-                    Promise.all([fetchUsers(), fetchRoles()]).finally(() => setIsLoading(false))
-                  }}
-                  disabled={isLoading}
-                  className="flex items-center gap-2 hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-900 dark:hover:text-blue-300 dark:hover:border-blue-600"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Refresh</span>
-                </Button>
-                <Button 
-                  size="sm"
-                  onClick={() => setShowCreateUserModal(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Add User</span>
-                </Button>
-              </div>
-            </div>
 
-            {/* Enhanced Search and Filter Container */}
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Search Section */}
-                  <div className="flex items-end gap-4">
-                    <div className="w-full max-w-md">
-                      <Label className="text-sm font-medium text-muted-foreground mb-2">Search Users</Label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search by name, email, role, or project..."
-                          className="pl-10 h-11 text-sm"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-stretch gap-3">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setShowRoleModal(true)}
-                        className="flex items-center gap-2 h-11 px-4 bg-purple-100 hover:bg-purple-200 border-purple-300 text-purple-800 hover:text-purple-900 dark:bg-purple-900 dark:hover:bg-purple-800 dark:border-purple-600 dark:text-purple-300 dark:hover:text-purple-200"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Create Role</span>
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setShowRolesModal(true)}
-                        className="flex items-center gap-2 h-11 px-4 bg-indigo-100 hover:bg-indigo-200 border-indigo-300 text-indigo-800 hover:text-indigo-900 dark:bg-indigo-900 dark:hover:bg-indigo-800 dark:border-indigo-600 dark:text-indigo-300 dark:hover:text-indigo-200"
-                      >
-                        <Shield className="w-4 h-4" />
-                        <span>Manage Roles</span>
-                        <Badge variant="secondary" className="ml-1 bg-indigo-200 text-indigo-800 dark:bg-indigo-300 dark:text-indigo-900">
-                          {roles.length}
-                        </Badge>
-                      </Button>
+            {/* Compact Search Container */}
+            <Card className="border-0 shadow-sm bg-white dark:bg-gray-800">
+              <CardContent className="p-4">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-4">
+                  {/* Search Input */}
+                  <div className="flex-1 min-w-0">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                      <Input
+                        placeholder="Search by name, email, role, or project..."
+                        className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
                     </div>
                   </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowRoleModal(true)}
+                      className="flex items-center gap-2 h-10 px-3 bg-purple-100 hover:bg-purple-200 border-purple-300 text-purple-800 hover:text-purple-900 dark:bg-purple-900 dark:hover:bg-purple-800 dark:border-purple-600 dark:text-purple-300 dark:hover:text-purple-200"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Role</span>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowRolesModal(true)}
+                      className="flex items-center gap-2 h-10 px-3 bg-indigo-100 hover:bg-indigo-200 border-indigo-300 text-indigo-800 hover:text-indigo-900 dark:bg-indigo-900 dark:hover:bg-indigo-800 dark:border-indigo-600 dark:text-indigo-300 dark:hover:text-indigo-200"
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span>Manage Roles</span>
+                      <Badge variant="secondary" className="ml-1 bg-indigo-200 text-indigo-800 dark:bg-indigo-300 dark:text-indigo-900">
+                        {roles.length}
+                      </Badge>
+                    </Button>
+                  </div>
 
-                  {/* Search Results Info */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+                  {/* Results Info */}
+                  <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4" />
-                      <span>
-                        Showing {paginatedUsers.length} of {sortedUsers.length} users
-                        {searchTerm && ` matching &quot;${searchTerm}&quot;`}
+                      <span className="font-medium">
+                        {paginatedUsers.length} of {sortedUsers.length}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full animate-pulse"></div>
-                      <span>Real-time search</span>
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span>Live</span>
                     </div>
                   </div>
                 </div>

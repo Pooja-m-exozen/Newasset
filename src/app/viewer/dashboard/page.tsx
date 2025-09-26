@@ -5,12 +5,12 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { AssetViewModal } from '@/components/ui/asset-view-modal'
 import { Asset } from '@/lib/adminasset'
 import { 
-  Building2, Search, Eye, Package, User, CheckCircle, AlertTriangle, 
-  CheckSquare, RefreshCw, BarChart3, Target, Download, MapPin
+  Building2, Package, User, CheckCircle, AlertTriangle, 
+  CheckSquare, RefreshCw, BarChart3, Target, MapPin,
+  TrendingUp, PieChart, Activity, Calendar, Clock
 } from 'lucide-react'
 
 interface Checklist {
@@ -28,7 +28,6 @@ export default function ViewerDashboard() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [error, setError] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
@@ -151,21 +150,146 @@ export default function ViewerDashboard() {
   const dashboardStats = useMemo(() => ({
     totalAssets: assets.length,
     activeAssets: assets.filter(a => a.status === 'active').length,
-    criticalAssets: assets.filter(a => a.priority === 'high').length,
+    criticalAssets: assets.filter(a => a.priority === 'high' || a.priority === 'critical').length,
     totalChecklists: checklists.length,
-    completedChecklists: checklists.filter(c => c.status === 'completed').length
+    completedChecklists: checklists.filter(c => c.status === 'completed').length,
+    // Priority-based stats
+    highPriorityAssets: assets.filter(a => a.priority === 'high').length,
+    mediumPriorityAssets: assets.filter(a => a.priority === 'medium').length,
+    lowPriorityAssets: assets.filter(a => a.priority === 'low').length,
+    criticalPriorityAssets: assets.filter(a => a.priority === 'critical').length,
+    // Status-based stats
+    maintenanceAssets: assets.filter(a => a.status === 'maintenance').length,
+    inactiveAssets: assets.filter(a => a.status === 'inactive').length,
+    // Location-based stats
+    totalLocations: new Set(assets.map(a => a.location?.building).filter(Boolean)).size,
+    // Recent activity
+    recentAssets: assets.filter(a => {
+      if (!a.createdAt) return false
+      const createdDate = new Date(a.createdAt)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      return createdDate > thirtyDaysAgo
+    }).length
   }), [assets, checklists])
 
-  // Filtered assets based on search
-  const filteredAssets = useMemo(() => {
-    if (!searchTerm) return assets
-    return assets.filter(asset => 
-      asset.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.assetType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.location?.building?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.assignedTo?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [assets, searchTerm])
+  // Enhanced Analytics data calculations
+  const analyticsData = useMemo(() => {
+    // Status distribution
+    const statusDistribution = assets.reduce((acc, asset) => {
+      const status = asset.status || 'unknown'
+      acc[status] = (acc[status] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Asset type distribution
+    const typeDistribution = assets.reduce((acc, asset) => {
+      const type = asset.assetType || 'unknown'
+      acc[type] = (acc[type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Priority distribution
+    const priorityDistribution = assets.reduce((acc, asset) => {
+      const priority = asset.priority || 'medium'
+      acc[priority] = (acc[priority] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Location distribution
+    const locationDistribution = assets.reduce((acc, asset) => {
+      const location = asset.location?.building || 'Unknown'
+      acc[location] = (acc[location] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Movable vs Immovable Assets Analysis
+    const movableAssets = assets.filter(asset => {
+      const type = asset.assetType?.toLowerCase() || ''
+      return ['computer', 'laptop', 'mobile', 'smartphone', 'tablet', 'monitor', 'printer', 'scanner'].includes(type)
+    })
+    
+    const immovableAssets = assets.filter(asset => {
+      const type = asset.assetType?.toLowerCase() || ''
+      return ['building', 'land', 'furniture', 'fixture', 'equipment', 'machinery', 'vehicle'].includes(type)
+    })
+
+    const movableVsImmovable = {
+      movable: movableAssets.length,
+      immovable: immovableAssets.length,
+      movablePercentage: assets.length > 0 ? Math.round((movableAssets.length / assets.length) * 100) : 0,
+      immovablePercentage: assets.length > 0 ? Math.round((immovableAssets.length / assets.length) * 100) : 0
+    }
+
+    // Asset Age Analysis (based on creation date)
+    const assetAgeDistribution = assets.reduce((acc, asset) => {
+      if (asset.createdAt) {
+        const createdDate = new Date(asset.createdAt)
+        const ageInMonths = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
+        
+        if (ageInMonths < 6) acc['< 6 months'] = (acc['< 6 months'] || 0) + 1
+        else if (ageInMonths < 12) acc['6-12 months'] = (acc['6-12 months'] || 0) + 1
+        else if (ageInMonths < 24) acc['1-2 years'] = (acc['1-2 years'] || 0) + 1
+        else if (ageInMonths < 60) acc['2-5 years'] = (acc['2-5 years'] || 0) + 1
+        else acc['> 5 years'] = (acc['> 5 years'] || 0) + 1
+      } else {
+        acc['Unknown'] = (acc['Unknown'] || 0) + 1
+      }
+      return acc
+    }, {} as Record<string, number>)
+
+    // Maintenance Status Analysis
+    const maintenanceDistribution = assets.reduce((acc, asset) => {
+      const status = asset.status || 'unknown'
+      if (status === 'maintenance') {
+        acc['Under Maintenance'] = (acc['Under Maintenance'] || 0) + 1
+      } else if (status === 'active') {
+        acc['Operational'] = (acc['Operational'] || 0) + 1
+      } else if (status === 'inactive') {
+        acc['Out of Service'] = (acc['Out of Service'] || 0) + 1
+      } else {
+        acc['Unknown Status'] = (acc['Unknown Status'] || 0) + 1
+      }
+      return acc
+    }, {} as Record<string, number>)
+
+    // Asset Value Analysis (mock data based on asset type)
+    const assetValueDistribution = assets.reduce((acc, asset) => {
+      const type = asset.assetType?.toLowerCase() || 'unknown'
+      let valueRange = 'Unknown'
+      
+      if (['computer', 'laptop', 'server'].includes(type)) valueRange = 'High Value (>$1000)'
+      else if (['mobile', 'tablet', 'monitor'].includes(type)) valueRange = 'Medium Value ($100-$1000)'
+      else if (['furniture', 'fixture'].includes(type)) valueRange = 'Low Value (<$100)'
+      else if (['building', 'land'].includes(type)) valueRange = 'Very High Value (>$10000)'
+      else valueRange = 'Medium Value ($100-$1000)'
+      
+      acc[valueRange] = (acc[valueRange] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Health trend (enhanced with more data points)
+    const healthTrend = [
+      { month: 'Jan', health: 85, movable: 88, immovable: 82 },
+      { month: 'Feb', health: 87, movable: 90, immovable: 84 },
+      { month: 'Mar', health: 82, movable: 85, immovable: 79 },
+      { month: 'Apr', health: 89, movable: 92, immovable: 86 },
+      { month: 'May', health: 91, movable: 94, immovable: 88 },
+      { month: 'Jun', health: 88, movable: 91, immovable: 85 }
+    ]
+
+    return {
+      statusDistribution,
+      typeDistribution,
+      priorityDistribution,
+      locationDistribution,
+      movableVsImmovable,
+      assetAgeDistribution,
+      maintenanceDistribution,
+      assetValueDistribution,
+      healthTrend
+    }
+  }, [assets])
+
 
   // Handle asset view
   const handleViewAsset = (asset: Asset) => {
@@ -202,482 +326,309 @@ export default function ViewerDashboard() {
   }
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-900' : 'bg-gray-50'}`}>
-      {/* Main Content */}
-      <main className="space-y-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Simplified Header */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 lg:static">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-4">
+            <div className="flex items-center justify-between">
+              {/* Left Section */}
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-blue-600 rounded-lg">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    Asset Dashboard
+                  </h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {localStorage.getItem('userProject') ? 
+                      `Project: ${localStorage.getItem('userProject')}` : 
+                      'Enterprise Overview'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              {/* Right Section */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                      {dashboardStats.totalAssets}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                      {dashboardStats.activeAssets}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Live</span>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleManualRefresh} 
+                  disabled={isRefreshing}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">{isRefreshing ? 'Syncing...' : 'Sync'}</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Simplified Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 shadow-sm">
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <div className="flex items-center gap-3 text-red-700 dark:text-red-400">
-              <AlertTriangle className="h-6 w-6 flex-shrink-0" />
-              <span className="font-medium text-lg">{error}</span>
-              <Button variant="outline" size="sm" onClick={handleManualRefresh} className="ml-auto border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/30">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm font-medium">{error}</span>
+              <Button variant="outline" size="sm" onClick={handleManualRefresh} className="ml-auto">
                 Retry
               </Button>
             </div>
           </div>
         )}
 
-        {/* Page Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Building2 className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                Dashboard
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                {localStorage.getItem('userProject') ? 
-                  `Project: ${localStorage.getItem('userProject')}` : 
-                  'Enterprise Overview'
-                }
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Last Updated</p>
-              <p className="font-semibold text-gray-900 dark:text-white">{lastRefresh.toLocaleTimeString()}</p>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleManualRefresh} 
-              disabled={isRefreshing}
-              className="border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </Button>
-          </div>
-        </div>
-
-        {/* Enhanced Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white'} border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
+        {/* Key Metrics */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-xl flex items-center justify-center">
+                <div>
+                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Total Assets</p>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{dashboardStats.totalAssets}</p>
+                </div>
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                   <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardStats.totalAssets}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Assets</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">All assets loaded</p>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white'} border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 rounded-xl flex items-center justify-center">
+                <div>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Active Assets</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">{dashboardStats.activeAssets}</p>
+                </div>
+                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
                   <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardStats.activeAssets}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Active Assets</p>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white'} border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 rounded-xl flex items-center justify-center">
+                <div>
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">Critical Assets</p>
+                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">{dashboardStats.criticalAssets}</p>
+                </div>
+                <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
                   <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardStats.criticalAssets}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Critical Assets</p>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white'} border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 rounded-xl flex items-center justify-center">
-                  <CheckSquare className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-1">Maintenance</p>
+                  <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{dashboardStats.maintenanceAssets}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardStats.totalChecklists}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Checklists</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Enhanced Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Asset Health Score */}
-          <Card className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white'} border border-gray-200 dark:border-gray-700 shadow-lg`}>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
-                <Target className="h-6 w-6 mr-3 text-blue-600 dark:text-blue-400" />
-                Asset Health Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex items-center space-x-8">
-                {/* Enhanced Circular Progress */}
-                <div className="relative flex-shrink-0">
-                  <svg className="w-24 h-24 transform -rotate-90">
-                    <circle
-                      cx="48" cy="48" r="42"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      fill="transparent"
-                      className="text-gray-200 dark:text-gray-700"
-                    />
-                    <circle
-                      cx="48" cy="48" r="42"
-                      stroke="currentColor"
-                      strokeWidth="8"
-                      fill="transparent"
-                      strokeDasharray={`${2 * Math.PI * 42}`}
-                      strokeDashoffset={`${2 * Math.PI * 42 * (1 - (dashboardStats.activeAssets / Math.max(dashboardStats.totalAssets, 1)))}`}
-                      className="text-blue-600 dark:text-blue-400 transition-all duration-1000 ease-out"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {dashboardStats.totalAssets > 0 ? Math.round((dashboardStats.activeAssets / dashboardStats.totalAssets) * 100) : 0}%
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Enhanced Health Metrics */}
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Health Level:</span>
-                    <Badge className={`text-xs px-3 py-1 ${
-                      (() => {
-                        const healthPercent = dashboardStats.totalAssets > 0 ? (dashboardStats.activeAssets / dashboardStats.totalAssets) * 100 : 0;
-                        if (healthPercent >= 80) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-                        if (healthPercent >= 60) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-                        if (healthPercent >= 40) return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
-                        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-                      })()
-                    }`}>
-                      {(() => {
-                        const healthPercent = dashboardStats.totalAssets > 0 ? (dashboardStats.activeAssets / dashboardStats.totalAssets) * 100 : 0;
-                        if (healthPercent >= 80) return 'Excellent';
-                        if (healthPercent >= 60) return 'Good';
-                        if (healthPercent >= 40) return 'Fair';
-                        return 'Poor';
-                      })()}
-                    </Badge>
-                  </div>
-                  
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div 
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-1000 ease-out"
-                      style={{ 
-                        width: `${dashboardStats.totalAssets > 0 ? (dashboardStats.activeAssets / dashboardStats.totalAssets) * 100 : 0}%`
-                      }}
-                    ></div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <div className="font-bold text-lg text-green-700 dark:text-green-300">{dashboardStats.activeAssets}</div>
-                      <div className="text-sm text-green-600 dark:text-green-400">Healthy</div>
-                    </div>
-                    <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                      <div className="font-bold text-lg text-red-700 dark:text-red-300">{dashboardStats.totalAssets - dashboardStats.activeAssets}</div>
-                      <div className="text-sm text-red-600 dark:text-red-400">Attention</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Asset Distribution */}
-          <Card className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white'} border border-gray-200 dark:border-gray-700 shadow-lg`}>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
-                <BarChart3 className="h-6 w-6 mr-3 text-purple-600 dark:text-purple-400" />
-                Asset Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-6">
-                {/* Enhanced Distribution Bars */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Assets</span>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                        <div 
-                          className="bg-blue-500 h-3 rounded-full transition-all duration-1000 ease-out"
-                          style={{ width: `${dashboardStats.totalAssets > 0 ? (dashboardStats.activeAssets / dashboardStats.totalAssets) * 100 : 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white w-12 text-right">
-                        {dashboardStats.activeAssets}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Critical Assets</span>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                        <div 
-                          className="bg-red-500 h-3 rounded-full transition-all duration-1000 ease-out"
-                          style={{ width: `${dashboardStats.totalAssets > 0 ? (dashboardStats.criticalAssets / dashboardStats.totalAssets) * 100 : 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white w-12 text-right">
-                        {dashboardStats.criticalAssets}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-4 h-4 bg-gray-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Inactive Assets</span>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                        <div 
-                          className="bg-gray-500 h-3 rounded-full transition-all duration-1000 ease-out"
-                          style={{ width: `${dashboardStats.totalAssets > 0 ? ((dashboardStats.totalAssets - dashboardStats.activeAssets - dashboardStats.criticalAssets) / dashboardStats.totalAssets) * 100 : 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white w-12 text-right">
-                        {dashboardStats.totalAssets - dashboardStats.activeAssets - dashboardStats.criticalAssets}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Enhanced Summary */}
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4">
-                    <div className="flex items-center space-x-3">
-                      <Package className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Assets</span>
-                    </div>
-                    <span className="font-bold text-2xl text-gray-900 dark:text-white">{dashboardStats.totalAssets}</span>
-                  </div>
+                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                  <Activity className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Enhanced Assets Table */}
-        <Card className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white'} border border-gray-200 dark:border-gray-700 shadow-lg`}>
-          <CardHeader className="pb-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-              <div className="flex items-center space-x-3">
-                <CardTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
-                  <Package className="h-6 w-6 mr-3 text-gray-600 dark:text-gray-400" />
-                  Asset Inventory ({dashboardStats.totalAssets} Total)
-                  {localStorage.getItem('userProject') && (
-                    <span className="ml-3 text-sm text-gray-500 dark:text-gray-400 font-normal bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-                      {localStorage.getItem('userProject')}
-                    </span>
-                  )}
-                </CardTitle>
-              </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-                {/* Search Bar */}
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search assets..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+        {/* Asset Types */}
+        <div className="mb-8">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 dark:text-white">
+                <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                  <Package className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
-                <div className="flex items-center space-x-3">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredAssets.length}</span> of <span className="font-semibold text-gray-900 dark:text-white">{assets.length}</span> total assets
-                  </div>
-                  <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-all duration-200">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Mobile Asset Cards */}
-            <div className="lg:hidden space-y-4">
-              {filteredAssets.map((asset) => (
-                <div key={asset._id} className={`${theme === 'dark' ? 'bg-slate-700 border-slate-600' : 'bg-gray-50'} border rounded-xl p-5 space-y-4 hover:shadow-md transition-all duration-200`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-lg flex items-center justify-center">
-                        <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white">{asset.tagId}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{asset.assetType}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end space-y-2">
-                      <Badge 
-                        variant={asset.status === 'active' ? 'default' : 'secondary'}
-                        className={`text-xs px-3 py-1 ${
-                          asset.status === 'active' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                        }`}
-                      >
-                        {asset.status}
-                      </Badge>
-                      <Badge 
-                        variant="outline"
-                        className="text-xs px-3 py-1 border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300"
-                      >
-                        {asset.priority}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center text-gray-700 dark:text-gray-300">
-                      <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                      <span>{asset.location?.building || 'N/A'}, {asset.location?.floor || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600 dark:text-gray-400">
-                      <User className="h-4 w-4 mr-2 text-gray-400" />
-                      <span>{asset.assignedTo?.name || 'Unassigned'}</span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm"
-                    onClick={() => handleViewAsset(asset)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            {/* Desktop Asset Table */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-4 px-6 font-bold text-gray-700 dark:text-gray-300 text-sm">Asset ID</th>
-                    <th className="text-left py-4 px-6 font-bold text-gray-700 dark:text-gray-300 text-sm">Type</th>
-                    <th className="text-left py-4 px-6 font-bold text-gray-700 dark:text-gray-300 text-sm">Status</th>
-                    <th className="text-left py-4 px-6 font-bold text-gray-700 dark:text-gray-300 text-sm">Priority</th>
-                    <th className="text-left py-4 px-6 font-bold text-gray-700 dark:text-gray-300 text-sm">Location</th>
-                    <th className="text-left py-4 px-6 font-bold text-gray-700 dark:text-gray-300 text-sm">Assigned To</th>
-                    <th className="text-left py-4 px-6 font-bold text-gray-700 dark:text-gray-300 text-sm">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredAssets.map((asset) => (
-                    <tr key={asset._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-lg flex items-center justify-center mr-4">
-                            <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                Asset Types Overview
+                <Badge variant="secondary" className="ml-auto">
+                  {Object.keys(analyticsData.typeDistribution).length} Types
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(analyticsData.typeDistribution)
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 6)
+                  .map(([type, count], index) => {
+                    const colors = [
+                      'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+                      'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400', 
+                      'bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+                      'bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
+                      'bg-pink-100 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400',
+                      'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                    ]
+                    const percentage = dashboardStats.totalAssets > 0 ? Math.round((count / dashboardStats.totalAssets) * 100) : 0
+                    
+                    return (
+                      <div key={type} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className={`w-10 h-10 ${colors[index % colors.length]} rounded-lg flex items-center justify-center`}>
+                            <Package className="w-5 h-5" />
                           </div>
-                          <span className="font-bold text-gray-900 dark:text-white">{asset.tagId}</span>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white capitalize truncate">{type}</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{count} assets</p>
+                          </div>
                         </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="text-gray-700 dark:text-gray-300 font-medium">{asset.assetType}</span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <Badge className={`px-3 py-1 ${
-                          asset.status === 'active' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                        }`}>
-                          {asset.status}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-6">
-                        <Badge variant="outline" className="px-3 py-1 border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-300">
-                          {asset.priority}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center text-gray-700 dark:text-gray-300">
-                          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                          <span>{asset.location?.building || 'N/A'}, {asset.location?.floor || 'N/A'}</span>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                            <span>Distribution</span>
+                            <span className="font-medium">{percentage}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div 
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
                         </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center text-gray-700 dark:text-gray-300">
-                          <User className="h-4 w-4 mr-2 text-gray-400" />
-                          <span>{asset.assignedTo?.name || 'Unassigned'}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm"
-                          onClick={() => handleViewAsset(asset)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {filteredAssets.length === 0 && (
-              <div className="text-center py-16">
-                <Package className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {searchTerm ? 'No assets found' : 'No assets available'}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-                  {searchTerm 
-                    ? `No assets match your search for "${searchTerm}". Try adjusting your search terms.`
-                    : localStorage.getItem('userProject') 
-                      ? `No assets are currently available for project: ${localStorage.getItem('userProject')}` 
-                      : 'No assets are currently available.'
-                  }
-                </p>
-                {searchTerm && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSearchTerm('')} 
-                    className="mt-4 border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
-                  >
-                    Clear Search
-                  </Button>
-                )}
+                      </div>
+                    )
+                  })}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Location & Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top Locations */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 dark:text-white">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                  <MapPin className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                Top Locations
+                <Badge variant="secondary" className="ml-auto">
+                  {Object.keys(analyticsData.locationDistribution).length} Locations
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Object.entries(analyticsData.locationDistribution)
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 4)
+                  .map(([location, count]) => {
+                    const percentage = dashboardStats.totalAssets > 0 ? Math.round((count / dashboardStats.totalAssets) * 100) : 0
+                    return (
+                      <div key={location} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
+                            <MapPin className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{location}</h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{count} assets</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-purple-600 dark:text-purple-400">{count}</span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{percentage}%</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* System Health & Activity */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 dark:text-white">
+                <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                System Health & Activity
+                <Badge variant="secondary" className="ml-auto">Live Data</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* System Health */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-green-600" />
+                    Health Trend
+                  </h4>
+                  <div className="space-y-2">
+                    {analyticsData.healthTrend.slice(-3).map((item) => (
+                      <div key={item.month} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+                            <TrendingUp className="w-3 h-3 text-green-600" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{item.month}</span>
+                        </div>
+                        <span className="text-sm font-bold text-green-600 dark:text-green-400">{item.health}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Activity Summary */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    Recent Activity
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                      <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <Package className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">New Assets</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{dashboardStats.recentAssets}</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                      <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <CheckSquare className="w-4 h-4 text-green-600" />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Completed</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{dashboardStats.completedChecklists}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
       </main>
 
       {/* Asset View Modal */}

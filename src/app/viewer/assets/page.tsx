@@ -25,7 +25,17 @@ import {
   Scan,
   Eye,
   Download,
-  X
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  MoreVertical,
+  Filter,
+  Calendar,
+  MapPin,
+  User,
+  Tag,
+  Package
 } from 'lucide-react'
 
 interface Asset {
@@ -133,8 +143,14 @@ export default function AssetsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('table')
   const [userProject, setUserProject] = useState<string | null>(null)
+  
+  // Table sorting and filtering states
+  const [sortField, setSortField] = useState<keyof Asset>('tagId')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
   
   // Modal states
   const [showScanner, setShowScanner] = useState(false)
@@ -161,6 +177,45 @@ export default function AssetsPage() {
   // Simplified handlers
   const showDigitalAssetModal = (asset: Asset, type: 'qrCode' | 'barcode' | 'nfcData') => {
     setDigitalAssetModal({ asset, type })
+  }
+
+  // Table sorting function
+  const handleSort = (field: keyof Asset) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  // Get sort icon
+  const getSortIcon = (field: keyof Asset) => {
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400" />
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 text-blue-600" />
+      : <ArrowDown className="w-4 h-4 text-blue-600" />
+  }
+
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active': return 'bg-green-100 text-green-800 border-green-200'
+      case 'inactive': return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'maintenance': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'retired': return 'bg-red-100 text-red-800 border-red-200'
+      default: return 'bg-blue-100 text-blue-800 border-blue-200'
+    }
+  }
+
+  // Get priority badge color
+  const getPriorityBadgeColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'high': return 'bg-red-100 text-red-800 border-red-200'
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'low': return 'bg-green-100 text-green-800 border-green-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
   }
 
   // Load scanner images for view modal
@@ -522,10 +577,11 @@ Timestamps:
     }
   }, [viewModalQrImgSrc, viewModalBarcodeImgSrc])
 
-  // Filter assets based on search
+  // Filter and sort assets
   useEffect(() => {
     let filtered = assets
 
+    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(asset =>
         asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -537,8 +593,40 @@ Timestamps:
       )
     }
 
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(asset => asset.status.toLowerCase() === statusFilter.toLowerCase())
+    }
+
+    // Apply priority filter
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(asset => asset.priority.toLowerCase() === priorityFilter.toLowerCase())
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue = a[sortField]
+      let bValue = b[sortField]
+
+      // Handle nested objects
+      if (sortField === 'assignedTo') {
+        aValue = typeof a.assignedTo === 'string' ? a.assignedTo : a.assignedTo?.name || ''
+        bValue = typeof b.assignedTo === 'string' ? b.assignedTo : b.assignedTo?.name || ''
+      } else if (sortField === 'location') {
+        aValue = a.location?.building || ''
+        bValue = b.location?.building || ''
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase())
+        return sortDirection === 'asc' ? comparison : -comparison
+      }
+
+      return 0
+    })
+
     setFilteredAssets(filtered)
-  }, [assets, searchTerm])
+  }, [assets, searchTerm, statusFilter, priorityFilter, sortField, sortDirection])
 
   // Loading state
   if (isLoading) {
@@ -663,10 +751,20 @@ Timestamps:
               {/* View Mode Toggle - Mobile Responsive */}
               <div className="flex items-center bg-white rounded-lg border border-slate-200 p-1 shadow-sm">
                 <Button
+                  variant={viewMode === 'table' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                  className="rounded-md font-medium p-1.5 sm:p-2"
+                  title="Table View"
+                >
+                  <Package className="w-3 h-3 sm:w-4 sm:h-4" />
+                </Button>
+                <Button
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('grid')}
                   className="rounded-md font-medium p-1.5 sm:p-2"
+                  title="Grid View"
                 >
                   <Grid3X3 className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
@@ -675,6 +773,7 @@ Timestamps:
                   size="sm"
                   onClick={() => setViewMode('list')}
                   className="rounded-md font-medium p-1.5 sm:p-2"
+                  title="List View"
                 >
                   <List className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
@@ -713,6 +812,38 @@ Timestamps:
                       />
                     </div>
                   </div>
+                  
+                  {/* Filters */}
+                  {viewMode === 'table' && (
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-muted-foreground" />
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="text-xs sm:text-sm border border-gray-300 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="all">All Status</option>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="maintenance">Maintenance</option>
+                          <option value="retired">Retired</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={priorityFilter}
+                          onChange={(e) => setPriorityFilter(e.target.value)}
+                          className="text-xs sm:text-sm border border-gray-300 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="all">All Priority</option>
+                          <option value="high">High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Search Results Info - Mobile Responsive */}
@@ -761,7 +892,11 @@ Timestamps:
                       }
                     </p>
                     <Button 
-                      onClick={() => setSearchTerm('')}
+                      onClick={() => {
+                        setSearchTerm('')
+                        setStatusFilter('all')
+                        setPriorityFilter('all')
+                      }}
                       variant="outline"
                       size="sm"
                       className="border-slate-300 text-slate-700 hover:bg-slate-50 font-medium px-6 py-2 rounded-lg"
@@ -772,7 +907,215 @@ Timestamps:
                 </div>
               </CardContent>
             </Card>
+          ) : viewMode === 'table' ? (
+            /* Table View */
+            <Card className="shadow-sm border border-gray-200">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('tagId')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            <Tag className="w-4 h-4" />
+                            Asset ID
+                            {getSortIcon('tagId')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('assetType')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            <Package className="w-4 h-4" />
+                            Type
+                            {getSortIcon('assetType')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('brand')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            Brand
+                            {getSortIcon('brand')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('model')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            Model
+                            {getSortIcon('model')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('status')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            Status
+                            {getSortIcon('status')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('priority')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            Priority
+                            {getSortIcon('priority')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('location')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            Location
+                            {getSortIcon('location')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('assignedTo')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            <User className="w-4 h-4" />
+                            Assigned To
+                            {getSortIcon('assignedTo')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          <button
+                            onClick={() => handleSort('createdAt')}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                          >
+                            <Calendar className="w-4 h-4" />
+                            Created
+                            {getSortIcon('createdAt')}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-center">
+                          <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Actions
+                          </span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredAssets.map((asset) => (
+                        <tr key={asset._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-4">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0">
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                  <Tag className="w-4 h-4 text-blue-600" />
+                                </div>
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {asset.tagId}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {asset.subcategory}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900">{asset.assetType}</div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900">{asset.brand}</div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900">{asset.model}</div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeColor(asset.status)}`}>
+                              {asset.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityBadgeColor(asset.priority)}`}>
+                              {asset.priority}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900">
+                              {asset.location ? (
+                                <div>
+                                  <div className="font-medium">{asset.location.building}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {asset.location.floor} • {asset.location.room}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">Not assigned</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900">
+                              {typeof asset.assignedTo === 'string' 
+                                ? asset.assignedTo 
+                                : asset.assignedTo?.name || 'Unassigned'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900">
+                              {new Date(asset.createdAt).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setScannedAsset(asset)
+                                  setShowScannedAssetModal(true)
+                                }}
+                                className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => downloadAssetInfo(asset)}
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                title="Download Info"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowMoreOptions(asset._id)}
+                                className="h-8 w-8 p-0 hover:bg-gray-50 hover:text-gray-600"
+                                title="More Options"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
+            /* Grid/List View */
             <div className={viewMode === 'grid' 
               ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'
               : 'space-y-3 sm:space-y-4'

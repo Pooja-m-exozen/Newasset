@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Eye, EyeOff, ArrowRight, Zap, Building2, Users, Settings, TrendingUp, User, Mail, Lock, CheckCircle, AlertCircle, Briefcase } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Eye, EyeOff, ArrowRight, Zap, Building2, Users, Settings, TrendingUp, User, Mail, Lock, CheckCircle, AlertCircle, Briefcase, X } from "lucide-react"
 import { apiService } from "@/lib/api"
 import { useToast, ToastContainer } from "@/components/ui/toast"
 import Link from "next/link"
@@ -22,9 +21,10 @@ export default function RegisterPage() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [successMessage, setSuccessMessage] = useState("")
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [agreeToTerms, setAgreeToTerms] = useState(false)
   const { toasts, addToast, removeToast } = useToast()
 
@@ -157,110 +157,83 @@ export default function RegisterPage() {
   ]
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+    <div className="h-screen w-full flex flex-col lg:flex-row bg-gray-50 dark:bg-gray-900 overflow-hidden">
+
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-blue-600 py-2 px-4 flex-shrink-0">
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center">
+              <Zap className="w-3 h-3 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white">Exozen Pvt Ltd</h1>
+              <p className="text-blue-100 text-xs">Enterprise Solutions</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Left Panel - Hero Section */}
-      <div className="lg:w-[60%] relative transition-all duration-500 min-h-[300px] lg:min-h-screen">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800" />
-        
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-20 left-20 w-40 h-40 bg-white rounded-full animate-bounce"></div>
-          <div className="absolute bottom-32 right-32 w-32 h-32 bg-white rounded-full animate-bounce delay-1000"></div>
-          <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-white rounded-full animate-bounce delay-500"></div>
-        </div>
-        
-        <div className="relative z-10 flex flex-col justify-center px-6 lg:px-14 py-8 lg:py-10 h-full">
+      {/* Desktop Left Panel */}
+      <div className="hidden lg:flex lg:w-[50%] bg-blue-600 h-screen">
+        <div className="flex flex-col justify-center px-8 xl:px-12 py-8 h-full w-full">
           {/* Logo and Brand */}
-          <div className="mb-6 lg:mb-8">
-            <div className="inline-flex items-center space-x-3 mb-4 lg:mb-6">
-              <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-orange-400 via-orange-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-2xl transform hover:scale-105 transition-transform duration-300">
-                <Zap className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
+          <div className="mb-4 xl:mb-6">
+            <div className="flex items-center gap-3 mb-3 xl:mb-4">
+              <div className="w-8 h-8 xl:w-10 xl:h-10 bg-white rounded-xl flex items-center justify-center">
+                <Zap className="w-5 h-5 xl:w-6 xl:h-6 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-lg lg:text-xl font-bold text-white">FacilioTrack</h2>
-                <p className="text-blue-200 text-xs">Enterprise Solutions</p>
+                <h1 className="text-lg xl:text-xl font-bold text-white">Exozen Pvt Ltd</h1>
+                <p className="text-blue-100 text-sm xl:text-base">Enterprise Solutions</p>
               </div>
             </div>
             
-            <h1 className="text-2xl lg:text-4xl font-bold mb-3 lg:mb-4 bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent leading-tight">
-              Join the Future of
-              <br />
-              <span className="bg-gradient-to-r from-orange-400 to-teal-400 bg-clip-text text-transparent">
-                Facility Management
-              </span>
-            </h1>
-            <p className="text-sm lg:text-base text-blue-100 mb-6 lg:mb-8 leading-relaxed">
-              Start your journey with our comprehensive facility management platform. Transform your operations today.
+            <h2 className="text-2xl xl:text-3xl font-bold text-white mb-2 xl:mb-3 leading-tight">
+              Join Our Platform
+            </h2>
+            <p className="text-blue-100 text-sm xl:text-base leading-relaxed">
+              Start your journey with our comprehensive facility management platform and transform your operations.
             </p>
           </div>
           
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 gap-3 flex-1">
+          {/* Features */}
+          <div className="space-y-2 xl:space-y-3">
             {features.map((feature, index) => (
-              <div 
-                key={index} 
-                className="group bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-500 transform hover:scale-105"
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-white/20 to-white/30 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-white/40 transition-all duration-300 shadow-lg">
-                    <feature.icon className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-white text-xs lg:text-sm mb-1 group-hover:text-blue-100 transition-colors truncate">
-                      {feature.title}
-                    </h3>
-                    <p className="text-blue-100 text-xs leading-relaxed opacity-90 line-clamp-2">
-                      {feature.description}
-                    </p>
-                  </div>
+              <div key={index} className="flex items-start gap-2 xl:gap-3">
+                <div className="w-7 h-7 xl:w-8 xl:h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <feature.icon className="w-3 h-3 xl:w-4 xl:h-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-white text-xs xl:text-sm mb-1">
+                    {feature.title}
+                  </h3>
+                  <p className="text-blue-100 text-xs leading-relaxed">
+                    {feature.description}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Trust Indicators */}
-          <div className="mt-4 lg:mt-6 pt-4 border-t border-white/20">
-            <p className="text-blue-200 text-xs mb-3">Join thousands of satisfied users</p>
-            <div className="flex items-center space-x-4 opacity-60">
-              <div className="w-6 h-6 bg-white/20 rounded-md flex items-center justify-center">
-                <Building2 className="w-3 h-3 text-white" />
-              </div>
-              <div className="w-6 h-6 bg-white/20 rounded-md flex items-center justify-center">
-                <Users className="w-3 h-3 text-white" />
-              </div>
-              <div className="w-6 h-6 bg-white/20 rounded-md flex items-center justify-center">
-                <Settings className="w-3 h-3 text-white" />
-              </div>
-            </div>
-          </div>
         </div>
-        {/* Vertical border */}
-        <div className="absolute top-0 right-0 h-full w-0.5 bg-gradient-to-b from-blue-200/30 via-blue-400/40 to-blue-400/30 opacity-70 shadow-lg hidden lg:block" />
       </div>
 
       {/* Right Panel - Registration Form */}
-      <div className="lg:w-[40%] flex items-center justify-center p-4 lg:p-8 relative bg-white/90 backdrop-blur-xl min-h-screen lg:min-h-0">
-        <div className="w-full max-w-sm">
-          <Card className="shadow-2xl bg-white/95 rounded-2xl overflow-hidden">
-            <CardHeader className="text-center pb-4 lg:pb-6 pt-6 lg:pt-10 px-4 lg:px-6">
-              <div className="w-14 h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-xl flex items-center justify-center mx-auto mb-4 lg:mb-5 shadow-xl">
-                <User className="w-7 h-7 lg:w-8 lg:h-8 text-white" />
+      <div className="flex-1 lg:w-[50%] flex items-center justify-center p-3 sm:p-4 lg:p-6 xl:p-8 bg-white h-screen lg:h-auto overflow-y-auto">
+        <div className="w-full max-w-sm sm:max-w-md">
+          <Card className="shadow-lg border-0">
+            <CardHeader className="text-center pb-3 sm:pb-4 pt-4 sm:pt-6 px-3 sm:px-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                <User className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
-              <CardTitle className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">
+              <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2">
                 Create Account
               </CardTitle>
-              <CardDescription className="text-gray-600 text-sm leading-relaxed">
-                Join FacilioTrack and start managing your facilities efficiently
+              <CardDescription className="text-gray-600 text-xs sm:text-sm">
+                Join Exozen Pvt Ltd and start managing your facilities efficiently
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-4 lg:px-6 pb-6">
+            <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
               {successMessage && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-blue-600" />
@@ -275,136 +248,91 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
                 {/* Name Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-semibold text-gray-700">
+                <div className="space-y-1">
+                  <Label htmlFor="name" className="text-xs sm:text-sm font-medium text-gray-700">
                     Full Name
                   </Label>
-                  <div className={cn(
-                    "relative group transition-all duration-300",
-                    focusedField === "name" && "ring-2 ring-blue-500/20",
-                    errors.name && "ring-2 ring-red-500/20"
-                  )}>
-                    <User className={cn(
-                      "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-300",
-                      focusedField === "name" ? "text-blue-500" : errors.name ? "text-red-500" : "text-gray-400"
-                    )} />
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                     <Input
                       id="name"
                       type="text"
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
-                      onFocus={() => setFocusedField("name")}
-                      onBlur={() => setFocusedField(null)}
-                      className={cn(
-                        "pl-10 h-11 lg:h-12 border-2 focus:ring-blue-500/20 rounded-xl text-sm transition-all duration-300 bg-white/50 backdrop-blur-sm",
-                        errors.name ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-blue-500"
-                      )}
+                      className="pl-8 sm:pl-10 h-8 sm:h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-xs sm:text-sm"
                       placeholder="Enter your full name"
                       required
                     />
                   </div>
                   {errors.name && (
-                    <p className="text-xs text-red-600 flex items-center space-x-1">
-                      <AlertCircle className="w-3 h-3" />
-                      <span>{errors.name}</span>
-                    </p>
+                    <p className="text-xs text-red-600">{errors.name}</p>
                   )}
                 </div>
 
                 {/* Email Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+                <div className="space-y-1">
+                  <Label htmlFor="email" className="text-xs sm:text-sm font-medium text-gray-700">
                     Email Address
                   </Label>
-                  <div className={cn(
-                    "relative group transition-all duration-300",
-                    focusedField === "email" && "ring-2 ring-blue-500/20",
-                    errors.email && "ring-2 ring-red-500/20"
-                  )}>
-                    <Mail className={cn(
-                      "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-300",
-                      focusedField === "email" ? "text-blue-500" : errors.email ? "text-red-500" : "text-gray-400"
-                    )} />
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                     <Input
                       id="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
-                      onFocus={() => setFocusedField("email")}
-                      onBlur={() => setFocusedField(null)}
-                      className={cn(
-                        "pl-10 h-11 lg:h-12 border-2 focus:ring-blue-500/20 rounded-xl text-sm transition-all duration-300 bg-white/50 backdrop-blur-sm",
-                        errors.email ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-blue-500"
-                      )}
+                      className="pl-8 sm:pl-10 h-8 sm:h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-xs sm:text-sm"
                       placeholder="Enter your email address"
                       required
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-xs text-red-600 flex items-center space-x-1">
-                      <AlertCircle className="w-3 h-3" />
-                      <span>{errors.email}</span>
-                    </p>
+                    <p className="text-xs text-red-600">{errors.email}</p>
                   )}
                 </div>
 
                 {/* Password Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                <div className="space-y-1">
+                  <Label htmlFor="password" className="text-xs sm:text-sm font-medium text-gray-700">
                     Password
                   </Label>
-                  <div className={cn(
-                    "relative group transition-all duration-300",
-                    focusedField === "password" && "ring-2 ring-blue-500/20",
-                    errors.password && "ring-2 ring-red-500/20"
-                  )}>
-                    <Lock className={cn(
-                      "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-300",
-                      focusedField === "password" ? "text-blue-500" : errors.password ? "text-red-500" : "text-gray-400"
-                    )} />
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
-                      onFocus={() => setFocusedField("password")}
-                      onBlur={() => setFocusedField(null)}
-                      className={cn(
-                        "pl-10 pr-10 h-11 lg:h-12 border-2 focus:ring-blue-500/20 rounded-xl text-sm transition-all duration-300 bg-white/50 backdrop-blur-sm",
-                        errors.password ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-blue-500"
-                      )}
+                      className="pl-8 sm:pl-10 pr-8 sm:pr-10 h-8 sm:h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-xs sm:text-sm"
                       placeholder="Create a strong password"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-300 p-1 rounded-lg hover:bg-gray-100"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 touch-manipulation"
                     >
                       {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
+                        <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" />
                       ) : (
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                       )}
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-xs text-red-600 flex items-center space-x-1">
-                      <AlertCircle className="w-3 h-3" />
-                      <span>{errors.password}</span>
-                    </p>
+                    <p className="text-xs text-red-600">{errors.password}</p>
                   )}
                 </div>
 
                 {/* Role Field */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-700">
+                <div className="space-y-1">
+                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
                     Role
                   </Label>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <input
                         type="radio"
                         id="user"
@@ -412,13 +340,13 @@ export default function RegisterPage() {
                         value="user"
                         checked={formData.role === "user"}
                         onChange={(e) => handleInputChange("role", e.target.value)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500/20 border-gray-300 rounded"
+                        className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded touch-manipulation"
                       />
-                      <Label htmlFor="user" className="text-sm text-gray-700 cursor-pointer">
+                      <Label htmlFor="user" className="text-xs sm:text-sm text-gray-700 cursor-pointer touch-manipulation">
                         User
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <input
                         type="radio"
                         id="admin"
@@ -426,83 +354,70 @@ export default function RegisterPage() {
                         value="admin"
                         checked={formData.role === "admin"}
                         onChange={(e) => handleInputChange("role", e.target.value)}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500/20 border-gray-300 rounded"
+                        className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded touch-manipulation"
                       />
-                      <Label htmlFor="admin" className="text-sm text-gray-700 cursor-pointer">
+                      <Label htmlFor="admin" className="text-xs sm:text-sm text-gray-700 cursor-pointer touch-manipulation">
                         Admin
                       </Label>
                     </div>
                   </div>
                   {errors.role && (
-                    <p className="text-xs text-red-600 flex items-center space-x-1">
-                      <AlertCircle className="w-3 h-3" />
-                      <span>{errors.role}</span>
-                    </p>
+                    <p className="text-xs text-red-600">{errors.role}</p>
                   )}
                 </div>
 
                 {/* Project Name Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="projectName" className="text-sm font-semibold text-gray-700">
+                <div className="space-y-1">
+                  <Label htmlFor="projectName" className="text-xs sm:text-sm font-medium text-gray-700">
                     Project Name
                   </Label>
-                  <div className={cn(
-                    "relative group transition-all duration-300",
-                    focusedField === "projectName" && "ring-2 ring-blue-500/20",
-                    errors.projectName && "ring-2 ring-red-500/20"
-                  )}>
-                    <Briefcase className={cn(
-                      "absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-300",
-                      focusedField === "projectName" ? "text-blue-500" : errors.projectName ? "text-red-500" : "text-gray-400"
-                    )} />
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                     <Input
                       id="projectName"
                       type="text"
                       value={formData.projectName}
                       onChange={(e) => handleInputChange("projectName", e.target.value)}
-                      onFocus={() => setFocusedField("projectName")}
-                      onBlur={() => setFocusedField(null)}
-                      className={cn(
-                        "pl-10 h-11 lg:h-12 border-2 focus:ring-blue-500/20 rounded-xl text-sm transition-all duration-300 bg-white/50 backdrop-blur-sm",
-                        errors.projectName ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-blue-500"
-                      )}
+                      className="pl-8 sm:pl-10 h-8 sm:h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-xs sm:text-sm"
                       placeholder="Enter your project name"
                       required
                     />
                   </div>
                   {errors.projectName && (
-                    <p className="text-xs text-red-600 flex items-center space-x-1">
-                      <AlertCircle className="w-3 h-3" />
-                      <span>{errors.projectName}</span>
-                    </p>
+                    <p className="text-xs text-red-600">{errors.projectName}</p>
                   )}
                 </div>
 
                 {/* Terms and Conditions */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div className="flex items-start space-x-2">
                     <Checkbox
                       id="terms"
                       checked={agreeToTerms}
                       onCheckedChange={(checked) => setAgreeToTerms(checked as boolean)}
-                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 rounded-md mt-1"
+                      className="touch-manipulation w-3 h-3 sm:w-4 sm:h-4"
                     />
-                    <Label htmlFor="terms" className="text-xs text-gray-700 font-medium cursor-pointer leading-relaxed">
+                    <Label htmlFor="terms" className="text-xs text-gray-700 cursor-pointer leading-relaxed touch-manipulation">
                       I agree to the{" "}
-                      <Link href="/terms" className="text-blue-600 hover:text-blue-800 underline">
+                      <button
+                        type="button"
+                        onClick={() => setShowTermsModal(true)}
+                        className="text-blue-600 hover:text-blue-800 underline touch-manipulation"
+                      >
                         Terms of Service
-                      </Link>{" "}
+                      </button>{" "}
                       and{" "}
-                      <Link href="/privacy" className="text-blue-600 hover:text-blue-800 underline">
+                      <button
+                        type="button"
+                        onClick={() => setShowPrivacyModal(true)}
+                        className="text-blue-600 hover:text-blue-800 underline touch-manipulation"
+                      >
                         Privacy Policy
-                      </Link>
+                      </button>
                     </Label>
                   </div>
                   {errors.terms && (
-                    <p className="text-xs text-red-600 flex items-center space-x-1">
-                      <AlertCircle className="w-3 h-3" />
-                      <span>{errors.terms}</span>
-                    </p>
+                    <p className="text-xs text-red-600">{errors.terms}</p>
                   )}
                 </div>
 
@@ -510,26 +425,26 @@ export default function RegisterPage() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-11 lg:h-12 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-700 hover:from-blue-700 hover:via-blue-800 hover:to-blue-800 text-white font-semibold text-sm rounded-lg shadow-md hover:shadow-xl transition-all duration-500 transform hover:scale-[1.01] disabled:transform-none disabled:opacity-70"
+                  className="w-full h-8 sm:h-9 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm touch-manipulation"
                 >
                   {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Creating account...</span>
+                    <div className="flex items-center space-x-1 sm:space-x-2">
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Creating...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <span>Create Account</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                     </div>
                   )}
                 </Button>
 
                 {/* Login Link */}
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs text-gray-600">
                     Already have an account?{" "}
-                    <Link href="/login" className="text-blue-600 hover:text-blue-800 font-semibold transition-colors">
+                    <Link href="/login" className="text-blue-600 hover:text-blue-800 font-medium touch-manipulation">
                       Sign in
                     </Link>
                   </p>
@@ -537,15 +452,125 @@ export default function RegisterPage() {
               </form>
 
               {/* Footer */}
-              <div className="mt-6 text-center">
+              <div className="mt-2 sm:mt-3 text-center">
                 <p className="text-xs text-gray-400">
-                  © 2025 FacilioTrack. All rights reserved.
+                  © 2025 Exozen Pvt Ltd. All rights reserved.
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+      {/* Terms and Conditions Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">Terms of Service</h2>
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-4 text-sm text-gray-700">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">1. Acceptance of Terms</h3>
+                  <p>By accessing and using Exozen Pvt Ltd&apos;s facility management platform, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">2. Use License</h3>
+                  <p>Permission is granted to temporarily use Exozen Pvt Ltd&apos;s services for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">3. Disclaimer</h3>
+                  <p>The materials on Exozen Pvt Ltd&apos;s platform are provided on an &apos;as is&apos; basis. Exozen Pvt Ltd makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">4. Limitations</h3>
+                  <p>In no event shall Exozen Pvt Ltd or its suppliers be liable for any damages arising out of the use or inability to use the materials on the platform.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">5. Accuracy of Materials</h3>
+                  <p>The materials appearing on Exozen Pvt Ltd&apos;s platform could include technical, typographical, or photographic errors. We do not warrant that any of the materials are accurate, complete, or current.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">6. Modifications</h3>
+                  <p>Exozen Pvt Ltd may revise these terms of service at any time without notice. By using this platform, you are agreeing to be bound by the then current version of these terms.</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy Policy Modal */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">Privacy Policy</h2>
+              <button
+                onClick={() => setShowPrivacyModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-4 text-sm text-gray-700">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">1. Information We Collect</h3>
+                  <p>We collect information you provide directly to us, such as when you create an account, use our services, or contact us for support.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">2. How We Use Your Information</h3>
+                  <p>We use the information we collect to provide, maintain, and improve our services, process transactions, and communicate with you.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">3. Information Sharing</h3>
+                  <p>We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, except as described in this policy.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">4. Data Security</h3>
+                  <p>We implement appropriate security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">5. Cookies and Tracking</h3>
+                  <p>We use cookies and similar tracking technologies to enhance your experience and analyze how you use our services.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">6. Your Rights</h3>
+                  <p>You have the right to access, update, or delete your personal information. You may also opt out of certain communications from us.</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">7. Changes to This Policy</h3>
+                  <p>We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setShowPrivacyModal(false)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   )

@@ -1,17 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Card, CardContent } from '../../../../components/ui/card';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
-import { ErrorDisplay } from '../../../../components/ui/error-display';
-import { AssetGrid } from '../../../../components/ui/asset-grid';
-import { AssetPDFDownload, AssetExcelDownload } from '../../../../components/ui/asset-pdf-download';
 import { ReportProvider, useReportContext } from '../../../../contexts/ReportContext';
 import { filterAssets, type Asset } from '../../../../lib/Report';
-import { SuccessToast } from '../../../../components/ui/success-toast';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -19,7 +14,6 @@ import {
   MapPin,
   Search,
   FileText,
-  BarChart3,
   Edit,
   Calendar,
   Clock,
@@ -29,8 +23,6 @@ import {
   Monitor,
   Server,
   Eye,
-  MoreHorizontal,
-  PieChart,
   Database,
   ChevronLeft,
   ChevronRight
@@ -49,12 +41,9 @@ interface AssetsResponse {
 
 function AssetsLogsContent() {
   const { user } = useAuth();
-  const { loading, error, successMessage, clearError, clearSuccess } = useReportContext();
+  const { loading, error } = useReportContext();
   const [projectAssets, setProjectAssets] = useState<Asset[]>([]);
-  const [assetTypes, setAssetTypes] = useState<Array<{_id: string, name: string}>>([]);
-  const [selectedAssetType, setSelectedAssetType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [sortBy, setSortBy] = useState('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
@@ -82,10 +71,6 @@ function AssetsLogsContent() {
         throw new Error(`Failed to fetch asset types: ${response.status}`);
       }
 
-      const data = await response.json();
-      if (data.success && data.assetTypes) {
-        setAssetTypes(data.assetTypes);
-      }
     } catch (err) {
       console.error('Error fetching asset types:', err);
     }
@@ -208,12 +193,7 @@ function AssetsLogsContent() {
     console.log('Assets Logs - Original assets:', projectAssets.length);
     console.log('Assets Logs - Unique assets after deduplication:', uniqueAssets.length);
     
-    let filtered = filterAssets(uniqueAssets as Asset[], searchTerm, 'all', 'all', 'all');
-    
-    // Additional filtering by selected asset type
-    if (selectedAssetType !== 'all') {
-      filtered = filtered.filter(asset => asset.assetType === selectedAssetType);
-    }
+    const filtered = filterAssets(uniqueAssets as Asset[], searchTerm, 'all', 'all', 'all');
     
     // Sort assets
     filtered.sort((a, b) => {
@@ -233,7 +213,7 @@ function AssetsLogsContent() {
     });
     
     return filtered;
-  }, [projectAssets, searchTerm, selectedAssetType, sortBy, sortOrder]);
+  }, [projectAssets, searchTerm, sortBy, sortOrder]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
@@ -244,14 +224,8 @@ function AssetsLogsContent() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedAssetType, sortBy, sortOrder]);
+  }, [searchTerm, sortBy, sortOrder]);
 
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setSelectedAssetType('all');
-    setSortBy('updatedAt');
-    setSortOrder('desc');
-  };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -305,8 +279,221 @@ function AssetsLogsContent() {
     }
   };
 
-  const handlePDFDownload = () => {
-    console.log('PDF download initiated');
+
+  const handlePDFDownload = async () => {
+    try {
+      // Dynamic import to avoid SSR issues
+      const jsPDF = (await import('jspdf')).default;
+      
+      const doc = new jsPDF('landscape'); // Use landscape orientation
+      
+      // Add EXOZEN logo
+      try {
+        // Load and add the actual logo image
+        const logoImg = new Image();
+        logoImg.src = process.env.NODE_ENV === 'production' ? '/v1/asset/exozen_logo1.png' : '/exozen_logo1.png';
+        
+        // Wait for image to load
+        await new Promise((resolve, reject) => {
+          logoImg.onload = resolve;
+          logoImg.onerror = reject;
+        });
+        
+        // Add logo to PDF (reduced height for better layout)
+        doc.addImage(logoImg, 'PNG', 15, 15, 35, 12);
+      } catch {
+        console.log('Logo not available, using text fallback');
+        // Fallback to text if image fails
+        doc.setFillColor(255, 165, 0); // Orange color for ZEN logo
+        doc.rect(15, 15, 30, 12, 'F');
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ZEN', 22, 21);
+      }
+      
+      // Add project name below logo
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text(user?.projectName || 'Unknown Project', 15, 35);
+      
+      // Add title
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('ASSET DETAILS', 150, 28, { align: 'center' });
+      
+      // Add date
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 45);
+       
+      // Count unique TAG IDs - this is the true asset count
+      const uniqueTagIds = [...new Set(filteredAssets.map(asset => asset.tagId))];
+      
+      // Remove duplicates based on tagId to ensure accurate counting
+      const uniqueAssets = filteredAssets.filter((asset, index, self) => 
+        index === self.findIndex(a => a.tagId === asset.tagId)
+      );
+      
+      // Define table structure
+      const columns = [
+        { header: 'S.No', key: 'sno', width: 20 },
+        { header: 'Serial Number', key: 'serialNumber', width: 60 },
+        { header: 'Asset Tag Number', key: 'tagId', width: 50 },
+        { header: 'Vendor Name', key: 'vendorName', width: 40 },
+        { header: 'Asset Category', key: 'assetType', width: 35 },
+        { header: 'Mobility Category', key: 'mobilityCategory', width: 35 },
+        { header: 'Location', key: 'location', width: 60 }
+      ];
+      
+      const startX = 15;
+      const startY = 55;
+      const rowHeight = 12;
+      const headerHeight = 10;
+      const totalTableWidth = columns.reduce((sum, col) => sum + col.width, 0);
+      
+      // Draw table headers
+      doc.setFillColor(240, 240, 240);
+      doc.rect(startX, startY, totalTableWidth, headerHeight, 'F');
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      let currentX = startX;
+      
+      columns.forEach(column => {
+        doc.text(column.header, currentX + 1, startY + 7);
+        currentX += column.width;
+      });
+      
+      // Draw header borders
+      doc.setDrawColor(200, 200, 200);
+      doc.line(startX, startY, startX + totalTableWidth, startY);
+      doc.line(startX, startY + headerHeight, startX + totalTableWidth, startY + headerHeight);
+      
+      currentX = startX;
+      columns.forEach(column => {
+        doc.line(currentX, startY, currentX, startY + headerHeight);
+        currentX += column.width;
+      });
+      
+      // Process unique assets and create table rows
+      let currentY = startY + headerHeight;
+      
+      for (let i = 0; i < uniqueAssets.length; i++) {
+        const asset = uniqueAssets[i];
+        
+        // Check if we need a new page
+        if (currentY > 190) {
+          doc.addPage('landscape');
+          currentY = 20;
+          
+          // Redraw table headers on new page
+          doc.setFillColor(240, 240, 240);
+          doc.rect(startX, currentY, totalTableWidth, headerHeight, 'F');
+          
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          currentX = startX;
+          
+          columns.forEach(column => {
+            doc.text(column.header, currentX + 1, currentY + 7);
+            currentX += column.width;
+          });
+          
+          currentY += headerHeight;
+        }
+        
+        // Prepare row data
+        const rowData = [
+          (i + 1).toString(),
+          asset.serialNumber || 'N/A',
+          asset.tagId || 'N/A',
+          asset.customFields?.['Vendor Name'] || asset.brand || 'N/A',
+          asset.assetType || 'N/A',
+          asset.mobilityCategory ? asset.mobilityCategory.charAt(0).toUpperCase() + asset.mobilityCategory.slice(1) : 'Not Set',
+          formatLocation(asset.location)
+        ];
+        
+        // Draw row borders
+        doc.setDrawColor(200, 200, 200);
+        doc.line(startX, currentY, startX + totalTableWidth, currentY);
+        doc.line(startX, currentY + rowHeight, startX + totalTableWidth, currentY + rowHeight);
+        
+        // Draw column borders
+        currentX = startX;
+        columns.forEach(column => {
+          doc.line(currentX, currentY, currentX, currentY + rowHeight);
+          currentX += column.width;
+        });
+        
+        // Add row data
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        currentX = startX;
+        
+        rowData.forEach((text, index) => {
+          const column = columns[index];
+          const maxWidth = column.width - 2;
+          
+          // Handle text wrapping for long content
+          const lines = doc.splitTextToSize(text.toString(), maxWidth);
+          const lineHeight = 4;
+          
+          lines.forEach((line: string, lineIndex: number) => {
+            if (lineIndex === 0) {
+              doc.text(line, currentX + 1, currentY + 7);
+            } else if (currentY + 7 + (lineIndex * lineHeight) < currentY + rowHeight) {
+              doc.text(line, currentX + 1, currentY + 7 + (lineIndex * lineHeight));
+            }
+          });
+          
+          currentX += column.width;
+        });
+        
+        currentY += rowHeight;
+      }
+      
+      // Draw final bottom border
+      doc.setDrawColor(200, 200, 200);
+      doc.line(startX, currentY, startX + totalTableWidth, currentY);
+      
+      // Add summary
+      if (currentY > 150) {
+        doc.addPage('landscape');
+        currentY = 20;
+      }
+      
+      const summaryStartY = currentY + 20;
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('ASSET SUMMARY', startX + 5, summaryStartY);
+      
+      let summaryContentY = summaryStartY + 15;
+      const summaryContentX = startX + 5;
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Total Assets: ${uniqueTagIds.length}`, summaryContentX, summaryContentY);
+      
+      summaryContentY += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Project: ${user?.projectName || 'Unknown Project'}`, summaryContentX, summaryContentY);
+      
+      summaryContentY += 6;
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, summaryContentX, summaryContentY);
+      
+      // Save the PDF
+      const filename = `assets-report-${user?.projectName || 'project'}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
   };
 
   const handleExcelDownload = () => {
@@ -562,15 +749,6 @@ function AssetsLogsContent() {
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(asset)}
-                          className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="More Options"
-                        >
-                          <MoreHorizontal className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -699,338 +877,375 @@ function AssetsLogsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 sm:h-16 gap-4 sm:gap-0">
-            <div className="flex items-center space-x-4 min-w-0">
-              <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl flex-shrink-0">
-                <Database className="w-6 h-6 text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white truncate">
-                  Assets Management
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 truncate">
-                  {user?.projectName || 'Project'} • Asset Inventory & Analytics
-                </p>
-              </div>
+    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+      <div className="flex-1 overflow-auto">
+        {/* Main Content */}
+        <main className="px-4 pt-1 pb-1 sm:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
+          {/* Simple Search and Actions */}
+          <div className="flex items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <Input
+                placeholder="Search assets..."
+                className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={handlePDFDownload}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Download PDF</span>
+              </Button>
             </div>
           </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Error Display */}
-        <ErrorDisplay 
-          error={error} 
-          onClearError={clearError} 
-        />
-
-        {/* Success Toast */}
-        {successMessage && (
-          <SuccessToast
-            message={successMessage}
-            onClose={clearSuccess}
-            duration={4000}
-          />
-        )}
 
 
 
-        {/* Search, Filters, and View Controls */}
-        <Card className="mb-8 border-slate-200 dark:border-slate-700 shadow-sm">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-              {/* Search and Asset Type */}
-              <div className="flex flex-col sm:flex-row gap-4 flex-1 max-w-2xl">
-                <div className="relative flex-1 max-w-xs">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <Input
-                    placeholder="Search assets, tags, serial numbers..."
-                    className="pl-10 h-12 text-base border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+          {/* Assets Table */}
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-gray-600 dark:text-gray-400">Loading assets...</span>
+                  </div>
                 </div>
-                
-                <div className="w-full sm:w-auto sm:min-w-[180px]">
-                  <Select value={selectedAssetType} onValueChange={setSelectedAssetType}>
-                    <SelectTrigger className="h-12 text-base border-slate-200 dark:border-slate-700">
-                      <SelectValue placeholder="All Asset Types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Asset Types</SelectItem>
-                      {assetTypes.map(type => (
-                        <SelectItem key={type._id} value={type.name}>
-                          {type.name}
-                        </SelectItem>
+              ) : error ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <Database className="w-12 h-12 text-red-500" />
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">Failed to load data</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+                      <Button 
+                        onClick={fetchProjectAssets}
+                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Try Again
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto bg-white">
+                  <table className="w-full border-collapse font-sans text-base">
+                    <thead>
+                      <tr className="bg-white border-b border-blue-200">
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          #
+                        </th>
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          ASSET DETAILS
+                        </th>
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          TAG & SERIAL
+                        </th>
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          VENDOR
+                        </th>
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          CATEGORY
+                        </th>
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          LOCATION
+                        </th>
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          STATUS
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedAssets.map((asset, index) => (
+                        <tr key={asset._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                              {startIndex + index + 1}
+                            </div>
+                          </td>
+                          <td className="border border-blue-200 px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-100 rounded-lg">
+                                {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
+                                  className: "w-5 h-5 text-blue-600"
+                                })}
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                  {asset.brand} {asset.model || ''}
+                                </span>
+                                <div className="text-sm text-gray-500">
+                                  {asset.assetType}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="border border-blue-200 px-4 py-3">
+                            <div>
+                              <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                {asset.tagId || 'N/A'}
+                              </span>
+                              <div className="text-sm text-gray-500">
+                                SN: {asset.serialNumber || 'N/A'}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                            {(() => {
+                              const vendorName = asset.customFields?.['Vendor Name'];
+                              return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
+                            })()}
+                          </td>
+                          <td className="border border-blue-200 px-4 py-3">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                              {asset.assetType || 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-blue-500" />
+                              <span className="truncate max-w-[120px]">
+                                {formatLocation(asset.location)}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="border border-blue-200 px-4 py-3">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                              {asset.status || 'active'}
+                            </span>
+                          </td>
+                        </tr>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-
-              {/* View Mode Buttons and Export Controls */}
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setViewMode('table')}
-                  className={`${viewMode === 'table' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300' : 'border-slate-200 dark:border-slate-700'} w-full sm:w-auto`}
-                >
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Table View
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setViewMode('grid')}
-                  className={`${viewMode === 'grid' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300' : 'border-slate-200 dark:border-slate-700'} w-full sm:w-auto`}
-                >
-                  <PieChart className="w-4 h-4 mr-2" />
-                  Grid View
-                </Button>
-                
-                <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
-                
-                <AssetPDFDownload
-                  assets={filteredAssets}
-                  filename={`${user?.projectName || 'project'}-${selectedAssetType !== 'all' ? selectedAssetType.toLowerCase() : 'all'}-asset-details.pdf`}
-                  selectedAssetType={selectedAssetType}
-                  projectName={user?.projectName || 'Unknown Project'}
-                  onDownload={handlePDFDownload}
-                />
-                <AssetExcelDownload
-                  assets={filteredAssets}
-                  filename={`${user?.projectName || 'project'}-assets-report.xlsx`}
-                  projectName={user?.projectName || 'Unknown Project'}
-                  onDownload={handleExcelDownload}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-
-
-        {/* Assets Display */}
-        {filteredAssets.length === 0 ? (
-          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardContent className="p-16 text-center">
-              <div className="w-24 h-24 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Database className="w-12 h-12 text-slate-400 dark:text-slate-500" />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">No assets found</h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-6 text-lg max-w-md mx-auto">
-                {projectAssets.length === 0 
-                  ? `No assets found for project: ${user?.projectName || 'your project'}`
-                  : 'No assets match your current filters. Try adjusting your search criteria or clearing the filters.'
-                }
-              </p>
-              <div className="flex items-center justify-center gap-3">
-                <Button
-                  onClick={handleClearFilters}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800"
-                >
-                  Clear Filters
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={fetchProjectAssets}
-                  className="border-slate-200 dark:border-slate-700"
-                >
-                  Refresh Assets
-                </Button>
-              </div>
+              )}
             </CardContent>
           </Card>
-        ) : viewMode === 'table' ? (
-          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardHeader className="pb-6">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+
+          {/* Empty State */}
+          {!loading && !error && filteredAssets.length === 0 && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <Database className="w-12 h-12 text-gray-400" />
+                <div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">No assets found</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {projectAssets.length === 0 
+                      ? `No assets found for project: ${user?.projectName || 'your project'}`
+                      : 'No assets match your current search criteria'
+                    }
+                  </p>
+                </div>
+                {searchTerm && (
+                  <Button 
+                    onClick={() => setSearchTerm('')}
+                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Clear Search
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>Showing</span>
+                <span className="font-semibold text-gray-900">
+                  {startIndex + 1}-{Math.min(endIndex, filteredAssets.length)}
+                </span>
+                <span>of</span>
+                <span className="font-semibold text-gray-900">
+                  {filteredAssets.length}
+                </span>
+                <span>assets</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const page = i + 1;
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                        className="h-8 w-8 p-0 text-sm"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Asset View Modal */}
+          <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+            <DialogContent className="max-w-3xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
                   <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
                     <Database className="w-5 h-5 text-white" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Asset Inventory</h2>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      Comprehensive view of all tracked assets for {user?.projectName || 'your project'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-                    {filteredAssets.length} assets
-                  </span>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ProjectAssetsTable assets={paginatedAssets} />
-              <PaginationComponent />
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardHeader className="pb-6">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
-                    <PieChart className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Asset Grid View</h2>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      Visual overview of all assets in card format
-                    </p>
-                  </div>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AssetGrid
-                assets={paginatedAssets}
-                onViewDetails={handleViewDetails}
-              />
-              <PaginationComponent />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Asset View Modal */}
-        <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-          <DialogContent className="max-w-3xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
-                  <Database className="w-5 h-5 text-white" />
-                </div>
-                Asset Details
-              </DialogTitle>
-            </DialogHeader>
-            
-            {selectedAsset && (
-              <div className="space-y-6">
-                {/* Asset Header */}
-                <div className="flex items-center gap-4 p-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
-                  <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl">
-                    {React.createElement(getAssetTypeIcon(selectedAsset.assetType || 'unknown'), {
-                      className: "w-8 h-8 text-white"
-                    })}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      {selectedAsset.tagId || 'Unknown Asset'}
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-400">
-                      {selectedAsset.assetType || 'Unknown Type'} • {selectedAsset.brand || 'Unknown Brand'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(selectedAsset.status || 'active')}
-                    {getPriorityBadge(selectedAsset.priority || 'medium')}
-                  </div>
-                </div>
-
-                {/* Asset Information Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Assigned To */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <User className="w-4 h-4" />
-                      Assigned To
+                  Asset Details
+                </DialogTitle>
+              </DialogHeader>
+              
+              {selectedAsset && (
+                <div className="space-y-6">
+                  {/* Asset Header */}
+                  <div className="flex items-center gap-4 p-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
+                    <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl">
+                      {React.createElement(getAssetTypeIcon(selectedAsset.assetType || 'unknown'), {
+                        className: "w-8 h-8 text-white"
+                      })}
                     </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                      <p className="text-sm text-slate-900 dark:text-white font-medium">
-                        {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.name 
-                          ? selectedAsset.assignedTo.name 
-                          : typeof selectedAsset.assignedTo === 'string' 
-                          ? selectedAsset.assignedTo 
-                          : 'Unassigned'}
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                        {selectedAsset.tagId || 'Unknown Asset'}
+                      </h3>
+                      <p className="text-slate-600 dark:text-slate-400">
+                        {selectedAsset.assetType || 'Unknown Type'} • {selectedAsset.brand || 'Unknown Brand'}
                       </p>
-                      {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.email && (
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                          {selectedAsset.assignedTo.email}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(selectedAsset.status || 'active')}
+                      {getPriorityBadge(selectedAsset.priority || 'medium')}
+                    </div>
+                  </div>
+
+                  {/* Asset Information Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Assigned To */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <User className="w-4 h-4" />
+                        Assigned To
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                          {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.name 
+                            ? selectedAsset.assignedTo.name 
+                            : typeof selectedAsset.assignedTo === 'string' 
+                            ? selectedAsset.assignedTo 
+                            : 'Unassigned'}
                         </p>
-                      )}
+                        {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.email && (
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                            {selectedAsset.assignedTo.email}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <MapPin className="w-4 h-4" />
+                        Location
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                          {selectedAsset.location ? formatLocation(selectedAsset.location) : 'Location not specified'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Created Date */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <Calendar className="w-4 h-4" />
+                        Created
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                          {selectedAsset.createdAt ? formatDate(selectedAsset.createdAt) : 'Date not available'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Last Updated */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <Clock className="w-4 h-4" />
+                        Last Updated
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                          {selectedAsset.updatedAt ? formatDate(selectedAsset.updatedAt) : 'Date not available'}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Location */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <MapPin className="w-4 h-4" />
-                      Location
+                  {/* Additional Details */}
+                  {selectedAsset.notes && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <FileText className="w-4 h-4" />
+                        Notes
+                      </div>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                        <p className="text-sm text-slate-900 dark:text-white">
+                          {selectedAsset.notes}
+                        </p>
+                      </div>
                     </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                      <p className="text-sm text-slate-900 dark:text-white font-medium">
-                        {selectedAsset.location ? formatLocation(selectedAsset.location) : 'Location not specified'}
-                      </p>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Created Date */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <Calendar className="w-4 h-4" />
-                      Created
-                    </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                      <p className="text-sm text-slate-900 dark:text-white font-medium">
-                        {selectedAsset.createdAt ? formatDate(selectedAsset.createdAt) : 'Date not available'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Last Updated */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <Clock className="w-4 h-4" />
-                      Last Updated
-                    </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                      <p className="text-sm text-slate-900 dark:text-white font-medium">
-                        {selectedAsset.updatedAt ? formatDate(selectedAsset.updatedAt) : 'Date not available'}
-                      </p>
-                    </div>
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
+                    <Button
+                      variant="outline"
+                      onClick={closeViewModal}
+                      className="border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                      Close
+                    </Button>
+                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Asset
+                    </Button>
                   </div>
                 </div>
-
-                {/* Additional Details */}
-                {selectedAsset.notes && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      <FileText className="w-4 h-4" />
-                      Notes
-                    </div>
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                      <p className="text-sm text-slate-900 dark:text-white">
-                        {selectedAsset.notes}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
-                  <Button
-                    variant="outline"
-                    onClick={closeViewModal}
-                    className="border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  >
-                    Close
-                  </Button>
-                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white">
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit Asset
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+              )}
+            </DialogContent>
+          </Dialog>
+        </main>
       </div>
     </div>
   );

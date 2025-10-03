@@ -5,21 +5,14 @@ import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-
 // Import extracted components
-import { AssetCard } from '@/components/ui/asset-card-component'
-import { AssetListItem } from '@/components/ui/asset-list-item-component'
 import { DigitalAssetModal } from '@/components/ui/digital-asset-modal-component'
 import { ScannerModal } from '@/components/ui/scanner-modal-component'
 import { SuccessModal } from '@/components/ui/success-modal-component'
 
 import { 
   Search, 
-  Grid3X3, 
-  List, 
   Building, 
-  CheckCircle,
   AlertCircle,
   RefreshCw,
   Scan,
@@ -27,15 +20,7 @@ import {
   Download,
   X,
   ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  MoreVertical,
-  Filter,
-  Calendar,
-  MapPin,
-  User,
-  Tag,
-  Package
+  MoreVertical
 } from 'lucide-react'
 
 interface Asset {
@@ -143,14 +128,11 @@ export default function AssetsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('table')
   const [userProject, setUserProject] = useState<string | null>(null)
   
-  // Table sorting and filtering states
+  // Table sorting states
   const [sortField, setSortField] = useState<keyof Asset>('tagId')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [priorityFilter, setPriorityFilter] = useState<string>('all')
   
   // Modal states
   const [showScanner, setShowScanner] = useState(false)
@@ -174,10 +156,6 @@ export default function AssetsPage() {
 
 
 
-  // Simplified handlers
-  const showDigitalAssetModal = (asset: Asset, type: 'qrCode' | 'barcode' | 'nfcData') => {
-    setDigitalAssetModal({ asset, type })
-  }
 
   // Table sorting function
   const handleSort = (field: keyof Asset) => {
@@ -189,13 +167,6 @@ export default function AssetsPage() {
     }
   }
 
-  // Get sort icon
-  const getSortIcon = (field: keyof Asset) => {
-    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-    return sortDirection === 'asc' 
-      ? <ArrowUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-      : <ArrowDown className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-  }
 
   // Get status badge color
   const getStatusBadgeColor = (status: string) => {
@@ -593,16 +564,6 @@ Timestamps:
       )
     }
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(asset => asset.status.toLowerCase() === statusFilter.toLowerCase())
-    }
-
-    // Apply priority filter
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(asset => asset.priority.toLowerCase() === priorityFilter.toLowerCase())
-    }
-
     // Apply sorting
     filtered.sort((a, b) => {
       let aValue = a[sortField]
@@ -626,7 +587,7 @@ Timestamps:
     })
 
     setFilteredAssets(filtered)
-  }, [assets, searchTerm, statusFilter, priorityFilter, sortField, sortDirection])
+  }, [assets, searchTerm, sortField, sortDirection])
 
   // Loading state
   if (isLoading) {
@@ -686,398 +647,174 @@ Timestamps:
   return (
     <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="flex-1 overflow-auto">
-        {/* Consolidated Header */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* Left Section - Title and Badges */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
-                  <Building className="w-6 h-6 text-white" />
+        {/* Main Content */}
+        <main className="px-4 pt-1 pb-1 sm:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
+          {/* Simple Search and Actions */}
+          <div className="flex items-center justify-between gap-4">
+                {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <Input
+                placeholder="Search assets..."
+                className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-                    Asset Management
-                  </h1>
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
-                    Manage facility assets with advanced scanning capabilities
-                  </p>
-                </div>
-              </div>
-              
-              {/* Asset Count Badges */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                  <Building className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                    {filteredAssets.length} Assets
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                    {assets.filter(a => a.status === 'active').length} Active
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Right Section - Controls */}
-            <div className="flex items-center gap-3">
-              {/* View Mode Toggle */}
-              <div className="flex items-center bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-1 shadow-sm">
-                <Button
-                  variant={viewMode === 'table' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('table')}
-                  className="rounded-md font-medium p-2"
-                  title="Table View"
-                >
-                  <Package className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-md font-medium p-2"
-                  title="Grid View"
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-md font-medium p-2"
-                  title="List View"
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-              </div>
-              
+                
+            {/* Action Buttons */}
+                  <div className="flex items-center gap-2">
               <Button 
-                size="sm"
                 onClick={() => {
                   setScannerKey(prev => prev + 1)
                   setShowScanner(true)
                 }}
-                className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Scan className="w-4 h-4" />
-                <span className="hidden sm:inline">Scan QR</span>
-                <span className="sm:hidden">Scan</span>
+                <span>Scan QR</span>
               </Button>
-              
-              {/* Live Status */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
-              </div>
-            </div>
-          </div>
-        </header>
+                  </div>
+                  </div>
 
-        {/* Main Content */}
-        <main className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Project Info Banner */}
-         
-
-          {/* Compact Search Container */}
-          <Card className="border-0 shadow-sm bg-white dark:bg-gray-800">
-            <CardContent className="p-4">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-4">
-                {/* Search Input */}
-                <div className="flex-1 min-w-0">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <Input
-                      placeholder="Search by ID, type, brand..."
-                      className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+          {/* Assets Table */}
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center gap-3">
+                    <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+                    <span className="text-gray-600 dark:text-gray-400">Loading assets...</span>
                   </div>
                 </div>
-                
-                {/* Filters - Only show in table mode */}
-                {viewMode === 'table' && (
-                  <div className="flex items-center gap-2">
-                    <Filter className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="text-sm border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-[120px]"
-                    >
-                      <option value="all">All Status</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="retired">Retired</option>
-                    </select>
-                    <select
-                      value={priorityFilter}
-                      onChange={(e) => setPriorityFilter(e.target.value)}
-                      className="text-sm border border-gray-200 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 min-w-[120px]"
-                    >
-                      <option value="all">All Priority</option>
-                      <option value="high">High</option>
-                      <option value="medium">Medium</option>
-                      <option value="low">Low</option>
-                    </select>
-                  </div>
-                )}
-
-                {/* Results Info */}
-                <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-                  <div className="flex items-center gap-2">
-                    <Building className="w-4 h-4" />
-                    <span className="font-medium">
-                      {filteredAssets.length} of {assets.length}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>Live</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Assets Display */}
-          {filteredAssets.length === 0 ? (
-            <Card className="shadow-lg bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl">
-              <CardContent className="p-12 text-center">
-                <div className="flex flex-col items-center gap-6">
-                  <div className="w-20 h-20 bg-gradient-to-r from-slate-100 to-blue-100 rounded-full flex items-center justify-center">
-                    <Search className="h-10 w-10 text-slate-400" />
-                  </div>
-                  <div className="space-y-3">
-                    <h3 className="text-2xl font-bold text-slate-900">
-                      No assets found
-                    </h3>
-                    <p className="text-slate-600 text-base max-w-md">
-                      {searchTerm 
-                        ? 'Try adjusting your search or filter criteria'
-                        : userProject 
-                        ? `No assets found for project: ${userProject}`
-                        : 'No assets are currently available'
-                      }
-                    </p>
+              ) : error ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <AlertCircle className="w-12 h-12 text-red-500" />
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">Failed to load data</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
                     <Button 
-                      onClick={() => {
-                        setSearchTerm('')
-                        setStatusFilter('all')
-                        setPriorityFilter('all')
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="border-slate-300 text-slate-700 hover:bg-slate-50 font-medium px-6 py-2 rounded-lg"
-                    >
-                      Clear All Filters
+                        onClick={fetchAssets}
+                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Try Again
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ) : viewMode === 'table' ? (
-            /* Table View */
-            <Card className="shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                      <tr>
-                        <th className="px-4 py-3 text-left">
-                          <button
+                </div>
+              ) : (
+                <div className="overflow-x-auto bg-white">
+                  <table className="w-full border-collapse font-sans text-base">
+                    <thead>
+                      <tr className="bg-white border-b border-blue-200">
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          #
+                        </th>
+                        <th 
+                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
                             onClick={() => handleSort('tagId')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            <Tag className="w-4 h-4" />
-                            Asset ID
-                            {getSortIcon('tagId')}
-                          </button>
+                        >
+                          ASSET ID
                         </th>
-                        <th className="px-4 py-3 text-left">
-                          <button
+                        <th 
+                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
                             onClick={() => handleSort('assetType')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            <Package className="w-4 h-4" />
-                            Type
-                            {getSortIcon('assetType')}
-                          </button>
+                        >
+                          TYPE
                         </th>
-                        <th className="px-4 py-3 text-left">
-                          <button
+                        <th 
+                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
                             onClick={() => handleSort('brand')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            Brand
-                            {getSortIcon('brand')}
-                          </button>
+                        >
+                          BRAND
                         </th>
-                        <th className="px-4 py-3 text-left">
-                          <button
-                            onClick={() => handleSort('model')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            Model
-                            {getSortIcon('model')}
-                          </button>
-                        </th>
-                        <th className="px-4 py-3 text-left">
-                          <button
+                        <th 
+                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
                             onClick={() => handleSort('status')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            Status
-                            {getSortIcon('status')}
-                          </button>
+                        >
+                          STATUS
                         </th>
-                        <th className="px-4 py-3 text-left">
-                          <button
+                        <th 
+                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
                             onClick={() => handleSort('priority')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            Priority
-                            {getSortIcon('priority')}
-                          </button>
+                        >
+                          PRIORITY
                         </th>
-                        <th className="px-4 py-3 text-left">
-                          <button
-                            onClick={() => handleSort('location')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            <MapPin className="w-4 h-4" />
-                            Location
-                            {getSortIcon('location')}
-                          </button>
+                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          LOCATION
                         </th>
-                        <th className="px-4 py-3 text-left">
-                          <button
-                            onClick={() => handleSort('assignedTo')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            <User className="w-4 h-4" />
-                            Assigned To
-                            {getSortIcon('assignedTo')}
-                          </button>
-                        </th>
-                        <th className="px-4 py-3 text-left">
-                          <button
-                            onClick={() => handleSort('createdAt')}
-                            className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            <Calendar className="w-4 h-4" />
-                            Created
-                            {getSortIcon('createdAt')}
-                          </button>
-                        </th>
-                        <th className="px-4 py-3 text-center">
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                            Actions
-                          </span>
-                        </th>
+                        <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredAssets.map((asset) => (
-                        <tr key={asset._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                          <td className="px-4 py-4">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0">
-                                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                                  <Tag className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                </div>
-                              </div>
-                              <div className="ml-3">
-                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                  {asset.tagId}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {asset.subcategory}
-                                </div>
-                              </div>
+                    <tbody>
+                      {filteredAssets.map((asset, index) => (
+                        <tr key={asset._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                              {index + 1}
                             </div>
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900 dark:text-gray-100">{asset.assetType}</div>
+                          <td className="border border-blue-200 px-4 py-3">
+                            <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                  {asset.tagId}
+                            </span>
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900 dark:text-gray-100">{asset.brand}</div>
+                          <td className="border border-blue-200 px-4 py-3">
+                            <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                              {asset.assetType}
+                            </span>
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900 dark:text-gray-100">{asset.model}</div>
+                          <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                            {asset.brand}
                           </td>
-                          <td className="px-4 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeColor(asset.status)}`}>
+                          <td className="border border-blue-200 px-4 py-3">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(asset.status)}`}>
                               {asset.status}
                             </span>
                           </td>
-                          <td className="px-4 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityBadgeColor(asset.priority)}`}>
+                          <td className="border border-blue-200 px-4 py-3">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPriorityBadgeColor(asset.priority)}`}>
                               {asset.priority}
                             </span>
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900 dark:text-gray-100">
+                          <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
                               {asset.location ? (
                                 <div>
                                   <div className="font-medium">{asset.location.building}</div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {asset.location.floor} • {asset.location.room}
-                                  </div>
+                                <div className="text-gray-500">{asset.location.floor} • {asset.location.room}</div>
                                 </div>
                               ) : (
-                                <span className="text-gray-400 dark:text-gray-500">Not assigned</span>
+                              <span className="text-gray-400">Not assigned</span>
                               )}
-                            </div>
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900 dark:text-gray-100">
-                              {typeof asset.assignedTo === 'string' 
-                                ? asset.assignedTo 
-                                : asset.assignedTo?.name || 'Unassigned'}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900 dark:text-gray-100">
-                              {new Date(asset.createdAt).toLocaleDateString()}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center justify-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                          <td className="border border-blue-200 px-4 py-3">
+                            <div className="flex items-center gap-2 justify-center">
+                              <button 
+                                className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
                                 onClick={() => {
                                   setScannedAsset(asset)
                                   setShowScannedAssetModal(true)
                                 }}
-                                className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900 hover:text-blue-600 dark:hover:text-blue-400"
                                 title="View Details"
                               >
                                 <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                              </button>
+                              <button 
+                                className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
                                 onClick={() => downloadAssetInfo(asset)}
-                                className="h-8 w-8 p-0 hover:bg-green-50 dark:hover:bg-green-900 hover:text-green-600 dark:hover:text-green-400"
                                 title="Download Info"
                               >
                                 <Download className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                              </button>
+                              <button 
+                                className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
                                 onClick={() => setShowMoreOptions(asset._id)}
-                                className="h-8 w-8 p-0 hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-300"
                                 title="More Options"
                               >
                                 <MoreVertical className="w-4 h-4" />
-                              </Button>
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1085,39 +822,35 @@ Timestamps:
                     </tbody>
                   </table>
                 </div>
+              )}
               </CardContent>
             </Card>
-          ) : (
-            /* Grid/List View */
-            <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'
-              : 'space-y-3 sm:space-y-4'
-            }>
-              {filteredAssets.map((asset) => (
-                viewMode === 'grid' 
-                  ? <AssetCard 
-                      key={asset._id} 
-                      asset={asset}
-                      onShowDetails={(asset) => {
-                        setScannedAsset(asset)
-                        setShowScannedAssetModal(true)
-                      }}
-                      onDownload={downloadAssetInfo}
-                      onShowMoreOptions={setShowMoreOptions}
-                      onShowDigitalAsset={showDigitalAssetModal}
-                    />
-                  : <AssetListItem 
-                      key={asset._id} 
-                      asset={asset}
-                      onShowDetails={(asset) => {
-                        setScannedAsset(asset)
-                        setShowScannedAssetModal(true)
-                      }}
-                      onDownload={downloadAssetInfo}
-                      onShowMoreOptions={setShowMoreOptions}
-                      onShowDigitalAsset={showDigitalAssetModal}
-                    />
-              ))}
+
+          {/* Empty State */}
+          {!isLoading && !error && filteredAssets.length === 0 && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <Building className="w-12 h-12 text-gray-400" />
+                <div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">No assets found</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {searchTerm 
+                      ? 'Try adjusting your search terms'
+                      : userProject 
+                      ? `No assets found for project: ${userProject}`
+                      : 'No assets are currently available'
+                    }
+                  </p>
+                </div>
+                {searchTerm && (
+                  <Button 
+                    onClick={() => setSearchTerm('')}
+                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Clear Search
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </main>

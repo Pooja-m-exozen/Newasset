@@ -181,53 +181,27 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
   }
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("space-y-4", className)}>
       {showSuccessToast && (
         <SuccessToast
           message={successMessage}
           onClose={() => setShowSuccessToast(false)}
         />
       )}
-      
-      {/* Project Info Banner */}
-      {user?.projectName && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              Currently working with project: <span className="font-bold">{user.projectName}</span>
-            </span>
-          </div>
-        </div>
-      )}
 
-      <Card className="shadow-sm">
-        <CardHeader className="pb-6">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-purple-500">
-              <Wifi className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-xl font-semibold">
-                NFC Data Generator
-              </CardTitle>
-              <CardDescription className="text-muted-foreground mt-1">
-                Select an asset from your project and generate NFC data for contactless asset identification
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Card className="border border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            NFC Data Generator
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            Select an asset and generate NFC data for contactless asset identification
+          </p>
+        </div>
+        <div className="p-4 space-y-4">
           {/* Asset Selection Section */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <Label className="text-sm font-semibold">Step 1: Select Asset</Label>
-            </div>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-700">Select Asset</Label>
             
             {assetsLoading && (
               <div className="flex items-center space-x-3 p-4 bg-muted/50 border border-border rounded-lg">
@@ -284,7 +258,7 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
               <div className="text-center text-xs text-muted-foreground">
                 {assetsLoading ? 'Loading...' : (
                   assets.length === 0 ? (
-                    <span className="text-red-500">⚠️ No assets found for project: {user?.projectName}</span>
+                    <span>No assets found</span>
                   ) : (
                     <span>{filteredAssets.length} assets available</span>
                   )
@@ -331,16 +305,11 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
           )}
 
           {/* Generate Button Section */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <Label className="text-sm font-semibold">Step 2: Generate NFC Data</Label>
-            </div>
-            
+          <div className="space-y-3">
             <Button 
               onClick={handleGenerate} 
               disabled={isGenerating || !selectedAssetId}
-              className="w-full h-11 text-base font-semibold"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isGenerating ? (
                 <div className="flex items-center space-x-2">
@@ -360,32 +329,20 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
               )}
             </Button>
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {nfcData && (
-        <Card className="shadow-sm">
-          <CardHeader className="pb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-purple-500">
-                  <Wifi className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-semibold">
-                    Generated NFC Data
-                  </CardTitle>
-                  <CardDescription className="text-muted-foreground mt-1">
-                    NFC data generated successfully for asset {nfcData.nfcData.data.id}
-                  </CardDescription>
-                </div>
-              </div>
-              <Badge variant="secondary" className="text-sm px-3 py-1">
-                {nfcData.nfcData.data.id}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <Card className="border border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Generated NFC Data
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+              NFC data generated successfully for asset {nfcData.nfcData.data.id}
+            </p>
+          </div>
+          <div className="p-4 space-y-4">
             {/* NFC Data Preview */}
             <div className="flex justify-center">
               <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
@@ -409,18 +366,13 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
             </div>
 
             {/* Asset Information Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Asset Information Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-md bg-blue-100">
-                      <Hash className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold">Asset Information</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Asset Information</h4>
+                </div>
+                <div className="p-3 space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Type</Label>
@@ -457,20 +409,15 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
                       <p className="text-sm font-medium">{nfcData.nfcData.data.assignedTo}</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Location Information Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-md bg-green-100">
-                      <MapPin className="h-4 w-4 text-green-600" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold">Location Details</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Location Details</h4>
+                </div>
+                <div className="p-3 space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Building</Label>
@@ -489,23 +436,18 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
                       <p className="text-sm font-medium">{nfcData.nfcData.data.projectName}</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Technical Details Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Security Information Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-md bg-purple-100">
-                      <Shield className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold">Security & Validation</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Security & Validation</h4>
+                </div>
+                <div className="p-3 space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Checksum</Label>
@@ -530,20 +472,15 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
                       <p className="text-sm font-medium font-mono">{nfcData.nfcData.data.id}</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Assignment and Timestamp Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-md bg-blue-100">
-                      <User className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold">Assignment & Timing</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Assignment & Timing</h4>
+                </div>
+                <div className="p-3 space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned To</Label>
@@ -560,8 +497,8 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
                       </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Success Message */}
@@ -578,7 +515,7 @@ export function NFCGenerator({ className }: NFCGeneratorProps) {
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
     </div>

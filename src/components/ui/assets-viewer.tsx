@@ -77,7 +77,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
         throw new Error('Authentication token not found')
       }
 
-      const response = await fetch(`${API_BASE_URL}/assets`, {
+      const response = await fetch(`${API_BASE_URL}/assets?limit=1000&page=1`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -325,142 +325,35 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Project Assets</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {user?.projectName ? `Managing assets for ${user.projectName}` : 'Loading project...'}
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <ExportButtons 
-            onExportPDF={() => {
-              // TODO: Implement PDF export
-              console.log('Export PDF')
-            }}
-            onExportExcel={() => {
-              // TODO: Implement Excel export
-              console.log('Export Excel')
-            }}
-          />
+    <div className={`space-y-4 ${className}`}>
+      {/* Search Container */}
+      <div className="bg-white shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+        <div className="p-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search assets, tags, locations..."
+              value={filters.search}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                setFilters(prev => ({ ...prev, search: e.target.value }))
+              }
+              className="pl-10"
+            />
+          </div>
         </div>
       </div>
-
-      {/* Project Info Banner */}
-      {user?.projectName && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              Currently viewing assets for project: <span className="font-bold">{user.projectName}</span>
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <Card className="bg-white shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-col lg:flex-row gap-4 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search assets, tags, locations..."
-                  value={filters.search}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                    setFilters(prev => ({ ...prev, search: e.target.value }))
-                  }
-                  className="pl-10"
-                />
-              </div>
-              
-              <div className="flex gap-2">
-                <Select value={filters.assetType} onValueChange={(value) => 
-                  setFilters(prev => ({ ...prev, assetType: value }))
-                }>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Asset Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Types</SelectItem>
-                    {assetTypes.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filters.status} onValueChange={(value) => 
-                  setFilters(prev => ({ ...prev, status: value }))
-                }>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Status</SelectItem>
-                    {statuses.map(status => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filters.priority} onValueChange={(value) => 
-                  setFilters(prev => ({ ...prev, priority: value }))
-                }>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Priorities</SelectItem>
-                    {priorities.map(priority => (
-                      <SelectItem key={priority} value={priority}>{priority}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <Button 
-              variant="outline" 
-              onClick={() => setFilters({
-                search: '',
-                assetType: '',
-                status: '',
-                priority: '',
-                location: ''
-              })}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Clear Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Results Count */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-600 dark:text-gray-400">
           Showing {filteredAssets.length} of {assets.length} total assets
-          {user?.projectName && (
-            <span className="ml-2 text-blue-600 dark:text-blue-400">
-              (filtered by project: {user.projectName})
-            </span>
-          )}
         </div>
       </div>
 
       {/* Assets Display - Table Only */}
       {filteredAssets.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
+        <div className="bg-white border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="p-8 text-center">
             <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               No assets found
@@ -468,11 +361,11 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
             <p className="text-gray-600 dark:text-gray-400">
               {filters.search || filters.assetType || filters.status || filters.priority || filters.location
                 ? 'Try adjusting your filters'
-                : `No assets found for project: ${user?.projectName}`
+                : 'No assets available'
               }
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
         <AssetTable
           assets={filteredAssets}

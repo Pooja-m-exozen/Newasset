@@ -617,68 +617,32 @@ export function EnhancedDashboard({
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-background to-muted">
+    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="flex-1 overflow-auto">
-        {/* Advanced Header */}
-        <header className="bg-card border-b border-border px-4 sm:px-6 py-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Real-time facility management and analytics
-                {user?.projectName && (
-                  <span className="ml-2 text-primary font-medium">• {user.projectName}</span>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onRefresh}
-                disabled={isLoading}
-                className="hover:bg-accent"
-              >
-                <RefreshCw className={`w-4 h-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleAIAnalyticsClick}
-                disabled={isLoading}
-                className="hover:bg-accent"
-              >
-                <Brain className={`w-4 h-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">AI Insights</span>
-              </Button>
-            </div>
-          </div>
-        </header>
 
         {/* Main Content */}
-        <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+        <main className="px-4 pt-1 pb-1 sm:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
           {/* Advanced Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             {advancedStats.map((stat) => (
-              <Card key={stat.title} className="hover:shadow-lg transition-all duration-300 hover:scale-105 border-0 shadow-sm">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between mb-2 sm:mb-3">
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 ${stat.color} rounded-lg flex items-center justify-center shadow-sm`}>
-                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <Card key={stat.title} className="border border-gray-200 dark:border-gray-700">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                      <stat.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div className="flex items-center space-x-1">
-                      <TrendingUp className={`w-3 h-3 ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
-                      <span className={`text-xs font-medium ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                      <TrendingUp className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs font-medium text-gray-500">
                         {stat.change}
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-1 sm:space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">{stat.title}</p>
-                    <p className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.subValue}</p>
-                    <p className="text-xs text-muted-foreground">{stat.description}</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{stat.subValue}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{stat.description}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -688,35 +652,23 @@ export function EnhancedDashboard({
           {/* Asset Health Monitoring and Cost Analysis */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Asset Health Monitoring */}
-            <Card className="shadow-lg border-0">
+            <Card className="border border-gray-200 dark:border-gray-700">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-base">
+                <CardTitle className="flex items-center text-base">
                   <div className="flex items-center">
-                    <Thermometer className="w-4 h-4 mr-2 text-red-600" />
+                    <Thermometer className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
                     Asset Health Monitoring
                   </div>
-                  {onRefreshHealth && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={onRefreshHealth}
-                      disabled={isHealthLoading}
-                      className="hover:bg-red-50"
-                    >
-                      <RefreshCw className={`w-3 h-3 mr-1 ${isHealthLoading ? 'animate-spin' : ''}`} />
-                      Refresh
-                    </Button>
-                  )}
                 </CardTitle>
                 <CardDescription className="text-sm">Real-time asset health status distribution</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 {/* Project Filter Indicator */}
                 {user?.projectName && (
-                  <div className="mb-3 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <Thermometer className="w-3 h-3 text-red-600" />
-                      <span className="text-xs text-red-700 dark:text-red-300">
+                      <Thermometer className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                      <span className="text-xs text-gray-700 dark:text-gray-300">
                         Showing health data for: <strong>{user.projectName}</strong>
                       </span>
                     </div>
@@ -735,12 +687,6 @@ export function EnhancedDashboard({
                     <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
                     <h3 className="text-base font-semibold text-foreground mb-2">Failed to load health data</h3>
                     <p className="text-muted-foreground mb-3 text-sm">{healthError}</p>
-                    {onRefreshHealth && (
-                      <Button onClick={onRefreshHealth} disabled={isHealthLoading} size="sm">
-                        <RefreshCw className={`w-3 h-3 mr-1 ${isHealthLoading ? 'animate-spin' : ''}`} />
-                        Try Again
-                      </Button>
-                    )}
                   </div>
                 ) : healthData?.success ? (
                   <div className="space-y-3">
@@ -765,20 +711,20 @@ export function EnhancedDashboard({
                     ))}
                     
                     {/* Health Summary */}
-                    <div className="mt-3 p-2 bg-red-50 rounded-lg">
+                    <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <Thermometer className="w-3 h-3 text-red-600" />
-                          <span className="text-xs font-medium text-red-900">
+                          <Thermometer className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                          <span className="text-xs font-medium text-gray-900 dark:text-white">
                             Total Assets: {assetHealthData.reduce((sum, asset) => sum + asset.count, 0)}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-red-600 border-red-200 text-xs">
+                        <Badge variant="outline" className="text-gray-600 border-gray-200 text-xs">
                           Real-time
                         </Badge>
                       </div>
                       {user?.projectName && (
-                        <div className="mt-2 text-xs text-red-700">
+                        <div className="mt-2 text-xs text-gray-700 dark:text-gray-300">
                           <span className="font-medium">Project:</span> {user.projectName}
                         </div>
                       )}
@@ -795,25 +741,13 @@ export function EnhancedDashboard({
             </Card>
 
             {/* Cost Analysis */}
-            <Card className="shadow-lg border-0">
+            <Card className="border border-gray-200 dark:border-gray-700">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-base">
+                <CardTitle className="flex items-center text-base">
                   <div className="flex items-center">
-                    <DollarSign className="w-4 h-4 mr-2 text-green-600" />
+                    <DollarSign className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
                     Cost Analysis
                   </div>
-                  {onRefreshCost && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={onRefreshCost}
-                      disabled={isCostLoading}
-                      className="hover:bg-green-50"
-                    >
-                      <RefreshCw className={`w-3 h-3 mr-1 ${isCostLoading ? 'animate-spin' : ''}`} />
-                      Refresh
-                    </Button>
-                  )}
                 </CardTitle>
                 <CardDescription className="text-sm">Asset cost analysis and depreciation tracking</CardDescription>
               </CardHeader>
@@ -830,12 +764,6 @@ export function EnhancedDashboard({
                     <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
                     <h3 className="text-base font-semibold text-foreground mb-2">Failed to load cost data</h3>
                     <p className="text-muted-foreground mb-3 text-sm">{costError}</p>
-                    {onRefreshCost && (
-                      <Button onClick={onRefreshCost} disabled={isCostLoading} size="sm">
-                        <RefreshCw className={`w-3 h-3 mr-1 ${isCostLoading ? 'animate-spin' : ''}`} />
-                        Try Again
-                      </Button>
-                    )}
                   </div>
                 ) : costData?.success ? (
                   <div className="space-y-3">
@@ -882,15 +810,15 @@ export function EnhancedDashboard({
                     </div>
                     
                     {/* Cost Summary */}
-                    <div className="mt-3 p-2 bg-green-50 rounded-lg">
+                    <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <DollarSign className="w-3 h-3 text-green-600" />
-                          <span className="text-xs font-medium text-green-900">
+                          <DollarSign className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                          <span className="text-xs font-medium text-gray-900 dark:text-white">
                             Total Assets: {costAnalysisData.assetCount}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-green-600 border-green-200 text-xs">
+                        <Badge variant="outline" className="text-gray-600 border-gray-200 text-xs">
                           Real-time
                         </Badge>
                       </div>
@@ -907,25 +835,13 @@ export function EnhancedDashboard({
             </Card>
 
             {/* Trend Analysis */}
-            <Card className="shadow-lg border-0">
+            <Card className="border border-gray-200 dark:border-gray-700">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between text-base">
+                <CardTitle className="flex items-center text-base">
                   <div className="flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
+                    <TrendingUp className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
                     Trend Analysis
                   </div>
-                  {onRefreshTrends && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={onRefreshTrends}
-                      disabled={isTrendsLoading}
-                      className="hover:bg-blue-50"
-                    >
-                      <RefreshCw className={`w-3 h-3 mr-1 ${isTrendsLoading ? 'animate-spin' : ''}`} />
-                      Refresh
-                    </Button>
-                  )}
                 </CardTitle>
                 <CardDescription className="text-sm">Performance trends and analytics</CardDescription>
               </CardHeader>
@@ -942,12 +858,6 @@ export function EnhancedDashboard({
                     <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
                     <h3 className="text-base font-semibold text-foreground mb-2">Failed to load trends data</h3>
                     <p className="text-muted-foreground mb-3 text-sm">{trendsError}</p>
-                    {onRefreshTrends && (
-                      <Button onClick={onRefreshTrends} disabled={isTrendsLoading} size="sm">
-                        <RefreshCw className={`w-3 h-3 mr-1 ${isTrendsLoading ? 'animate-spin' : ''}`} />
-                        Try Again
-                      </Button>
-                    )}
                   </div>
                 ) : trendsData?.success ? (
                   <div className="space-y-3">
@@ -985,15 +895,15 @@ export function EnhancedDashboard({
                     </div>
                     
                     {/* Trends Summary */}
-                    <div className="mt-3 p-2 bg-blue-50 rounded-lg">
+                    <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-3 h-3 text-blue-600" />
-                          <span className="text-xs font-medium text-blue-900">
+                          <TrendingUp className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                          <span className="text-xs font-medium text-gray-900 dark:text-white">
                             Period: {trendsData.period} | Total Records: {trendsData.totalRecords}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-blue-600 border-blue-200 text-xs">
+                        <Badge variant="outline" className="text-gray-600 border-gray-200 text-xs">
                           Real-time
                         </Badge>
                       </div>
@@ -1020,7 +930,7 @@ export function EnhancedDashboard({
                 predictionsData={transformedPredictionsData || null}
                 isLoading={isPredictionsLoading}
                 error={predictionsError}
-                onRefresh={onRefreshPredictions || (() => {})}
+                onRefreshAction={onRefreshPredictions || (() => {})}
               />
             </div>
 
@@ -1038,47 +948,47 @@ export function EnhancedDashboard({
                   <div className="grid grid-cols-1 gap-2 sm:gap-3">
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-blue-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
                       onClick={handleAddUserClick}
                       aria-label="Add a new user"
                     >
-                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-blue-600" />
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
                       <span className="text-xs sm:text-sm font-medium">Add User</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-green-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
                       onClick={handleAddAssetClick}
                       aria-label="Add a new asset"
                     >
-                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-green-600" />
+                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
                       <span className="text-xs sm:text-sm font-medium">Add Asset</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-purple-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
                       onClick={handleAddLocationClick}
                       aria-label="Add a new location"
                     >
-                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-purple-600" />
+                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
                       <span className="text-xs sm:text-sm font-medium">Add Location</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-orange-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
                       onClick={handleGenerateReportClick}
                       aria-label="Generate report"
                     >
-                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-orange-600" />
+                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
                       <span className="text-xs sm:text-sm font-medium">Generate Report</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-red-50 transition-colors justify-start"
+                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
                       onClick={handleViewAlertsClick}
                       aria-label="View system alerts"
                     >
-                      <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-red-600" />
+                      <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
                       <span className="text-xs sm:text-sm font-medium">View Alerts</span>
                     </Button>
                   </div>
@@ -1087,9 +997,9 @@ export function EnhancedDashboard({
             </div>
           </div>
         </main>
-       </div>
+      </div>
 
-       {/* Alerts Modal */}
+      {/* Alerts Modal */}
        <Dialog open={isAlertsModalOpen} onOpenChange={setIsAlertsModalOpen}>
          <DialogContent className="max-w-2xl">
            <DialogHeader>

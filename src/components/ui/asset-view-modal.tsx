@@ -40,32 +40,30 @@ const formatTimestamp = (timestamp: number) => {
 };
 
 // Compact Info Card Component
-const InfoCard = ({ icon: Icon, title, value, bgColor = "from-slate-500 to-slate-600" }: {
+const InfoCard = ({ icon: Icon, title, value }: {
   icon: React.ElementType;
   title: string;
   value: string;
-  bgColor?: string;
 }) => (
-  <div className="flex items-center gap-2.5 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-slate-600/60 shadow-sm">
-    <div className={`p-2 rounded-lg bg-gradient-to-br ${bgColor}`}>
-      <Icon className="w-4 h-4 text-white" />
+  <div className="flex items-center gap-2.5 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+    <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+      <Icon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">{title}</p>
-      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{value}</p>
+      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{title}</p>
+      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{value}</p>
     </div>
   </div>
 );
 
 // Compact Detail Row Component
-const DetailRow = ({ label, value, bgColor = "from-slate-50 to-blue-50" }: {
+const DetailRow = ({ label, value }: {
   label: string;
   value: string;
-  bgColor?: string;
 }) => (
-  <div className={`flex justify-between py-2.5 px-3 bg-gradient-to-r ${bgColor} dark:from-slate-700 dark:to-blue-900/20 rounded-lg border border-slate-200/60 dark:border-slate-600/60`}>
-    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">{label}</span>
-    <span className="text-xs text-slate-900 dark:text-white font-medium truncate max-w-[120px]">{value}</span>
+  <div className="flex justify-between py-2.5 px-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</span>
+    <span className="text-xs text-gray-900 dark:text-white font-medium truncate max-w-[120px]">{value}</span>
   </div>
 );
 
@@ -526,23 +524,20 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] p-0 bg-white dark:bg-slate-900 border-0 shadow-2xl overflow-hidden">
-        {/* Compact Header */}
-        <DialogHeader className="px-6 py-4 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-b border-slate-200/60 dark:border-slate-700/60">
+      <DialogContent className="max-w-4xl max-h-[85vh] p-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+        {/* Simple Header */}
+        <DialogHeader className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
-                  <Package className="w-5 h-5 text-white" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white dark:border-slate-900"></div>
+              <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+                <Package className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </div>
               <div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200 bg-clip-text text-transparent">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Asset Details
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-800/60 px-2 py-1 rounded-full border border-slate-200/60 dark:border-slate-600/60">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                     {asset?.tagId || 'Unknown Asset'}
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -556,7 +551,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-8 w-8 p-0 hover:bg-white/80 dark:hover:bg-slate-800/80 text-slate-600 dark:text-slate-400 rounded-lg transition-all duration-200 hover:scale-105"
+              className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -566,79 +561,45 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
         {/* Main Content */}
         <ScrollArea className="flex-1 h-[calc(85vh-140px)]">
           <div className="p-6 space-y-6">
-            {/* Compact Hero Section */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-slate-800 dark:via-slate-900 dark:to-blue-900/20 rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60 shadow-lg">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full -translate-y-12 translate-x-12"></div>
-              <div className="relative z-10">
+            {/* Simple Hero Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  <InfoCard icon={Tag} title="Asset Type" value={asset?.assetType || 'N/A'} bgColor="from-blue-500 to-blue-600" />
+                <InfoCard icon={Tag} title="Asset Type" value={asset?.assetType || 'N/A'} />
                   {asset?.brand && (
-                    <InfoCard icon={Package} title="Brand" value={asset.brand} bgColor="from-green-500 to-emerald-600" />
+                  <InfoCard icon={Package} title="Brand" value={asset.brand} />
                   )}
                   {asset?.model && (
-                    <InfoCard icon={Package} title="Model" value={asset.model} bgColor="from-purple-500 to-violet-600" />
+                  <InfoCard icon={Package} title="Model" value={asset.model} />
                   )}
-                  <InfoCard icon={Building} title="Location" value={asset?.location?.building || asset?.location?.floor || asset?.location?.room || 'N/A'} bgColor="from-indigo-500 to-purple-600" />
+                <InfoCard icon={Building} title="Location" value={asset?.location?.building || asset?.location?.floor || asset?.location?.room || 'N/A'} />
                 </div>
                 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-                  <InfoCard icon={Calendar} title="Created" value={asset?.createdAt ? formatDate(asset.createdAt) : 'N/A'} bgColor="from-orange-500 to-red-600" />
+                <InfoCard icon={Calendar} title="Created" value={asset?.createdAt ? formatDate(asset.createdAt) : 'N/A'} />
                   {asset?.yearOfInstallation && (
-                    <InfoCard icon={Calendar} title="Installation Year" value={asset.yearOfInstallation} bgColor="from-teal-500 to-cyan-600" />
+                  <InfoCard icon={Calendar} title="Installation Year" value={asset.yearOfInstallation} />
                   )}
                   {asset?.serialNumber && (
-                    <InfoCard icon={Hash} title="Serial Number" value={asset.serialNumber} bgColor="from-rose-500 to-pink-600" />
+                  <InfoCard icon={Hash} title="Serial Number" value={asset.serialNumber} />
                   )}
                   {asset?.capacity && (
-                    <InfoCard icon={Database} title="Capacity" value={asset.capacity} bgColor="from-emerald-500 to-green-600" />
+                  <InfoCard icon={Database} title="Capacity" value={asset.capacity} />
                   )}
                 </div>
                 
-                {/* Custom Fields Row */}
-                {asset?.customFields && Object.keys(asset.customFields).length > 0 && (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-                    {Object.entries(asset.customFields)
-                      .filter(([ value]) => value && value !== '' && value !== null && value !== undefined)
-                      .slice(0, 4) // Show only first 4 custom fields in hero section
-                      .map(([key, value], index) => {
-                        const iconVariations = [Package, Hash, Database, Tag];
-                        const bgColorVariations = [
-                          "from-blue-500 to-indigo-600",
-                          "from-green-500 to-emerald-600", 
-                          "from-purple-500 to-violet-600",
-                          "from-amber-500 to-orange-600"
-                        ];
-                        
-                        const Icon = iconVariations[index % iconVariations.length];
-                        const bgColor = bgColorVariations[index % bgColorVariations.length];
-                        
-                        return (
-                          <InfoCard 
-                            key={key}
-                            icon={Icon} 
-                            title={key} 
-                            value={String(value)} 
-                            bgColor={bgColor} 
-                          />
-                        );
-                      })}
-                  </div>
-                )}
-                
                 {asset?.notes && (
-                  <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-600/60">
-                    <div className="flex items-start gap-2.5 p-3 bg-amber-50/80 dark:bg-amber-900/30 backdrop-blur-sm rounded-xl border border-amber-200/60 dark:border-amber-700/60">
-                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 mt-0.5">
-                        <Info className="w-3.5 h-3.5 text-white" />
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                  <div className="flex items-start gap-2.5 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-600 mt-0.5">
+                      <Info className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">Notes</p>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 italic line-clamp-2">&quot;{asset.notes}&quot;</p>
+                      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notes</p>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 italic line-clamp-2">&quot;{asset.notes}&quot;</p>
                       </div>
                     </div>
                   </div>
                 )}
-              </div>
             </div>
 
             {/* Compact Two Column Layout */}
@@ -646,68 +607,68 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
               {/* Left Column - Asset Information */}
               <div className="space-y-4">
                 {/* Asset Information Card */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-slate-500 to-slate-600">
-                      <Database className="w-4 h-4 text-white" />
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                  <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                      <Database className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                     </div>
                     Asset Information
                   </h4>
                   <div className="space-y-2">
                     <DetailRow label="Asset ID" value={asset?._id || 'N/A'} />
                     {asset?.serialNumber && (
-                      <DetailRow label="Serial Number" value={asset.serialNumber} bgColor="from-slate-50 to-green-50" />
+                      <DetailRow label="Serial Number" value={asset.serialNumber} />
                     )}
                     {asset?.model && (
-                      <DetailRow label="Model" value={asset.model} bgColor="from-slate-50 to-purple-50" />
+                      <DetailRow label="Model" value={asset.model} />
                     )}
                     {asset?.subcategory && (
-                      <DetailRow label="Subcategory" value={asset.subcategory} bgColor="from-slate-50 to-blue-50" />
+                      <DetailRow label="Subcategory" value={asset.subcategory} />
                     )}
                     {asset?.capacity && (
-                      <DetailRow label="Capacity" value={asset.capacity} bgColor="from-slate-50 to-emerald-50" />
+                      <DetailRow label="Capacity" value={asset.capacity} />
                     )}
                     {asset?.yearOfInstallation && (
-                      <DetailRow label="Installation Year" value={asset.yearOfInstallation} bgColor="from-slate-50 to-orange-50" />
+                      <DetailRow label="Installation Year" value={asset.yearOfInstallation} />
                     )}
                     {asset?.project?.projectName && (
-                      <DetailRow label="Project Name" value={asset.project.projectName} bgColor="from-slate-50 to-purple-50" />
+                      <DetailRow label="Project Name" value={asset.project.projectName} />
                     )}
                   </div>
                 </div>
 
                 {/* Location Information Card */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700/60 p-4 shadow-lg">
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600">
-                      <MapPin className="w-4 h-4 text-white" />
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                  <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                      <MapPin className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                     </div>
                     Location Information
                   </h4>
                   <div className="space-y-2">
                     {asset?.location?.building && (
-                      <DetailRow label="Building" value={asset.location.building} bgColor="from-slate-50 to-blue-50" />
+                      <DetailRow label="Building" value={asset.location.building} />
                     )}
                     {asset?.location?.floor && (
-                      <DetailRow label="Floor" value={asset.location.floor} bgColor="from-slate-50 to-green-50" />
+                      <DetailRow label="Floor" value={asset.location.floor} />
                     )}
                     {asset?.location?.room && (
-                      <DetailRow label="Room" value={asset.location.room} bgColor="from-slate-50 to-purple-50" />
+                      <DetailRow label="Room" value={asset.location.room} />
                     )}
                     {asset?.location?.latitude && asset?.location?.longitude && (
-                      <DetailRow label="Coordinates" value={`${asset.location.latitude}, ${asset.location.longitude}`} bgColor="from-slate-50 to-orange-50" />
+                      <DetailRow label="Coordinates" value={`${asset.location.latitude}, ${asset.location.longitude}`} />
                     )}
                     {reverseGeocodedAddress && (
-                      <div className="bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-700 dark:to-blue-900/20 rounded-lg p-3 border border-slate-200/60 dark:border-slate-600/60">
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Full Address</span>
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Full Address</span>
                           {geocodingLoading ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                            <Loader2 className="w-3 h-3 animate-spin text-gray-500" />
                           ) : (
-                            <MapPin className="w-3 h-3 text-blue-500" />
+                            <MapPin className="w-3 h-3 text-gray-500" />
                           )}
                         </div>
-                        <p className="text-xs text-slate-900 dark:text-white font-medium mt-1 line-clamp-2">{reverseGeocodedAddress}</p>
+                        <p className="text-xs text-gray-900 dark:text-white font-medium mt-1 line-clamp-2">{reverseGeocodedAddress}</p>
                       </div>
                     )}
                   </div>
@@ -724,16 +685,16 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                   <div className="space-y-2">
                     {asset?.assignedTo && typeof asset.assignedTo === 'object' ? (
                       <>
-                        <DetailRow label="Assigned To" value={asset.assignedTo.name || 'N/A'} bgColor="from-slate-50 to-blue-50" />
-                        <DetailRow label="Email" value={asset.assignedTo.email || 'N/A'} bgColor="from-slate-50 to-green-50" />
+                        <DetailRow label="Assigned To" value={asset.assignedTo.name || 'N/A'} />
+                        <DetailRow label="Email" value={asset.assignedTo.email || 'N/A'} />
                       </>
                     ) : (
-                      <DetailRow label="Assigned To" value="Not Assigned" bgColor="from-slate-50 to-gray-50" />
+                      <DetailRow label="Assigned To" value="Not Assigned" />
                     )}
                     {asset?.createdBy && (
                       <>
-                        <DetailRow label="Created By" value={asset.createdBy.name || 'N/A'} bgColor="from-slate-50 to-emerald-50" />
-                        <DetailRow label="Creator Email" value={asset.createdBy.email || 'N/A'} bgColor="from-slate-50 to-teal-50" />
+                        <DetailRow label="Created By" value={asset.createdBy.name || 'N/A'} />
+                        <DetailRow label="Creator Email" value={asset.createdBy.email || 'N/A'} />
                       </>
                     )}
                   </div>
@@ -771,26 +732,11 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                         // Skip if value is empty, null, or undefined
                         if (!value || value === '' || value === null || value === undefined) return null;
                         
-                        // Define color variations for different field types
-                        const colorVariations = [
-                          "from-slate-50 to-blue-50",
-                          "from-slate-50 to-green-50", 
-                          "from-slate-50 to-purple-50",
-                          "from-slate-50 to-orange-50",
-                          "from-slate-50 to-teal-50",
-                          "from-slate-50 to-rose-50",
-                          "from-slate-50 to-indigo-50",
-                          "from-slate-50 to-amber-50"
-                        ];
-                        
-                        const bgColor = colorVariations[index % colorVariations.length];
-                        
                         return (
                           <DetailRow 
                             key={key} 
                             label={key} 
                             value={String(value)} 
-                            bgColor={bgColor}
                           />
                         );
                       })}
@@ -807,14 +753,14 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                     Compliance & Metadata
                   </h4>
                   <div className="space-y-2">
-                    <DetailRow label="Digital Tag Type" value={asset?.digitalTagType || 'N/A'} bgColor="from-slate-50 to-blue-50" />
-                    <DetailRow label="Status" value={asset?.status || 'N/A'} bgColor="from-slate-50 to-green-50" />
-                    <DetailRow label="Priority" value={asset?.priority || 'N/A'} bgColor="from-slate-50 to-purple-50" />
+                    <DetailRow label="Digital Tag Type" value={asset?.digitalTagType || 'N/A'} />
+                    <DetailRow label="Status" value={asset?.status || 'N/A'} />
+                    <DetailRow label="Priority" value={asset?.priority || 'N/A'} />
                     {asset?.updatedAt && (
-                      <DetailRow label="Last Updated" value={formatDate(asset.updatedAt)} bgColor="from-slate-50 to-orange-50" />
+                      <DetailRow label="Last Updated" value={formatDate(asset.updatedAt)} />
                     )}
                     {asset?.__v !== undefined && (
-                      <DetailRow label="Version" value={asset.__v.toString()} bgColor="from-slate-50 to-teal-50" />
+                      <DetailRow label="Version" value={asset.__v.toString()} />
                     )}
                   </div>
                 </div>
@@ -841,7 +787,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <DetailRow label="Certifications" value="None" bgColor="from-slate-50 to-gray-50" />
+                        <DetailRow label="Certifications" value="None" />
                       )}
                       
                       {asset.compliance.regulatoryRequirements && asset.compliance.regulatoryRequirements.length > 0 ? (
@@ -856,7 +802,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <DetailRow label="Regulatory Requirements" value="None" bgColor="from-slate-50 to-gray-50" />
+                        <DetailRow label="Regulatory Requirements" value="None" />
                       )}
                     </div>
                   </div>
@@ -1044,21 +990,21 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
           </div>
         </ScrollArea>
 
-        {/* Compact Footer */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-800 dark:via-blue-900/20 dark:to-indigo-900/20 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+        {/* Simple Footer */}
+        <div className="px-6 py-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+            <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
               <Database className="w-3.5 h-3.5" />
               Asset ID: {asset?._id || 'N/A'}
             </div>
-            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-            <div className="text-xs text-slate-500 dark:text-slate-500">
+            <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+            <div className="text-xs text-gray-500 dark:text-gray-500">
               Last updated: {asset?.updatedAt ? formatDate(asset.updatedAt) : 'Unknown'}
             </div>
           </div>
           <Button 
             onClick={onClose} 
-            className="bg-gradient-to-r from-slate-600 to-slate-700 dark:from-slate-700 dark:to-slate-800 hover:from-slate-700 hover:to-slate-800 dark:hover:from-slate-600 dark:hover:to-slate-700 text-white px-6 h-9 rounded-lg shadow-lg transition-all duration-200 hover:scale-105 text-sm"
+            className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-6 h-9 rounded-lg text-sm"
           >
             Close
           </Button>

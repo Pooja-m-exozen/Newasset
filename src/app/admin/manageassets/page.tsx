@@ -1,19 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AssetProvider, useAssetContext } from '../../../contexts/AdminAssetContext';
-import { Asset, AssetType,  } from '../../../lib/adminasset';
+import { Asset } from '../../../lib/adminasset';
 import { Button } from '../../../components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { Input } from '../../../components/ui/input';
 import { AssetCard } from '../../../components/ui/asset-card';
 import { AssetViewModal } from '../../../components/ui/asset-view-modal';
 
 import { AssetFormModal } from '../../../components/ui/asset-form-modal';
-import { AssetTypeFormModal } from '../../../components/ui/asset-type-form-modal';
-import { StatusBadge } from '../../../components/ui/status-badge';
-import { PriorityBadge } from '../../../components/ui/priority-badge';
 import { SuccessToast } from '../../../components/ui/success-toast';
 import { ErrorDisplay } from '../../../components/ui/error-display';
 import { EmptyState } from '../../../components/ui/empty-state';
@@ -74,7 +70,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 // }
 
 // Permissions Display Component
-const PermissionsDisplay: React.FC = () => {
+const PermissionsDisplay: React.FC<{ onBackToAssets: () => void }> = ({ onBackToAssets }) => {
   const { 
     state, 
     fetchAdminPermissions, 
@@ -97,6 +93,7 @@ const PermissionsDisplay: React.FC = () => {
         onClearError={clearError}
         bearerToken={localStorage.getItem('authToken') || undefined}
         role="viewer"
+        onBackToAssets={onBackToAssets}
       />
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </>
@@ -104,7 +101,7 @@ const PermissionsDisplay: React.FC = () => {
 };
 
 // Main Assets List Component
-const AssetsList: React.FC = () => {
+const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
   const { 
     state, 
     fetchAssets, 
@@ -122,10 +119,8 @@ const AssetsList: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
 
   const [successMessage, setSuccessMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
@@ -136,6 +131,19 @@ const AssetsList: React.FC = () => {
     fetchAssets();
     fetchAssetTypes();
   }, [fetchAssets, fetchAssetTypes]);
+
+  // Listen for custom event to open create asset modal
+  useEffect(() => {
+    const handleOpenCreateAssetModal = () => {
+      setIsCreateModalOpen(true);
+    };
+
+    window.addEventListener('openCreateAssetModal', handleOpenCreateAssetModal);
+    
+    return () => {
+      window.removeEventListener('openCreateAssetModal', handleOpenCreateAssetModal);
+    };
+  }, []);
 
   const handleDelete = async (assetId: string) => {
     if (window.confirm('Are you sure you want to delete this asset?')) {
@@ -212,15 +220,14 @@ const AssetsList: React.FC = () => {
       }
     }
     
-    // Then apply search and status filters
+    // Then apply search filter only
     const matchesSearch = asset.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || asset.status === filterStatus;
     
-    // Asset must match project AND search AND status
-    const finalResult = matchesProject && matchesSearch && matchesStatus;
+    // Asset must match project AND search
+    const finalResult = matchesProject && matchesSearch;
     
     // Debug logging for final result
     if (finalResult) {
@@ -245,7 +252,7 @@ const AssetsList: React.FC = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterStatus, itemsPerPage]);
+  }, [searchTerm, itemsPerPage]);
 
   if (state.loading) {
     return (
@@ -278,134 +285,13 @@ const AssetsList: React.FC = () => {
         onClearError={clearError} 
       />
 
-      {/* ERP Style Header Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Asset Management</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {user?.projectName ? `Managing assets for project: ${user.projectName}` : 'Manage and track all facility assets'}
-                </p>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button 
-              onClick={() => {
-                console.log('Refresh all assets - will filter by project on frontend');
-                fetchAssets();
-              }}
-              variant="outline"
-              className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </Button>
-          <Button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add New Asset
-          </Button>
-          </div>
-        </div>
-
-
-
-        {/* Search and Filter Section */}
-        <div className="mt-6 space-y-4 sm:space-y-0 sm:flex sm:items-center sm:justify-between gap-4">
-          {/* Search Input - Full width on mobile */}
-          <div className="flex-1 min-w-0">
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <Input
-                placeholder="Search assets by ID, brand, model, or serial number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              />
-            </div>
-          </div>
-          
-          {/* Filters and Actions - Stack on mobile, row on desktop */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-            >
-              <option value="all">All Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Maintenance">Maintenance</option>
-              <option value="Retired">Retired</option>
-            </select>
-            {(searchTerm || filterStatus !== 'all') && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterStatus('all');
-                }}
-                className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 text-sm"
-              >
-                Clear Filters
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Results Count and Pagination Controls */}
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of {totalItems} assets
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Show:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span className="text-sm text-gray-600 dark:text-gray-400">per page</span>
-            </div>
-          </div>
-          {user?.projectName && (
-            <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-md border border-blue-200 dark:border-blue-700">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-              </svg>
-              <span>Project Filter Active: {user.projectName}</span>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Assets Display */}
       {filteredAssets.length === 0 ? (
         <EmptyState
-          title={searchTerm || filterStatus !== 'all' ? 'No matching assets' : 'No assets found'}
-          description={searchTerm || filterStatus !== 'all' 
-            ? 'Try adjusting your search or filters'
+          title={searchTerm ? 'No matching assets' : 'No assets found'}
+          description={searchTerm 
+            ? 'Try adjusting your search terms'
             : user?.projectName 
               ? `No assets found for project: ${user.projectName}. Get started by adding your first asset.`
             : 'Get started by adding your first asset to your facility'
@@ -420,145 +306,131 @@ const AssetsList: React.FC = () => {
         />
       ) : (
         <>
-          {/* ERP Desktop Table View */}
+          {/* Modern Desktop Table View */}
           <div className="hidden lg:block">
-            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-              {/* Project Header */}
-              {user?.projectName && (
-                <div className="bg-blue-100 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700 px-6 py-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      Project: <span className="font-bold">{user.projectName}</span>
-                    </span>
-                  </div>
-                </div>
-              )}
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
-                      <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Asset ID</TableHead>
-                      <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Brand & Model</TableHead>
-                      <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Mobility Category</TableHead>
-                      <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Assigned To</TableHead>
-                      <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Status</TableHead>
-                      <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Priority</TableHead>
-                      <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm text-center px-6">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedAssets.map((asset, index) => {
-                      const getStatusBackground = (status: string) => {
-                        switch (status?.toLowerCase()) {
-                          case 'maintenance':
-                            return 'bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30';
-                          case 'inactive':
-                            return 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30';
-                          case 'retired':
-                            return 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700';
-                          default:
-                            return index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800';
-                        }
-                      };
-
-                      return (
-                        <TableRow 
-                          key={asset._id || `asset-${index}`} 
-                          className={`${getStatusBackground(asset.status || '')} transition-all duration-200 border-b border-gray-100 dark:border-gray-700`}
-                        >
-                        <TableCell className="font-semibold text-gray-900 dark:text-white py-4 px-6">
+                <table className="w-full border-collapse font-sans text-base">
+                  <thead>
+                    <tr className="bg-white border-b border-blue-200">
+                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        #
+                      </th>
+                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        ASSET ID
+                      </th>
+                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        BRAND & MODEL
+                      </th>
+                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        MOBILITY
+                      </th>
+                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        ASSIGNED TO
+                      </th>
+                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        STATUS
+                      </th>
+                      <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedAssets.map((asset, index) => (
+                      <tr key={asset._id || `asset-${index}`} className="hover:bg-gray-50 transition-colors">
+                        <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
+                          <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                            {startIndex + index + 1}
+                          </div>
+                        </td>
+                        <td className="border border-blue-200 px-4 py-3">
+                          <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                            {asset.tagId}
+                          </span>
+                        </td>
+                        <td className="border border-blue-200 px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-lg flex items-center justify-center shadow-sm">
-                              <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                               </svg>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">{asset.tagId}</span>
-                              {asset.digitalAssets?.qrCode && (
-                                <div className="w-2 h-2 bg-green-500 rounded-full" title="Has QR Code"></div>
-                              )}
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {asset.brand} {asset.model}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {asset.assetType || 'Unknown Type'}
+                              </div>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
-                          <div className="text-sm font-semibold text-gray-900 dark:text-white">{asset.brand} {asset.model}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{asset.serialNumber}</div>
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
+                        </td>
+                        <td className="border border-blue-200 px-4 py-3">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                            {asset.mobilityCategory || 'Not Set'}
+                          </span>
+                        </td>
+                        <td className="border border-blue-200 px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-sm ${asset.mobilityCategory === 'movable' ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                            <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                              {asset.mobilityCategory || 'Not Set'}
+                            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                            <span className="text-sm text-gray-900">
+                              {asset.assignedTo?.name || 'Unassigned'}
                             </span>
                           </div>
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
-                          <div className="text-sm font-semibold text-gray-900 dark:text-white">{asset.assignedTo?.name || 'Unassigned'}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{asset.assignedTo?.email || 'N/A'}</div>
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
-                          <StatusBadge status={asset.status || 'Active'} />
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
-                          <PriorityBadge priority={asset.priority || 'Medium'} />
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
-                          <div className="flex justify-center space-x-1">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                        </td>
+                        <td className="border border-blue-200 px-4 py-3">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            {asset.status || 'Active'}
+                          </span>
+                        </td>
+                        <td className="border border-blue-200 px-4 py-3">
+                          <div className="flex items-center gap-2 justify-center">
+                            <button 
+                              className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
                               onClick={() => handleView(asset)}
-                              className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:shadow-sm transition-all duration-200"
-                              title="View Details"
+                              title="View Asset"
                             >
-                              <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                            </button>
+                            <button 
+                              className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
                               onClick={() => handleEdit(asset)}
-                              className="h-8 w-8 p-0 hover:bg-green-50 dark:hover:bg-green-900/20 hover:shadow-sm transition-all duration-200"
                               title="Edit Asset"
                             >
-                              <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
-                            </Button>
-
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                            </button>
+                            <button 
+                              className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
                               onClick={() => asset._id && handleDelete(asset._id)}
-                              className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 hover:shadow-sm transition-all duration-200"
                               title="Delete Asset"
                             >
-                              <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
-                            </Button>
+                            </button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
             
-            {/* Pagination Controls */}
+            {/* Modern Pagination Controls */}
             {totalPages > 1 && (
-              <div className="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+              <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                    Page {currentPage} of {totalPages} ({totalItems} total assets)
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing <span className="font-semibold text-gray-900 dark:text-white">{startIndex + 1}-{Math.min(endIndex, totalItems)}</span> of <span className="font-semibold text-gray-900 dark:text-white">{totalItems}</span> assets
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -566,18 +438,22 @@ const AssetsList: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(1)}
                       disabled={currentPage === 1}
-                      className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      First
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                      </svg>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Previous
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
                     </Button>
                     
                     {/* Page Numbers */}
@@ -600,10 +476,11 @@ const AssetsList: React.FC = () => {
                             variant={currentPage === pageNum ? "default" : "outline"}
                             size="sm"
                             onClick={() => setCurrentPage(pageNum)}
-                            className={currentPage === pageNum 
-                              ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                              : "border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-                            }
+                            className={`h-8 w-8 p-0 text-sm ${
+                              currentPage === pageNum 
+                                ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600" 
+                                : "border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                            }`}
                           >
                             {pageNum}
                           </Button>
@@ -616,18 +493,22 @@ const AssetsList: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={currentPage === totalPages}
-                      className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Last
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      </svg>
                     </Button>
                   </div>
                 </div>
@@ -637,26 +518,6 @@ const AssetsList: React.FC = () => {
 
           {/* Enhanced Mobile Card View */}
           <div className="lg:hidden space-y-4">
-            {/* Project Header for Mobile */}
-            {user?.projectName && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      Project: <span className="font-bold">{user.projectName}</span>
-                    </span>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      {totalItems} assets available
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
             
             {/* Mobile Asset Cards */}
             <div className="space-y-3">
@@ -674,7 +535,7 @@ const AssetsList: React.FC = () => {
             
             {/* Mobile Pagination Controls */}
             {totalPages > 1 && (
-              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
                 <div className="flex flex-col gap-4">
                   <div className="text-center text-sm text-gray-700 dark:text-gray-300">
                     Page {currentPage} of {totalPages} ({totalItems} total assets)
@@ -763,8 +624,8 @@ const AssetsList: React.FC = () => {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Assets Found</h3>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  {searchTerm || filterStatus !== 'all' 
-                    ? 'Try adjusting your search or filters'
+                  {searchTerm 
+                    ? 'Try adjusting your search terms'
                     : 'Get started by adding your first asset'
                   }
                 </p>
@@ -873,400 +734,23 @@ const AssetsList: React.FC = () => {
   );
 };
 
-// Asset Type Management Component
-const AssetTypeManagement: React.FC = () => {
-  const { state, fetchAssetTypes, createAssetType, updateAssetType, deleteAssetType, clearError } = useAssetContext();
-  const { user } = useAuth();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingAssetType, setEditingAssetType] = useState<AssetType | null>(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => {
-    // Only fetch if not already loading and no asset types loaded
-    if (!state.loading && state.assetTypes.length === 0) {
-      fetchAssetTypes();
-    }
-  }, [state.loading, state.assetTypes.length, fetchAssetTypes]);
-
-  const handleEdit = (assetType: AssetType) => {
-    setEditingAssetType(assetType);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDelete = async (assetTypeId: string) => {
-    if (window.confirm('Are you sure you want to delete this asset type? This action cannot be undone.')) {
-      try {
-        await deleteAssetType(assetTypeId);
-        setSuccessMessage('Asset type deleted successfully!');
-        setShowSuccess(true);
-      } catch {
-        // Handle error silently or show user-friendly message
-      }
-    }
-  };
-
-  const handleCreateSuccess = () => {
-    setSuccessMessage('Asset type created successfully!');
-    setShowSuccess(true);
-  };
-
-  const handleUpdateSuccess = () => {
-    setSuccessMessage('Asset type updated successfully!');
-    setShowSuccess(true);
-  };
-
-  const filteredAssetTypes = state.assetTypes.filter(assetType => {
-    const matchesSearch = assetType.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
-  if (state.loading) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {user?.projectName ? `Loading asset types for ${user.projectName}...` : 'Loading asset types...'}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            {user?.projectName 
-              ? `Please wait while we fetch asset type data for project: ${user.projectName}`
-              : 'Please wait while we fetch your asset type data'
-            }
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Error Display */}
-      <ErrorDisplay 
-        error={state.error} 
-        onClearError={clearError} 
-      />
-
-            {/* ERP Style Header Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center shadow-sm">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Asset Type Management</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {user?.projectName ? `Define and manage asset types for project: ${user.projectName}` : 'Define and manage asset types for your facility'}
-                </p>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button 
-              onClick={() => fetchAssetTypes()}
-              variant="outline"
-              className="border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-400 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </Button>
-          <Button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add Asset Type
-          </Button>
-          </div>
-        </div>
-
-        {/* Search and Filter Section */}
-        <div className="mt-6 flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <Input
-              placeholder="Search asset types by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-gray-300 dark:border-gray-600 focus:border-green-500 dark:focus:border-green-400 focus:ring-green-500 dark:focus:ring-green-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-            />
-          </div>
-          {searchTerm && (
-            <Button
-              variant="outline"
-              onClick={() => setSearchTerm('')}
-              className="border-gray-300 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-400 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
-            >
-              Clear
-            </Button>
-          )}
-        </div>
-
-        {/* Results Count */}
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-          Showing {filteredAssetTypes.length} of {state.assetTypes.length} asset types
-          </div>
-          {user?.projectName && (
-            <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 px-2 py-1 rounded-md border border-green-200 dark:border-green-700">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-              </svg>
-              <span>Managing for project: {user.projectName}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Asset Types Display */}
-      {filteredAssetTypes.length === 0 ? (
-        <EmptyState
-          title={searchTerm ? 'No matching asset types' : 'No asset types found'}
-          description={searchTerm 
-            ? 'Try adjusting your search terms'
-            : user?.projectName 
-              ? `No asset types found for project: ${user.projectName}. Get started by creating your first asset type.`
-            : 'Get started by creating your first asset type to define custom fields for your assets'
-          }
-          actionText={searchTerm ? 'Clear Search' : 'Create Your First Asset Type'}
-          onAction={() => searchTerm ? setSearchTerm('') : setIsCreateModalOpen(true)}
-          icon={
-            <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-          }
-        />
-      ) : (
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          {/* Project Header for Asset Types */}
-          {user?.projectName && (
-            <div className="bg-green-100 dark:bg-green-900 border-b border-green-200 dark:border-green-700 px-6 py-3">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                  Project: <span className="font-bold">{user.projectName}</span>
-                </span>
-              </div>
-            </div>
-          )}
- 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
-                  <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Asset Type Name</TableHead>
-                  <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm px-6">Created</TableHead>
-                  <TableHead className="font-bold text-gray-900 dark:text-white py-4 text-sm text-center px-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAssetTypes.map((assetType: AssetType, index: number) => (
-                  <TableRow 
-                    key={assetType._id} 
-                    className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 border-b border-gray-100 dark:border-gray-700 ${index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}`}
-                  >
-                    <TableCell className="font-semibold text-gray-900 dark:text-white py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 rounded-lg flex items-center justify-center shadow-sm">
-                          <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                          </svg>
-                        </div>
-                        <span className="text-sm font-medium">{assetType.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 px-6">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {new Date(assetType.createdAt).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 px-6">
-                      <div className="flex justify-center space-x-1">
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={() => handleEdit(assetType)}
-                          className="h-8 w-8 p-0 hover:bg-green-50 dark:hover:bg-green-900/20 hover:shadow-sm transition-all duration-200"
-                          title="Edit Asset Type"
-                        >
-                          <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={() => handleDelete(assetType._id)}
-                          className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 hover:shadow-sm transition-all duration-200"
-                          title="Delete Asset Type"
-                        >
-                          <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-
-      {/* Create/Edit Asset Type Modal */}
-      <AssetTypeFormModal
-        isOpen={isCreateModalOpen || isEditModalOpen}
-          onClose={() => {
-          setIsCreateModalOpen(false);
-            setIsEditModalOpen(false);
-            setEditingAssetType(null);
-          }}
-        mode={isCreateModalOpen ? 'create' : 'edit'}
-          assetType={editingAssetType}
-        onSubmit={async (data) => {
-          // Transform the data to match CreateAssetTypeRequest format
-          const transformedData = {
-            name: data.name,
-            fields: data.fields.map(field => ({
-              label: field.label,
-              fieldType: field.fieldType as 'text' | 'dropdown',
-              options: field.fieldType === 'dropdown' ? (field.options || []) : undefined
-            }))
-          };
-          
-          if (isCreateModalOpen) {
-            await createAssetType(transformedData);
-            setIsCreateModalOpen(false);
-            handleCreateSuccess();
-          } else if (isEditModalOpen && editingAssetType) {
-            await updateAssetType(editingAssetType._id, transformedData);
-            setIsEditModalOpen(false);
-            setEditingAssetType(null);
-            handleUpdateSuccess();
-          }
-        }}
-        loading={state.loading}
-      />
-
-      {/* Success Toast */}
-      {showSuccess && (
-        <SuccessToast
-          message={successMessage}
-          onClose={() => setShowSuccess(false)}
-        />
-      )}
-    </div>
-  );
-};
 
 // Main Page Component
 const ManageAssetsPage: React.FC = () => {
   const [showPermissions, setShowPermissions] = useState(false);
-  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
+  const router = useRouter();
 
   if (showPermissions) {
     return (
       <AssetProvider>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-          <div className="p-6 lg:p-8">
+        <div className="min-h-screen bg-white dark:bg-gray-900">
+          <div className="p-0">
             <div className="max-w-7xl mx-auto">
-              {/* Enhanced Header with better visual hierarchy */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                                 <div className="flex items-center gap-4">
-                 <div className="relative">
-                   <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
-                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                     </svg>
+              {/* Permissions Content */}
+              <div className="mb-0">
                    </div>
-                   <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 dark:bg-green-400 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
-                     <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                     </svg>
-                   </div>
-                 </div>
-                 <div>
-                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                     Admin Permissions
-                   </h1>
-                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
-                       {user?.projectName ? `Manage permissions for project: ${user.projectName}` : 'Manage system-wide permissions and access controls'}
-                     </p>
-                   <div className="flex items-center gap-3">
-                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                       </svg>
-                       <span>Last updated: {new Date().toLocaleDateString()}</span>
-                     </div>
-                     <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
-                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                       </svg>
-                       <span>Active</span>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-                  <Button 
-                    onClick={() => setShowPermissions(false)}
-                    variant="outline"
-                    className="flex items-center gap-2 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 shadow-sm text-sm"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7" />
-                    </svg>
-                    Back to Assets
-                  </Button>
-                </div>
-                
-                {/* Project Info Banner for Permissions */}
-                {user?.projectName && (
-                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-3 mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                      </div>
-                      <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                        Managing permissions for project: <span className="font-bold">{user.projectName}</span>
-                      </span>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Enhanced breadcrumb */}
-                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  <span className="hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer transition-colors">
-                    {user?.projectName ? `Asset Management (${user.projectName})` : 'Asset Management'}
-                  </span>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Permissions</span>
-                </div>
-              </div>
-              <PermissionsDisplay />
+              <PermissionsDisplay onBackToAssets={() => setShowPermissions(false)} />
             </div>
           </div>
         </div>
@@ -1276,81 +760,69 @@ const ManageAssetsPage: React.FC = () => {
 
   return (
     <AssetProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-200">
-        <div className="p-4 sm:p-6 lg:p-8">
+      <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+        <div className="p-0">
           <div className="max-w-7xl mx-auto">
-            {/* Enhanced Responsive Header */}
-            <div className="mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            {/* Search and Action Buttons Row */}
+            <div className="mb-2 px-4 py-1 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+              {/* Search Input */}
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
+                  <Input
+                    placeholder="Search assets by ID, brand, model, or serial number..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                      Asset Management
-                    </h1>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-                      {user?.projectName ? `Managing assets for project: ${user.projectName}` : 'Manage your assets and configurations with ease'}
-                    </p>
                   </div>
-                </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => router.push('/admin/asset-types')}
+                  className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Create Asset Type
+                </Button>
+                <Button 
+                  onClick={() => {
+                    // Trigger the create asset modal in AssetsList
+                    const event = new CustomEvent('openCreateAssetModal');
+                    window.dispatchEvent(event);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                  Add New Asset
+                </Button>
                 <Button 
                   onClick={() => setShowPermissions(true)}
-                  className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-xs sm:text-sm w-full sm:w-auto justify-center"
+                  className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
                 >
-                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                  <span className="hidden sm:inline">Asset Permissions</span>
-                  <span className="sm:hidden">Permissions</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                  Asset Permissions
                 </Button>
-              </div>
-             </div>
+                      </div>
+                </div>
 
-            {/* Enhanced Responsive Tabs */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-              <Tabs defaultValue="assets" className="w-full">
-                <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
-                  <TabsList className="grid w-full grid-cols-2 h-12 sm:h-14 bg-transparent border-0">
-                    <TabsTrigger 
-                      value="assets" 
-                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-sm rounded-none border-0 h-full text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 text-sm sm:text-base"
-                    >
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                        <span className="hidden sm:inline">Assets</span>
-                        <span className="sm:hidden">Assets</span>
-                      </div>
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="asset-types" 
-                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:text-green-600 dark:data-[state=active]:text-green-400 data-[state=active]:shadow-sm rounded-none border-0 h-full text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 text-sm sm:text-base"
-                    >
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                        <span className="hidden sm:inline">Asset Types</span>
-                        <span className="sm:hidden">Types</span>
-                      </div>
-                    </TabsTrigger>
-                  </TabsList>
+            {/* Assets Content */}
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm">
+                <div className="p-0">
+                    <AssetsList searchTerm={searchTerm} />
                 </div>
-                <div className="p-3 sm:p-4 lg:p-6">
-                  <TabsContent value="assets" className="mt-0">
-                    <AssetsList />
-                  </TabsContent>
-                  <TabsContent value="asset-types" className="mt-0">
-                    <AssetTypeManagement />
-                  </TabsContent>
-                </div>
-              </Tabs>
             </div>
+
           </div>
         </div>
       </div>

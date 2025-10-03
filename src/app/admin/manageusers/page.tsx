@@ -4,35 +4,25 @@ import { useState, useEffect, useCallback, useRef } from "react"
 
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent } from "@/components/ui/card"
 import { useUserManagement } from "@/contexts/UserManagementContext"
-import { useToast, ToastContainer } from "@/components/ui/toast"
 import { User } from "@/lib/manageuser"
+import { useToast, ToastContainer } from "@/components/ui/toast"
 import { 
-  Users, 
   Plus,
   Search,
   Eye,
   Edit,
   Trash2,
-  Mail,
   Shield,
-  UserCheck,
   UserPlus,
   RefreshCw,
   X,
   EyeOff,
   Eye as EyeIcon,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight
+  AlertCircle
 } from "lucide-react"
 
 
@@ -63,7 +53,6 @@ export default function AdminManageUsersPage() {
   const [viewingUser, setViewingUser] = useState<User | null>(null)
   const [sortField, setSortField] = useState<string>("name")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
-  const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   const [newUserData, setNewUserData] = useState({
     name: "",
@@ -340,27 +329,7 @@ export default function AdminManageUsersPage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'inactive': return 'bg-red-100 text-red-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
 
-  const getRoleColor = (role: string) => {
-    switch (role.toLowerCase()) {
-      case 'admin': return 'bg-purple-100 text-purple-800'
-      case 'manager': return 'bg-blue-100 text-blue-800'
-      case 'technician': return 'bg-green-100 text-green-800'
-      case 'viewer': return 'bg-gray-100 text-gray-800'
-      case 'user': return 'bg-blue-100 text-blue-800'
-      case 'engineer': return 'bg-orange-100 text-orange-800'
-      case 'supervisor': return 'bg-indigo-100 text-indigo-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -382,8 +351,28 @@ export default function AdminManageUsersPage() {
 
   // Sort users
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    const aValue = a[sortField as keyof User] || ""
-    const bValue = b[sortField as keyof User] || ""
+    // Type-safe field access with fallback
+    const getFieldValue = (user: User, field: string): string => {
+      switch (field) {
+        case 'name':
+          return user.name || ""
+        case 'email':
+          return user.email || ""
+        case 'role':
+          return user.role || ""
+        case 'projectName':
+          return user.projectName || ""
+        case 'status':
+          return user.status || ""
+        case 'createdAt':
+          return user.createdAt || ""
+        default:
+          return ""
+      }
+    }
+    
+    const aValue = getFieldValue(a, sortField)
+    const bValue = getFieldValue(b, sortField)
     
     if (sortDirection === "asc") {
       return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
@@ -393,9 +382,8 @@ export default function AdminManageUsersPage() {
   })
 
   // Pagination
-  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
+  const startIndex = 0
+  const endIndex = sortedUsers.length
   const paginatedUsers = sortedUsers.slice(startIndex, endIndex)
 
   const handleSort = (field: string) => {
@@ -415,64 +403,9 @@ export default function AdminManageUsersPage() {
     <ProtectedRoute>
       <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
         <div className="flex-1 overflow-auto">
-          {/* Consolidated Header */}
-          <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 shadow-sm transition-colors duration-200">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              {/* Left Section - Title, Badges and Description */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
-                    <Users className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-                      User Management
-                    </h1>
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
-                      Manage your team members, roles, and access permissions
-                    </p>
-                  </div>
-                </div>
-                
-                {/* User Count Badges */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                      {sortedUsers.length} Users
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                    <UserCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                      {users.filter(u => u.status === 'active').length} Active
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Right Section - Controls */}
-              <div className="flex items-center gap-3">
-                <Button 
-                  size="sm"
-                  onClick={() => setShowCreateUserModal(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Add User</span>
-                </Button>
-                
-                {/* Live Status */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-green-800 dark:text-green-300 font-medium">Live</span>
-                </div>
-              </div>
-            </div>
-          </header>
 
           {/* Main Content */}
-          <main className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <main className="px-4 pb-1 sm:px-6 sm:pb-2 space-y-4 sm:space-y-6">
             {isLoading && users.length === 0 && roles.length === 0 ? (
               <div className="flex items-center justify-center py-20">
                 <div className="flex flex-col items-center gap-4 text-center">
@@ -488,89 +421,41 @@ export default function AdminManageUsersPage() {
             ) : (
               <>
 
-            {/* Compact Search Container */}
-            <Card className="border-0 shadow-sm bg-white dark:bg-gray-800">
-              <CardContent className="p-4">
-                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-4">
-                  {/* Search Input */}
-                  <div className="flex-1 min-w-0">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <Input
-                        placeholder="Search by name, email, role, or project..."
-                        className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowRoleModal(true)}
-                      className="flex items-center gap-2 h-10 px-3 bg-purple-100 hover:bg-purple-200 border-purple-300 text-purple-800 hover:text-purple-900 dark:bg-purple-900 dark:hover:bg-purple-800 dark:border-purple-600 dark:text-purple-300 dark:hover:text-purple-200"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Create Role</span>
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowRolesModal(true)}
-                      className="flex items-center gap-2 h-10 px-3 bg-indigo-100 hover:bg-indigo-200 border-indigo-300 text-indigo-800 hover:text-indigo-900 dark:bg-indigo-900 dark:hover:bg-indigo-800 dark:border-indigo-600 dark:text-indigo-300 dark:hover:text-indigo-200"
-                    >
-                      <Shield className="w-4 h-4" />
-                      <span>Manage Roles</span>
-                      <Badge variant="secondary" className="ml-1 bg-indigo-200 text-indigo-800 dark:bg-indigo-300 dark:text-indigo-900">
-                        {roles.length}
-                      </Badge>
-                    </Button>
-                  </div>
-
-                  {/* Results Info */}
-                  <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <span className="font-medium">
-                        {paginatedUsers.length} of {sortedUsers.length}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span>Live</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Simple Search and Actions */}
+            <div className="flex items-center justify-between gap-4">
+              {/* Search Input */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <Input
+                  placeholder="Search users..."
+                  className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={() => setShowCreateUserModal(true)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Add User</span>
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowRolesModal(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Roles</span>
+                </Button>
+              </div>
+            </div>
 
               {/* Users Table */}
-              <Card className="border-0 shadow-sm">
-                <CardHeader className="pb-6">
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-600 rounded-lg">
-                    <Users className="w-5 h-5 text-white" />
-                  </div>
-                      <div>
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">User Management</h2>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                          Manage users, roles, and permissions in a structured table format
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {sortedUsers.length} users
-                      </span>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                
+              <Card className="border border-gray-200 dark:border-gray-700">
                 <CardContent className="p-0">
                     {isLoading ? (
                       <div className="flex items-center justify-center py-12">
@@ -597,202 +482,109 @@ export default function AdminManageUsersPage() {
                         </div>
                       </div>
                     ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-100 dark:bg-gray-800">
-                            <TableHead className="w-12">
-                              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
-                                <Users className="w-4 h-4" />
-                              </div>
-                            </TableHead>
-                            <TableHead 
-                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    <div className="overflow-x-auto bg-white">
+                      <table className="w-full border-collapse font-sans text-base">
+                        <thead>
+                          <tr className="bg-white border-b border-blue-200">
+                            <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                              #
+                            </th>
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
                               onClick={() => handleSort("name")}
                             >
-                              <div className="flex items-center gap-2">
-                                <span>Name</span>
-                                <ArrowUpDown className="w-4 h-4" />
-                              </div>
-                            </TableHead>
-                            <TableHead 
-                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                              onClick={() => handleSort("email")}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span>Email</span>
-                                <ArrowUpDown className="w-4 h-4" />
-                              </div>
-                            </TableHead>
-                            <TableHead 
-                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                              onClick={() => handleSort("role")}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span>Role</span>
-                                <ArrowUpDown className="w-4 h-4" />
-                              </div>
-                            </TableHead>
-                            <TableHead 
-                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                              onClick={() => handleSort("projectName")}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span>Project</span>
-                                <ArrowUpDown className="w-4 h-4" />
-                              </div>
-                            </TableHead>
-                            <TableHead 
-                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                              onClick={() => handleSort("status")}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span>Status</span>
-                                <ArrowUpDown className="w-4 h-4" />
-                              </div>
-                            </TableHead>
-                            <TableHead 
-                              className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                              USER ID
+                            </th>
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
                               onClick={() => handleSort("createdAt")}
                             >
-                              <div className="flex items-center gap-2">
-                                <span>Created</span>
-                                <ArrowUpDown className="w-4 h-4" />
-                              </div>
-                            </TableHead>
-                            <TableHead className="w-32 text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {paginatedUsers.map((user) => (
-                            <TableRow key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                              <TableCell>
-                                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-semibold text-sm">
-                                {getInitials(user.name)}
-                              </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{user.name}</span>
-                                  {user.isVerified && (
-                                    <CheckCircle className="w-4 h-4 text-green-500" />
-                                  )}
+                              DATE
+                            </th>
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              onClick={() => handleSort("projectName")}
+                            >
+                              PROJECT NAME
+                            </th>
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              onClick={() => handleSort("name")}
+                            >
+                              CUSTOMER
+                            </th>
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              onClick={() => handleSort("status")}
+                            >
+                              STATUS
+                            </th>
+                            <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedUsers.map((user, index) => (
+                            <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
+                                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                                  {startIndex + index + 1}
                                 </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Mail className="w-4 h-4 text-muted-foreground" />
-                                  <span className="text-sm">{user.email}</span>
-                                  </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={`${getRoleColor(user.role)} px-2 py-1 text-xs`}>
-                                      {user.role}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <span className="text-sm text-muted-foreground">{user.projectName}</span>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Badge className={`${getStatusColor(user.status)} px-2 py-1 text-xs`}>
-                                    {user.status}
-                                    </Badge>
-                                  </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{formatDate(user.createdAt)}</span>
-                                  </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1 justify-end">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                    className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-700"
-                                    onClick={() => openViewUserModal(user)}
-                                  >
-                                    <Eye className="w-4 h-4 text-blue-600" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                    className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-700"
+                              </td>
+                              <td className="border border-blue-200 px-4 py-3">
+                                <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                  {user.email.split('@')[0].toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                                {new Date(user.createdAt).toISOString().split('T')[0]}
+                              </td>
+                              <td className="border border-blue-200 px-4 py-3">
+                                <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                  {user.projectName}
+                                </span>
+                              </td>
+                              <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                                {user.name}
+                              </td>
+                              <td className="border border-blue-200 px-4 py-3">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                  Active
+                                </span>
+                              </td>
+                              <td className="border border-blue-200 px-4 py-3">
+                                <div className="flex items-center gap-2 justify-center">
+                                  <button 
+                                    className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
                                     onClick={() => openEditUserRoleModal(user)}
+                                    title="Edit User"
                                   >
-                                    <Edit className="w-4 h-4 text-green-600" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-700"
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button 
+                                    className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
                                     onClick={() => openDeleteUserModal(user)}
+                                    title="Delete User"
                                   >
-                                    <Trash2 className="w-4 h-4 text-red-600" />
-                              </Button>
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                  <button 
+                                    className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
+                                    onClick={() => openViewUserModal(user)}
+                                    title="View User"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
                             </div>
-                              </TableCell>
-                            </TableRow>
+                              </td>
+                            </tr>
                           ))}
-                        </TableBody>
-                      </Table>
+                        </tbody>
+                      </table>
                           </div>
                     )}
                 </CardContent>
               </Card>
 
-              {/* Enhanced Pagination */}
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Showing {startIndex + 1} to {Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} results
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                        className="flex items-center gap-1"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </Button>
-                      
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const page = i + 1
-                          return (
-                            <Button
-                              key={page}
-                              variant={currentPage === page ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCurrentPage(page)}
-                              className="w-8 h-8 p-0"
-                            >
-                              {page}
-                            </Button>
-                          )
-                        })}
-                      </div>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center gap-1"
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </>
             )}
             </main>
@@ -1059,38 +851,27 @@ export default function AdminManageUsersPage() {
 
         {/* Edit User Role Modal */}
         {showEditUserRoleModal && editingUser && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
-            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md shadow-xl">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
               <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-600 rounded-lg">
-                    <Edit className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground">Edit User Role</h3>
-                    <p className="text-sm text-muted-foreground">Update user&apos;s role assignment</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <h3 className="text-lg font-medium">Edit User Role</h3>
+                <button
                   onClick={() => {
                     setShowEditUserRoleModal(false)
                     setEditingUser(null)
                   }}
-                  className="h-8 w-8 p-0 hover:bg-accent"
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  <X className="w-4 h-4" />
-                </Button>
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="editUserRole" className="text-sm font-medium text-muted-foreground">Role</Label>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">Role</label>
                   <select
-                    id="editUserRole"
                     value={editingUser?.currentRole || ''}
                     onChange={(e) => setEditingUser(prev => prev ? { ...prev, currentRole: e.target.value } : null)}
-                    className="w-full h-11 px-3 py-2 border border-input bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Select a role</option>
                     {roles.map((role) => (
@@ -1101,34 +882,23 @@ export default function AdminManageUsersPage() {
                   </select>
                 </div>
                 <div className="flex gap-3 pt-4">
-                  <Button
-                    className="flex-1 h-11 bg-green-600 hover:bg-green-700 text-white"
+                  <button
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
                     onClick={handleEditUserRole}
                     disabled={isUpdatingUserRole}
                   >
-                    {isUpdatingUserRole ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin text-white" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <Edit className="w-4 h-4 mr-2 text-white" />
-                        Update Role
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
+                    {isUpdatingUserRole ? 'Updating...' : 'Update Role'}
+                  </button>
+                  <button
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
                     onClick={() => {
                       setShowEditUserRoleModal(false)
                       setEditingUser(null)
                     }}
                     disabled={isUpdatingUserRole}
-                    className="h-11 px-6"
                   >
                     Cancel
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1212,229 +982,89 @@ export default function AdminManageUsersPage() {
 
         {/* View User Modal */}
         {showViewUserModal && viewingUser && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
-            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-xl">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
               <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-blue-600 rounded-lg">
-                  <Eye className="w-5 h-5 text-white" />
-                </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground">User Details</h3>
-                    <p className="text-sm text-muted-foreground">View complete user information</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <h3 className="text-lg font-medium">User Details</h3>
+                <button
                   onClick={() => {
                     setShowViewUserModal(false)
                     setViewingUser(null)
                   }}
-                  className="h-8 w-8 p-0 hover:bg-accent"
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  <X className="w-4 h-4" />
-                </Button>
+                  <X className="w-5 h-5" />
+                </button>
               </div>
               
-              <div className="space-y-6">
-                {/* User Header */}
-                <Card className="border-0 bg-blue-50 dark:bg-blue-100">
-                  <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                      <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center text-white font-semibold text-2xl shadow-sm">
+              <div className="space-y-5">
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 font-semibold text-2xl mx-auto mb-4">
                     {getInitials(viewingUser?.name || 'Unknown')}
                   </div>
-                      <div className="flex-1">
-                        <h4 className="text-xl font-semibold text-foreground">{viewingUser?.name || 'Unknown User'}</h4>
-                        <div className="flex items-center gap-3 mt-2">
-                      {viewingUser?.isVerified && (
-                            <div className="flex items-center gap-1 text-green-600">
-                              <CheckCircle className="w-4 h-4" />
-                              <span className="text-sm font-medium">Verified</span>
+                  <h4 className="text-xl font-medium text-gray-900">{viewingUser?.name || 'Unknown User'}</h4>
+                  <p className="text-gray-500 mt-1">{viewingUser?.email || 'No email'}</p>
                             </div>
-                      )}
-                          <Badge className={`${getStatusColor(viewingUser?.status || 'inactive')} px-3 py-1`}>
-                        {viewingUser?.status || 'Unknown'}
-                      </Badge>
-                          <Badge className={`${getRoleColor(viewingUser?.role || 'user')} px-3 py-1`}>
-                        {viewingUser?.role || 'Unknown'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                  </CardContent>
-                </Card>
 
-                {/* User Information Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg font-semibold text-foreground">Personal Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                          <Mail className="w-4 h-4 text-blue-600" />
-                          <span className="text-foreground font-medium">{viewingUser?.email || 'No email'}</span>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Role</span>
+                    <p className="text-sm text-gray-900 mt-1">{viewingUser?.role || 'Unknown'}</p>
+                      </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Project</span>
+                    <p className="text-sm text-gray-900 mt-1">{viewingUser?.projectName || 'No project'}</p>
+                    </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</span>
+                    <p className="text-sm text-gray-900 mt-1">{viewingUser?.status || 'Unknown'}</p>
+                      </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</span>
+                    <p className="text-sm text-gray-900 mt-1">{formatDate(viewingUser?.createdAt || new Date().toISOString())}</p>
+                    </div>
                       </div>
                     </div>
-                    
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Role</Label>
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                          <Shield className="w-4 h-4 text-purple-600" />
-                          <Badge className={`${getRoleColor(viewingUser?.role || 'user')} px-3 py-1`}>
-                          {viewingUser?.role || 'Unknown'}
-                        </Badge>
-                      </div>
-                    </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Project</Label>
-                        <div className="p-3 bg-muted/50 rounded-lg">
-                          <span className="text-foreground font-medium">{viewingUser?.projectName || 'No project'}</span>
-                      </div>
-                    </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg font-semibold text-foreground">Account Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Account Status</Label>
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                          <Badge className={`${getStatusColor(viewingUser?.status || 'inactive')} px-3 py-1`}>
-                          {viewingUser?.status || 'Unknown'}
-                        </Badge>
-                        {viewingUser?.isVerified && (
-                            <div className="flex items-center gap-1 text-green-600">
-                            <CheckCircle className="w-3 h-3" />
-                              <span className="text-xs font-medium">Verified</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Created</Label>
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                          <Clock className="w-4 h-4 text-green-600" />
-                          <span className="text-foreground font-medium">{formatDate(viewingUser?.createdAt || new Date().toISOString())}</span>
-                      </div>
-                    </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Last Updated</Label>
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                          <Clock className="w-4 h-4 text-orange-600" />
-                          <span className="text-foreground font-medium">{formatDate(viewingUser?.updatedAt || new Date().toISOString())}</span>
-                      </div>
-                    </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end gap-3 pt-6 border-t border-border">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowViewUserModal(false)
-                      setViewingUser(null)
-                    }}
-                    className="h-10 px-6"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Close
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowViewUserModal(false)
-                      setViewingUser(null)
-                      if (viewingUser) {
-                        openEditUserRoleModal(viewingUser)
-                      }
-                    }}
-                    className="h-10 px-6 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Edit className="w-4 h-4 mr-2 text-white" />
-                    Edit Role
-                  </Button>
-                </div>
-              </div>
             </div>
           </div>
         )}
 
         {/* Roles Management Modal */}
         {showRolesModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-card border border-border rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-xl">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-lg">
               <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-indigo-600 rounded-lg">
-                  <Shield className="w-5 h-5 text-white" />
-                </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground">Role Management</h3>
-                    <p className="text-sm text-muted-foreground">Manage all roles and permissions</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <h3 className="text-lg font-medium">Role Management</h3>
+                <button
                   onClick={() => setShowRolesModal(false)}
-                  className="h-8 w-8 p-0 hover:bg-accent"
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  <X className="w-4 h-4" />
-                </Button>
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Total Roles: {roles.length}</span>
-                  </div>
-                  <Button
-                    size="sm"
+                  <span className="text-sm text-gray-600">Total Roles: {roles.length}</span>
+                  <button
                     onClick={() => {
                       setShowRolesModal(false)
                       setShowRoleModal(true)
                     }}
-                    className="flex items-center gap-2 h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white"
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Role</span>
-                  </Button>
+                    Add Role
+                  </button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {roles.map((role) => (
-                    <Card key={role._id} className="border-0 shadow-sm hover:shadow-md transition-all duration-200">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                              <Shield className="w-5 h-5 text-white" />
-                            </div>
+                    <div key={role._id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                             <div>
-                              <Badge className={`${getRoleColor(role.name)} px-3 py-1 text-sm font-medium`}>
-                                {role.name}
-                              </Badge>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Created: {formatDate(role.createdAt)}
-                              </p>
-                            </div>
+                        <span className="text-sm font-medium">{role.name}</span>
+                        <p className="text-xs text-gray-500">Created: {formatDate(role.createdAt)}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600" 
+                        <button 
+                          className="w-6 h-6 flex items-center justify-center text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
                               onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
@@ -1442,12 +1072,10 @@ export default function AdminManageUsersPage() {
                                 openEditRoleModal(role)
                               }}
                             >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                          <Edit className="w-3 h-3" />
+                        </button>
+                        <button 
+                          className="w-6 h-6 flex items-center justify-center text-red-600 border border-red-600 rounded hover:bg-red-50"
                               onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
@@ -1455,12 +1083,10 @@ export default function AdminManageUsersPage() {
                                 // Add delete role functionality here
                               }}
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
                   ))}
                 </div>
               </div>

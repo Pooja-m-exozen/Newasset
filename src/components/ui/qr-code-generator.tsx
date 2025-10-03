@@ -310,7 +310,7 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
   }, [])
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("space-y-4", className)}>
       {showSuccessToast && (
         <SuccessToast
           message={successMessage}
@@ -318,45 +318,19 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
         />
       )}
       
-      {/* Project Info Banner */}
-      {user?.projectName && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              Currently working with project: <span className="font-bold">{user.projectName}</span>
-            </span>
-          </div>
-        </div>
-      )}
 
-      <Card className="shadow-sm">
-        <CardHeader className="pb-6">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-emerald-500">
-              <QrCode className="h-6 w-6 text-white" />
+      <Card className="border border-gray-200 dark:border-gray-700">
+        <CardContent className="p-0">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">QR Code Generator & Scanner</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Select an asset, generate a professional QR code, and scan it for instant asset details
+            </p>
             </div>
-            <div>
-              <CardTitle className="text-xl font-semibold">
-                QR Code Generator & Scanner
-              </CardTitle>
-              <CardDescription className="text-muted-foreground mt-1">
-                Select an asset from your project, generate a professional QR code, and scan it for instant asset details
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <div className="p-4 space-y-4">
           {/* Asset Selection Section */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <Label className="text-sm font-semibold">Step 1: Select Asset</Label>
-            </div>
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-700">Select Asset</Label>
             
             {assetsLoading && (
               <div className="flex items-center space-x-3 p-4 bg-muted/50 border border-border rounded-lg">
@@ -412,10 +386,10 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                 </SelectContent>
               </Select>
               
-              <div className="text-center text-xs text-muted-foreground">
+              <div className="text-center text-xs text-gray-500">
                 {assetsLoading ? 'Loading...' : (
                   assets.length === 0 ? (
-                    <span className="text-red-500">⚠️ No assets found for project: {user?.projectName}</span>
+                    <span className="text-red-500">No assets found</span>
                   ) : (
                     <span>{filteredAssets.length} assets available</span>
                   )
@@ -470,57 +444,48 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
           )}
 
           {/* Generate Button Section */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <Label className="text-sm font-semibold">Step 2: Generate QR Code</Label>
-            </div>
-            
+            <div className="space-y-3">
             <Button 
               onClick={handleGenerate} 
               disabled={isGenerating || !selectedAssetId}
-              className="w-full h-11 text-base font-semibold"
+                className="w-full h-10 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isGenerating ? (
-                <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   <span>Generating QR Code...</span>
                 </div>
               ) : selectedAssetId ? (
-                <div className="flex items-center space-x-2">
-                  <QrCode className="h-5 w-5" />
+                  <div className="flex items-center gap-2">
+                    <QrCode className="h-4 w-4" />
                   <span>Generate QR Code for {selectedAssetId}</span>
                 </div>
               ) : (
-                <div className="flex items-center space-x-2">
-                  <QrCode className="h-5 w-5" />
+                  <div className="flex items-center gap-2">
+                    <QrCode className="h-4 w-4" />
                   <span>Generate QR Code</span>
                 </div>
               )}
             </Button>
           </div>
-
+          </div>
         </CardContent>
       </Card>
 
       {qrCodeData && (
-        <Card className="shadow-sm">
-          <CardHeader className="pb-6">
+        <Card className="border border-gray-200 dark:border-gray-700">
+          <CardContent className="p-0">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-green-500">
-                  <QrCode className="h-6 w-6 text-white" />
-                </div>
                 <div>
-                  <CardTitle className="text-xl font-semibold">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Generated QR Code
-                  </CardTitle>
-                  <CardDescription className="text-muted-foreground mt-1">
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     QR code generated successfully for asset {qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId}
-                  </CardDescription>
+                  </p>
                 </div>
-              </div>
-              <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-sm px-3 py-1">
                   {qrCodeData.qrCode.data.t || qrCodeData.qrCode.data.tagId}
                 </Badge>
@@ -529,14 +494,15 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                   size="sm"
                   onClick={handleFastScan}
                   disabled={isScanning}
-                  className="flex items-center space-x-2"
+                    className="flex items-center gap-2"
                 >
                   <Scan className="h-4 w-4" />
                   <span>{isScanning ? 'Scanning...' : 'Fast Scan'}</span>
                 </Button>
               </div>
             </div>
-          </CardHeader>
+            </div>
+          </CardContent>
           <CardContent className="space-y-6">
             <div className="flex justify-center">
               <div className="relative border-2 border-dashed border-border rounded-lg p-8 bg-muted/30">
@@ -617,18 +583,11 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
             </div>
 
             {/* Enhanced Asset Information Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Asset Information Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-md bg-blue-100">
-                      <Hash className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold">Asset Details</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <Card className="border border-gray-200 dark:border-gray-700">
+                <CardContent className="p-4">
+                  <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Asset Details</h4>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tag ID</Label>
@@ -682,16 +641,9 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
               </Card>
 
               {/* Location Information Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-md bg-green-100">
-                      <MapPin className="h-4 w-4 text-green-600" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold">Location & Project</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <Card className="border border-gray-200 dark:border-gray-700">
+                <CardContent className="p-4">
+                  <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Location & Project</h4>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Building</Label>
@@ -704,10 +656,6 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Room</Label>
                       <p className="text-sm font-medium">{qrCodeData.qrCode.data.l?.room || qrCodeData.qrCode.data.location?.room || 'N/A'}</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Project</Label>
-                      <p className="text-sm font-medium">{qrCodeData.qrCode.data.pr || qrCodeData.qrCode.data.projectName || 'N/A'}</p>
                     </div>
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Coordinates</Label>
@@ -725,16 +673,9 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
               </Card>
 
               {/* Technical Details Card */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-md bg-purple-100">
-                      <Zap className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold">Technical Info</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <Card className="border border-gray-200 dark:border-gray-700">
+                <CardContent className="p-4">
+                  <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Technical Info</h4>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Generated</Label>
@@ -810,23 +751,14 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
 
       {/* Scanned Data Display */}
       {scannedData && (
-        <Card className="shadow-sm border-green-200 bg-green-50/30">
-          <CardHeader className="pb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 rounded-lg bg-green-500">
-                <Scan className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-xl font-semibold text-green-800">
-                  QR Code Scanned Successfully!
-                </CardTitle>
-                <CardDescription className="text-green-700 mt-1">
+        <Card className="border border-gray-200 dark:border-gray-700 bg-green-50/30">
+          <CardContent className="p-4">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-green-800">QR Code Scanned Successfully!</h3>
+              <p className="text-sm text-green-700 mt-1">
                   Asset details loaded from scanned QR code
-                </CardDescription>
-              </div>
+              </p>
             </div>
-          </CardHeader>
-          <CardContent>
             <div className="p-4 bg-white rounded-lg border border-green-200">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -844,7 +776,6 @@ export function QRCodeGenerator({ className }: QRCodeGeneratorProps) {
                     <p><span className="font-medium">Status:</span> {scannedData.st || scannedData.status}</p>
                     <p><span className="font-medium">Priority:</span> {scannedData.p || scannedData.priority}</p>
                     <p><span className="font-medium">Building:</span> {scannedData.l?.building || scannedData.location?.building || 'N/A'}</p>
-                    <p><span className="font-medium">Project:</span> {scannedData.pr || scannedData.projectName}</p>
                   </div>
                 </div>
               </div>

@@ -46,7 +46,7 @@ interface AIPredictionsChartProps {
   predictionsData: PredictionsData | null
   isLoading: boolean
   error: string | null
-  onRefresh: () => void
+  onRefreshAction: () => void
 }
 
 interface ChartData {
@@ -59,7 +59,7 @@ export function AIPredictionsChart({
   predictionsData,
   isLoading,
   error,
-  onRefresh
+  onRefreshAction
 }: AIPredictionsChartProps) {
   const [selectedChartType, setSelectedChartType] = useState<'pie' | 'bar'>('pie')
   const [selectedMetric, setSelectedMetric] = useState<'confidence' | 'maintenance' | 'assetType'>('confidence')
@@ -142,9 +142,6 @@ export function AIPredictionsChart({
                     strokeDasharray={strokeDasharray}
                     strokeDashoffset={strokeDashoffset}
                     className="transition-all duration-700 hover:stroke-opacity-80 cursor-pointer"
-                    style={{
-                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
-                    }}
                   />
                 )
               })}
@@ -181,13 +178,13 @@ export function AIPredictionsChart({
 
   const renderBarChart = (data: Record<string, number>) => {
     const maxValue = Math.max(...Object.values(data))
-    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
+    const colors = ['#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB', '#F3F4F6', '#F9FAFB']
     
     if (maxValue === 0) {
       return (
         <div className="text-center py-8">
-          <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground font-medium text-sm">No data available for bar chart</p>
+          <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium text-sm">No data available for bar chart</p>
         </div>
       )
     }
@@ -195,58 +192,58 @@ export function AIPredictionsChart({
     return (
       <div className="space-y-4">
         <div className="text-center">
-          <h4 className="text-lg font-bold text-foreground mb-1">Comparative Analysis</h4>
-          <p className="text-xs text-muted-foreground">Data visualization</p>
+          <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Comparative Analysis</h4>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Data visualization</p>
         </div>
         
         <div className="flex items-start space-x-6">
-          {/* Chart Container - Vertical Scrollable */}
+          {/* Chart Container */}
           <div className="flex-1 min-w-0">
-            <div className="bg-gradient-to-br from-background to-muted rounded-xl border border-border p-6 shadow-lg">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
               <div className="h-64 relative">
-                {/* Y-axis with refined styling */}
-                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted-foreground font-medium">
-                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value,) => (
+                {/* Y-axis */}
+                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-sm text-gray-500 dark:text-gray-400 font-medium">
+                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
                     <div key={value} className="flex items-center">
                       <span className="w-8 text-right font-semibold">{value}</span>
-                      <div className="w-2 h-px bg-border ml-2"></div>
+                      <div className="w-2 h-px bg-gray-300 dark:bg-gray-600 ml-2"></div>
                     </div>
                   ))}
                 </div>
                 
-                {/* Enhanced Grid lines */}
+                {/* Grid lines */}
                 <div className="absolute inset-0 flex flex-col justify-between ml-10">
                   {[0, 1, 2, 3, 4].map((i) => (
-                    <div key={i} className="w-full h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
+                    <div key={i} className="w-full h-px bg-gray-200 dark:bg-gray-700"></div>
                   ))}
                 </div>
                 
-                {/* Vertical Scrollable Chart Area */}
+                {/* Chart Area */}
                 <div className="ml-10 h-full overflow-y-auto">
                   <div className="flex items-end space-x-8 min-w-max px-6 pb-4">
                     {Object.entries(data).map(([key, value]: [string, number], index: number) => (
                       <div key={key} className="flex flex-col items-center">
                         {/* Value Label Above Bar */}
                         <div className="mb-2 text-center">
-                          <span className="text-xs font-bold text-foreground">{value}</span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-white">{value}</span>
                         </div>
                         
-                        {/* Refined Bar Design */}
+                        {/* Bar Design */}
                         <div 
-                          className="w-12 rounded-t-lg transition-all duration-700 shadow-md min-h-[6px] relative overflow-hidden"
+                          className="w-12 rounded-t-lg transition-all duration-500 min-h-[6px] relative"
                           style={{ 
                             height: `${(value / maxValue) * 200}px`,
-                            background: `linear-gradient(135deg, ${colors[index % colors.length]} 0%, ${colors[index % colors.length]}dd 50%, ${colors[index % colors.length]} 100%)`
+                            backgroundColor: colors[index % colors.length]
                           }}
                         >
-                          {/* Bar Shine Effect */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white to-transparent opacity-30"></div>
-                          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-white to-transparent opacity-20"></div>
-                          
                           {/* Bar Border */}
-                          <div className="absolute inset-0 rounded-t-lg border border-white/20"></div>
+                          <div className="absolute inset-0 rounded-t-lg border border-gray-300 dark:border-gray-600"></div>
                         </div>
                         
+                        {/* Category Label */}
+                        <div className="mt-2 text-center">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">{key}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -255,23 +252,23 @@ export function AIPredictionsChart({
             </div>
           </div>
 
-          {/* Enhanced Legend with Better Visibility */}
+          {/* Legend */}
           <div className="flex-shrink-0">
-            <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
-              <h5 className="text-sm font-semibold text-foreground mb-4 border-b border-border pb-2">Categories</h5>
-              <div className="space-y-4">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Categories</h5>
+              <div className="space-y-3">
                 {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-                  <div key={key} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-accent transition-colors">
+                  <div key={key} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <div 
-                      className="w-4 h-4 rounded-sm shadow-sm"
+                      className="w-4 h-4 rounded-sm"
                       style={{ backgroundColor: colors[index % colors.length] }}
                     />
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-bold capitalize text-foreground">{key}</span>
-                        <span className="text-sm font-bold text-muted-foreground">{value}</span>
+                        <span className="text-sm font-bold capitalize text-gray-900 dark:text-white">{key}</span>
+                        <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{value}</span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                         <div 
                           className="h-2 rounded-full transition-all duration-500"
                           style={{ 
@@ -322,29 +319,19 @@ export function AIPredictionsChart({
   // Loading state
   if (isLoading) {
     return (
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center text-foreground">
-                <Brain className="w-6 h-6 mr-3 text-primary" />
-                AI Predictions Analytics
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Graphical representation of AI predictions
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" disabled className="border-border text-muted-foreground">
-              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              Loading...
-            </Button>
-          </div>
+      <Card className="border border-gray-200 dark:border-gray-700">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-base">
+            <Brain className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+            AI Predictions Analytics
+          </CardTitle>
+          <CardDescription className="text-sm">Graphical representation of AI predictions</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground font-medium">Loading AI predictions...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 dark:border-gray-400 mx-auto mb-4"></div>
+              <p className="text-gray-500 dark:text-gray-400 font-medium">Loading AI predictions...</p>
             </div>
           </div>
         </CardContent>
@@ -355,31 +342,20 @@ export function AIPredictionsChart({
   // Error state
   if (error) {
     return (
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-destructive/10 to-destructive/5">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center text-destructive">
-                <Brain className="w-6 h-6 mr-3 text-destructive" />
-                AI Predictions Analytics
-              </CardTitle>
-              <CardDescription className="text-destructive/70">
-                Graphical representation of AI predictions
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={onRefresh} className="border-destructive/20 text-destructive hover:bg-destructive/10">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Retry
-            </Button>
-          </div>
+      <Card className="border border-gray-200 dark:border-gray-700">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-base">
+            <Brain className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+            AI Predictions Analytics
+          </CardTitle>
+          <CardDescription className="text-sm">Graphical representation of AI predictions</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <AlertTriangle className="w-16 h-16 text-destructive mx-auto mb-6" />
-            <h3 className="text-xl font-semibold text-destructive mb-3">Failed to load predictions</h3>
-            <p className="text-destructive/70 mb-6 max-w-md mx-auto">{error}</p>
-            <Button onClick={onRefresh} className="bg-destructive hover:bg-destructive/90">
-              <RefreshCw className="w-4 h-4 mr-2" />
+            <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto mb-6" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Failed to load predictions</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">{error}</p>
+            <Button onClick={onRefreshAction} className="bg-gray-600 hover:bg-gray-700 text-white">
               Try Again
             </Button>
           </div>
@@ -391,31 +367,20 @@ export function AIPredictionsChart({
   // Empty state
   if (!predictionsData?.success || !predictionsData?.predictions?.length) {
     return (
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center text-foreground">
-                <Brain className="w-6 h-6 mr-3 text-muted-foreground" />
-                AI Predictions Analytics
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Graphical representation of AI predictions
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={onRefresh} className="border-border text-muted-foreground hover:bg-accent">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
+      <Card className="border border-gray-200 dark:border-gray-700">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-base">
+            <Brain className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+            AI Predictions Analytics
+          </CardTitle>
+          <CardDescription className="text-sm">Graphical representation of AI predictions</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <Brain className="w-16 h-16 text-muted-foreground mx-auto mb-6" />
-            <h3 className="text-xl font-semibold text-foreground mb-3">No predictions available</h3>
-            <p className="text-muted-foreground mb-6">AI predictions will appear here once data is available</p>
-            <Button onClick={onRefresh} variant="outline">
-              <RefreshCw className="w-4 h-4 mr-2" />
+            <Brain className="w-16 h-16 text-gray-400 mx-auto mb-6" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">No predictions available</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">AI predictions will appear here once data is available</p>
+            <Button onClick={onRefreshAction} variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
               Refresh Data
             </Button>
           </div>
@@ -425,15 +390,15 @@ export function AIPredictionsChart({
   }
 
   return (
-    <Card className="shadow-lg border-0 bg-gradient-to-br from-background to-muted h-full">
+    <Card className="border border-gray-200 dark:border-gray-700 h-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center text-foreground text-lg">
-              <Brain className="w-5 h-5 mr-2 text-primary" />
+            <CardTitle className="flex items-center text-base">
+              <Brain className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
               AI Predictions Analytics
             </CardTitle>
-            <CardDescription className="text-muted-foreground text-sm">
+            <CardDescription className="text-sm">
               Advanced graphical representation of AI predictions
             </CardDescription>
           </div>
@@ -442,34 +407,25 @@ export function AIPredictionsChart({
               variant="outline" 
               size="sm" 
               onClick={() => setShowDetails(!showDetails)}
-              className="border-border text-muted-foreground hover:bg-accent"
+              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <Eye className="w-4 h-4 mr-1" />
               {showDetails ? 'Hide' : 'Show'} Details
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onRefresh}
-              className="border-border text-muted-foreground hover:bg-accent"
-            >
-              <RefreshCw className="w-4 h-4 mr-1" />
-              Refresh
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="space-y-3">
-          {/* Chart Type Selection - More Compact */}
-          <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
+        <div className="space-y-4">
+          {/* Chart Type Selection */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
-                  <Filter className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-semibold text-muted-foreground">Chart:</span>
+                  <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Chart:</span>
                   <Select value={selectedChartType} onValueChange={(value: string) => setSelectedChartType(value as 'pie' | 'bar')}>
-                    <SelectTrigger className="w-24 h-8 bg-background border-border text-xs">
+                    <SelectTrigger className="w-24 h-8 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -479,10 +435,10 @@ export function AIPredictionsChart({
                   </Select>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Target className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-semibold text-muted-foreground">Metric:</span>
+                  <Target className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Metric:</span>
                   <Select value={selectedMetric} onValueChange={(value: string) => setSelectedMetric(value as 'confidence' | 'maintenance' | 'assetType')}>
-                    <SelectTrigger className="w-32 h-8 bg-background border-border text-xs">
+                    <SelectTrigger className="w-32 h-8 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -494,60 +450,60 @@ export function AIPredictionsChart({
                 </div>
               </div>
               
-              <Badge variant="outline" className="border-border text-muted-foreground font-semibold text-xs">
+              <Badge variant="outline" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold text-sm">
                 {predictionsData?.count || 0} Predictions
               </Badge>
             </div>
           </div>
 
-          {/* Chart Display - More Compact */}
-          <div className="bg-card rounded-lg p-3 shadow-sm border border-border flex-1">
+          {/* Chart Display */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 flex-1">
             {renderChart()}
           </div>
 
-          {/* Detailed Information Panel - More Compact */}
+          {/* Detailed Information Panel */}
           {showDetails && (
-            <div className="bg-card rounded-lg p-3 shadow-sm border border-border">
-              <div className="flex items-center space-x-2 mb-2">
-                <Info className="w-4 h-4 text-primary" />
-                <h4 className="text-sm font-semibold text-foreground">Prediction Details</h4>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-2 mb-3">
+                <Info className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Prediction Details</h4>
               </div>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h5 className="font-medium text-muted-foreground mb-1 text-sm">Confidence Distribution</h5>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
+                  <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm">Confidence Distribution</h5>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
                       <span>High (&gt;80%):</span>
-                      <span className="font-semibold text-green-600 dark:text-green-400">
+                      <span className="font-semibold text-gray-900 dark:text-white">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.8).length}
                       </span>
                     </div>
-                    <div className="flex justify-between text-xs">
+                    <div className="flex justify-between text-sm">
                       <span>Medium (60-80%):</span>
-                      <span className="font-semibold text-yellow-600 dark:text-yellow-400">
+                      <span className="font-semibold text-gray-900 dark:text-white">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.6 && p.prediction.confidence <= 0.8).length}
                       </span>
                     </div>
-                    <div className="flex justify-between text-xs">
+                    <div className="flex justify-between text-sm">
                       <span>Low (&lt;60%):</span>
-                      <span className="font-semibold text-red-600 dark:text-red-400">
+                      <span className="font-semibold text-gray-900 dark:text-white">
                         {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length}
                       </span>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <h5 className="font-medium text-muted-foreground mb-1 text-sm">Asset Types</h5>
-                  <div className="space-y-1">
+                  <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm">Asset Types</h5>
+                  <div className="space-y-2">
                     {Object.entries(
                       predictionsData.predictions.reduce((acc: Record<string, number>, p: Prediction) => {
                         acc[p.assetType] = (acc[p.assetType] || 0) + 1
                         return acc
                       }, {})
                     ).map(([type, count]) => (
-                      <div key={type} className="flex justify-between text-xs">
+                      <div key={type} className="flex justify-between text-sm">
                         <span className="capitalize">{type}:</span>
-                        <span className="font-semibold text-primary">{count}</span>
+                        <span className="font-semibold text-gray-900 dark:text-white">{count}</span>
                       </div>
                     ))}
                   </div>

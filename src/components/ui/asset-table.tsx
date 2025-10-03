@@ -1,13 +1,12 @@
 import React from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { Button } from './button';
-import { Badge } from './badge';
 import { Asset, getStatusBadge, getPriorityBadge } from '../../lib/Report';
 import { 
   Building2,
-  ChevronDown,
-  ChevronUp,
-  Eye
+  ArrowUpDown,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 interface AssetTableProps {
@@ -25,84 +24,124 @@ export const AssetTable: React.FC<AssetTableProps> = ({
   onSort,
   onViewDetails
 }) => {
-  const getSortIcon = (field: string) => {
-    if (sortBy !== field) return null;
-    return sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+  const handleSort = (field: string) => {
+    onSort(field);
   };
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-accent/50">
-            <TableHead 
-              className="cursor-pointer hover:bg-accent transition-colors"
-              onClick={() => onSort('tagId')}
+    <div className="overflow-x-auto bg-white">
+      <table className="w-full border-collapse font-sans text-sm">
+        <thead>
+          <tr className="bg-white border-b border-blue-200">
+            <th className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs">
+              #
+            </th>
+            <th 
+              className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs cursor-pointer hover:bg-blue-100 transition-colors"
+              onClick={() => handleSort('tagId')}
             >
               <div className="flex items-center gap-1">
-                Asset
-                {getSortIcon('tagId')}
+                <span>ASSET ID</span>
+                <ArrowUpDown className="w-3 h-3" />
               </div>
-            </TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Priority</TableHead>
-            <TableHead className="w-12"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {assets.map((asset) => {
+            </th>
+            <th 
+              className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs cursor-pointer hover:bg-blue-100 transition-colors"
+              onClick={() => handleSort('createdAt')}
+            >
+              <div className="flex items-center gap-1">
+                <span>DATE</span>
+                <ArrowUpDown className="w-3 h-3" />
+              </div>
+            </th>
+            <th 
+              className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs cursor-pointer hover:bg-blue-100 transition-colors"
+              onClick={() => handleSort('assetType')}
+            >
+              <div className="flex items-center gap-1">
+                <span>ASSET TYPE</span>
+                <ArrowUpDown className="w-3 h-3" />
+              </div>
+            </th>
+            <th 
+              className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs cursor-pointer hover:bg-blue-100 transition-colors"
+              onClick={() => handleSort('brand')}
+            >
+              <div className="flex items-center gap-1">
+                <span>BRAND</span>
+                <ArrowUpDown className="w-3 h-3" />
+              </div>
+            </th>
+            <th 
+              className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs cursor-pointer hover:bg-blue-100 transition-colors"
+              onClick={() => handleSort('status')}
+            >
+              <div className="flex items-center gap-1">
+                <span>STATUS</span>
+                <ArrowUpDown className="w-3 h-3" />
+              </div>
+            </th>
+            <th className="border border-blue-200 px-3 py-2 text-center font-semibold text-blue-900 bg-blue-50 text-xs">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {assets.map((asset, index) => {
             const statusBadge = getStatusBadge(asset.status || 'active');
-            const priorityBadge = getPriorityBadge(asset.priority || 'medium');
             
             return (
-              <TableRow key={asset._id} className="hover:bg-accent/50 transition-colors">
-                <TableCell>
-                  <div>
-                    <div className="font-medium text-foreground">{asset.brand} {asset.model}</div>
-                    <div className="text-sm text-muted-foreground font-mono">{asset.tagId}</div>
-                    {asset.serialNumber && (
-                      <div className="text-xs text-muted-foreground/70">SN: {asset.serialNumber}</div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-muted-foreground" />
-                    <div className="text-sm text-foreground">
-                      {asset.location.building && `${asset.location.building}`}
-                      {asset.location.floor && ` - ${asset.location.floor}`}
-                      {asset.location.room && ` - ${asset.location.room}`}
-                      {!asset.location.building && !asset.location.floor && !asset.location.room && 'Location not specified'}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge className={`${statusBadge.className} transition-colors`}>
+              <tr key={asset._id} className="hover:bg-gray-50 transition-colors">
+                <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
+                  {index + 1}
+                </td>
+                <td className="border border-blue-200 px-3 py-2">
+                  <span className="text-xs font-medium text-blue-600 cursor-pointer hover:underline">
+                    {asset.tagId}
+                  </span>
+                </td>
+                <td className="border border-blue-200 px-3 py-2 text-xs text-gray-700">
+                  {asset.createdAt ? new Date(asset.createdAt).toISOString().split('T')[0] : 'N/A'}
+                </td>
+                <td className="border border-blue-200 px-3 py-2 text-xs text-gray-700">
+                  {asset.assetType || 'N/A'}
+                </td>
+                <td className="border border-blue-200 px-3 py-2 text-xs text-gray-700">
+                  {asset.brand || 'N/A'}
+                </td>
+                <td className="border border-blue-200 px-3 py-2">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusBadge.className}`}>
                     {statusBadge.label}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge className={`${priorityBadge.className} transition-colors`}>
-                    {priorityBadge.label}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => onViewDetails?.(asset)}
-                    className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground transition-colors"
-                    title="View Details"
-                  >
-                    <Eye className="w-4 h-4 text-muted-foreground hover:text-accent-foreground" />
-                  </Button>
-                </TableCell>
-              </TableRow>
+                  </span>
+                </td>
+                <td className="border border-blue-200 px-3 py-2">
+                  <div className="flex items-center gap-1 justify-center">
+                    <button 
+                      className="w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-600 rounded hover:bg-blue-50 transition-colors"
+                      onClick={() => onViewDetails?.(asset)}
+                      title="View Asset"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button 
+                      className="w-8 h-8 flex items-center justify-center text-green-600 border border-green-600 rounded hover:bg-green-50 transition-colors"
+                      onClick={() => onViewDetails?.(asset)}
+                      title="Edit Asset"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
+                      className="w-8 h-8 flex items-center justify-center text-red-600 border border-red-600 rounded hover:bg-red-50 transition-colors"
+                      onClick={() => onViewDetails?.(asset)}
+                      title="Delete Asset"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
             );
           })}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
     </div>
   );
 }; 

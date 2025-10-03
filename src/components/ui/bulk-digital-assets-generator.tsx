@@ -223,7 +223,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
   const selectedFormat = BARCODE_FORMATS.find(f => f.value === barcodeFormat)
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("space-y-4", className)}>
       {showSuccessToast && (
         <SuccessToast
           message={successMessage}
@@ -231,45 +231,19 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
         />
       )}
       
-      {/* Project Info Banner */}
-      {user?.projectName && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-blue-700">
-              Currently working with project: <span className="font-bold">{user.projectName}</span>
-            </span>
-          </div>
-        </div>
-      )}
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Package className="h-5 w-5 text-blue-600" />
+      <Card className="border border-gray-200 dark:border-gray-700">
+        <CardContent className="p-0">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Bulk Digital Assets Generator</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Select an asset and generate QR code, barcode, and NFC data simultaneously
+            </p>
             </div>
-            <div>
-              <CardTitle className="text-lg font-semibold">
-                Bulk Digital Assets Generator
-              </CardTitle>
-              <CardDescription className="text-gray-600 mt-1">
-                Select an asset from your project and generate QR code, barcode, and NFC data simultaneously
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <div className="p-4 space-y-4">
           {/* Asset Selection Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <Label className="text-sm font-medium text-gray-700">Step 1: Select Asset</Label>
-            </div>
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-700">Select Asset</Label>
             
             {assetsLoading && (
               <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
@@ -326,7 +300,7 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
               <div className="text-center text-xs text-gray-500">
                 {assetsLoading ? 'Loading...' : (
                   assets.length === 0 ? (
-                    <span className="text-red-500">No assets found for project: {user?.projectName}</span>
+                    <span className="text-red-500">No assets found</span>
                   ) : (
                     <span>{filteredAssets.length} assets available</span>
                   )
@@ -410,15 +384,10 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
 
           {/* Generate Button Section */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <Label className="text-sm font-medium text-gray-700">Step 2: Generate All Digital Assets</Label>
-            </div>
-
             <Button 
               onClick={handleGenerate} 
               disabled={isGenerating || !selectedAssetId}
-              className="w-full h-10 text-sm font-medium"
+                className="w-full h-10 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isGenerating ? (
                 <div className="flex items-center gap-2">
@@ -437,35 +406,29 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                 </div>
               )}
             </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {digitalAssets && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Summary Card */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Package className="h-5 w-5 text-blue-600" />
-                  </div>
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-4">
                   <div>
-                    <CardTitle className="text-lg font-semibold">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                       Generated Digital Assets
-                    </CardTitle>
-                    <CardDescription className="text-gray-600 mt-1">
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                       All digital assets generated successfully for asset {digitalAssets.digitalAssets.qrCode.data.tagId}
-                    </CardDescription>
-                  </div>
+                  </p>
                 </div>
                 <Badge variant="secondary" className="text-sm px-3 py-1">
                   {digitalAssets.digitalAssets.qrCode.data.tagId}
                 </Badge>
               </div>
-            </CardHeader>
-            <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
                   <CheckCircle className="h-4 w-4 text-green-600" />
@@ -493,21 +456,14 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
           </Card>
 
           {/* QR Code Preview */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <QrCode className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-semibold">QR Code</CardTitle>
-                  <CardDescription className="text-gray-600 mt-1">
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">QR Code</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     QR code for asset {digitalAssets.digitalAssets.qrCode.data.tagId}
-                  </CardDescription>
+                </p>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
               <div className="flex justify-center mb-4">
                 <Button
                   variant="outline"
@@ -588,21 +544,14 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
           </Card>
 
           {/* Barcode Preview */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Barcode className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-semibold">Barcode</CardTitle>
-                  <CardDescription className="text-gray-600 mt-1">
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Barcode</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Barcode for asset {digitalAssets.digitalAssets.barcode.data}
-                  </CardDescription>
+                </p>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
               <div className="flex justify-center mb-4">
                 <Button
                   variant="outline"
@@ -683,21 +632,14 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
           </Card>
 
           {/* NFC Data Preview */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Wifi className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-semibold">NFC Data</CardTitle>
-                  <CardDescription className="text-gray-600 mt-1">
+          <Card className="border border-gray-200 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">NFC Data</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     NFC data for asset {digitalAssets.digitalAssets.nfcData.data.id}
-                  </CardDescription>
+                </p>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
               <div className="flex justify-center">
                 <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
                   <div className="relative w-72 h-40 bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
@@ -722,16 +664,10 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
               {/* NFC Data Information Cards */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* NFC Basic Info Card */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-purple-100">
-                        <Wifi className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <CardTitle className="text-base font-semibold">NFC Information</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                <Card className="border border-gray-200 dark:border-gray-700">
+                  <CardContent className="p-4">
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3">NFC Information</h4>
+                    <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Type</Label>
@@ -767,21 +703,16 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                           {digitalAssets.digitalAssets.nfcData.data.priority}
                         </Badge>
                       </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* NFC Technical Details Card */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-md bg-blue-100">
-                        <Settings className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <CardTitle className="text-base font-semibold">Technical Details</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                <Card className="border border-gray-200 dark:border-gray-700">
+                  <CardContent className="p-4">
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Technical Details</h4>
+                    <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Timestamp</Label>
@@ -805,9 +736,6 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                         <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Assigned To</Label>
                         <p className="text-sm font-medium">{digitalAssets.digitalAssets.nfcData.data.assignedTo}</p>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Project</Label>
-                        <p className="text-sm font-medium">{digitalAssets.digitalAssets.nfcData.data.projectName}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -819,16 +747,10 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
           {/* Asset Information Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Asset Information Card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-blue-100">
-                    <Hash className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <CardTitle className="text-base font-semibold">Asset Information</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <Card className="border border-gray-200 dark:border-gray-700">
+              <CardContent className="p-4">
+                <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Asset Information</h4>
+                <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Type</Label>
@@ -864,21 +786,16 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                     <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Assigned To</Label>
                     <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.assignedTo}</p>
                   </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Location Information Card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-green-100">
-                    <MapPin className="h-4 w-4 text-green-600" />
-                  </div>
-                  <CardTitle className="text-base font-semibold">Location Details</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <Card className="border border-gray-200 dark:border-gray-700">
+              <CardContent className="p-4">
+                <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Location Details</h4>
+                <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Building</Label>
@@ -892,9 +809,6 @@ export function BulkDigitalAssetsGenerator({ className }: BulkDigitalAssetsGener
                     <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Room</Label>
                     <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.location?.room || 'N/A'}</p>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Project</Label>
-                      <p className="text-sm font-medium">{digitalAssets.digitalAssets.qrCode.data.projectName || 'N/A'}</p>
                   </div>
                 </div>
               </CardContent>

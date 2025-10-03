@@ -209,7 +209,8 @@ export const LocationModal: React.FC<LocationModalProps> = ({
             <LocationDetails location={location} onClose={onClose} />
           </ScrollArea>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <ScrollArea className="max-h-[60vh]">
+            <form onSubmit={handleSubmit} className="space-y-6 pr-4">
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium border-b pb-2">Basic Information</h3>
@@ -362,60 +363,44 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </div>
             </div>
 
-            {/* Settings */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium border-b pb-2">Settings</h3>
-              
-              <div className="flex items-start space-x-3 p-4 border rounded-lg bg-gray-50">
-                <Checkbox
-                  id="geocoding"
-                  checked={enableGeocoding}
-                  onCheckedChange={(checked) => setEnableGeocoding(checked as boolean)}
-                />
-                <div>
-                  <Label htmlFor="geocoding" className="font-medium">
-                    Automatic Coordinate Detection
-                  </Label>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Automatically convert addresses to GPS coordinates
+            {/* Form Validation Errors */}
+            {formErrors.coordinates && (
+              <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <p className="text-sm text-red-700">
+                    {formErrors.coordinates}
                   </p>
                 </div>
               </div>
+            )}
 
-              {/* Form Validation Errors */}
-              {formErrors.coordinates && (
-                <div className="border border-red-200 rounded-lg p-4 bg-red-50">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-red-600" />
-                    <p className="text-sm text-red-700">
-                      {formErrors.coordinates}
-                    </p>
-                  </div>
-                </div>
-              )}
+            {/* Hidden coordinates for form submission */}
+            <input type="hidden" value={formData.coordinates.latitude} />
+            <input type="hidden" value={formData.coordinates.longitude} />
 
-              {/* Hidden coordinates for form submission */}
-              <input type="hidden" value={formData.coordinates.latitude} />
-              <input type="hidden" value={formData.coordinates.longitude} />
-            </div>
+            </form>
+          </ScrollArea>
+        )}
 
-            {/* Form Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={loading || geocodingLoading || locationLoading}
-              >
-                {loading ? 'Saving...' : mode === 'create' ? 'Create Location' : 'Update Location'}
-              </Button>
-            </div>
-          </form>
+        {/* Form Actions - Outside ScrollArea */}
+        {mode !== 'view' && (
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading || geocodingLoading || locationLoading}
+              onClick={handleSubmit}
+            >
+              {loading ? 'Saving...' : mode === 'create' ? 'Create Location' : 'Update Location'}
+            </Button>
+          </div>
         )}
       </DialogContent>
     </Dialog>

@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { 
   Plus, 
   Edit, 
@@ -14,7 +13,7 @@ import {
   MapPin,
   RefreshCw,
   Eye,
-  QrCode
+  Search
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ChecklistFormModal from '@/components/ui/checklist-form-modal'
@@ -81,21 +80,6 @@ const STATUS_COLORS = {
   archived: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
 }
 
-const CHECKLIST_TYPES = [
-  'Daily Checklist',
-  'Weekly Checklist',
-  'Monthly Checklist',
-  'Quarterly Checklist',
-  'Annual Checklist',
-  'Maintenance Checklist',
-  'Safety Checklist',
-  'Quality Checklist',
-  'Compliance Checklist',
-  'Training Checklist',
-  'Inspection Checklist',
-  'Audit Checklist',
-  'Custom Checklist'
-]
 
 export default function ChecklistPage() {
   const { isAuthenticated } = useAuth()
@@ -106,11 +90,16 @@ export default function ChecklistPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [editingChecklist, setEditingChecklist] = useState<Checklist | null>(null)
   const [viewingChecklist, setViewingChecklist] = useState<Checklist | null>(null)
-  const [filterPriority, setFilterPriority] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterType, setFilterType] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [sortField, setSortField] = useState<string>("title")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  const [currentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+  const [filterPriority, setFilterPriority] = useState<string>("")
+  const [filterStatus, setFilterStatus] = useState<string>("")
+  const [filterType, setFilterType] = useState<string>("")
 
 
 
@@ -207,14 +196,43 @@ export default function ChecklistPage() {
 
 
 
-  // Filter checklists based on filters
+  // Filter checklists based on filters and search
   const filteredChecklists = checklists.filter(checklist => {
     const matchesPriority = !filterPriority || checklist.priority === filterPriority
     const matchesStatus = !filterStatus || checklist.status === filterStatus
     const matchesType = !filterType || checklist.type === filterType
+    const matchesSearch = !searchTerm || 
+      checklist.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      checklist.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      checklist.type.toLowerCase().includes(searchTerm.toLowerCase())
 
-    return matchesPriority && matchesStatus && matchesType
+    return matchesPriority && matchesStatus && matchesType && matchesSearch
   })
+
+  // Sort checklists
+  const sortedChecklists = [...filteredChecklists].sort((a, b) => {
+    const aValue = a[sortField as keyof Checklist] || ""
+    const bValue = b[sortField as keyof Checklist] || ""
+    
+    if (sortDirection === "asc") {
+      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+    } else {
+      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
+    }
+  })
+
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedChecklists = sortedChecklists.slice(startIndex, endIndex)
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    } else {
+      setSortField(field)
+      setSortDirection("asc")
+    }
+  }
 
   const handleCreateChecklist = () => {
     // Add success notification
@@ -348,11 +366,6 @@ export default function ChecklistPage() {
 
 
 
-  const clearFilters = () => {
-    setFilterPriority('')
-    setFilterStatus('')
-    setFilterType('')
-  }
 
   // Check if user is authenticated
   if (!isAuthenticated) {
@@ -371,227 +384,152 @@ export default function ChecklistPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Page Header */}
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-lg flex items-center justify-center shadow-lg">
-                  <CheckSquare className="w-5 h-5 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                    Checklist Management
-                  </h1>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-                    Create, manage, and track task checklists for your organization
-                  </p>
-                </div>
+    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+      <div className="flex-1 overflow-auto">
+        {/* Main Content */}
+        <main className="px-4 pb-1 sm:px-6 sm:pb-2 space-y-4 sm:space-y-6">
+          {/* Simple Search and Actions */}
+          <div className="flex items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <Input
+                placeholder="Search checklists..."
+                className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
               </div>
               
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => window.location.href = '/admin/checklist/scan'}
-                  variant="outline"
-                  className="flex items-center gap-2 border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-400 text-blue-700 dark:text-blue-300"
-                >
-                  <QrCode className="w-4 h-4" />
-                  Scan QR Code
-                </Button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
                 <Button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Plus className="w-4 h-4" />
-                  Create Checklist
+                <span>Add Checklist</span>
                 </Button>
-              </div>
             </div>
           </div>
 
-          {/* Main Content Card */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="p-4 sm:p-6">
-              {/* Header Section */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/20 rounded-full">
-                      <CheckSquare className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                        Checklist Tools
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Filter and manage your checklists by type, priority, and status
-                  </p>
-                </div>
-              </div>
-
-              {/* Filters */}
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6">
-                    <Select value={filterType} onValueChange={setFilterType}>
-                      <SelectTrigger className="border-gray-200 dark:border-gray-700">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Types</SelectItem>
-                        {CHECKLIST_TYPES.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={filterPriority} onValueChange={setFilterPriority}>
-                      <SelectTrigger className="border-gray-200 dark:border-gray-700">
-                        <SelectValue placeholder="Priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Priorities</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="critical">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="border-gray-200 dark:border-gray-700">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Status</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="archived">Archived</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Button
-                      variant="outline"
-                      onClick={clearFilters}
-                      className="flex items-center gap-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Clear
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Loading State */}
-              {isLoading && (
-                <div className="p-12 text-center">
-                  <div className="relative">
-                    <RefreshCw className="w-16 h-16 text-blue-500 mx-auto mb-4 animate-spin" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    Loading Checklists...
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Please wait while we fetch your checklists from the server.
-                  </p>
-                </div>
-              )}
 
               {/* Checklists Table */}
-              {!isLoading && (
-                <div className="overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
+              <Card className="border border-gray-200 dark:border-gray-700">
+                <CardContent className="p-0">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="flex items-center gap-3">
+                        <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+                        <span className="text-gray-600 dark:text-gray-400">Loading checklists...</span>
+                  </div>
+                  </div>
+                  ) : (
+                    <div className="overflow-x-auto bg-white">
+                      <table className="w-full border-collapse font-sans text-base">
                       <thead>
-                        <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                            Title
+                          <tr className="bg-white border-b border-blue-200">
+                            <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                              #
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                            Type
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              onClick={() => handleSort("title")}
+                            >
+                              TITLE
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                            Priority
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              onClick={() => handleSort("type")}
+                            >
+                              TYPE
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                            Status
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              onClick={() => handleSort("priority")}
+                            >
+                              PRIORITY
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                            Location
+                            <th 
+                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              onClick={() => handleSort("status")}
+                            >
+                              STATUS
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                            Actions
+                            <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                              LOCATION
                           </th>
+                            <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                        {filteredChecklists.map((checklist) => (
-                          <tr key={checklist._id} className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {checklist.title}
+                        <tbody>
+                          {paginatedChecklists.map((checklist, index) => (
+                            <tr key={checklist._id} className="hover:bg-gray-50 transition-colors">
+                              <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
+                                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                                  {startIndex + index + 1}
                                 </div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xs mt-1">
-                                  {checklist.description}
+                              </td>
+                              <td className="border border-blue-200 px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1.5 bg-blue-100 rounded">
+                                    <CheckSquare className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                      {checklist.title}
+                                    </span>
+                                    <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-xs">
+                                      {checklist.description}
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge variant="outline" className="text-xs">
+                              <td className="border border-blue-200 px-4 py-3">
+                                <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
                                 {checklist.type}
-                              </Badge>
+                                </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge className={cn('text-xs font-medium', PRIORITY_COLORS[checklist.priority])}>
+                              <td className="border border-blue-200 px-4 py-3">
+                                <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-sm font-medium', PRIORITY_COLORS[checklist.priority])}>
                                 {checklist.priority}
-                              </Badge>
+                                </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge className={cn('text-xs font-medium', STATUS_COLORS[checklist.status])}>
+                              <td className="border border-blue-200 px-4 py-3">
+                                <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-sm font-medium', STATUS_COLORS[checklist.status])}>
                                 {checklist.status}
-                              </Badge>
+                                </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900 dark:text-white">
+                              <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Building className="w-4 h-4 text-blue-500" />
-                                  <span className="font-medium">{checklist.location.building}</span>
+                                  <span>{checklist.location.building}</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center gap-2 text-gray-500">
                                   <MapPin className="w-4 h-4 text-green-500" />
                                   <span>{checklist.location.zone}</span>
-                                </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
+                              <td className="border border-blue-200 px-4 py-3">
+                                <div className="flex items-center gap-2 justify-center">
+                                  <button 
+                                    className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
                                   onClick={() => handleView(checklist)}
-                                  className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                                   title="View Details"
                                 >
                                   <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
+                                  </button>
+                                  <button 
+                                    className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
                                   onClick={() => handleEdit(checklist)}
-                                  className="h-8 w-8 p-0 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
                                   title="Edit Checklist"
                                 >
                                   <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
+                                  </button>
+                                  <button 
+                                    className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
                                   onClick={() => handleDeleteChecklist(checklist._id)}
                                   disabled={isDeleting === checklist._id}
-                                  className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
                                   title="Delete Checklist"
                                 >
                                   {isDeleting === checklist._id ? (
@@ -599,46 +537,45 @@ export default function ChecklistPage() {
                                   ) : (
                                     <Trash2 className="w-4 h-4" />
                                   )}
-                                </Button>
+                                  </button>
                               </div>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  </div>
                 </div>
               )}
+                </CardContent>
+              </Card>
 
               {/* Empty State */}
-              {!isLoading && filteredChecklists.length === 0 && (
-                <div className="p-12 text-center">
-                  <div className="relative">
-                    <CheckSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No checklists found
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    {filterPriority || filterStatus || filterType
-                      ? 'Try adjusting your filters'
+              {!isLoading && paginatedChecklists.length === 0 && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <CheckSquare className="w-12 h-12 text-gray-400" />
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">No checklists found</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {filterPriority || filterStatus || filterType || searchTerm
+                          ? 'Try adjusting your filters or search terms'
                       : 'Create your first checklist to get started'
                     }
                   </p>
-                  {!filterPriority && !filterStatus && !filterType && (
+                    </div>
+                    {!filterPriority && !filterStatus && !filterType && !searchTerm && (
                     <Button 
                       onClick={() => setIsCreateModalOpen(true)}
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Create Checklist
                     </Button>
                   )}
+                  </div>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
+            </main>
       </div>
 
       {/* Create/Edit Modal */}

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Badge } from './badge'
@@ -111,6 +112,7 @@ interface PermissionsUIProps {
   onClearError?: () => void
   bearerToken?: string
   role?: string
+  onBackToAssets?: () => void
 }
 
 export function PermissionsUI({
@@ -118,8 +120,10 @@ export function PermissionsUI({
   error = null,
   onClearError,
   bearerToken,
-  role = ''
+  role = '',
+  onBackToAssets
 }: PermissionsUIProps) {
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [apiPermissions, setApiPermissions] = useState<Permissions | null>(null)
   const [apiLoading, setApiLoading] = useState(false)
@@ -549,10 +553,10 @@ export function PermissionsUI({
     : Object.entries(apiPermissions).filter(([key]) => key === selectedCategory)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       {/* Success Message */}
       {showSuccessMessage && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3 mb-1">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
               <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -569,118 +573,83 @@ export function PermissionsUI({
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+      {/* All Controls in One Row */}
+      <div className="mb-1 px-2 py-0 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        {/* Left Side - Dropdowns */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 rounded-lg flex items-center justify-center">
-              <Shield className="w-4 w-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Permissions Management
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 text-xs">
-                Configure access controls for different roles
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => { fetchRoles(); fetchPermissions() }}
-              variant="outline"
-              size="sm"
-              disabled={apiLoading || rolesLoading}
-              className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 text-xs"
-            >
-              <RefreshCw className={`h-3 w-3 mr-1 ${apiLoading || rolesLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button
-              onClick={() => setShowUpdateModal(true)}
-              size="sm"
-              className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white text-xs"
-              disabled={apiLoading || rolesLoading}
-            >
-              <Save className="h-3 w-3 mr-1" />
-              Save Changes
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* Role Selection */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <Users className="w-3 w-3 text-purple-600 dark:text-purple-400" />
-            </div>
-            <Label htmlFor="role-select" className="text-xs font-medium text-gray-700 dark:text-gray-300">Select Role</Label>
-          </div>
           <Select value={selectedRole} onValueChange={handleRoleChange}>
-            <SelectTrigger className="w-64 border-gray-300 dark:border-gray-600 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-purple-500 dark:focus:ring-purple-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs">
-              <SelectValue placeholder="Select a role" />
+            <SelectTrigger className="w-48 h-9 border border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm rounded-lg font-medium">
+              <SelectValue placeholder="All Categories" />
             </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg">
               {roles.map(role => (
-                <SelectItem key={role._id} value={role.name} className="text-gray-900 dark:text-white hover:bg-purple-50 dark:hover:bg-purple-900/20 text-xs">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{role.name}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      Created: {new Date(role.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
+                <SelectItem key={role._id} value={role.name} className="text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium py-2">
+                  {role.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Category Filter */}
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-44 h-9 border border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm rounded-lg font-medium">
+              <SelectValue placeholder="All Sub Categori" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg">
+              {categories.map(category => (
+                <SelectItem key={category.value} value={category.value} className="text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium py-2">
+                    {category.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-              <Filter className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-            </div>
-            <Label htmlFor="category-filter" className="text-xs font-medium text-gray-700 dark:text-gray-300">Filter by Category</Label>
-          </div>
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-48 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs">
-              <SelectValue placeholder="Select a category" />
-            </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-              {categories.map(category => (
-                <SelectItem key={category.value} value={category.value} className="text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/20 text-xs">
-                  <div className="flex items-center gap-2">
-                    <category.icon className="h-3 w-3" />
-                    {category.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        
+        {/* Right Side - Action Buttons */}
+        <div className="flex gap-3">
+          <Button
+            onClick={() => setShowUpdateModal(true)}
+            size="sm"
+            className="h-8 bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white text-sm px-4 rounded-md"
+            disabled={apiLoading || rolesLoading}
+          >
+            Save Changes
+          </Button>
+          <Button
+            onClick={() => {
+              if (onBackToAssets) {
+                onBackToAssets()
+              } else {
+                router.push('/admin/manageassets')
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="h-8 border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm px-4 rounded-md"
+          >
+            Back to Assets
+          </Button>
         </div>
       </div>
 
       {/* Permissions Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
+        <div className="overflow-x-auto bg-white">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
         {filteredCategories.map(([categoryKey, permissions]) => (
-          <Card key={categoryKey} className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-            <CardHeader className="border-b border-gray-200 dark:border-gray-700 pb-3">
-              <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+              <div key={categoryKey} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                <div className="border-b border-blue-200 bg-blue-50 px-3 py-2">
+                  <div className="flex items-center gap-2">
                 <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
                   {getCategoryIcon(categoryKey)}
                 </div>
-                <span className="text-sm">{categories.find(cat => cat.value === categoryKey)?.label || categoryKey}</span>
-              </CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-400 text-xs">
-                Manage permissions for {categoryKey.replace(/([A-Z])/g, ' $1').toLowerCase()}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-3">
+                    <span className="text-xs font-semibold text-blue-900 bg-blue-50">
+                      {categories.find(cat => cat.value === categoryKey)?.label || categoryKey}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3">
               <div className="space-y-2">
                 {Object.entries(permissions).map(([permissionKey, enabled]) => (
                   <div key={permissionKey} className="flex items-center justify-between py-1 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
@@ -700,14 +669,16 @@ export function PermissionsUI({
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+                </div>
+              </div>
         ))}
+          </div>
+        </div>
       </div>
 
       {/* Update Confirmation Modal */}
       <Dialog open={showUpdateModal} onOpenChange={setShowUpdateModal}>
-        <DialogContent className="sm:max-w-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+        <DialogContent className="sm:max-w-sm bg-white dark:bg-gray-900">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
               <div className="w-6 h-6 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center">

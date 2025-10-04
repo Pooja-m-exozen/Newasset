@@ -306,56 +306,56 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
         />
       ) : (
         <>
-          {/* Modern Desktop Table View */}
-          <div className="hidden lg:block">
+          {/* Responsive Table View */}
+          <div className="block">
             <div className="bg-background rounded-lg shadow-sm overflow-hidden border border-border">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse font-sans text-base">
+                <table className="w-full border-collapse font-sans text-base min-w-[800px]">
                   <thead>
                     <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
-                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
+                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                         #
                       </th>
-                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
+                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                         ASSET ID
                       </th>
-                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
+                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                         BRAND & MODEL
                       </th>
-                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
+                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                         MOBILITY
                       </th>
-                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
+                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                         ASSIGNED TO
                       </th>
-                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
+                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                         STATUS
                       </th>
-                      <th className="border border-border px-4 py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">ACTIONS</th>
+                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedAssets.map((asset, index) => (
                       <tr key={asset._id || `asset-${index}`} className="hover:bg-muted transition-colors">
-                        <td className="border border-border px-4 py-3 text-sm font-medium text-blue-800">
-                          <div className="flex items-center justify-center w-8 h-8 bg-blue-50 rounded-full text-sm font-semibold text-blue-800">
+                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-blue-800">
+                          <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 bg-blue-50 rounded-full text-xs sm:text-sm font-semibold text-blue-800">
                             {startIndex + index + 1}
                           </div>
                         </td>
-                        <td className="border border-border px-4 py-3">
-                          <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
+                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <span className="text-xs sm:text-sm font-medium text-primary cursor-pointer hover:underline">
                             {asset.tagId}
                           </span>
                         </td>
-                        <td className="border border-border px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-muted rounded-lg">
-                              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="p-1 sm:p-2 bg-muted rounded-lg">
+                              <svg className="w-3 h-3 sm:w-5 sm:h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                               </svg>
                             </div>
                             <div>
-                              <div className="text-sm font-medium text-foreground">
+                              <div className="text-xs sm:text-sm font-medium text-foreground">
                                 {asset.brand} {asset.model}
                               </div>
                               <div className="text-xs text-muted-foreground">
@@ -364,55 +364,55 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                             </div>
                           </div>
                         </td>
-                        <td className="border border-border px-4 py-3">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-muted text-muted-foreground">
+                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-muted text-muted-foreground">
                             {asset.mobilityCategory || 'Not Set'}
                           </span>
                         </td>
-                        <td className="border border-border px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-muted rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                             </div>
-                            <span className="text-sm text-foreground">
+                            <span className="text-xs sm:text-sm text-foreground">
                               {asset.assignedTo?.name || 'Unassigned'}
                             </span>
                           </div>
                         </td>
-                        <td className="border border-border px-4 py-3">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
+                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
                             {asset.status || 'Active'}
                           </span>
                         </td>
-                        <td className="border border-border px-4 py-3">
-                          <div className="flex items-center gap-2 justify-center">
+                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <div className="flex items-center gap-1 sm:gap-2 justify-center">
                             <button 
-                              className="w-9 h-9 flex items-center justify-center text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors shadow-sm"
+                              className="w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors shadow-sm"
                               onClick={() => handleView(asset)}
                               title="View Asset"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
                             </button>
                             <button 
-                              className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
+                              className="w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                               onClick={() => handleEdit(asset)}
                               title="Edit Asset"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
                             <button 
-                              className="w-9 h-9 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
+                              className="w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
                               onClick={() => asset._id && handleDelete(asset._id)}
                               title="Delete Asset"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>
@@ -516,128 +516,6 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
             )}
           </div>
 
-          {/* Enhanced Mobile Card View */}
-          <div className="lg:hidden space-y-4">
-            
-            {/* Mobile Asset Cards */}
-            <div className="space-y-3">
-              {paginatedAssets.map((asset, index) => (
-                <AssetCard
-                  key={asset._id || `asset-${index}`}
-                  asset={asset}
-                  onView={handleView}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  className="shadow-sm hover:shadow-md transition-shadow duration-200"
-                />
-              ))}
-            </div>
-            
-            {/* Mobile Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="bg-background rounded-lg p-4">
-                <div className="flex flex-col gap-4">
-                  <div className="text-center text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages} ({totalItems} total assets)
-                  </div>
-                  <div className="flex justify-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                      className="border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      First
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Prev
-                    </Button>
-                    
-                    {/* Mobile Page Numbers - Show fewer on mobile */}
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 2) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 1) {
-                          pageNum = totalPages - 2 + i;
-                        } else {
-                          pageNum = currentPage - 1 + i;
-                        }
-                        
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={currentPage === pageNum ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={currentPage === pageNum 
-                              ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
-                              : "border-border hover:border-primary text-muted-foreground hover:text-primary"
-                            }
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      className="border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(totalPages)}
-                      disabled={currentPage === totalPages}
-                      className="border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Last
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Mobile Empty State */}
-            {filteredAssets.length === 0 && (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">No Assets Found</h3>
-                <p className="text-muted-foreground text-sm mb-4">
-                  {searchTerm 
-                    ? 'Try adjusting your search terms'
-                    : 'Get started by adding your first asset'
-                  }
-                </p>
-                <Button 
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  Add First Asset
-                </Button>
-              </div>
-            )}
-          </div>
         </>
       )}
 

@@ -401,7 +401,7 @@ export default function AdminManageUsersPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+      <div className="flex h-screen bg-background transition-colors duration-200">
         <div className="flex-1 overflow-auto">
 
           {/* Main Content */}
@@ -425,10 +425,10 @@ export default function AdminManageUsersPage() {
             <div className="flex items-center justify-between gap-4">
               {/* Search Input */}
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search users..."
-                  className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                  className="pl-10 h-10 text-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -455,13 +455,13 @@ export default function AdminManageUsersPage() {
             </div>
 
               {/* Users Table */}
-              <Card className="border border-gray-200 dark:border-gray-700">
+              <Card className="border-border">
                 <CardContent className="p-0">
                     {isLoading ? (
                       <div className="flex items-center justify-center py-12">
                         <div className="flex items-center gap-3">
-                          <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-                          <span className="text-gray-600 dark:text-gray-400">Loading users...</span>
+                          <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                          <span className="text-muted-foreground">Loading users...</span>
                         </div>
                       </div>
                     ) : error ? (
@@ -469,11 +469,11 @@ export default function AdminManageUsersPage() {
                         <div className="flex flex-col items-center gap-3 text-center">
                           <AlertCircle className="w-12 h-12 text-red-500" />
                           <div>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">Failed to load data</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+                            <p className="text-lg font-semibold text-foreground">Failed to load data</p>
+                            <p className="text-sm text-muted-foreground">{error}</p>
                             <Button 
                               onClick={loadData}
-                              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                              className="mt-4"
                             >
                               <RefreshCw className="w-4 h-4 mr-2" />
                               Try Again
@@ -482,93 +482,93 @@ export default function AdminManageUsersPage() {
                         </div>
                       </div>
                     ) : (
-                    <div className="overflow-x-auto bg-white">
+                    <div className="overflow-x-auto bg-background">
                       <table className="w-full border-collapse font-sans text-base">
                         <thead>
-                          <tr className="bg-white border-b border-blue-200">
-                            <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                            <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                               #
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("name")}
                             >
                               USER ID
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("createdAt")}
                             >
                               DATE
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("projectName")}
                             >
                               PROJECT NAME
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("name")}
                             >
                               CUSTOMER
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("status")}
                             >
                               STATUS
                             </th>
-                            <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
+                            <th className="border border-border px-4 py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">ACTIONS</th>
                           </tr>
                         </thead>
                         <tbody>
                           {paginatedUsers.map((user, index) => (
-                            <tr key={user._id} className="hover:bg-gray-50 transition-colors">
-                              <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
-                                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                            <tr key={user._id} className="hover:bg-muted transition-colors">
+                              <td className="border border-border px-4 py-3 text-sm font-medium text-blue-800">
+                                <div className="flex items-center justify-center w-8 h-8 bg-blue-50 rounded-full text-sm font-semibold text-blue-800">
                                   {startIndex + index + 1}
                                 </div>
                               </td>
-                              <td className="border border-blue-200 px-4 py-3">
-                                <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                              <td className="border border-border px-4 py-3">
+                                <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                                   {user.email.split('@')[0].toUpperCase()}
                                 </span>
                               </td>
-                              <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                              <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                                 {new Date(user.createdAt).toISOString().split('T')[0]}
                               </td>
-                              <td className="border border-blue-200 px-4 py-3">
-                                <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                              <td className="border border-border px-4 py-3">
+                                <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                                   {user.projectName}
                                 </span>
                               </td>
-                              <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                              <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                                 {user.name}
                               </td>
-                              <td className="border border-blue-200 px-4 py-3">
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                              <td className="border border-border px-4 py-3">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
                                   Active
                                 </span>
                               </td>
-                              <td className="border border-blue-200 px-4 py-3">
+                              <td className="border border-border px-4 py-3">
                                 <div className="flex items-center gap-2 justify-center">
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors shadow-sm"
                                     onClick={() => openEditUserRoleModal(user)}
                                     title="Edit User"
                                   >
                                     <Edit className="w-4 h-4" />
                                   </button>
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
                                     onClick={() => openDeleteUserModal(user)}
                                     title="Delete User"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                                     onClick={() => openViewUserModal(user)}
                                     title="View User"
                                   >
@@ -641,19 +641,19 @@ export default function AdminManageUsersPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="userRole" className="text-sm font-medium text-gray-700">Role</Label>
+                  <Label htmlFor="userRole" className="text-sm font-medium text-foreground">Role</Label>
                   <select
                     id="userRole"
                     value={newUserData.role}
                     onChange={(e) => setNewUserData(prev => ({ ...prev, role: e.target.value }))}
-                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full mt-1 px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
                   >
                     <option value="">Select a role</option>
                     {roles.map((role) => (
@@ -664,7 +664,7 @@ export default function AdminManageUsersPage() {
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="userProject" className="text-sm font-medium text-gray-700">Project Name</Label>
+                  <Label htmlFor="userProject" className="text-sm font-medium text-foreground">Project Name</Label>
                   <Input
                     id="userProject"
                     placeholder="Enter project name"
@@ -852,26 +852,26 @@ export default function AdminManageUsersPage() {
         {/* Edit User Role Modal */}
         {showEditUserRoleModal && editingUser && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
+            <div className="bg-card rounded-lg p-6 w-full max-w-sm shadow-lg border border-border">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-medium">Edit User Role</h3>
+                <h3 className="text-lg font-medium text-foreground">Edit User Role</h3>
                 <button
                   onClick={() => {
                     setShowEditUserRoleModal(false)
                     setEditingUser(null)
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 block mb-2">Role</label>
+                  <label className="text-sm font-medium text-foreground block mb-2">Role</label>
                   <select
                     value={editingUser?.currentRole || ''}
                     onChange={(e) => setEditingUser(prev => prev ? { ...prev, currentRole: e.target.value } : null)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-foreground"
                   >
                     <option value="">Select a role</option>
                     {roles.map((role) => (
@@ -883,14 +883,14 @@ export default function AdminManageUsersPage() {
                 </div>
                 <div className="flex gap-3 pt-4">
                   <button
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
+                    className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 disabled:opacity-50"
                     onClick={handleEditUserRole}
                     disabled={isUpdatingUserRole}
                   >
                     {isUpdatingUserRole ? 'Updating...' : 'Update Role'}
                   </button>
                   <button
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
+                    className="px-4 py-2 border border-border rounded-md text-sm hover:bg-muted text-foreground"
                     onClick={() => {
                       setShowEditUserRoleModal(false)
                       setEditingUser(null)
@@ -983,15 +983,15 @@ export default function AdminManageUsersPage() {
         {/* View User Modal */}
         {showViewUserModal && viewingUser && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
+            <div className="bg-card rounded-lg p-6 w-full max-w-sm shadow-lg border border-border">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-medium">User Details</h3>
+                <h3 className="text-lg font-medium text-foreground">User Details</h3>
                 <button
                   onClick={() => {
                     setShowViewUserModal(false)
                     setViewingUser(null)
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -999,29 +999,29 @@ export default function AdminManageUsersPage() {
               
               <div className="space-y-5">
                 <div className="text-center">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 font-semibold text-2xl mx-auto mb-4">
+                  <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center text-muted-foreground font-semibold text-2xl mx-auto mb-4">
                     {getInitials(viewingUser?.name || 'Unknown')}
                   </div>
-                  <h4 className="text-xl font-medium text-gray-900">{viewingUser?.name || 'Unknown User'}</h4>
-                  <p className="text-gray-500 mt-1">{viewingUser?.email || 'No email'}</p>
+                  <h4 className="text-xl font-medium text-foreground">{viewingUser?.name || 'Unknown User'}</h4>
+                  <p className="text-muted-foreground mt-1">{viewingUser?.email || 'No email'}</p>
                             </div>
 
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="bg-muted rounded-lg p-4 space-y-3">
                   <div>
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Role</span>
-                    <p className="text-sm text-gray-900 mt-1">{viewingUser?.role || 'Unknown'}</p>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Role</span>
+                    <p className="text-sm text-foreground mt-1">{viewingUser?.role || 'Unknown'}</p>
                       </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Project</span>
-                    <p className="text-sm text-gray-900 mt-1">{viewingUser?.projectName || 'No project'}</p>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Project</span>
+                    <p className="text-sm text-foreground mt-1">{viewingUser?.projectName || 'No project'}</p>
                     </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</span>
-                    <p className="text-sm text-gray-900 mt-1">{viewingUser?.status || 'Unknown'}</p>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</span>
+                    <p className="text-sm text-foreground mt-1">{viewingUser?.status || 'Unknown'}</p>
                       </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Created</span>
-                    <p className="text-sm text-gray-900 mt-1">{formatDate(viewingUser?.createdAt || new Date().toISOString())}</p>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Created</span>
+                    <p className="text-sm text-foreground mt-1">{formatDate(viewingUser?.createdAt || new Date().toISOString())}</p>
                     </div>
                       </div>
                     </div>
@@ -1032,39 +1032,39 @@ export default function AdminManageUsersPage() {
         {/* Roles Management Modal */}
         {showRolesModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-lg">
+            <div className="bg-card rounded-lg p-6 w-full max-w-lg shadow-lg border border-border">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-medium">Role Management</h3>
+                <h3 className="text-lg font-medium text-foreground">Role Management</h3>
                 <button
                   onClick={() => setShowRolesModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total Roles: {roles.length}</span>
+                  <span className="text-sm text-muted-foreground">Total Roles: {roles.length}</span>
                   <button
                     onClick={() => {
                       setShowRolesModal(false)
                       setShowRoleModal(true)
                     }}
-                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                    className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90"
                   >
                     Add Role
                   </button>
                 </div>
                 <div className="space-y-2">
                   {roles.map((role) => (
-                    <div key={role._id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                    <div key={role._id} className="flex items-center justify-between p-3 border border-border rounded-lg">
                             <div>
-                        <span className="text-sm font-medium">{role.name}</span>
-                        <p className="text-xs text-gray-500">Created: {formatDate(role.createdAt)}</p>
+                        <span className="text-sm font-medium text-foreground">{role.name}</span>
+                        <p className="text-xs text-muted-foreground">Created: {formatDate(role.createdAt)}</p>
                           </div>
                           <div className="flex items-center gap-2">
                         <button 
-                          className="w-6 h-6 flex items-center justify-center text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
+                          className="w-6 h-6 flex items-center justify-center text-primary border border-primary rounded hover:bg-primary/10"
                               onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()
@@ -1075,7 +1075,7 @@ export default function AdminManageUsersPage() {
                           <Edit className="w-3 h-3" />
                         </button>
                         <button 
-                          className="w-6 h-6 flex items-center justify-center text-red-600 border border-red-600 rounded hover:bg-red-50"
+                          className="w-6 h-6 flex items-center justify-center text-destructive border border-destructive rounded hover:bg-destructive/10"
                               onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()

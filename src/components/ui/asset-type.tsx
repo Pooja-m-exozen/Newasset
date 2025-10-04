@@ -74,10 +74,10 @@ const AssetTypeManagement: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-xl font-semibold text-foreground mb-2">
             {user?.projectName ? `Loading asset types for ${user.projectName}...` : 'Loading asset types...'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-base text-muted-foreground">
             {user?.projectName 
               ? `Please wait while we fetch asset type data for project: ${user.projectName}`
               : 'Please wait while we fetch your asset type data'
@@ -101,14 +101,14 @@ const AssetTypeManagement: React.FC = () => {
         {/* Search Input */}
         <div className="flex-1 max-w-md">
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <Input
               placeholder="Search asset types by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 border-gray-300 dark:border-gray-600 focus:border-green-500 dark:focus:border-green-400 focus:ring-green-500 dark:focus:ring-green-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              className="w-full pl-12 text-base"
             />
           </div>
         </div>
@@ -118,18 +118,18 @@ const AssetTypeManagement: React.FC = () => {
           <Button 
             onClick={() => router.push('/admin/manageassets')}
             variant="outline"
-            className="border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-all duration-200 text-sm"
+            className="border-border hover:border-border/80 hover:bg-muted text-foreground flex items-center gap-2 transition-all duration-200 text-base"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7" />
             </svg>
             Back to Assets
           </Button>
           <Button 
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-base"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
             Add Asset Type
@@ -150,58 +150,60 @@ const AssetTypeManagement: React.FC = () => {
           actionText={searchTerm ? 'Clear Search' : 'Create Your First Asset Type'}
           onAction={() => searchTerm ? setSearchTerm('') : setIsCreateModalOpen(true)}
           icon={
-            <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-16 h-16 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           }
         />
       ) : (
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto bg-white">
-            <table className="w-full border-collapse font-sans text-sm">
+        <div className="bg-background rounded-lg shadow-sm overflow-hidden border border-border">
+          <div className="overflow-x-auto bg-background">
+            <table className="w-full border-collapse font-sans text-base">
               <thead>
-                <tr className="bg-white border-b border-blue-200">
-                  <th className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs">
+                <tr className="bg-muted border-b border-border">
+                  <th className="border border-border px-4 py-3 text-left font-semibold text-foreground bg-muted text-sm">
                     #
                   </th>
-                  <th className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs">
+                  <th className="border border-border px-4 py-3 text-left font-semibold text-foreground bg-muted text-sm">
                     ASSET TYPE NAME
                   </th>
-                  <th className="border border-blue-200 px-3 py-2 text-left font-semibold text-blue-900 bg-blue-50 text-xs">
+                  <th className="border border-border px-4 py-3 text-left font-semibold text-foreground bg-muted text-sm">
                     CREATED
                   </th>
-                  <th className="border border-blue-200 px-3 py-2 text-center font-semibold text-blue-900 bg-blue-50 text-xs">ACTIONS</th>
+                  <th className="border border-border px-4 py-3 text-center font-semibold text-foreground bg-muted text-sm">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAssetTypes.map((assetType: AssetType, index: number) => (
-                  <tr key={assetType._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
-                      {index + 1}
+                  <tr key={assetType._id} className="hover:bg-muted transition-colors">
+                    <td className="border border-border px-4 py-3 text-sm font-medium text-muted-foreground">
+                      <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-full text-sm font-semibold text-primary">
+                        {index + 1}
+                      </div>
                     </td>
-                    <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
+                    <td className="border border-border px-4 py-3 text-sm font-medium text-foreground">
                       {assetType.name}
                     </td>
-                    <td className="border border-blue-200 px-3 py-2 text-xs font-medium text-gray-700">
+                    <td className="border border-border px-4 py-3 text-sm font-medium text-muted-foreground">
                       {new Date(assetType.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="border border-blue-200 px-3 py-2">
-                      <div className="flex items-center gap-1 justify-center">
+                    <td className="border border-border px-4 py-3">
+                      <div className="flex items-center gap-2 justify-center">
                         <button 
-                          className="w-8 h-8 flex items-center justify-center text-green-600 border border-green-600 rounded hover:bg-green-50 transition-colors"
+                          className="w-10 h-10 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                           onClick={() => handleEdit(assetType)}
                           title="Edit Asset Type"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
                         <button 
-                          className="w-8 h-8 flex items-center justify-center text-red-600 border border-red-600 rounded hover:bg-red-50 transition-colors"
+                          className="w-10 h-10 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
                           onClick={() => handleDelete(assetType._id)}
                           title="Delete Asset Type"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -265,7 +267,7 @@ const AssetTypeManagement: React.FC = () => {
 const AssetTypesPage: React.FC = () => {
   return (
     <AssetProvider>
-      <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+      <div className="min-h-screen bg-background transition-colors duration-200">
         <div className="p-0">
           <div className="max-w-7xl mx-auto">
             <AssetTypeManagement />

@@ -481,10 +481,10 @@ export function PermissionsUI({
             </div>
             <div className="absolute inset-0 w-12 h-12 border-4 border-blue-200 dark:border-blue-800 rounded-full animate-ping opacity-20"></div>
           </div>
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+          <h3 className="text-lg font-semibold text-foreground mb-1">
             Loading Permissions
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 text-xs">
+          <p className="text-muted-foreground text-sm">
             Please wait while we fetch your permission data
           </p>
         </div>
@@ -494,14 +494,14 @@ export function PermissionsUI({
 
   if (error || apiError || rolesError) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
+      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <div className="w-8 h-8 bg-destructive/20 rounded-lg flex items-center justify-center">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">Error Loading Permissions</h3>
-            <p className="text-red-600 dark:text-red-400 text-xs">{error || apiError || rolesError}</p>
+            <h3 className="text-sm font-semibold text-destructive">Error Loading Permissions</h3>
+            <p className="text-destructive/80 text-xs">{error || apiError || rolesError}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -509,7 +509,7 @@ export function PermissionsUI({
             onClick={onClearError || (() => { setApiError(null); setRolesError(null) })}
             variant="outline" 
             size="sm"
-            className="border-red-300 dark:border-red-600 hover:border-red-400 dark:hover:border-red-500 text-red-700 dark:text-red-300 text-xs"
+            className="border-destructive/30 hover:border-destructive/50 text-destructive text-xs"
           >
             Try Again
           </Button>
@@ -517,7 +517,7 @@ export function PermissionsUI({
             onClick={() => { fetchRoles(); fetchPermissions() }}
             variant="outline" 
             size="sm"
-            className="border-red-300 dark:border-red-600 hover:border-red-400 dark:hover:border-red-500 text-red-700 dark:text-red-300 text-xs"
+            className="border-destructive/30 hover:border-destructive/50 text-destructive text-xs"
           >
             <RefreshCw className="h-3 w-3 mr-1" />
             Refresh
@@ -534,11 +534,11 @@ export function PermissionsUI({
           <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-500 dark:to-gray-600 rounded-full flex items-center justify-center mx-auto mb-3">
             <Shield className="w-6 h-6 text-white" />
           </div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">No Permissions Data Available</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-3 text-xs">Unable to load permission data at this time</p>
+          <h3 className="text-sm font-semibold text-foreground mb-1">No Permissions Data Available</h3>
+          <p className="text-muted-foreground mb-3 text-xs">Unable to load permission data at this time</p>
           <Button 
             onClick={() => { fetchRoles(); fetchPermissions() }} 
-            className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white text-xs"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
           >
             <RefreshCw className="h-3 w-3 mr-1" />
             Load Permissions
@@ -579,12 +579,12 @@ export function PermissionsUI({
           <div className="flex items-center gap-3">
       {/* Role Selection */}
           <Select value={selectedRole} onValueChange={handleRoleChange}>
-            <SelectTrigger className="w-48 h-9 border border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm rounded-lg font-medium">
+            <SelectTrigger className="w-48 h-9 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground text-sm rounded-lg font-medium">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg">
+            <SelectContent className="bg-background border-border rounded-lg shadow-lg">
               {roles.map(role => (
-                <SelectItem key={role._id} value={role.name} className="text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium py-2">
+                <SelectItem key={role._id} value={role.name} className="text-foreground hover:bg-muted text-sm font-medium py-2">
                   {role.name}
                 </SelectItem>
               ))}
@@ -593,12 +593,12 @@ export function PermissionsUI({
 
           {/* Category Filter */}
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-44 h-9 border border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm rounded-lg font-medium">
+            <SelectTrigger className="w-44 h-9 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background text-foreground text-sm rounded-lg font-medium">
               <SelectValue placeholder="All Sub Categori" />
             </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg">
+            <SelectContent className="bg-background border-border rounded-lg shadow-lg">
               {categories.map(category => (
-                <SelectItem key={category.value} value={category.value} className="text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium py-2">
+                <SelectItem key={category.value} value={category.value} className="text-foreground hover:bg-muted text-sm font-medium py-2">
                     {category.label}
                 </SelectItem>
               ))}
@@ -611,7 +611,7 @@ export function PermissionsUI({
           <Button
             onClick={() => setShowUpdateModal(true)}
             size="sm"
-            className="h-8 bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white text-sm px-4 rounded-md"
+            className="h-8 bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 rounded-md"
             disabled={apiLoading || rolesLoading}
           >
             Save Changes
@@ -626,7 +626,7 @@ export function PermissionsUI({
             }}
             variant="outline"
             size="sm"
-            className="h-8 border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm px-4 rounded-md"
+            className="h-8 border-border hover:border-border/80 hover:bg-muted text-foreground text-sm px-4 rounded-md"
           >
             Back to Assets
           </Button>
@@ -634,17 +634,17 @@ export function PermissionsUI({
       </div>
 
       {/* Permissions Grid */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto bg-white">
+      <div className="bg-background rounded-lg shadow-sm overflow-hidden border border-border">
+        <div className="overflow-x-auto bg-background">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
         {filteredCategories.map(([categoryKey, permissions]) => (
-              <div key={categoryKey} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
-                <div className="border-b border-blue-200 bg-blue-50 px-3 py-2">
+              <div key={categoryKey} className="border-b border-border last:border-b-0">
+                <div className="border-b border-border bg-muted px-3 py-2">
                   <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
                   {getCategoryIcon(categoryKey)}
                 </div>
-                    <span className="text-xs font-semibold text-blue-900 bg-blue-50">
+                    <span className="text-xs font-semibold text-foreground">
                       {categories.find(cat => cat.value === categoryKey)?.label || categoryKey}
                     </span>
                   </div>
@@ -652,11 +652,11 @@ export function PermissionsUI({
                 <div className="p-3">
               <div className="space-y-2">
                 {Object.entries(permissions).map(([permissionKey, enabled]) => (
-                  <div key={permissionKey} className="flex items-center justify-between py-1 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+                  <div key={permissionKey} className="flex items-center justify-between py-1 border-b border-border/50 last:border-b-0">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-gray-900 dark:text-white">{getPermissionLabel(permissionKey)}</span>
-                        <Badge variant="outline" className={`text-xs ${enabled ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600'}`}>
+                        <span className="text-xs font-medium text-foreground">{getPermissionLabel(permissionKey)}</span>
+                        <Badge variant="outline" className={`text-xs ${enabled ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700' : 'bg-muted text-muted-foreground border-border'}`}>
                           {enabled ? 'Enabled' : 'Disabled'}
                         </Badge>
                       </div>
@@ -678,30 +678,30 @@ export function PermissionsUI({
 
       {/* Update Confirmation Modal */}
       <Dialog open={showUpdateModal} onOpenChange={setShowUpdateModal}>
-        <DialogContent className="sm:max-w-sm bg-white dark:bg-gray-900">
+        <DialogContent className="sm:max-w-sm bg-background">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-              <div className="w-6 h-6 bg-blue-500 dark:bg-blue-600 rounded-lg flex items-center justify-center">
-                <Save className="h-3 w-3 text-white" />
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <div className="w-6 h-6 bg-primary rounded-lg flex items-center justify-center">
+                <Save className="h-3 w-3 text-primary-foreground" />
               </div>
               <span className="text-sm">Save Permission Changes</span>
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400 text-xs">
-              Are you sure you want to save the permission changes? This will update the permissions for the <span className="font-medium text-blue-600 dark:text-blue-400">{selectedRole}</span> role.
+            <DialogDescription className="text-muted-foreground text-xs">
+              Are you sure you want to save the permission changes? This will update the permissions for the <span className="font-medium text-primary">{selectedRole}</span> role.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button 
               variant="outline" 
               onClick={() => setShowUpdateModal(false)}
-              className="border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 text-xs"
+              className="border-border hover:border-border/80 text-foreground text-xs"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSaveChanges}
               disabled={apiLoading}
-              className="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800 text-white text-xs"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
             >
               <Save className="h-3 w-3 mr-1" />
               {apiLoading ? 'Saving...' : 'Save Changes'}

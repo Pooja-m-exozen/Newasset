@@ -617,32 +617,32 @@ export function EnhancedDashboard({
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+    <div className="flex h-screen bg-background transition-colors duration-200">
       <div className="flex-1 overflow-auto">
 
         {/* Main Content */}
-        <main className="px-4 pt-1 pb-1 sm:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
+        <main className="px-2 pt-1 pb-1 sm:px-4 md:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
           {/* Advanced Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
             {advancedStats.map((stat) => (
-              <Card key={stat.title} className="border border-gray-200 dark:border-gray-700">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                      <stat.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <Card key={stat.title} className="border-border">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg flex items-center justify-center">
+                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                     </div>
                     <div className="flex items-center space-x-1">
-                      <TrendingUp className="w-3 h-3 text-gray-400" />
-                      <span className="text-xs font-medium text-gray-500">
+                      <TrendingUp className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">
                         {stat.change}
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{stat.subValue}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{stat.description}</p>
+                  <div className="space-y-1 sm:space-y-2">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground">{stat.title}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{stat.subValue}</p>
+                    <p className="text-xs text-muted-foreground hidden sm:block">{stat.description}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -650,56 +650,56 @@ export function EnhancedDashboard({
           </div>
 
           {/* Asset Health Monitoring and Cost Analysis */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
             {/* Asset Health Monitoring */}
-            <Card className="border border-gray-200 dark:border-gray-700">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-base">
+            <Card className="border-border">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center text-sm sm:text-base">
                   <div className="flex items-center">
-                    <Thermometer className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
-                    Asset Health Monitoring
+                    <Thermometer className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <span className="truncate">Asset Health Monitoring</span>
                   </div>
                 </CardTitle>
-                <CardDescription className="text-sm">Real-time asset health status distribution</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Real-time asset health status distribution</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 {/* Project Filter Indicator */}
                 {user?.projectName && (
-                  <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg">
+                  <div className="mb-2 sm:mb-3 p-2 bg-muted border border-border rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <Thermometer className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                      <span className="text-xs text-gray-700 dark:text-gray-300">
-                        Showing health data for: <strong>{user.projectName}</strong>
+                      <Thermometer className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                      <span className="text-xs text-foreground truncate">
+                        Showing health data for: <strong className="truncate">{user.projectName}</strong>
                       </span>
                     </div>
                   </div>
                 )}
                 
                 {isHealthLoading ? (
-                  <div className="flex items-center justify-center py-6" aria-busy="true" aria-live="polite">
+                  <div className="flex items-center justify-center py-4 sm:py-6" aria-busy="true" aria-live="polite">
                     <div className="text-center">
                       <LoadingSpinner size="lg" />
-                      <p className="mt-3 text-muted-foreground text-sm">Loading health data...</p>
+                      <p className="mt-2 sm:mt-3 text-muted-foreground text-xs sm:text-sm">Loading health data...</p>
                     </div>
                   </div>
                 ) : healthError ? (
-                  <div className="text-center py-6">
-                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-foreground mb-2">Failed to load health data</h3>
-                    <p className="text-muted-foreground mb-3 text-sm">{healthError}</p>
+                  <div className="text-center py-4 sm:py-6">
+                    <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-500 mx-auto mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-foreground mb-1 sm:mb-2">Failed to load health data</h3>
+                    <p className="text-muted-foreground mb-2 sm:mb-3 text-xs sm:text-sm">{healthError}</p>
                   </div>
                 ) : healthData?.success ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {assetHealthData.map((asset, index) => (
                       <div key={index} className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <asset.icon className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-xs font-medium text-foreground">{asset.name}</span>
+                          <div className="flex items-center space-x-2 min-w-0 flex-1">
+                            <asset.icon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs font-medium text-foreground truncate">{asset.name}</span>
                           </div>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 flex-shrink-0">
                             <div className={`w-2 h-2 rounded-full ${asset.color}`}></div>
-                            <span className="text-xs text-muted-foreground">{asset.count} units</span>
+                            <span className="text-xs text-muted-foreground">{asset.count}</span>
                           </div>
                         </div>
                         <Progress value={asset.percentage} className="h-1.5" />
@@ -711,21 +711,21 @@ export function EnhancedDashboard({
                     ))}
                     
                     {/* Health Summary */}
-                    <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Thermometer className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                          <span className="text-xs font-medium text-gray-900 dark:text-white">
-                            Total Assets: {assetHealthData.reduce((sum, asset) => sum + asset.count, 0)}
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          <Thermometer className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs font-medium text-foreground truncate">
+                            Total: {assetHealthData.reduce((sum, asset) => sum + asset.count, 0)}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-gray-600 border-gray-200 text-xs">
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs flex-shrink-0">
                           Real-time
                         </Badge>
                       </div>
                       {user?.projectName && (
-                        <div className="mt-2 text-xs text-gray-700 dark:text-gray-300">
-                          <span className="font-medium">Project:</span> {user.projectName}
+                        <div className="mt-1 sm:mt-2 text-xs text-muted-foreground truncate">
+                          <span className="font-medium">Project:</span> <span className="truncate">{user.projectName}</span>
                         </div>
                       )}
                     </div>
@@ -741,11 +741,11 @@ export function EnhancedDashboard({
             </Card>
 
             {/* Cost Analysis */}
-            <Card className="border border-gray-200 dark:border-gray-700">
+            <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center text-base">
                   <div className="flex items-center">
-                    <DollarSign className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+                    <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
                     Cost Analysis
                   </div>
                 </CardTitle>
@@ -810,15 +810,15 @@ export function EnhancedDashboard({
                     </div>
                     
                     {/* Cost Summary */}
-                    <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <DollarSign className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                          <span className="text-xs font-medium text-gray-900 dark:text-white">
+                          <DollarSign className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs font-medium text-foreground">
                             Total Assets: {costAnalysisData.assetCount}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-gray-600 border-gray-200 text-xs">
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
                           Real-time
                         </Badge>
                       </div>
@@ -835,11 +835,11 @@ export function EnhancedDashboard({
             </Card>
 
             {/* Trend Analysis */}
-            <Card className="border border-gray-200 dark:border-gray-700">
+            <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center text-base">
                   <div className="flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+                    <TrendingUp className="w-4 h-4 mr-2 text-muted-foreground" />
                     Trend Analysis
                   </div>
                 </CardTitle>
@@ -895,15 +895,15 @@ export function EnhancedDashboard({
                     </div>
                     
                     {/* Trends Summary */}
-                    <div className="mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-3 h-3 text-gray-600 dark:text-gray-400" />
-                          <span className="text-xs font-medium text-gray-900 dark:text-white">
+                          <TrendingUp className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs font-medium text-foreground">
                             Period: {trendsData.period} | Total Records: {trendsData.totalRecords}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-gray-600 border-gray-200 text-xs">
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
                           Real-time
                         </Badge>
                       </div>
@@ -923,9 +923,9 @@ export function EnhancedDashboard({
 
 
           {/* AI Predictions Chart Section and Quick Actions - Side by Side */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-6">
             {/* AI Predictions Chart Section - Reduced Width */}
-            <div className="lg:col-span-2">
+            <div className="xl:col-span-2">
               <AIPredictionsChart
                 predictionsData={transformedPredictionsData || null}
                 isLoading={isPredictionsLoading}
@@ -935,60 +935,60 @@ export function EnhancedDashboard({
             </div>
 
             {/* Quick Actions - Side Panel */}
-            <div className="lg:col-span-1">
-              <Card className="shadow-lg border-0 h-full">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center text-base">
+            <div className="xl:col-span-1">
+              <Card className="shadow-lg border-border h-full">
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="flex items-center text-sm sm:text-base">
                     <Zap className="w-4 h-4 mr-2 text-orange-600" />
-                    Quick Actions
+                    <span className="truncate">Quick Actions</span>
                   </CardTitle>
-                  <CardDescription className="text-sm">Common tasks and shortcuts</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">Common tasks and shortcuts</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="grid grid-cols-1 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
+                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
                       onClick={handleAddUserClick}
                       aria-label="Add a new user"
                     >
-                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">Add User</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
+                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
                       onClick={handleAddAssetClick}
                       aria-label="Add a new asset"
                     >
-                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
+                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">Add Asset</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
+                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
                       onClick={handleAddLocationClick}
                       aria-label="Add a new location"
                     >
-                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
+                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">Add Location</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
+                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
                       onClick={handleGenerateReportClick}
                       aria-label="Generate report"
                     >
-                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
+                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">Generate Report</span>
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="h-14 sm:h-16 flex-col hover:bg-gray-50 transition-colors justify-start"
+                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2 col-span-2 sm:col-span-1"
                       onClick={handleViewAlertsClick}
                       aria-label="View system alerts"
                     >
-                      <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-gray-600 dark:text-gray-400" />
+                      <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">View Alerts</span>
                     </Button>
                   </div>
@@ -999,9 +999,9 @@ export function EnhancedDashboard({
         </main>
       </div>
 
-      {/* Alerts Modal */}
+       {/* Alerts Modal */}
        <Dialog open={isAlertsModalOpen} onOpenChange={setIsAlertsModalOpen}>
-         <DialogContent className="max-w-2xl">
+         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
            <DialogHeader>
              <DialogTitle className="flex items-center gap-2">
                <AlertCircle className="w-5 h-5 text-red-600" />
@@ -1038,7 +1038,7 @@ export function EnhancedDashboard({
              ) : alertsData ? (
                <div className="space-y-6">
                  {/* Statistics Cards */}
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                    <div className="bg-blue-50 rounded-lg p-4">
                      <div className="flex items-center justify-between">
                        <div>
@@ -1119,7 +1119,7 @@ export function EnhancedDashboard({
 
        {/* Alert Rules Modal */}
        <Dialog open={isAlertRulesModalOpen} onOpenChange={setIsAlertRulesModalOpen}>
-         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
            <DialogHeader>
              <DialogTitle className="flex items-center gap-2">
                <Settings className="w-5 h-5 text-orange-600" />
@@ -1197,7 +1197,7 @@ export function EnhancedDashboard({
                      )}
                    </div>
                    
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                      <div className="space-y-2">
                        <Label>Field</Label>
                        <Select
@@ -1280,7 +1280,7 @@ export function EnhancedDashboard({
                      )}
                    </div>
                    
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                      <div className="space-y-2">
                        <Label>Action Type</Label>
                        <Select
@@ -1376,18 +1376,19 @@ export function EnhancedDashboard({
              </div>
              
              {/* Action Buttons */}
-             <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200">
                <Button
                  variant="outline"
                  onClick={() => setIsAlertRulesModalOpen(false)}
                  disabled={isCreatingRule}
+                 className="w-full sm:w-auto"
                >
                  Cancel
                </Button>
                <Button
                  onClick={handleCreateAlertRule}
                  disabled={isCreatingRule || !ruleForm.name}
-                 className="bg-orange-600 hover:bg-orange-700"
+                 className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
                >
                  {isCreatingRule ? (
                    <>

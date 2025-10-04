@@ -10,6 +10,7 @@ import { Eye, EyeOff, ArrowRight, Zap, Building2, Users, Settings, TrendingUp, U
 import { apiService } from "@/lib/api"
 import { useToast, ToastContainer } from "@/components/ui/toast"
 import Link from "next/link"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -157,7 +158,11 @@ export default function RegisterPage() {
   ]
 
   return (
-    <div className="h-screen w-full flex flex-col lg:flex-row bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="h-screen w-full flex flex-col lg:flex-row bg-background overflow-hidden">
+      {/* Theme Toggle - Fixed Position */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
 
       {/* Mobile Header */}
       <div className="lg:hidden bg-blue-600 py-2 px-4 flex-shrink-0">
@@ -219,9 +224,9 @@ export default function RegisterPage() {
       </div>
 
       {/* Right Panel - Registration Form */}
-      <div className="flex-1 lg:w-[50%] flex items-center justify-center p-3 sm:p-4 lg:p-6 xl:p-8 bg-white h-screen lg:h-auto overflow-y-auto">
+      <div className="flex-1 lg:w-[50%] flex items-center justify-center p-3 sm:p-4 lg:p-6 xl:p-8 bg-background h-screen lg:h-auto overflow-y-auto">
         <div className="w-full max-w-sm sm:max-w-md">
-          <Card className="shadow-lg border-0">
+          <Card className="shadow-lg border-border">
             <CardHeader className="text-center pb-3 sm:pb-4 pt-4 sm:pt-6 px-3 sm:px-4">
               <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
                 <User className="w-6 h-6 sm:w-7 sm:h-7 text-white" />

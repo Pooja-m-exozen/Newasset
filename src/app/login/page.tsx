@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useToast, ToastContainer } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -126,8 +127,13 @@ export default function LoginPage() {
   ]
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background">
       <ToastContainer toasts={toasts} onClose={removeToast} />
+      
+      {/* Theme Toggle - Fixed Position */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
 
       {/* Mobile Header */}
       <div className="lg:hidden bg-blue-600 py-4 px-4 flex-shrink-0">
@@ -189,71 +195,71 @@ export default function LoginPage() {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="flex-1 lg:w-[50%] flex items-center justify-center p-6 lg:p-12 bg-white">
+      <div className="flex-1 lg:w-[50%] flex items-center justify-center p-6 lg:p-12 bg-background">
         <div className="w-full max-w-md">
-          <Card className="shadow-lg">
+          <Card className="shadow-lg border-border">
             <CardHeader className="text-center pb-6 pt-8">
               <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8 text-white" />
               </div>
-              <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
+              <CardTitle className="text-2xl font-bold text-card-foreground mb-2">
                 Welcome back
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-muted-foreground">
                 Sign in to access your facility management dashboard
               </CardDescription>
             </CardHeader>
             <CardContent className="px-6 pb-6">
               {errors.general && (
-                <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-                  <AlertCircle className="w-3 h-3 text-red-600" />
-                  <p className="text-xs text-red-800">{errors.general}</p>
+                <div className="mb-3 p-2 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center space-x-2">
+                  <AlertCircle className="w-3 h-3 text-destructive" />
+                  <p className="text-xs text-destructive">{errors.general}</p>
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Email Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="email" className="text-sm font-medium text-foreground">
                     Email Address
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
                       value={email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
-                      className="pl-10 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="pl-10 h-11"
                       placeholder="Enter your email address"
                       required
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-sm text-red-600">{errors.email}</p>
+                    <p className="text-sm text-destructive">{errors.email}</p>
                   )}
                 </div>
 
                 {/* Password Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">
                     Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
-                      className="pl-10 pr-10 h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="pl-10 pr-10 h-11"
                       placeholder="Enter your password"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showPassword ? (
                         <EyeOff className="w-4 h-4" />
@@ -263,7 +269,7 @@ export default function LoginPage() {
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-sm text-red-600">{errors.password}</p>
+                    <p className="text-sm text-destructive">{errors.password}</p>
                   )}
                 </div>
 
@@ -275,13 +281,13 @@ export default function LoginPage() {
                       checked={rememberMe}
                       onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                     />
-                    <Label htmlFor="remember" className="text-sm text-gray-700">
+                    <Label htmlFor="remember" className="text-sm text-foreground">
                       Remember me
                     </Label>
                   </div>
                   <Link
                     href="/forgot-password"
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    className="text-sm text-primary hover:text-primary/80 font-medium"
                   >
                     Forgot password?
                   </Link>
@@ -291,7 +297,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  className="w-full h-11 font-medium bg-blue-600/70 backdrop-blur-md border border-blue-400/40 hover:bg-blue-700/70 hover:backdrop-blur-lg hover:border-blue-300/50 transition-all duration-300 shadow-xl shadow-blue-500/25"
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
@@ -308,9 +314,9 @@ export default function LoginPage() {
 
                 {/* Register Link */}
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Don&apos;t have an account?{" "}
-                    <Link href="/register" className="text-blue-600 hover:text-blue-800 font-medium">
+                    <Link href="/register" className="text-primary hover:text-primary/80 font-medium">
                       Create account
                     </Link>
                   </p>
@@ -319,7 +325,7 @@ export default function LoginPage() {
               
               {/* Footer */}
               <div className="mt-6 text-center">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   © 2025 Exozen Pvt Ltd. All rights reserved.
                 </p>
               </div>

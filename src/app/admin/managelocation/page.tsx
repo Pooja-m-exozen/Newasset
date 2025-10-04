@@ -170,7 +170,7 @@ const LocationManagementContent = () => {
 
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+    <div className="flex h-screen bg-background transition-colors duration-200">
       <div className="flex-1 overflow-auto">
         {/* Main Content */}
         <main className="px-4 pb-1 sm:px-6 sm:pb-2 space-y-4 sm:space-y-6">
@@ -192,10 +192,10 @@ const LocationManagementContent = () => {
               <div className="flex items-center justify-between gap-4">
                 {/* Search Input */}
                 <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="Search locations..."
-                    className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                    className="pl-10 h-10 text-sm"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -223,20 +223,20 @@ const LocationManagementContent = () => {
               </div>
 
               {/* Locations Table */}
-              <Card className="border border-gray-200 dark:border-gray-700">
+              <Card className="border-border">
                 <CardContent className="p-0">
                   {loading ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="flex items-center gap-3">
-                        <Loader2 className="w-6 h-6 animate-spin text-green-500" />
-                        <span className="text-gray-600 dark:text-gray-400">Loading locations...</span>
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        <span className="text-muted-foreground">Loading locations...</span>
                       </div>
                     </div>
                   ) : error ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="flex flex-col items-center gap-3 text-center">
-                        <div className="text-red-500 mb-2">Error loading locations</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">{error}</div>
+                        <div className="text-destructive mb-2">Error loading locations</div>
+                        <div className="text-sm text-muted-foreground mb-4">{error}</div>
                         <Button 
                           onClick={fetchLocations}
                           className="mt-4 bg-green-600 hover:bg-green-700 text-white"
@@ -247,87 +247,87 @@ const LocationManagementContent = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto bg-white">
+                    <div className="overflow-x-auto bg-background">
                       <table className="w-full border-collapse font-sans text-base">
                         <thead>
-                          <tr className="bg-white border-b border-blue-200">
-                            <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                            <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                               #
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("name")}
                             >
                               LOCATION NAME
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("type")}
                             >
                               TYPE
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("address")}
                             >
                               ADDRESS
                             </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("createdAt")}
                             >
                               CREATED
                             </th>
-                            <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
+                            <th className="border border-border px-4 py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">ACTIONS</th>
                           </tr>
                         </thead>
                         <tbody>
                           {paginatedLocations.map((location, index) => (
-                            <tr key={location._id} className="hover:bg-gray-50 transition-colors">
-                              <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
-                                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                            <tr key={location._id} className="hover:bg-muted transition-colors">
+                              <td className="border border-border px-4 py-3 text-sm font-medium text-blue-800">
+                                <div className="flex items-center justify-center w-8 h-8 bg-blue-50 rounded-full text-sm font-semibold text-blue-800">
                                   {startIndex + index + 1}
                                 </div>
                               </td>
-                              <td className="border border-blue-200 px-4 py-3">
+                              <td className="border border-border px-4 py-3">
                                 <div className="flex items-center gap-2">
-                                  <div className="p-1.5 bg-green-100 rounded">
-                                    <MapPin className="w-4 h-4 text-green-600" />
+                                  <div className="p-1.5 bg-muted rounded">
+                                    <MapPin className="w-4 h-4 text-muted-foreground" />
                                   </div>
-                                  <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                  <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                                     {location.name}
                                   </span>
                                 </div>
                               </td>
-                              <td className="border border-blue-200 px-4 py-3">
+                              <td className="border border-border px-4 py-3">
                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getTypeColor(location.type)}`}>
                                   {location.type}
                                 </span>
                               </td>
-                              <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                              <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                                 {location.address}
                               </td>
-                              <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                              <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                                 {new Date(location.createdAt).toISOString().split('T')[0]}
                               </td>
-                              <td className="border border-blue-200 px-4 py-3">
+                              <td className="border border-border px-4 py-3">
                                 <div className="flex items-center gap-2 justify-center">
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors shadow-sm"
                                     onClick={() => openModal('view', location)}
                                     title="View Details"
                                   >
                                     <Eye className="w-4 h-4" />
                                   </button>
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                                     onClick={() => openModal('edit', location)}
                                     title="Edit Location"
                                   >
                                     <Edit className="w-4 h-4" />
                                   </button>
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
                                     onClick={() => handleDelete(location)}
                                     title="Delete Location"
                                   >

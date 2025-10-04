@@ -864,12 +864,12 @@ function AssetsLogsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="min-h-screen bg-background">
         <div className="flex items-center justify-center h-screen">
           <div className="text-center space-y-4">
             <LoadingSpinner size="lg" />
-            <p className="text-lg text-slate-600 dark:text-slate-400 font-medium">Loading Assets Dashboard...</p>
-            <p className="text-sm text-slate-500 dark:text-slate-500">Please wait while we fetch your project data</p>
+            <p className="text-lg text-muted-foreground font-medium">Loading Assets Dashboard...</p>
+            <p className="text-sm text-muted-foreground">Please wait while we fetch your project data</p>
           </div>
         </div>
       </div>
@@ -877,7 +877,7 @@ function AssetsLogsContent() {
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+    <div className="flex h-screen bg-background transition-colors duration-200">
       <div className="flex-1 overflow-auto">
         {/* Main Content */}
         <main className="px-4 pt-1 pb-1 sm:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
@@ -885,10 +885,10 @@ function AssetsLogsContent() {
           <div className="flex items-center justify-between gap-4">
             {/* Search Input */}
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search assets..."
-                className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                className="pl-10 h-10 text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -910,25 +910,25 @@ function AssetsLogsContent() {
 
 
           {/* Assets Table */}
-          <Card className="border border-gray-200 dark:border-gray-700">
+          <Card className="border-border">
             <CardContent className="p-0">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Loading assets...</span>
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-muted-foreground">Loading assets...</span>
                   </div>
                 </div>
               ) : error ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex flex-col items-center gap-3 text-center">
-                    <Database className="w-12 h-12 text-red-500" />
+                    <Database className="w-12 h-12 text-destructive" />
                     <div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">Failed to load data</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+                      <p className="text-lg font-semibold text-foreground">Failed to load data</p>
+                      <p className="text-sm text-muted-foreground">{error}</p>
                       <Button 
                         onClick={fetchProjectAssets}
-                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                        className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         Try Again
                       </Button>
@@ -936,89 +936,89 @@ function AssetsLogsContent() {
                   </div>
                 </div>
               ) : (
-                <div className="overflow-x-auto bg-white">
+                <div className="overflow-x-auto bg-background">
                   <table className="w-full border-collapse font-sans text-base">
                     <thead>
-                      <tr className="bg-white border-b border-blue-200">
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                      <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           #
                         </th>
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           ASSET DETAILS
                         </th>
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           TAG & SERIAL
                         </th>
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           VENDOR
                         </th>
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           CATEGORY
                         </th>
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           LOCATION
                         </th>
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           STATUS
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedAssets.map((asset, index) => (
-                        <tr key={asset._id} className="hover:bg-gray-50 transition-colors">
-                          <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
-                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                        <tr key={asset._id} className="hover:bg-muted transition-colors">
+                          <td className="border border-border px-4 py-3 text-sm font-medium text-blue-800">
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-50 rounded-full text-sm font-semibold text-blue-800">
                               {startIndex + index + 1}
                             </div>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
+                          <td className="border border-border px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 bg-blue-100 rounded-lg">
+                              <div className="p-2 bg-muted rounded-lg">
                                 {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
-                                  className: "w-5 h-5 text-blue-600"
+                                  className: "w-5 h-5 text-muted-foreground"
                                 })}
                               </div>
                               <div>
-                                <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                                   {asset.brand} {asset.model || ''}
                                 </span>
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-muted-foreground">
                                   {asset.assetType}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
+                          <td className="border border-border px-4 py-3">
                             <div>
-                              <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                              <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                                 {asset.tagId || 'N/A'}
                               </span>
-                              <div className="text-sm text-gray-500">
+                              <div className="text-sm text-muted-foreground">
                                 SN: {asset.serialNumber || 'N/A'}
                               </div>
                             </div>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                          <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                             {(() => {
                               const vendorName = asset.customFields?.['Vendor Name'];
                               return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
                             })()}
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                          <td className="border border-border px-4 py-3">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-muted text-muted-foreground">
                               {asset.assetType || 'Unknown'}
                             </span>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                          <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-blue-500" />
+                              <MapPin className="w-4 h-4 text-primary" />
                               <span className="truncate max-w-[120px]">
                                 {formatLocation(asset.location)}
                               </span>
                             </div>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                          <td className="border border-border px-4 py-3">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
                               {asset.status || 'active'}
                             </span>
                           </td>
@@ -1035,10 +1035,10 @@ function AssetsLogsContent() {
           {!loading && !error && filteredAssets.length === 0 && (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3 text-center">
-                <Database className="w-12 h-12 text-gray-400" />
+                <Database className="w-12 h-12 text-muted-foreground" />
                 <div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">No assets found</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-lg font-semibold text-foreground">No assets found</p>
+                  <p className="text-sm text-muted-foreground">
                     {projectAssets.length === 0 
                       ? `No assets found for project: ${user?.projectName || 'your project'}`
                       : 'No assets match your current search criteria'
@@ -1048,7 +1048,7 @@ function AssetsLogsContent() {
                 {searchTerm && (
                   <Button 
                     onClick={() => setSearchTerm('')}
-                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Clear Search
                   </Button>
@@ -1059,14 +1059,14 @@ function AssetsLogsContent() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center justify-between px-6 py-4 bg-muted border-t border-border">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>Showing</span>
-                <span className="font-semibold text-gray-900">
+                <span className="font-semibold text-foreground">
                   {startIndex + 1}-{Math.min(endIndex, filteredAssets.length)}
                 </span>
                 <span>of</span>
-                <span className="font-semibold text-gray-900">
+                <span className="font-semibold text-foreground">
                   {filteredAssets.length}
                 </span>
                 <span>assets</span>
@@ -1115,9 +1115,9 @@ function AssetsLogsContent() {
 
           {/* Asset View Modal */}
           <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-            <DialogContent className="max-w-3xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+            <DialogContent className="max-w-3xl bg-card border-border">
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                <DialogTitle className="flex items-center gap-2 text-foreground">
                   <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
                     <Database className="w-5 h-5 text-white" />
                   </div>
@@ -1128,17 +1128,17 @@ function AssetsLogsContent() {
               {selectedAsset && (
                 <div className="space-y-6">
                   {/* Asset Header */}
-                  <div className="flex items-center gap-4 p-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
+                  <div className="flex items-center gap-4 p-6 bg-muted rounded-xl border border-border">
                     <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl">
                       {React.createElement(getAssetTypeIcon(selectedAsset.assetType || 'unknown'), {
                         className: "w-8 h-8 text-white"
                       })}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      <h3 className="text-xl font-bold text-foreground">
                         {selectedAsset.tagId || 'Unknown Asset'}
                       </h3>
-                      <p className="text-slate-600 dark:text-slate-400">
+                      <p className="text-muted-foreground">
                         {selectedAsset.assetType || 'Unknown Type'} • {selectedAsset.brand || 'Unknown Brand'}
                       </p>
                     </div>
@@ -1152,12 +1152,12 @@ function AssetsLogsContent() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Assigned To */}
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <User className="w-4 h-4" />
                         Assigned To
                       </div>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                      <div className="p-4 bg-muted rounded-lg border border-border">
+                        <p className="text-sm text-foreground font-medium">
                           {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.name 
                             ? selectedAsset.assignedTo.name 
                             : typeof selectedAsset.assignedTo === 'string' 
@@ -1165,7 +1165,7 @@ function AssetsLogsContent() {
                             : 'Unassigned'}
                         </p>
                         {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.email && (
-                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {selectedAsset.assignedTo.email}
                           </p>
                         )}
@@ -1174,12 +1174,12 @@ function AssetsLogsContent() {
 
                     {/* Location */}
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <MapPin className="w-4 h-4" />
                         Location
                       </div>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                      <div className="p-4 bg-muted rounded-lg border border-border">
+                        <p className="text-sm text-foreground font-medium">
                           {selectedAsset.location ? formatLocation(selectedAsset.location) : 'Location not specified'}
                         </p>
                       </div>
@@ -1187,12 +1187,12 @@ function AssetsLogsContent() {
 
                     {/* Created Date */}
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <Calendar className="w-4 h-4" />
                         Created
                       </div>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                      <div className="p-4 bg-muted rounded-lg border border-border">
+                        <p className="text-sm text-foreground font-medium">
                           {selectedAsset.createdAt ? formatDate(selectedAsset.createdAt) : 'Date not available'}
                         </p>
                       </div>
@@ -1200,12 +1200,12 @@ function AssetsLogsContent() {
 
                     {/* Last Updated */}
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <Clock className="w-4 h-4" />
                         Last Updated
                       </div>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                        <p className="text-sm text-slate-900 dark:text-white font-medium">
+                      <div className="p-4 bg-muted rounded-lg border border-border">
+                        <p className="text-sm text-foreground font-medium">
                           {selectedAsset.updatedAt ? formatDate(selectedAsset.updatedAt) : 'Date not available'}
                         </p>
                       </div>
@@ -1215,12 +1215,12 @@ function AssetsLogsContent() {
                   {/* Additional Details */}
                   {selectedAsset.notes && (
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <FileText className="w-4 h-4" />
                         Notes
                       </div>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
-                        <p className="text-sm text-slate-900 dark:text-white">
+                      <div className="p-4 bg-muted rounded-lg border border-border">
+                        <p className="text-sm text-foreground">
                           {selectedAsset.notes}
                         </p>
                       </div>
@@ -1228,11 +1228,11 @@ function AssetsLogsContent() {
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-600">
+                  <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
                     <Button
                       variant="outline"
                       onClick={closeViewModal}
-                      className="border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      className="border-border text-foreground hover:bg-muted"
                     >
                       Close
                     </Button>

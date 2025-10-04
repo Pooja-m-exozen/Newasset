@@ -372,10 +372,10 @@ export default function ChecklistPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-2xl font-bold text-foreground mb-4">
             Authentication Required
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Please log in to access the checklist management system.
           </p>
         </div>
@@ -384,7 +384,7 @@ export default function ChecklistPage() {
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+    <div className="flex h-screen bg-background transition-colors duration-200">
       <div className="flex-1 overflow-auto">
         {/* Main Content */}
         <main className="px-4 pb-1 sm:px-6 sm:pb-2 space-y-4 sm:space-y-6">
@@ -392,10 +392,10 @@ export default function ChecklistPage() {
           <div className="flex items-center justify-between gap-4">
             {/* Search Input */}
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search checklists..."
-                className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                className="pl-10 h-10 text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -415,119 +415,119 @@ export default function ChecklistPage() {
 
 
               {/* Checklists Table */}
-              <Card className="border border-gray-200 dark:border-gray-700">
+              <Card className="border-border">
                 <CardContent className="p-0">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="flex items-center gap-3">
-                        <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-                        <span className="text-gray-600 dark:text-gray-400">Loading checklists...</span>
+                        <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                        <span className="text-muted-foreground">Loading checklists...</span>
                   </div>
                   </div>
                   ) : (
-                    <div className="overflow-x-auto bg-white">
+                    <div className="overflow-x-auto bg-background">
                       <table className="w-full border-collapse font-sans text-base">
                       <thead>
-                          <tr className="bg-white border-b border-blue-200">
-                            <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                          <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                            <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                               #
                           </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("title")}
                             >
                               TITLE
                           </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("type")}
                             >
                               TYPE
                           </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("priority")}
                             >
                               PRIORITY
                           </th>
                             <th 
-                              className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                              className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                               onClick={() => handleSort("status")}
                             >
                               STATUS
                           </th>
-                            <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                            <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                               LOCATION
                           </th>
-                            <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
+                            <th className="border border-border px-4 py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">ACTIONS</th>
                         </tr>
                       </thead>
                         <tbody>
                           {paginatedChecklists.map((checklist, index) => (
-                            <tr key={checklist._id} className="hover:bg-gray-50 transition-colors">
-                              <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
-                                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                            <tr key={checklist._id} className="hover:bg-muted transition-colors">
+                              <td className="border border-border px-4 py-3 text-sm font-medium text-blue-800">
+                                <div className="flex items-center justify-center w-8 h-8 bg-blue-50 rounded-full text-sm font-semibold text-blue-800">
                                   {startIndex + index + 1}
                                 </div>
                               </td>
-                              <td className="border border-blue-200 px-4 py-3">
+                              <td className="border border-border px-4 py-3">
                                 <div className="flex items-center gap-2">
-                                  <div className="p-1.5 bg-blue-100 rounded">
-                                    <CheckSquare className="w-4 h-4 text-blue-600" />
+                                  <div className="p-1.5 bg-muted rounded">
+                                    <CheckSquare className="w-4 h-4 text-muted-foreground" />
                                   </div>
                                   <div>
-                                    <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                    <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                                       {checklist.title}
                                     </span>
-                                    <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-xs">
+                                    <div className="text-xs text-muted-foreground mt-1 line-clamp-1 max-w-xs">
                                       {checklist.description}
                                     </div>
                                   </div>
                                 </div>
                             </td>
-                              <td className="border border-blue-200 px-4 py-3">
-                                <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                              <td className="border border-border px-4 py-3">
+                                <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                                 {checklist.type}
                                 </span>
                             </td>
-                              <td className="border border-blue-200 px-4 py-3">
+                              <td className="border border-border px-4 py-3">
                                 <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-sm font-medium', PRIORITY_COLORS[checklist.priority])}>
                                 {checklist.priority}
                                 </span>
                             </td>
-                              <td className="border border-blue-200 px-4 py-3">
+                              <td className="border border-border px-4 py-3">
                                 <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-sm font-medium', STATUS_COLORS[checklist.status])}>
                                 {checklist.status}
                                 </span>
                             </td>
-                              <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                              <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <Building className="w-4 h-4 text-blue-500" />
+                                  <Building className="w-4 h-4 text-primary" />
                                   <span>{checklist.location.building}</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-gray-500">
+                                <div className="flex items-center gap-2 text-muted-foreground">
                                   <MapPin className="w-4 h-4 text-green-500" />
                                   <span>{checklist.location.zone}</span>
                               </div>
                             </td>
-                              <td className="border border-blue-200 px-4 py-3">
+                              <td className="border border-border px-4 py-3">
                                 <div className="flex items-center gap-2 justify-center">
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                                   onClick={() => handleView(checklist)}
                                   title="View Details"
                                 >
                                   <Eye className="w-4 h-4" />
                                   </button>
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors shadow-sm"
                                   onClick={() => handleEdit(checklist)}
                                   title="Edit Checklist"
                                 >
                                   <Edit className="w-4 h-4" />
                                   </button>
                                   <button 
-                                    className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                                    className="w-9 h-9 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
                                   onClick={() => handleDeleteChecklist(checklist._id)}
                                   disabled={isDeleting === checklist._id}
                                   title="Delete Checklist"
@@ -553,10 +553,10 @@ export default function ChecklistPage() {
               {!isLoading && paginatedChecklists.length === 0 && (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex flex-col items-center gap-3 text-center">
-                    <CheckSquare className="w-12 h-12 text-gray-400" />
+                    <CheckSquare className="w-12 h-12 text-muted-foreground" />
                     <div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">No checklists found</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-lg font-semibold text-foreground">No checklists found</p>
+                      <p className="text-sm text-muted-foreground">
                         {filterPriority || filterStatus || filterType || searchTerm
                           ? 'Try adjusting your filters or search terms'
                       : 'Create your first checklist to get started'

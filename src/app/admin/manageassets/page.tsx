@@ -263,10 +263,10 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-2">
             {user?.projectName ? `Loading assets for ${user.projectName}...` : 'Loading assets...'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             {user?.projectName 
               ? `Please wait while we fetch asset data for project: ${user.projectName}`
               : 'Please wait while we fetch your asset data'
@@ -299,7 +299,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
           actionText="Add First Asset"
           onAction={() => setIsCreateModalOpen(true)}
           icon={
-            <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
           }
@@ -308,88 +308,88 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
         <>
           {/* Modern Desktop Table View */}
           <div className="hidden lg:block">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="bg-background rounded-lg shadow-sm overflow-hidden border border-border">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse font-sans text-base">
                   <thead>
-                    <tr className="bg-white border-b border-blue-200">
-                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                    <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                         #
                       </th>
-                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                         ASSET ID
                       </th>
-                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                         BRAND & MODEL
                       </th>
-                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                         MOBILITY
                       </th>
-                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                         ASSIGNED TO
                       </th>
-                      <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                      <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                         STATUS
                       </th>
-                      <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
+                      <th className="border border-border px-4 py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedAssets.map((asset, index) => (
-                      <tr key={asset._id || `asset-${index}`} className="hover:bg-gray-50 transition-colors">
-                        <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
-                          <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                      <tr key={asset._id || `asset-${index}`} className="hover:bg-muted transition-colors">
+                        <td className="border border-border px-4 py-3 text-sm font-medium text-blue-800">
+                          <div className="flex items-center justify-center w-8 h-8 bg-blue-50 rounded-full text-sm font-semibold text-blue-800">
                             {startIndex + index + 1}
                           </div>
                         </td>
-                        <td className="border border-blue-200 px-4 py-3">
-                          <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                        <td className="border border-border px-4 py-3">
+                          <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                             {asset.tagId}
                           </span>
                         </td>
-                        <td className="border border-blue-200 px-4 py-3">
+                        <td className="border border-border px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="p-2 bg-muted rounded-lg">
+                              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                               </svg>
                             </div>
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium text-foreground">
                                 {asset.brand} {asset.model}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-muted-foreground">
                                 {asset.assetType || 'Unknown Type'}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="border border-blue-200 px-4 py-3">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                        <td className="border border-border px-4 py-3">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-muted text-muted-foreground">
                             {asset.mobilityCategory || 'Not Set'}
                           </span>
                         </td>
-                        <td className="border border-blue-200 px-4 py-3">
+                        <td className="border border-border px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                             </div>
-                            <span className="text-sm text-gray-900">
+                            <span className="text-sm text-foreground">
                               {asset.assignedTo?.name || 'Unassigned'}
                             </span>
                           </div>
                         </td>
-                        <td className="border border-blue-200 px-4 py-3">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        <td className="border border-border px-4 py-3">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
                             {asset.status || 'Active'}
                           </span>
                         </td>
-                        <td className="border border-blue-200 px-4 py-3">
+                        <td className="border border-border px-4 py-3">
                           <div className="flex items-center gap-2 justify-center">
                             <button 
-                              className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
+                              className="w-9 h-9 flex items-center justify-center text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors shadow-sm"
                               onClick={() => handleView(asset)}
                               title="View Asset"
                             >
@@ -399,7 +399,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                               </svg>
                             </button>
                             <button 
-                              className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
+                              className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                               onClick={() => handleEdit(asset)}
                               title="Edit Asset"
                             >
@@ -408,7 +408,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                               </svg>
                             </button>
                             <button 
-                              className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                              className="w-9 h-9 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
                               onClick={() => asset._id && handleDelete(asset._id)}
                               title="Delete Asset"
                             >
@@ -427,10 +427,10 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
             
             {/* Modern Pagination Controls */}
             {totalPages > 1 && (
-              <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+              <div className="bg-background border-t border-border px-6 py-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing <span className="font-semibold text-gray-900 dark:text-white">{startIndex + 1}-{Math.min(endIndex, totalItems)}</span> of <span className="font-semibold text-gray-900 dark:text-white">{totalItems}</span> assets
+                  <div className="text-sm text-muted-foreground">
+                    Showing <span className="font-semibold text-foreground">{startIndex + 1}-{Math.min(endIndex, totalItems)}</span> of <span className="font-semibold text-foreground">{totalItems}</span> assets
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -438,7 +438,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                       size="sm"
                       onClick={() => setCurrentPage(1)}
                       disabled={currentPage === 1}
-                      className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-8 w-8 p-0 border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
@@ -449,7 +449,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-8 w-8 p-0 border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -478,8 +478,8 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                             onClick={() => setCurrentPage(pageNum)}
                             className={`h-8 w-8 p-0 text-sm ${
                               currentPage === pageNum 
-                                ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600" 
-                                : "border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                                ? "bg-primary hover:bg-primary/90 text-primary-foreground border-primary" 
+                                : "border-border hover:border-primary text-muted-foreground hover:text-primary"
                             }`}
                           >
                             {pageNum}
@@ -493,7 +493,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-8 w-8 p-0 border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -504,7 +504,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                       size="sm"
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={currentPage === totalPages}
-                      className="h-8 w-8 p-0 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-8 w-8 p-0 border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -535,9 +535,9 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
             
             {/* Mobile Pagination Controls */}
             {totalPages > 1 && (
-              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
+              <div className="bg-background rounded-lg p-4">
                 <div className="flex flex-col gap-4">
-                  <div className="text-center text-sm text-gray-700 dark:text-gray-300">
+                  <div className="text-center text-sm text-muted-foreground">
                     Page {currentPage} of {totalPages} ({totalItems} total assets)
                   </div>
                   <div className="flex justify-center gap-2">
@@ -546,7 +546,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                       size="sm"
                       onClick={() => setCurrentPage(1)}
                       disabled={currentPage === 1}
-                      className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       First
                     </Button>
@@ -555,7 +555,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Prev
                     </Button>
@@ -581,8 +581,8 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                             size="sm"
                             onClick={() => setCurrentPage(pageNum)}
                             className={currentPage === pageNum 
-                              ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                              : "border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+                              ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
+                              : "border-border hover:border-primary text-muted-foreground hover:text-primary"
                             }
                           >
                             {pageNum}
@@ -596,7 +596,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                       size="sm"
                       onClick={() => setCurrentPage(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </Button>
@@ -605,7 +605,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                       size="sm"
                       onClick={() => setCurrentPage(totalPages)}
                       disabled={currentPage === totalPages}
-                      className="border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="border-border hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Last
                     </Button>
@@ -617,13 +617,13 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
             {/* Mobile Empty State */}
             {filteredAssets.length === 0 && (
               <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Assets Found</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                <h3 className="text-lg font-semibold text-foreground mb-2">No Assets Found</h3>
+                <p className="text-muted-foreground text-sm mb-4">
                   {searchTerm 
                     ? 'Try adjusting your search terms'
                     : 'Get started by adding your first asset'
@@ -631,7 +631,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                 </p>
                 <Button 
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   Add First Asset
                 </Button>
@@ -744,7 +744,7 @@ const ManageAssetsPage: React.FC = () => {
   if (showPermissions) {
     return (
       <AssetProvider>
-        <div className="min-h-screen bg-white dark:bg-gray-900">
+        <div className="min-h-screen bg-background">
           <div className="p-0">
             <div className="max-w-7xl mx-auto">
               {/* Permissions Content */}
@@ -760,7 +760,7 @@ const ManageAssetsPage: React.FC = () => {
 
   return (
     <AssetProvider>
-      <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+      <div className="min-h-screen bg-background transition-colors duration-200">
         <div className="p-0">
           <div className="max-w-7xl mx-auto">
             {/* Search and Action Buttons Row */}
@@ -768,14 +768,14 @@ const ManageAssetsPage: React.FC = () => {
               {/* Search Input */}
               <div className="flex-1 max-w-md">
                 <div className="relative">
-                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   <Input
                     placeholder="Search assets by ID, brand, model, or serial number..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                    className="w-full pl-10"
                   />
                   </div>
                   </div>
@@ -784,7 +784,7 @@ const ManageAssetsPage: React.FC = () => {
               <div className="flex gap-3">
                 <Button 
                   onClick={() => router.push('/admin/asset-types')}
-                  className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
+                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -797,7 +797,7 @@ const ManageAssetsPage: React.FC = () => {
                     const event = new CustomEvent('openCreateAssetModal');
                     window.dispatchEvent(event);
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -806,7 +806,7 @@ const ManageAssetsPage: React.FC = () => {
                 </Button>
                 <Button 
                   onClick={() => setShowPermissions(true)}
-                  className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -817,7 +817,7 @@ const ManageAssetsPage: React.FC = () => {
                 </div>
 
             {/* Assets Content */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm">
+            <div className="bg-background rounded-lg shadow-sm">
                 <div className="p-0">
                     <AssetsList searchTerm={searchTerm} />
                 </div>

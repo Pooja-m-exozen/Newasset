@@ -592,16 +592,16 @@ Timestamps:
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 font-sans">
+      <div className="min-h-screen bg-background font-sans">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex flex-col items-center gap-6">
             <div className="relative">
-              <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-400 rounded-full animate-spin" style={{ animationDelay: '0.5s' }}></div>
+              <div className="w-16 h-16 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
+              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-primary/60 rounded-full animate-spin" style={{ animationDelay: '0.5s' }}></div>
             </div>
             <div className="text-center">
-              <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-tight">Loading Assets</h3>
-              <p className="text-gray-600 font-medium">Fetching your facility assets...</p>
+              <h3 className="text-xl font-bold text-foreground mb-2 tracking-tight">Loading Assets</h3>
+              <p className="text-muted-foreground font-medium">Fetching your facility assets...</p>
             </div>
           </div>
         </div>
@@ -612,19 +612,19 @@ Timestamps:
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 font-sans">
+      <div className="min-h-screen bg-background font-sans">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex flex-col items-center gap-6 text-center max-w-md">
             <div className="relative">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="h-10 w-10 text-red-500" />
+              <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center">
+                <AlertCircle className="h-10 w-10 text-destructive" />
               </div>
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3 tracking-tight">
+              <h3 className="text-2xl font-bold text-foreground mb-3 tracking-tight">
                 {error.includes('Authentication') ? 'Authentication Required' : 'Error Loading Assets'}
               </h3>
-              <p className="text-gray-600 mb-6 text-lg font-medium">{error}</p>
+              <p className="text-muted-foreground mb-6 text-lg font-medium">{error}</p>
               <div className="flex gap-3 justify-center">
                 {error.includes('Authentication') ? (
                   <Button onClick={() => window.location.href = '/login'} size="lg" className="px-8 font-semibold">
@@ -645,7 +645,7 @@ Timestamps:
   }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
+    <div className="flex h-screen bg-background transition-colors duration-200">
       <div className="flex-1 overflow-auto">
         {/* Main Content */}
         <main className="px-4 pt-1 pb-1 sm:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
@@ -653,10 +653,10 @@ Timestamps:
           <div className="flex items-center justify-between gap-4">
                 {/* Search Input */}
             <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                 placeholder="Search assets..."
-                className="pl-10 h-10 text-sm bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                className="pl-10 h-10 text-sm"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -669,7 +669,7 @@ Timestamps:
                   setScannerKey(prev => prev + 1)
                   setShowScanner(true)
                 }}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <Scan className="w-4 h-4" />
                 <span>Scan QR</span>
@@ -678,25 +678,25 @@ Timestamps:
                   </div>
 
           {/* Assets Table */}
-          <Card className="border border-gray-200 dark:border-gray-700">
+          <Card className="border-border">
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex items-center gap-3">
-                    <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-                    <span className="text-gray-600 dark:text-gray-400">Loading assets...</span>
+                    <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                    <span className="text-muted-foreground">Loading assets...</span>
                   </div>
                 </div>
               ) : error ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="flex flex-col items-center gap-3 text-center">
-                    <AlertCircle className="w-12 h-12 text-red-500" />
+                    <AlertCircle className="w-12 h-12 text-destructive" />
                     <div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">Failed to load data</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
+                      <p className="text-lg font-semibold text-foreground">Failed to load data</p>
+                      <p className="text-sm text-muted-foreground">{error}</p>
                     <Button 
                         onClick={fetchAssets}
-                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                        className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Try Again
@@ -705,94 +705,94 @@ Timestamps:
                 </div>
                 </div>
               ) : (
-                <div className="overflow-x-auto bg-white">
+                <div className="overflow-x-auto bg-background">
                   <table className="w-full border-collapse font-sans text-base">
                     <thead>
-                      <tr className="bg-white border-b border-blue-200">
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                      <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           #
                         </th>
                         <th 
-                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                          className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                             onClick={() => handleSort('tagId')}
                         >
                           ASSET ID
                         </th>
                         <th 
-                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                          className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                             onClick={() => handleSort('assetType')}
                         >
                           TYPE
                         </th>
                         <th 
-                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                          className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                             onClick={() => handleSort('brand')}
                         >
                           BRAND
                         </th>
                         <th 
-                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                          className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                             onClick={() => handleSort('status')}
                         >
                           STATUS
                         </th>
                         <th 
-                          className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                          className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                             onClick={() => handleSort('priority')}
                         >
                           PRIORITY
                         </th>
-                        <th className="border border-blue-200 px-4 py-3 text-left font-semibold text-blue-900 bg-blue-50 text-sm">
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           LOCATION
                         </th>
-                        <th className="border border-blue-200 px-4 py-3 text-center font-semibold text-blue-900 bg-blue-50 text-sm">ACTIONS</th>
+                        <th className="border border-border px-4 py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredAssets.map((asset, index) => (
-                        <tr key={asset._id} className="hover:bg-gray-50 transition-colors">
-                          <td className="border border-blue-200 px-4 py-3 text-sm font-medium text-gray-700">
-                            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full text-sm font-semibold text-blue-700">
+                        <tr key={asset._id} className="hover:bg-muted transition-colors">
+                          <td className="border border-border px-4 py-3 text-sm font-medium text-blue-800">
+                            <div className="flex items-center justify-center w-8 h-8 bg-blue-50 rounded-full text-sm font-semibold text-blue-800">
                               {index + 1}
                             </div>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
-                            <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                          <td className="border border-border px-4 py-3">
+                            <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                                   {asset.tagId}
                             </span>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
-                            <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                          <td className="border border-border px-4 py-3">
+                            <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
                               {asset.assetType}
                             </span>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                          <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                             {asset.brand}
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
+                          <td className="border border-border px-4 py-3">
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(asset.status)}`}>
                               {asset.status}
                             </span>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
+                          <td className="border border-border px-4 py-3">
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPriorityBadgeColor(asset.priority)}`}>
                               {asset.priority}
                             </span>
                           </td>
-                          <td className="border border-blue-200 px-4 py-3 text-sm text-gray-700">
+                          <td className="border border-border px-4 py-3 text-sm text-muted-foreground">
                               {asset.location ? (
                                 <div>
                                   <div className="font-medium">{asset.location.building}</div>
-                                <div className="text-gray-500">{asset.location.floor} • {asset.location.room}</div>
+                                <div className="text-muted-foreground">{asset.location.floor} • {asset.location.room}</div>
                                 </div>
                               ) : (
-                              <span className="text-gray-400">Not assigned</span>
+                              <span className="text-muted-foreground">Not assigned</span>
                               )}
                           </td>
-                          <td className="border border-blue-200 px-4 py-3">
+                          <td className="border border-border px-4 py-3">
                             <div className="flex items-center gap-2 justify-center">
                               <button 
-                                className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-colors shadow-sm"
+                                className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                                 onClick={() => {
                                   setScannedAsset(asset)
                                   setShowScannedAssetModal(true)
@@ -802,14 +802,14 @@ Timestamps:
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button 
-                                className="w-9 h-9 flex items-center justify-center text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
+                                className="w-9 h-9 flex items-center justify-center text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors shadow-sm"
                                 onClick={() => downloadAssetInfo(asset)}
                                 title="Download Info"
                               >
                                 <Download className="w-4 h-4" />
                               </button>
                               <button 
-                                className="w-9 h-9 flex items-center justify-center text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
+                                className="w-9 h-9 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
                                 onClick={() => setShowMoreOptions(asset._id)}
                                 title="More Options"
                               >
@@ -830,10 +830,10 @@ Timestamps:
           {!isLoading && !error && filteredAssets.length === 0 && (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3 text-center">
-                <Building className="w-12 h-12 text-gray-400" />
+                <Building className="w-12 h-12 text-muted-foreground" />
                 <div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">No assets found</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-lg font-semibold text-foreground">No assets found</p>
+                  <p className="text-sm text-muted-foreground">
                     {searchTerm 
                       ? 'Try adjusting your search terms'
                       : userProject 
@@ -845,7 +845,7 @@ Timestamps:
                 {searchTerm && (
                   <Button 
                     onClick={() => setSearchTerm('')}
-                    className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Clear Search
                   </Button>
@@ -903,18 +903,18 @@ Timestamps:
       {/* Scanned Asset Details Modal */}
       {showScannedAssetModal && scannedAsset && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg sm:max-w-xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-card rounded-lg shadow-lg max-w-lg sm:max-w-xl w-full max-h-[90vh] overflow-hidden">
             {/* Simple Modal Header */}
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Eye className="w-5 h-5 text-gray-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Asset Details</h3>
+                <Eye className="w-5 h-5 text-muted-foreground" />
+                <h3 className="text-lg font-semibold text-foreground">Asset Details</h3>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowScannedAssetModal(false)}
-                className="h-8 w-8 p-0 hover:bg-gray-100 rounded"
+                className="h-8 w-8 p-0 hover:bg-muted rounded"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -923,12 +923,12 @@ Timestamps:
             {/* Simple Modal Content */}
             <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(90vh-80px)]">
               {/* Asset Header */}
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-1">{scannedAsset.tagId}</h2>
-                <p className="text-sm text-gray-600">{scannedAsset.assetType}</p>
-                <p className="text-sm text-gray-600">{scannedAsset.brand} • {scannedAsset.model}</p>
+              <div className="bg-muted rounded-lg p-3 border border-border">
+                <h2 className="text-xl font-bold text-foreground mb-1">{scannedAsset.tagId}</h2>
+                <p className="text-sm text-muted-foreground">{scannedAsset.assetType}</p>
+                <p className="text-sm text-muted-foreground">{scannedAsset.brand} • {scannedAsset.model}</p>
                 <div className="mt-2">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
                     {scannedAsset.status}
                   </span>
                 </div>
@@ -936,16 +936,16 @@ Timestamps:
 
               {/* Asset Info Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Asset Details</h4>
+                <div className="bg-muted rounded-lg p-3 border border-border">
+                  <h4 className="text-sm font-medium text-foreground mb-2">Asset Details</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Priority:</span>
-                      <span className="font-medium text-gray-900 capitalize">{scannedAsset.priority}</span>
+                      <span className="text-muted-foreground">Priority:</span>
+                      <span className="font-medium text-foreground capitalize">{scannedAsset.priority}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Assigned To:</span>
-                      <span className="font-medium text-gray-900 max-w-[120px] truncate">
+                      <span className="text-muted-foreground">Assigned To:</span>
+                      <span className="font-medium text-foreground max-w-[120px] truncate">
                         {typeof scannedAsset.assignedTo === 'string' 
                           ? scannedAsset.assignedTo 
                           : scannedAsset.assignedTo?.name || 'N/A'}
@@ -955,20 +955,20 @@ Timestamps:
                 </div>
                 
                 {scannedAsset.location && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Location</h4>
+                  <div className="bg-muted rounded-lg p-3 border border-border">
+                    <h4 className="text-sm font-medium text-foreground mb-2">Location</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Building:</span>
-                        <span className="font-medium text-gray-900">{scannedAsset.location.building}</span>
+                        <span className="text-muted-foreground">Building:</span>
+                        <span className="font-medium text-foreground">{scannedAsset.location.building}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Floor:</span>
-                        <span className="font-medium text-gray-900">{scannedAsset.location.floor}</span>
+                        <span className="text-muted-foreground">Floor:</span>
+                        <span className="font-medium text-foreground">{scannedAsset.location.floor}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Room:</span>
-                        <span className="font-medium text-gray-900">{scannedAsset.location.room}</span>
+                        <span className="text-muted-foreground">Room:</span>
+                        <span className="font-medium text-foreground">{scannedAsset.location.room}</span>
                       </div>
                     </div>
                   </div>
@@ -977,13 +977,13 @@ Timestamps:
 
               {/* Digital Assets */}
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Digital Assets</h4>
+                <h4 className="text-sm font-medium text-foreground">Digital Assets</h4>
                 
                 {/* QR Code */}
                 {scannedAsset.digitalAssets?.qrCode?.url && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div className="bg-muted rounded-lg p-3 border border-border">
                     <div className="flex items-center justify-between mb-3">
-                      <h5 className="text-sm font-medium text-gray-700">QR Code</h5>
+                      <h5 className="text-sm font-medium text-foreground">QR Code</h5>
                       <Button
                         onClick={() => downloadQRCode(scannedAsset)}
                         variant="outline"
@@ -1001,14 +1001,14 @@ Timestamps:
                           alt="QR Code" 
                           width={128}
                           height={128}
-                          className="w-28 h-28 sm:w-32 sm:h-32 border border-gray-300 rounded"
+                          className="w-28 h-28 sm:w-32 sm:h-32 border border-border rounded"
                         />
                       ) : (
-                        <div className="w-28 h-28 sm:w-32 sm:h-32 bg-gray-200 border border-gray-300 rounded flex items-center justify-center">
+                        <div className="w-28 h-28 sm:w-32 sm:h-32 bg-muted border border-border rounded flex items-center justify-center">
                           {viewModalQrLoading ? (
-                            <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="w-6 h-6 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
                           ) : (
-                            <span className="text-xs text-gray-500 text-center">Loading...</span>
+                            <span className="text-xs text-muted-foreground text-center">Loading...</span>
                           )}
                         </div>
                       )}
@@ -1018,9 +1018,9 @@ Timestamps:
 
                 {/* Barcode */}
                 {scannedAsset.digitalAssets?.barcode?.url && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div className="bg-muted rounded-lg p-3 border border-border">
                     <div className="flex items-center justify-between mb-3">
-                      <h5 className="text-sm font-medium text-gray-700">Barcode</h5>
+                      <h5 className="text-sm font-medium text-foreground">Barcode</h5>
                       <Button
                         onClick={() => downloadBarcode(scannedAsset)}
                         variant="outline"
@@ -1038,14 +1038,14 @@ Timestamps:
                           alt="Barcode" 
                           width={200}
                           height={96}
-                          className="h-20 sm:h-24 border border-gray-300 rounded"
+                          className="h-20 sm:h-24 border border-border rounded"
                         />
                       ) : (
-                        <div className="h-20 sm:h-24 bg-gray-200 border border-gray-300 rounded flex items-center justify-center">
+                        <div className="h-20 sm:h-24 bg-muted border border-border rounded flex items-center justify-center">
                           {viewModalBarcodeLoading ? (
-                            <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="w-6 h-6 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
                           ) : (
-                            <span className="text-xs text-gray-500 text-center">Loading...</span>
+                            <span className="text-xs text-muted-foreground text-center">Loading...</span>
                           )}
                         </div>
                       )}
@@ -1055,11 +1055,11 @@ Timestamps:
               </div>
 
               {/* Simple Action Buttons */}
-              <div className="pt-3 border-t border-gray-200">
+              <div className="pt-3 border-t border-border">
                 <Button
                   onClick={() => downloadAssetInfo(scannedAsset)}
                   variant="outline"
-                  className="w-full h-9 border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="w-full h-9 border-border text-foreground hover:bg-muted"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download Asset Info
@@ -1073,14 +1073,14 @@ Timestamps:
       {/* More Options Modal */}
       {showMoreOptions && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
-            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">More Options</h3>
+          <div className="bg-card rounded-lg shadow-xl max-w-sm w-full">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">More Options</h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowMoreOptions(null)}
-                className="h-8 w-8 p-0 hover:bg-slate-100 rounded-lg"
+                className="h-8 w-8 p-0 hover:bg-muted rounded-lg"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -1097,7 +1097,7 @@ Timestamps:
                     setShowScannedAssetModal(true)
                   }
                 }}
-                className="w-full justify-start h-10 text-slate-700 hover:bg-blue-50 hover:text-blue-600"
+                className="w-full justify-start h-10 text-foreground hover:bg-primary/10 hover:text-primary"
               >
                 <Eye className="w-4 h-4 mr-3" />
                 View Details
@@ -1112,7 +1112,7 @@ Timestamps:
                     downloadAssetInfo(asset)
                   }
                 }}
-                className="w-full justify-start h-10 text-slate-700 hover:bg-green-50 hover:text-green-600"
+                className="w-full justify-start h-10 text-foreground hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600"
               >
                 <Download className="w-4 h-4 mr-3" />
                 Download Info

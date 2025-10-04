@@ -63,13 +63,13 @@ export default function AdminDashboardPage() {
       <ProtectedRoute>
         <div className="flex h-screen bg-gradient-to-br from-background to-muted">
           <div className="flex-1 overflow-auto">
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
+            <div className="flex items-center justify-center h-full px-4">
+              <div className="text-center max-w-md w-full">
                 <LoadingSpinner size="lg" />
-                <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+                <p className="mt-4 text-muted-foreground text-sm sm:text-base">Loading dashboard...</p>
                 {user?.projectName && (
                   <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200">
                       <strong>Current Project:</strong> {user.projectName}
                     </p>
                     <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
@@ -90,15 +90,15 @@ export default function AdminDashboardPage() {
       <ProtectedRoute>
         <div className="flex h-screen bg-gradient-to-br from-background to-muted">
           <div className="flex-1 overflow-auto">
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
+            <div className="flex items-center justify-center h-full px-4">
+              <div className="text-center max-w-md w-full">
                 <div className="mb-4">
                   <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">Failed to load dashboard data</h3>
-                  <p className="text-muted-foreground mb-4">{error}</p>
+                  <p className="text-muted-foreground mb-4 text-sm sm:text-base">{error}</p>
                   {user?.projectName && (
                     <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg mb-4">
-                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200">
                         <strong>Current Project:</strong> {user.projectName}
                       </p>
                       <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button onClick={refreshDashboard} disabled={isLoading}>
+                <Button onClick={refreshDashboard} disabled={isLoading} className="w-full sm:w-auto">
                   <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                   Try Again
                 </Button>

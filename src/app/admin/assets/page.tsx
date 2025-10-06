@@ -17,10 +17,7 @@ import {
   RefreshCw,
   Scan,
   Eye,
-  Download,
-  X,
-  ArrowUpDown,
-  MoreVertical
+  X
 } from 'lucide-react'
 
 interface Asset {
@@ -138,7 +135,6 @@ export default function AssetsPage() {
   const [showScanner, setShowScanner] = useState(false)
   const [scannerKey, setScannerKey] = useState(0)
   const [scannedResult, setScannedResult] = useState<string | null>(null)
-  const [showMoreOptions, setShowMoreOptions] = useState<string | null>(null)
   const [scannedAsset, setScannedAsset] = useState<Asset | null>(null)
   const [showScannedAssetModal, setShowScannedAssetModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
@@ -790,7 +786,7 @@ Timestamps:
                               )}
                           </td>
                           <td className="border border-border px-4 py-3">
-                            <div className="flex items-center gap-2 justify-center">
+                            <div className="flex items-center justify-center">
                               <button 
                                 className="w-9 h-9 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                                 onClick={() => {
@@ -800,20 +796,6 @@ Timestamps:
                                 title="View Details"
                               >
                                 <Eye className="w-4 h-4" />
-                              </button>
-                              <button 
-                                className="w-9 h-9 flex items-center justify-center text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors shadow-sm"
-                                onClick={() => downloadAssetInfo(asset)}
-                                title="Download Info"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
-                              <button 
-                                className="w-9 h-9 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
-                                onClick={() => setShowMoreOptions(asset._id)}
-                                title="More Options"
-                              >
-                                <MoreVertical className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -990,7 +972,7 @@ Timestamps:
                         size="sm"
                         className="h-7 px-2 text-xs"
                       >
-                        <Download className="w-3 h-3 mr-1" />
+                        <RefreshCw className="w-3 h-3 mr-1" />
                         Download
                       </Button>
                     </div>
@@ -1027,7 +1009,7 @@ Timestamps:
                         size="sm"
                         className="h-7 px-2 text-xs"
                       >
-                        <Download className="w-3 h-3 mr-1" />
+                        <RefreshCw className="w-3 h-3 mr-1" />
                         Download
                       </Button>
                     </div>
@@ -1054,73 +1036,11 @@ Timestamps:
                 )}
               </div>
 
-              {/* Simple Action Buttons */}
-              <div className="pt-3 border-t border-border">
-                <Button
-                  onClick={() => downloadAssetInfo(scannedAsset)}
-                  variant="outline"
-                  className="w-full h-9 border-border text-foreground hover:bg-muted"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Asset Info
-                </Button>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* More Options Modal */}
-      {showMoreOptions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg shadow-xl max-w-sm w-full">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">More Options</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowMoreOptions(null)}
-                className="h-8 w-8 p-0 hover:bg-muted rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="p-4 space-y-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const asset = assets.find(a => a._id === showMoreOptions)
-                  if (asset) {
-                    setShowMoreOptions(null)
-                    setScannedAsset(asset)
-                    setShowScannedAssetModal(true)
-                  }
-                }}
-                className="w-full justify-start h-10 text-foreground hover:bg-primary/10 hover:text-primary"
-              >
-                <Eye className="w-4 h-4 mr-3" />
-                View Details
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const asset = assets.find(a => a._id === showMoreOptions)
-                  if (asset) {
-                    setShowMoreOptions(null)
-                    downloadAssetInfo(asset)
-                  }
-                }}
-                className="w-full justify-start h-10 text-foreground hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600"
-              >
-                <Download className="w-4 h-4 mr-3" />
-                Download Info
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -158,52 +158,52 @@ const AssetTypeManagement: React.FC = () => {
       ) : (
         <div className="bg-background rounded-lg shadow-sm overflow-hidden border border-border">
           <div className="overflow-x-auto bg-background">
-            <table className="w-full border-collapse font-sans text-base">
+            <table className="w-full border-collapse font-sans text-base min-w-[600px]">
               <thead>
-                <tr className="bg-muted border-b border-border">
-                  <th className="border border-border px-4 py-3 text-left font-semibold text-foreground bg-muted text-sm">
+                <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                  <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                     #
                   </th>
-                  <th className="border border-border px-4 py-3 text-left font-semibold text-foreground bg-muted text-sm">
+                  <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                     ASSET TYPE NAME
                   </th>
-                  <th className="border border-border px-4 py-3 text-left font-semibold text-foreground bg-muted text-sm">
+                  <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                     CREATED
                   </th>
-                  <th className="border border-border px-4 py-3 text-center font-semibold text-foreground bg-muted text-sm">ACTIONS</th>
+                  <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAssetTypes.map((assetType: AssetType, index: number) => (
                   <tr key={assetType._id} className="hover:bg-muted transition-colors">
-                    <td className="border border-border px-4 py-3 text-sm font-medium text-muted-foreground">
-                      <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-full text-sm font-semibold text-primary">
+                    <td className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-blue-800">
+                      <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 bg-blue-50 rounded-full text-xs sm:text-sm font-semibold text-blue-800">
                         {index + 1}
                       </div>
                     </td>
-                    <td className="border border-border px-4 py-3 text-sm font-medium text-foreground">
+                    <td className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-blue-800">
                       {assetType.name}
                     </td>
-                    <td className="border border-border px-4 py-3 text-sm font-medium text-muted-foreground">
+                    <td className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-blue-600">
                       {new Date(assetType.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="border border-border px-4 py-3">
-                      <div className="flex items-center gap-2 justify-center">
+                    <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                      <div className="flex items-center gap-1 sm:gap-2 justify-center">
                         <button 
-                          className="w-10 h-10 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
+                          className="w-7 h-7 sm:w-10 sm:h-10 flex items-center justify-center text-green-600 border border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors shadow-sm"
                           onClick={() => handleEdit(assetType)}
                           title="Edit Asset Type"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 h-3 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
                         <button 
-                          className="w-10 h-10 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
+                          className="w-7 h-7 sm:w-10 sm:h-10 flex items-center justify-center text-destructive border border-destructive rounded-lg hover:bg-destructive/10 transition-colors shadow-sm"
                           onClick={() => handleDelete(assetType._id)}
                           title="Delete Asset Type"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 h-3 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>

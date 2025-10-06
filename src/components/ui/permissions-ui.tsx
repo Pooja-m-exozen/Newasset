@@ -639,12 +639,12 @@ export function PermissionsUI({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
         {filteredCategories.map(([categoryKey, permissions]) => (
               <div key={categoryKey} className="border-b border-border last:border-b-0">
-                <div className="border-b border-border bg-muted px-3 py-2">
+                <div className="border-b border-border bg-blue-50 dark:bg-slate-800 px-3 py-2">
                   <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
                   {getCategoryIcon(categoryKey)}
                 </div>
-                    <span className="text-xs font-semibold text-foreground">
+                    <span className="text-xs font-semibold text-blue-800 dark:text-slate-200">
                       {categories.find(cat => cat.value === categoryKey)?.label || categoryKey}
                     </span>
                   </div>
@@ -655,8 +655,8 @@ export function PermissionsUI({
                   <div key={permissionKey} className="flex items-center justify-between py-1 border-b border-border/50 last:border-b-0">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-foreground">{getPermissionLabel(permissionKey)}</span>
-                        <Badge variant="outline" className={`text-xs ${enabled ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700' : 'bg-muted text-muted-foreground border-border'}`}>
+                        <span className="text-xs font-medium text-blue-800 dark:text-slate-200">{getPermissionLabel(permissionKey)}</span>
+                        <Badge variant="outline" className={`text-xs ${enabled ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-700'}`}>
                           {enabled ? 'Enabled' : 'Disabled'}
                         </Badge>
                       </div>

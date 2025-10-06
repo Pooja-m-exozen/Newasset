@@ -349,34 +349,34 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                         </td>
                         <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
                           <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="p-1 sm:p-2 bg-muted rounded-lg">
-                              <svg className="w-3 h-3 sm:w-5 sm:h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="p-1 sm:p-2 bg-blue-50 rounded-lg">
+                              <svg className="w-3 h-3 sm:w-5 sm:h-5 text-blue-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                               </svg>
                             </div>
                             <div>
-                              <div className="text-xs sm:text-sm font-medium text-foreground">
+                              <div className="text-xs sm:text-sm font-medium text-blue-800">
                                 {asset.brand} {asset.model}
                               </div>
-                              <div className="text-xs text-muted-foreground">
+                              <div className="text-xs text-blue-600">
                                 {asset.assetType || 'Unknown Type'}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-muted text-muted-foreground">
+                          <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-blue-50 text-blue-800">
                             {asset.mobilityCategory || 'Not Set'}
                           </span>
                         </td>
                         <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
                           <div className="flex items-center gap-1 sm:gap-2">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-muted rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-50 rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-blue-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                             </div>
-                            <span className="text-xs sm:text-sm text-foreground">
+                            <span className="text-xs sm:text-sm text-blue-800">
                               {asset.assignedTo?.name || 'Unassigned'}
                             </span>
                           </div>

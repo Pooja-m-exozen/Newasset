@@ -1050,7 +1050,7 @@ export default function AdminManageUsersPage() {
                       setShowRolesModal(false)
                       setShowRoleModal(true)
                     }}
-                    className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90"
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
                   >
                     Add Role
                   </button>

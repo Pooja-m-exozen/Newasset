@@ -110,29 +110,29 @@ export default function Header() {
   return (
     <>
     <header className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-100 dark:border-gray-800">
-      <div className="px-3 sm:px-6 py-2 sm:py-3">
-        <div className="flex items-center justify-between">
+      <div className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Left Side - Logo */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 flex-shrink-0">
             <div className="relative">
               <Image 
                 src={getAssetPath("/exozen_logo.png")} 
                 alt="Exozen Logo" 
                 width={32}
                 height={32}
-                className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain"
                 priority
                 unoptimized
               />
-              <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
+              <div className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 md:w-3 md:h-3 bg-green-500 rounded-full border border-white dark:border-gray-900"></div>
             </div>
-            <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
               Asset
             </h1>
           </div>
 
-          {/* Navigation Menu - Always Visible */}
-          <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 overflow-x-auto scrollbar-hide">
+          {/* Navigation Menu - Responsive */}
+          <div className="flex items-center space-x-0.5 sm:space-x-1 md:space-x-2 lg:space-x-4 overflow-x-auto scrollbar-hide flex-1 mx-2 sm:mx-4">
             {navigationItems.map((item) => {
               if (item.adminOnly && !isAdmin) return null
               return (
@@ -140,10 +140,10 @@ export default function Header() {
                   key={item.id}
                   onClick={() => handleNavigation(item.href)}
                   className={cn(
-                    "relative px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-semibold transition-colors duration-200 border-b-2 whitespace-nowrap flex-shrink-0",
+                    "relative px-1.5 py-1 sm:px-2 sm:py-1.5 md:px-3 md:py-2 text-xs sm:text-sm font-semibold transition-colors duration-200 border-b-2 whitespace-nowrap flex-shrink-0 rounded-sm",
                     pathname === item.href
                       ? "text-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-950"
-                      : "text-gray-800 dark:text-gray-200 border-transparent hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400"
+                      : "text-gray-800 dark:text-gray-200 border-transparent hover:text-blue-600 hover:border-blue-300 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800"
                   )}
                 >
                   {item.label}

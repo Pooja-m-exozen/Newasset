@@ -12,8 +12,6 @@ import {
   RefreshCw,
   Target,
   AlertTriangle,
-  Info,
-  Eye,
   Filter
 } from 'lucide-react'
 
@@ -63,7 +61,6 @@ export function AIPredictionsChart({
 }: AIPredictionsChartProps) {
   const [selectedChartType, setSelectedChartType] = useState<'pie' | 'bar'>('pie')
   const [selectedMetric, setSelectedMetric] = useState<'confidence' | 'maintenance' | 'assetType'>('confidence')
-  const [showDetails, setShowDetails] = useState(false)
 
   // Process predictions data for charts with proper typing
   const chartData = useMemo((): ChartData | null => {
@@ -178,7 +175,7 @@ export function AIPredictionsChart({
 
   const renderBarChart = (data: Record<string, number>) => {
     const maxValue = Math.max(...Object.values(data))
-    const colors = ['#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB', '#F3F4F6', '#F9FAFB']
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
     
     if (maxValue === 0) {
       return (
@@ -196,53 +193,73 @@ export function AIPredictionsChart({
           <p className="text-sm text-gray-500 dark:text-gray-400">Data visualization</p>
         </div>
         
-        <div className="flex items-start space-x-6">
+        <div className="flex flex-col lg:flex-row items-start space-y-4 lg:space-y-0 lg:space-x-6">
           {/* Chart Container */}
-          <div className="flex-1 min-w-0">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="h-64 relative">
-                {/* Y-axis */}
-                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-sm text-gray-500 dark:text-gray-400 font-medium">
-                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
-                    <div key={value} className="flex items-center">
-                      <span className="w-8 text-right font-semibold">{value}</span>
-                      <div className="w-2 h-px bg-gray-300 dark:bg-gray-600 ml-2"></div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Grid lines */}
-                <div className="absolute inset-0 flex flex-col justify-between ml-10">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <div key={i} className="w-full h-px bg-gray-200 dark:bg-gray-700"></div>
-                  ))}
-                </div>
-                
-                {/* Chart Area */}
-                <div className="ml-10 h-full overflow-y-auto">
-                  <div className="flex items-end space-x-8 min-w-max px-6 pb-4">
+          <div className="flex-1 min-w-0 w-full">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              {/* Scrollable Chart Area */}
+              <div className="overflow-x-auto" style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#9CA3AF transparent'
+              }}>
+                <style jsx>{`
+                  div::-webkit-scrollbar {
+                    width: 2px;
+                    height: 2px;
+                  }
+                  div::-webkit-scrollbar-track {
+                    background: transparent;
+                  }
+                  div::-webkit-scrollbar-thumb {
+                    background-color: #9CA3AF;
+                    border-radius: 2px;
+                  }
+                  div::-webkit-scrollbar-thumb:hover {
+                    background-color: #6B7280;
+                  }
+                  @media (prefers-color-scheme: dark) {
+                    div::-webkit-scrollbar-thumb {
+                      background-color: #6B7280;
+                    }
+                    div::-webkit-scrollbar-thumb:hover {
+                      background-color: #9CA3AF;
+                    }
+                  }
+                `}</style>
+                <div className="h-64 relative min-w-max">
+                  {/* Y-axis */}
+                  <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-sm text-gray-500 dark:text-gray-400 font-medium z-10">
+                    {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
+                      <div key={value} className="flex items-center">
+                        <span className="w-8 text-right font-semibold">{value}</span>
+                        <div className="w-2 h-px bg-gray-300 dark:bg-gray-600 ml-2"></div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  
+                  {/* Chart Bars */}
+                  <div className="ml-10 h-full flex items-end space-x-6 px-4 pb-4">
                     {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-                      <div key={key} className="flex flex-col items-center">
+                      <div key={key} className="flex flex-col items-center justify-end min-w-[60px] h-full">
                         {/* Value Label Above Bar */}
                         <div className="mb-2 text-center">
-                          <span className="text-sm font-bold text-gray-900 dark:text-white">{value}</span>
+                          <span className="text-xs font-bold text-gray-900 dark:text-white">{value}</span>
                         </div>
                         
                         {/* Bar Design */}
                         <div 
-                          className="w-12 rounded-t-lg transition-all duration-500 min-h-[6px] relative"
+                          className="w-10 rounded-t-md transition-all duration-300 min-h-[4px] hover:opacity-80 cursor-pointer shadow-sm"
                           style={{ 
-                            height: `${(value / maxValue) * 200}px`,
+                            height: `${(value / maxValue) * 160}px`,
                             backgroundColor: colors[index % colors.length]
                           }}
                         >
-                          {/* Bar Border */}
-                          <div className="absolute inset-0 rounded-t-lg border border-gray-300 dark:border-gray-600"></div>
                         </div>
                         
                         {/* Category Label */}
-                        <div className="mt-2 text-center">
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">{key}</span>
+                        <div className="mt-2 text-center px-1">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize break-words leading-tight">{key}</span>
                         </div>
                       </div>
                     ))}
@@ -253,24 +270,51 @@ export function AIPredictionsChart({
           </div>
 
           {/* Legend */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 w-full lg:w-64">
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-              <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Categories</h5>
-              <div className="space-y-3">
+              <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">Categories</h5>
+              <div className="space-y-2 max-h-48 overflow-y-auto" style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#9CA3AF transparent'
+              }}>
+                <style jsx>{`
+                  div::-webkit-scrollbar {
+                    width: 2px;
+                    height: 2px;
+                  }
+                  div::-webkit-scrollbar-track {
+                    background: transparent;
+                  }
+                  div::-webkit-scrollbar-thumb {
+                    background-color: #9CA3AF;
+                    border-radius: 2px;
+                  }
+                  div::-webkit-scrollbar-thumb:hover {
+                    background-color: #6B7280;
+                  }
+                  @media (prefers-color-scheme: dark) {
+                    div::-webkit-scrollbar-thumb {
+                      background-color: #6B7280;
+                    }
+                    div::-webkit-scrollbar-thumb:hover {
+                      background-color: #9CA3AF;
+                    }
+                  }
+                `}</style>
                 {Object.entries(data).map(([key, value]: [string, number], index: number) => (
-                  <div key={key} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                  <div key={key} className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <div 
-                      className="w-4 h-4 rounded-sm"
+                      className="w-3 h-3 rounded-sm flex-shrink-0"
                       style={{ backgroundColor: colors[index % colors.length] }}
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-bold capitalize text-gray-900 dark:text-white">{key}</span>
-                        <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{value}</span>
+                        <span className="text-xs font-semibold capitalize text-gray-900 dark:text-white truncate">{key}</span>
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-2">{value}</span>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
                         <div 
-                          className="h-2 rounded-full transition-all duration-500"
+                          className="h-1.5 rounded-full transition-all duration-300"
                           style={{ 
                             width: `${(value / maxValue) * 100}%`,
                             backgroundColor: colors[index % colors.length]
@@ -297,7 +341,7 @@ export function AIPredictionsChart({
     if (!data || Object.keys(data).length === 0) {
       return (
         <div className="text-center py-12">
-          <Info className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <Brain className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">No data available</h3>
           <p className="text-muted-foreground">
             No {selectedMetric} data found for the current predictions
@@ -402,17 +446,6 @@ export function AIPredictionsChart({
               Advanced graphical representation of AI predictions
             </CardDescription>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowDetails(!showDetails)}
-              className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              <Eye className="w-4 h-4 mr-1" />
-              {showDetails ? 'Hide' : 'Show'} Details
-            </Button>
-          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -461,56 +494,6 @@ export function AIPredictionsChart({
             {renderChart()}
           </div>
 
-          {/* Detailed Information Panel */}
-          {showDetails && (
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center space-x-2 mb-3">
-                <Info className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Prediction Details</h4>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm">Confidence Distribution</h5>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>High (&gt;80%):</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.8).length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Medium (60-80%):</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence > 0.6 && p.prediction.confidence <= 0.8).length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Low (&lt;60%):</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {predictionsData.predictions.filter((p: Prediction) => p.prediction.confidence <= 0.6).length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2 text-sm">Asset Types</h5>
-                  <div className="space-y-2">
-                    {Object.entries(
-                      predictionsData.predictions.reduce((acc: Record<string, number>, p: Prediction) => {
-                        acc[p.assetType] = (acc[p.assetType] || 0) + 1
-                        return acc
-                      }, {})
-                    ).map(([type, count]) => (
-                      <div key={type} className="flex justify-between text-sm">
-                        <span className="capitalize">{type}:</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

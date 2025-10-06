@@ -669,7 +669,7 @@ Timestamps:
                   setScannerKey(prev => prev + 1)
                   setShowScanner(true)
                 }}
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Scan className="w-4 h-4" />
                 <span>Scan QR</span>

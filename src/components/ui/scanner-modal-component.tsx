@@ -121,8 +121,6 @@ interface ScannerModalProps {
     }>
   }>
   mode?: 'assets' | 'checklists'
-  // When true, do not create sample checklists and only match within provided lists
-  strictChecklistsOnly?: boolean
 }
 
 export function ScannerModal({ 
@@ -131,8 +129,7 @@ export function ScannerModal({
   onScanResultAction, 
   assets = [],
   checklists = [],
-  mode = 'assets',
-  strictChecklistsOnly = false
+  mode = 'assets'
 }: ScannerModalProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [isCameraReady, setIsCameraReady] = useState(false)
@@ -862,86 +859,15 @@ export function ScannerModal({
           })
           // Return the full checklist to parent for local storage
           onScanResultAction(foundChecklist)
-        } else if (!strictChecklistsOnly) {
-          // QR code found but checklist not in system - create sample checklist
-          console.log('QR code found but no matching checklist - creating sample')
-          const sampleChecklist = {
-            _id: `SAMPLE_${Date.now()}`,
-            title: `Scanned Checklist: ${scannedQRContent}`,
-            description: `This checklist was scanned from QR code: ${scannedQRContent}`,
-            qrCode: {
-              data: scannedQRContent,
-              url: ''
-            },
-            location: {
-              building: 'Scanned Location',
-              floor: 'N/A',
-              zone: 'N/A'
-            },
-            type: 'Scanned',
-            status: 'active',
-            priority: 'medium',
-            frequency: 'daily',
-            items: [
-              {
-                _id: 'sample_1',
-                serialNumber: 1,
-                inspectionItem: 'Check Diesel Level',
-                details: 'Ensure diesel level is at least 1/2 of tank capacity',
-                status: 'pending' as const,
-                remarks: ''
-              },
-              {
-                _id: 'sample_2',
-                serialNumber: 2,
-                inspectionItem: 'Check Battery Voltage',
-                details: 'Verify battery voltage is between 24V-28V',
-                status: 'pending' as const,
-                remarks: ''
-              },
-              {
-                _id: 'sample_3',
-                serialNumber: 3,
-                inspectionItem: 'Check Engine Oil Level',
-                details: 'Ensure oil level is between L & H marks',
-                status: 'pending' as const,
-                remarks: ''
-              },
-              {
-                _id: 'sample_4',
-                serialNumber: 4,
-                inspectionItem: 'Check Water Temperature',
-                details: 'Verify temperature is below 42°C',
-                status: 'pending' as const,
-                remarks: ''
-              },
-              {
-                _id: 'sample_5',
-                serialNumber: 5,
-                inspectionItem: 'Inspect for Oil Leakages',
-                details: 'Check all hoses and pipes for oil leaks',
-                status: 'pending' as const,
-                remarks: ''
-              }
-            ]
-          }
-          
-          setScanResult({
-            success: true,
-            assetId: scannedQRContent,
-            asset: sampleChecklist,
-            message: `✅ QR Code scanned: "${scannedQRContent}" - Sample checklist created`,
-            qrImageData: qrImageData
-          })
         } else {
           setScanResult({
             success: false,
             assetId: scannedQRContent,
-            message: '❌ Wrong checklist - not matching any provided checklist',
+            message: '❌ QR code scanned but no matching checklist found in system',
             qrImageData: qrImageData
           })
-          // Inform parent about mismatch so it can update UI
-          onScanResultAction({ __type: 'error', reason: 'not_matching', raw: scannedQRContent })
+            // Inform parent about no matching checklist found
+            onScanResultAction({ __type: 'error', reason: 'not_found', raw: scannedQRContent })
         }
       } else {
         const foundAsset = findMatchingAsset(scannedQRContent)
@@ -959,7 +885,7 @@ export function ScannerModal({
           setScanResult({
             success: false,
             assetId: scannedQRContent,
-            message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Asset not registered in system`,
+            message: `ℹ️ QR Code scanned: "${scannedQRContent}" - Asset not found in system`,
             qrImageData: qrImageData
           })
         }
@@ -1049,87 +975,15 @@ export function ScannerModal({
               qrImageData: qrImageData
             })
             onScanResultAction(foundChecklist)
-          } else if (!strictChecklistsOnly) {
-            // QR code found but checklist not in system - create sample checklist
-            console.log('QR code found but no matching checklist - creating sample')
-            const sampleChecklist = {
-              _id: `SAMPLE_${Date.now()}`,
-              title: `Scanned Checklist: ${scannedQRContent}`,
-              description: `This checklist was scanned from QR code: ${scannedQRContent}`,
-              qrCode: {
-                data: scannedQRContent,
-                url: ''
-              },
-              location: {
-                building: 'Scanned Location',
-                floor: 'N/A',
-                zone: 'N/A'
-              },
-              type: 'Scanned',
-              status: 'active',
-              priority: 'medium',
-              frequency: 'daily',
-              items: [
-                {
-                  _id: 'sample_1',
-                  serialNumber: 1,
-                  inspectionItem: 'Check Diesel Level',
-                  details: 'Ensure diesel level is at least 1/2 of tank capacity',
-                  status: 'pending' as const,
-                  remarks: ''
-                },
-                {
-                  _id: 'sample_2',
-                  serialNumber: 2,
-                  inspectionItem: 'Check Battery Voltage',
-                  details: 'Verify battery voltage is between 24V-28V',
-                  status: 'pending' as const,
-                  remarks: ''
-                },
-                {
-                  _id: 'sample_3',
-                  serialNumber: 3,
-                  inspectionItem: 'Check Engine Oil Level',
-                  details: 'Ensure oil level is between L & H marks',
-                  status: 'pending' as const,
-                  remarks: ''
-                },
-                {
-                  _id: 'sample_4',
-                  serialNumber: 4,
-                  inspectionItem: 'Check Water Temperature',
-                  details: 'Verify temperature is below 42°C',
-                  status: 'pending' as const,
-                  remarks: ''
-                },
-                {
-                  _id: 'sample_5',
-                  serialNumber: 5,
-                  inspectionItem: 'Inspect for Oil Leakages',
-                  details: 'Check all hoses and pipes for oil leaks',
-                  status: 'pending' as const,
-                  remarks: ''
-                }
-              ]
-            }
-            
-            setScanResult({
-              success: true,
-              assetId: scannedQRContent,
-              asset: sampleChecklist,
-              message: `✅ QR Code scanned: "${scannedQRContent}" - Sample checklist created`,
-              qrImageData: qrImageData
-            })
-            onScanResultAction(sampleChecklist)
           } else {
             setScanResult({
               success: false,
               assetId: scannedQRContent,
-              message: '❌ Wrong checklist - not matching any provided checklist',
+              message: '❌ QR code scanned but no matching checklist found in system',
               qrImageData: qrImageData
             })
-            // Notify parent so page can clear/reflect mismatch
-            onScanResultAction({ __type: 'error', reason: 'not_matching', raw: scannedQRContent })
+            // Notify parent so page can clear/reflect no match found
+            onScanResultAction({ __type: 'error', reason: 'not_found', raw: scannedQRContent })
           }
         } else {
           // Handle asset scanning
@@ -1155,7 +1009,7 @@ export function ScannerModal({
             setScanResult({
               success: false,
               assetId: scannedQRContent,
-              message: `ℹ️ QR Code scanned successfully: "${scannedQRContent}" - Asset not registered in system`,
+              message: `ℹ️ QR Code scanned successfully: "${scannedQRContent}" - Asset not found in system`,
               qrImageData: qrImageData
             })
           }
@@ -1332,7 +1186,38 @@ export function ScannerModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4">
+    <>
+      {/* Scanner Animation Styles */}
+      <style jsx global>{`
+        @keyframes scanLine {
+          0% {
+            transform: translateX(-100%);
+            opacity: 0;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+        }
+        
+        @keyframes cornerPulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.3;
+          }
+        }
+        
+        .scanner-corner {
+          animation: cornerPulse 2s ease-in-out infinite;
+        }
+      `}</style>
+      
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
@@ -1371,86 +1256,142 @@ export function ScannerModal({
             </TabsList>
 
             <TabsContent value="scanner" className="space-y-4">
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <div className="text-center mb-4">
-                  <h3 className="text-xl font-semibold text-slate-900 mb-2">High-Quality Camera Scanner</h3>
-                  <p className="text-sm text-slate-600">Large viewfinder for better QR code capture and processing</p>
-                  <p className="text-xs text-slate-500 mt-1">Works with QR codes of any size - from tiny to large displays</p>
+              <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
+                <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">QR Code Scanner</h3>
+                  <p className="text-sm text-gray-600">Point your camera at a QR code to scan</p>
                 </div>
                 
                 {!isScanning ? (
-                  <div className="flex justify-center">
+                  <div className="p-8 text-center">
+                    <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Camera className="w-10 h-10 text-white" />
+                    </div>
                     <Button 
                       onClick={startScanner}
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-3 rounded-xl font-semibold"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg"
                     >
                       <Camera className="w-5 h-5 mr-2" />
-                      Start Camera
+                      Start Scanning
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="relative bg-black rounded-xl overflow-hidden">
+                  <div className="relative">
+                    {/* Camera View */}
+                    <div className="relative bg-black overflow-hidden">
                       <video
                         ref={videoRef}
-                        className="w-full h-96 sm:h-[500px] md:h-[600px] lg:h-[700px] object-cover"
+                        className="w-full h-[400px] sm:h-[500px] md:h-[600px] object-cover"
                         autoPlay
                         playsInline
                         muted
                       />
                       {/* Hidden canvas used for decoding frames */}
                       <canvas ref={canvasRef} className="hidden" />
-                      <div className="absolute inset-0 border-2 border-green-400 border-dashed rounded-xl m-6 pointer-events-none">
-                        <div className="absolute top-3 left-3 w-12 h-12 border-l-4 border-t-4 border-green-400"></div>
-                        <div className="absolute top-3 right-3 w-12 h-12 border-r-4 border-t-4 border-green-400"></div>
-                        <div className="absolute bottom-3 left-3 w-12 h-12 border-l-4 border-b-4 border-green-400"></div>
-                        <div className="absolute bottom-3 right-3 w-12 h-12 border-r-4 border-b-4 border-green-400"></div>
-                        {/* Center crosshair for better targeting */}
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 border-2 border-green-400 rounded-full opacity-50"></div>
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-green-400 rounded-full"></div>
-                        {/* Scanning instructions overlay */}
-                        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                          Point camera at QR code - works with any size
+                      
+                      {/* Google Pay/PhonePe Style Scanner Overlay */}
+                      <div className="absolute inset-0 pointer-events-none">
+                        {/* Top overlay */}
+                        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/60 to-transparent"></div>
+                        
+                        {/* Bottom overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        
+                        {/* Left overlay */}
+                        <div className="absolute top-32 bottom-32 left-0 w-16 bg-gradient-to-r from-black/60 to-transparent"></div>
+                        
+                        {/* Right overlay */}
+                        <div className="absolute top-32 bottom-32 right-0 w-16 bg-gradient-to-l from-black/60 to-transparent"></div>
+                        
+                        {/* Scanner Frame - Google Pay Style */}
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64">
+                          {/* Corner brackets with pulsing animation */}
+                          <div className="absolute top-0 left-0 w-12 h-12">
+                            <div className="absolute top-0 left-0 w-8 h-1 bg-white rounded-full scanner-corner"></div>
+                            <div className="absolute top-0 left-0 w-1 h-8 bg-white rounded-full scanner-corner"></div>
+                          </div>
+                          <div className="absolute top-0 right-0 w-12 h-12">
+                            <div className="absolute top-0 right-0 w-8 h-1 bg-white rounded-full scanner-corner"></div>
+                            <div className="absolute top-0 right-0 w-1 h-8 bg-white rounded-full scanner-corner"></div>
+                          </div>
+                          <div className="absolute bottom-0 left-0 w-12 h-12">
+                            <div className="absolute bottom-0 left-0 w-8 h-1 bg-white rounded-full scanner-corner"></div>
+                            <div className="absolute bottom-0 left-0 w-1 h-8 bg-white rounded-full scanner-corner"></div>
+                          </div>
+                          <div className="absolute bottom-0 right-0 w-12 h-12">
+                            <div className="absolute bottom-0 right-0 w-8 h-1 bg-white rounded-full scanner-corner"></div>
+                            <div className="absolute bottom-0 right-0 w-1 h-8 bg-white rounded-full scanner-corner"></div>
+                          </div>
+                          
+                          {/* Scanning line animation */}
+                          <div className="absolute top-1/2 left-0 right-0 h-0.5">
+                            <div className="w-full h-full bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-pulse"></div>
+                            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white to-transparent opacity-60" 
+                                 style={{
+                                   animation: 'scanLine 2s ease-in-out infinite'
+                                 }}></div>
+                          </div>
+                          
+                          {/* Center dot */}
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
                         </div>
-                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-xs">
-                          Hold steady for better detection
+                        
+                        {/* Instructions */}
+                        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 text-center">
+                          <div className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium">
+                            Position QR code within the frame
+                          </div>
+                        </div>
+                        
+                        {/* Bottom instructions */}
+                        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+                          <div className="bg-black/70 text-white px-4 py-2 rounded-full text-xs">
+                            Hold steady for automatic scanning
+                          </div>
                         </div>
                       </div>
+                      
                       {/* Loading overlay - only show when camera is not ready */}
                       {!isCameraReady && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
                           <div className="text-center text-white">
-                            <div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                            <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                             <p className="text-lg font-medium">Starting camera...</p>
-                            <p className="text-sm text-gray-300 mt-1">Preparing high-quality scanner</p>
+                            <p className="text-sm text-gray-300 mt-2">Please allow camera access</p>
                           </div>
                         </div>
                       )}
                     </div>
                     
-                    {/* Scanning Status and Error Messages */}
+                    {/* Modern Status Messages */}
                     {scanningError && (
-                      <div className="bg-red-50 rounded-lg p-3 border border-red-200 mb-4">
-                        <div className="flex items-center gap-2 text-red-700">
-                          <X className="w-4 h-4" />
-                          <span className="text-sm font-medium">Scanner Error</span>
+                      <div className="p-4 bg-red-50 border-l-4 border-red-400">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                            <X className="w-4 h-4 text-red-600" />
                         </div>
+                          <div>
+                            <p className="text-sm font-medium text-red-800">Camera Error</p>
                         <p className="text-xs text-red-600 mt-1">{scanningError}</p>
+                          </div>
+                        </div>
                       </div>
                     )}
 
-                    {/* Enhanced Scanning Progress Feedback */}
+                    {/* Modern Scanning Progress */}
                     {isScanning && !scanningError && (
-                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 mb-4">
-                        <div className="flex items-center gap-2 text-blue-700">
+                      <div className="p-4 bg-blue-50 border-l-4 border-blue-400">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                           <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span className="text-sm font-medium">
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-blue-800">
                             {scanAttempts < 30 ? 'Initializing Scanner...' : 
                              scanAttempts < 100 ? 'Scanning for QR Code...' : 
                              scanAttempts < 200 ? 'Looking for QR Code...' : 
                              'Still searching...'}
-                          </span>
-                        </div>
+                            </p>
                         <p className="text-xs text-blue-600 mt-1">
                           {scanAttempts < 10 ? 'Fast scanning mode - ultra-responsive detection' :
                            scanAttempts < 30 ? 'High-speed scanning - point camera at QR code' :
@@ -1458,15 +1399,17 @@ export function ScannerModal({
                            scanAttempts < 150 ? 'Enhanced scanning - make sure QR code is clearly visible' :
                            'Comprehensive scanning - try adjusting distance or lighting'}
                         </p>
+                          </div>
+                        </div>
                         {scanAttempts > 50 && (
-                          <div className="mt-2">
-                            <div className="w-full bg-blue-200 rounded-full h-1.5">
+                          <div className="mt-3">
+                            <div className="w-full bg-blue-200 rounded-full h-2">
                               <div 
-                                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                                className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
                                 style={{ width: `${Math.min((scanAttempts / MAX_SCAN_ATTEMPTS) * 100, 100)}%` }}
                               ></div>
                             </div>
-                            <p className="text-xs text-blue-500 mt-1 text-center">
+                            <p className="text-xs text-blue-500 mt-2 text-center">
                               {Math.round((scanAttempts / MAX_SCAN_ATTEMPTS) * 100)}% complete
                             </p>
                           </div>
@@ -1474,13 +1417,14 @@ export function ScannerModal({
                       </div>
                     )}
 
-                    <div className="flex gap-3">
+                    {/* Modern Action Button */}
+                    <div className="p-4">
                       <Button 
                         onClick={stopScanner}
                         variant="outline"
-                        className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50"
+                        className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 py-3 rounded-xl font-medium"
                       >
-                        Stop Camera
+                        Stop Scanning
                       </Button>
                     </div>
                   </div>
@@ -2013,8 +1957,8 @@ export function ScannerModal({
                             
                             <p className="text-sm text-gray-600">
                               {mode === 'checklists' 
-                                ? 'This QR code contains checklist data but is not registered in the system.'
-                                : 'This QR code contains asset data but is not registered in the system.'
+                                ? 'This QR code contains checklist data but no matching checklist was found in the system.'
+                                : 'This QR code contains asset data but no matching asset was found in the system.'
                               }
                             </p>
                           </div>
@@ -2063,5 +2007,6 @@ export function ScannerModal({
         </div>
       </div>
     </div>
+    </>
   )
 }

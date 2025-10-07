@@ -227,16 +227,16 @@ export function AIPredictionsChart({
                   }
                 `}</style>
                 <div className="h-64 relative min-w-max">
-                  {/* Y-axis */}
+                {/* Y-axis */}
                   <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-sm text-gray-500 dark:text-gray-400 font-medium z-10">
-                    {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
-                      <div key={value} className="flex items-center">
-                        <span className="w-8 text-right font-semibold">{value}</span>
-                        <div className="w-2 h-px bg-gray-300 dark:bg-gray-600 ml-2"></div>
-                      </div>
-                    ))}
-                  </div>
-                  
+                  {[maxValue, Math.round(maxValue * 0.75), Math.round(maxValue * 0.5), Math.round(maxValue * 0.25), 0].map((value) => (
+                    <div key={value} className="flex items-center">
+                      <span className="w-8 text-right font-semibold">{value}</span>
+                      <div className="w-2 h-px bg-gray-300 dark:bg-gray-600 ml-2"></div>
+                    </div>
+                  ))}
+                </div>
+                
                   
                   {/* Chart Bars */}
                   <div className="ml-10 h-full flex items-end space-x-6 px-4 pb-4">

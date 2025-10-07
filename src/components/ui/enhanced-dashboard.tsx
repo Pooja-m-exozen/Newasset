@@ -260,18 +260,6 @@ export function EnhancedDashboard({
       subValue: `${transformedPredictionsData?.predictions?.filter((p) => p.prediction.confidence > 0.7).length || 0} High Confidence`,
       health: transformedPredictionsData?.predictions?.length ? Math.round((transformedPredictionsData.predictions.filter((p) => p.prediction.confidence > 0.7).length / transformedPredictionsData.predictions.length) * 100) : 0,
       priority: "normal"
-    },
-    {
-      title: "System Health",
-      value: `${dashboardData?.data?.performanceData?.insights?.overallEfficiency ? Math.round(dashboardData.data.performanceData.insights.overallEfficiency * 100) : 85}%`,
-      change: "+5%",
-      icon: Gauge,
-      color: "bg-gradient-to-r from-purple-500 to-purple-600",
-      trend: "up",
-      description: "Overall system efficiency score",
-      subValue: `${dashboardData?.data?.performanceData?.healthScore || 78}/100 Health Score`,
-      health: dashboardData?.data?.performanceData?.insights?.overallEfficiency ? Math.round(dashboardData.data.performanceData.insights.overallEfficiency * 100) : 85,
-      priority: "normal"
     }
   ], [dashboardData, transformedPredictionsData])
 
@@ -569,61 +557,54 @@ export function EnhancedDashboard({
     }))
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen bg-gradient-to-br from-background to-muted">
-        <div className="flex-1 overflow-auto">
-          <div className="flex items-center justify-center h-full" aria-busy="true" aria-live="polite">
-            <div className="text-center">
-              <LoadingSpinner size="lg" />
-              <p className="mt-4 text-muted-foreground">Loading advanced dashboard...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Show loading spinner only in the header area, not blocking the entire dashboard
+  const showLoadingOverlay = isLoading && !dashboardData
 
-  if (error) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-background to-muted">
+    <div className="flex h-screen bg-background transition-colors duration-200">
         <div className="flex-1 overflow-auto">
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="mb-4">
-                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Failed to load dashboard data</h3>
-                <p className="text-muted-foreground mb-4">{error}</p>
-                {user?.projectName && (
-                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg mb-4">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
+
+        {/* Main Content */}
+        <main className="px-2 pt-1 pb-1 sm:px-4 md:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
+          
+          {/* Dashboard Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+              <p className="text-muted-foreground text-sm">Asset management overview and analytics</p>
+              {user?.projectName ? (
+                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-xs text-blue-800 dark:text-blue-200">
                       <strong>Current Project:</strong> {user.projectName}
                     </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                      Dashboard data will be filtered for this project only
+                </div>
+              ) : (
+                <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                    <strong>System Administrator:</strong> {user?.name || 'Admin User'}
                     </p>
                   </div>
                 )}
               </div>
-              <Button onClick={onRefresh} disabled={isLoading}>
+            <div className="flex items-center space-x-2">
+              {isLoading && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground">No data available</span>
+                </div>
+              )}
+              {error && (
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  <Button onClick={onRefresh} disabled={isLoading} variant="outline" size="sm">
                 <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Try Again
+                    Refresh
               </Button>
             </div>
+              )}
           </div>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex h-screen bg-background transition-colors duration-200">
-      <div className="flex-1 overflow-auto">
-
-        {/* Main Content */}
-        <main className="px-2 pt-1 pb-1 sm:px-4 md:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
           {/* Advanced Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
             {advancedStats.map((stat) => (
               <Card key={stat.title} className="border-border">
                 <CardContent className="p-3 sm:p-4">
@@ -676,10 +657,9 @@ export function EnhancedDashboard({
                 )}
                 
                 {isHealthLoading ? (
-                  <div className="flex items-center justify-center py-4 sm:py-6" aria-busy="true" aria-live="polite">
+                  <div className="flex items-center justify-center py-4 sm:py-6">
                     <div className="text-center">
-                      <LoadingSpinner size="lg" />
-                      <p className="mt-2 sm:mt-3 text-muted-foreground text-xs sm:text-sm">Loading health data...</p>
+                      <p className="text-muted-foreground text-xs sm:text-sm">No data available</p>
                     </div>
                   </div>
                 ) : healthError ? (
@@ -731,10 +711,47 @@ export function EnhancedDashboard({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-6">
-                    <Thermometer className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-foreground mb-2">No health data available</h3>
-                    <p className="text-muted-foreground text-sm">Asset health data will appear here once available</p>
+                  <div className="space-y-2 sm:space-y-3">
+                    {[
+                      { name: "Excellent", count: 0, percentage: 0, color: "bg-green-500", icon: CheckCircle },
+                      { name: "Good", count: 0, percentage: 0, color: "bg-blue-500", icon: Activity },
+                      { name: "Fair", count: 0, percentage: 0, color: "bg-yellow-500", icon: AlertTriangle },
+                      { name: "Poor", count: 0, percentage: 0, color: "bg-orange-500", icon: AlertTriangle },
+                      { name: "Critical", count: 0, percentage: 0, color: "bg-red-500", icon: AlertCircle }
+                    ].map((asset, index) => (
+                      <div key={index} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 min-w-0 flex-1">
+                            <asset.icon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs font-medium text-foreground truncate">{asset.name}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 flex-shrink-0">
+                            <div className={`w-2 h-2 rounded-full ${asset.color}`}></div>
+                            <span className="text-xs text-muted-foreground">{asset.count}</span>
+                          </div>
+                        </div>
+                        <Progress value={asset.percentage} className="h-1.5" />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Percentage</span>
+                          <span>{asset.percentage}%</span>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Health Summary */}
+                    <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          <Thermometer className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs font-medium text-foreground truncate">
+                            Total: 0
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs flex-shrink-0">
+                          No Data
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -753,10 +770,9 @@ export function EnhancedDashboard({
               </CardHeader>
               <CardContent className="pt-0">
                 {isCostLoading ? (
-                  <div className="flex items-center justify-center py-6" aria-busy="true" aria-live="polite">
+                  <div className="flex items-center justify-center py-6">
                     <div className="text-center">
-                      <LoadingSpinner size="lg" />
-                      <p className="mt-3 text-muted-foreground text-sm">Loading cost data...</p>
+                      <p className="text-muted-foreground text-sm">No data available</p>
                     </div>
                   </div>
                 ) : costError ? (
@@ -825,10 +841,39 @@ export function EnhancedDashboard({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-6">
-                    <DollarSign className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-foreground mb-2">No cost data available</h3>
-                    <p className="text-muted-foreground text-sm">Asset cost data will appear here once available</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Total Purchase Cost</span>
+                      <span className="text-sm font-bold text-foreground">$0</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Current Value</span>
+                      <span className="text-sm font-bold text-green-600 dark:text-green-400">$0</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Total Depreciation</span>
+                      <span className="text-sm font-bold text-red-600 dark:text-red-400">$0</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Avg. Depreciation Rate</span>
+                      <span className="text-xs font-medium text-foreground">0.00%</span>
+                    </div>
+                    <Progress value={0} className="h-2" />
+                    
+                    {/* Cost Summary */}
+                    <div className="mt-3 p-2 bg-muted rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <DollarSign className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs font-medium text-foreground">
+                            Total Assets: 0
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
+                          No Data
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -847,10 +892,9 @@ export function EnhancedDashboard({
               </CardHeader>
               <CardContent className="pt-0">
                 {isTrendsLoading ? (
-                  <div className="flex items-center justify-center py-6" aria-busy="true" aria-live="polite">
+                  <div className="flex items-center justify-center py-6">
                     <div className="text-center">
-                      <LoadingSpinner size="lg" />
-                      <p className="mt-3 text-muted-foreground text-sm">Loading trends data...</p>
+                      <p className="text-muted-foreground text-sm">No data available</p>
                     </div>
                   </div>
                 ) : trendsError ? (
@@ -910,17 +954,59 @@ export function EnhancedDashboard({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-6">
-                    <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-foreground mb-2">No trends data available</h3>
-                    <p className="text-muted-foreground text-sm">Trend analysis data will appear here once available</p>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">0</p>
+                        <p className="text-xs text-muted-foreground">Scheduled</p>
+                      </div>
+                      <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">0</p>
+                        <p className="text-xs text-muted-foreground">In Progress</p>
+                      </div>
+                      <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-green-600 dark:text-green-400">0</p>
+                        <p className="text-xs text-muted-foreground">Completed</p>
+                      </div>
+                      <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                        <p className="text-lg font-bold text-red-600 dark:text-red-400">0</p>
+                        <p className="text-xs text-muted-foreground">Overdue</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Efficiency</span>
+                        <span className="text-xs font-medium text-foreground">0%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Avg. Completion</span>
+                        <span className="text-xs font-medium text-foreground">0 days</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Cost Savings</span>
+                        <span className="text-xs font-medium text-green-600 dark:text-green-400">$0</span>
+                      </div>
+                    </div>
+                    
+                    {/* Trends Summary */}
+                    <div className="mt-3 p-2 bg-muted rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <TrendingUp className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs font-medium text-foreground">
+                            No Data Available
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
+                          No Data
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
-
-
 
           {/* AI Predictions Chart Section and Quick Actions - Side by Side */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-6">
@@ -1019,10 +1105,9 @@ export function EnhancedDashboard({
            
            <div className="space-y-6">
              {isAlertsLoading ? (
-               <div className="flex items-center justify-center py-8" aria-busy="true" aria-live="polite">
+               <div className="flex items-center justify-center py-8">
                  <div className="text-center">
-                   <LoadingSpinner size="lg" />
-                   <p className="mt-4 text-gray-600">Loading alerts data...</p>
+                   <p className="text-gray-600">No data available</p>
                  </div>
                </div>
              ) : alertsError ? (
@@ -1391,10 +1476,7 @@ export function EnhancedDashboard({
                  className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
                >
                  {isCreatingRule ? (
-                   <>
-                     <LoadingSpinner size="sm" className="mr-2" />
-                     Creating...
-                   </>
+                   'Creating...'
                  ) : (
                    'Create Rule'
                  )}

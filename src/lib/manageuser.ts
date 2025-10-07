@@ -1,3 +1,18 @@
+export interface LoginHistoryEntry {
+  timestamp: string
+  ipAddress: string
+  userAgent: string
+  success: boolean
+}
+
+export interface ActivityLogEntry {
+  timestamp: string
+  action: string
+  description: string
+  ipAddress?: string
+  userAgent?: string
+}
+
 const API_BASE_URL = 'https://digitalasset.zenapi.co.in/api'
 
 export interface User {
@@ -14,6 +29,30 @@ export interface User {
   updatedAt: string
   __v: number
   resetPasswordToken?: string
+  contactInfo?: {
+    phone?: string
+    emergencyContact?: {
+      name: string
+      phone: string
+      relationship: string
+    }
+    address?: {
+      street: string
+      city: string
+      state: string
+      zipCode: string
+      country: string
+    }
+  }
+  workSchedule?: {
+    shift: string
+    workingDays: string[]
+    startTime: string
+    endTime: string
+    timezone: string
+  }
+  loginHistory?: LoginHistoryEntry[]
+  activityLog?: ActivityLogEntry[]
 }
 
 export interface Role {

@@ -680,7 +680,6 @@ export default function ViewerChecklists() {
           items: checklist.items
         }))}
         mode="checklists"
-        strictChecklistsOnly={true}
       />
 
 

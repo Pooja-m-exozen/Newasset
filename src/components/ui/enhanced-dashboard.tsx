@@ -565,26 +565,18 @@ export function EnhancedDashboard({
         <div className="flex-1 overflow-auto">
 
         {/* Main Content */}
-        <main className="px-2 pt-1 pb-1 sm:px-4 md:px-6 sm:pt-2 sm:pb-2 space-y-2 sm:space-y-3">
+        <main className="px-2 pt-0 pb-1 sm:px-4 md:px-6 sm:pt-1 sm:pb-2 space-y-2 sm:space-y-3">
           
           {/* Dashboard Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground text-sm">Asset management overview and analytics</p>
               {user?.projectName ? (
                 <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-xs text-blue-800 dark:text-blue-200">
                       <strong>Current Project:</strong> {user.projectName}
                     </p>
                 </div>
-              ) : (
-                <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                    <strong>System Administrator:</strong> {user?.name || 'Admin User'}
-                    </p>
-                  </div>
-                )}
+              ) : null}
               </div>
             <div className="flex items-center space-x-2">
               {isLoading && (

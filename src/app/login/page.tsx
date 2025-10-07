@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import Image from "next/image"
+import { getAssetPath } from "@/lib/asset-utils"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -151,11 +152,13 @@ export default function LoginPage() {
           <div className="flex items-center justify-center gap-2">
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-md">
               <Image 
-                src="/exozen_logo.png" 
+                src={getAssetPath("/exozen_logo.png")} 
                 alt="Exozen Logo" 
                 width={24} 
                 height={24}
                 className="object-contain"
+                unoptimized
+                priority
               />
             </div>
             <div>
@@ -178,11 +181,13 @@ export default function LoginPage() {
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
                 <Image 
-                  src="/exozen_logo.png" 
+                  src={getAssetPath("/exozen_logo.png")} 
                   alt="Exozen Logo" 
                   width={32} 
                   height={32}
                   className="object-contain"
+                  unoptimized
+                  priority
                 />
               </div>
               <div>
@@ -227,11 +232,13 @@ export default function LoginPage() {
             <CardHeader className="text-center pb-6 pt-8">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Image 
-                  src="/exozen_logo.png" 
+                   src={getAssetPath("/exozen_logo.png")} 
                   alt="Exozen Logo" 
                   width={32} 
                   height={32}
                   className="object-contain"
+                  unoptimized
+                  priority
                 />
               </div>
               <CardTitle className="text-2xl font-bold text-card-foreground mb-2">

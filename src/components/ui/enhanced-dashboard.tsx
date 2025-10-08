@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useMemo } from 'react'
@@ -14,8 +15,8 @@ import { Label } from './label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { Textarea } from './textarea'
 import { AIPredictionsChart } from './ai-predictions-chart'
-import { 
-  TrendingUp, 
+import {
+  TrendingUp,
   Activity,
   AlertCircle,
   CheckCircle,
@@ -170,13 +171,13 @@ export function EnhancedDashboard({
   const [alertsData, setAlertsData] = useState<AlertsData | null>(null)
   const [isAlertsLoading, setIsAlertsLoading] = useState(false)
   const [alertsError, setAlertsError] = useState<string | null>(null)
-  
+ 
   // Alert Rules Modal State
   const [isAlertRulesModalOpen, setIsAlertRulesModalOpen] = useState(false)
   const [isCreatingRule, setIsCreatingRule] = useState(false)
   const [ruleCreationError, setRuleCreationError] = useState<string | null>(null)
   const [ruleCreationSuccess, setRuleCreationSuccess] = useState(false)
-  
+ 
   // Form State
   const [ruleForm, setRuleForm] = useState({
     name: '',
@@ -190,7 +191,7 @@ export function EnhancedDashboard({
   // Transform predictionsData to match the expected format
   const transformedPredictionsData = useMemo(() => {
     if (!predictionsData) return null
-    
+   
     return {
       success: predictionsData.success,
       count: predictionsData.count,
@@ -265,42 +266,42 @@ export function EnhancedDashboard({
 
   const assetHealthData = useMemo(() => (
     healthData?.success && healthData?.statistics ? [
-      { 
-        name: "Excellent", 
-        status: "excellent", 
-        count: healthData.statistics.excellent ?? 0, 
+      {
+        name: "Excellent",
+        status: "excellent",
+        count: healthData.statistics.excellent ?? 0,
         percentage: (healthData.statistics.excellent ?? 0) > 0 ? Math.round(((healthData.statistics.excellent ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
         color: "bg-green-500",
         icon: CheckCircle
       },
-      { 
-        name: "Good", 
-        status: "good", 
-        count: healthData.statistics.good ?? 0, 
+      {
+        name: "Good",
+        status: "good",
+        count: healthData.statistics.good ?? 0,
         percentage: (healthData.statistics.good ?? 0) > 0 ? Math.round(((healthData.statistics.good ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
         color: "bg-blue-500",
         icon: Activity
       },
-      { 
-        name: "Fair", 
-        status: "fair", 
-        count: healthData.statistics.fair ?? 0, 
+      {
+        name: "Fair",
+        status: "fair",
+        count: healthData.statistics.fair ?? 0,
         percentage: (healthData.statistics.fair ?? 0) > 0 ? Math.round(((healthData.statistics.fair ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
         color: "bg-yellow-500",
         icon: AlertTriangle
       },
-      { 
-        name: "Poor", 
-        status: "poor", 
-        count: healthData.statistics.poor ?? 0, 
+      {
+        name: "Poor",
+        status: "poor",
+        count: healthData.statistics.poor ?? 0,
         percentage: (healthData.statistics.poor ?? 0) > 0 ? Math.round(((healthData.statistics.poor ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
         color: "bg-orange-500",
         icon: AlertTriangle
       },
-      { 
-        name: "Critical", 
-        status: "critical", 
-        count: healthData.statistics.critical ?? 0, 
+      {
+        name: "Critical",
+        status: "critical",
+        count: healthData.statistics.critical ?? 0,
         percentage: (healthData.statistics.critical ?? 0) > 0 ? Math.round(((healthData.statistics.critical ?? 0) / ((healthData.statistics.excellent ?? 0) + (healthData.statistics.good ?? 0) + (healthData.statistics.fair ?? 0) + (healthData.statistics.poor ?? 0) + (healthData.statistics.critical ?? 0))) * 100) : 0,
         color: "bg-red-500",
         icon: AlertCircle
@@ -382,21 +383,21 @@ export function EnhancedDashboard({
     setIsAlertsModalOpen(true)
     setIsAlertsLoading(true)
     setAlertsError(null)
-    
+   
     try {
       const currentDate = new Date()
       const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
       const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-      
+     
       const dateFrom = firstDayOfMonth.toISOString().split('T')[0]
       const dateTo = lastDayOfMonth.toISOString().split('T')[0]
-      
+     
       // Get token from localStorage
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('authToken')
       if (!token) {
         throw new Error('Authentication token not found')
       }
-      
+     
       const response = await fetch(`https://digitalasset.zenapi.co.in/api/automation/alerts/statistics?dateFrom=${dateFrom}&dateTo=${dateTo}&alertType=performance_threshold`, {
         method: 'GET',
         headers: {
@@ -404,7 +405,7 @@ export function EnhancedDashboard({
           'Authorization': `Bearer ${token}`
         }
       })
-      
+     
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication failed. Please login again.')
@@ -414,7 +415,7 @@ export function EnhancedDashboard({
           throw new Error(`Failed to fetch alerts data: ${response.status}`)
         }
       }
-      
+     
       const responseData = await response.json()
       setAlertsData(responseData)
     } catch (error) {
@@ -428,13 +429,13 @@ export function EnhancedDashboard({
     setIsCreatingRule(true)
     setRuleCreationError(null)
     setRuleCreationSuccess(false)
-    
+   
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('authToken')
       if (!token) {
         throw new Error('Authentication token not found')
       }
-      
+     
       // Prepare the rule data
       const ruleData = {
         name: ruleForm.name,
@@ -442,7 +443,7 @@ export function EnhancedDashboard({
         conditions: ruleForm.conditions.filter(condition => condition.field && condition.operator && condition.value),
         actions: ruleForm.actions.filter(action => action.type).map(action => {
           const baseAction = { type: action.type }
-          
+         
           if (action.type === 'email') {
             return {
               ...baseAction,
@@ -461,13 +462,13 @@ export function EnhancedDashboard({
               severity: action.severity
             }
           }
-          
+         
           return baseAction
         }),
         isActive: ruleForm.isActive,
         cooldown: ruleForm.cooldown
       }
-      
+     
       const response = await fetch('https://digitalasset.zenapi.co.in/api/automation/alerts/rules', {
         method: 'POST',
         headers: {
@@ -476,7 +477,7 @@ export function EnhancedDashboard({
         },
         body: JSON.stringify(ruleData)
       })
-      
+     
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication failed. Please login again.')
@@ -486,10 +487,10 @@ export function EnhancedDashboard({
           throw new Error(`Failed to create alert rule: ${response.status}`)
         }
       }
-      
+     
       await response.json()
       setRuleCreationSuccess(true)
-      
+     
              // Reset form after successful creation
        setTimeout(() => {
          setIsAlertRulesModalOpen(false)
@@ -503,7 +504,7 @@ export function EnhancedDashboard({
          })
          setRuleCreationSuccess(false)
        }, 2000)
-      
+     
     } catch (error) {
       setRuleCreationError(error instanceof Error ? error.message : 'An error occurred while creating the alert rule')
     } finally {
@@ -542,7 +543,7 @@ export function EnhancedDashboard({
   const handleConditionChange = (index: number, field: string, value: string) => {
     setRuleForm(prev => ({
       ...prev,
-      conditions: prev.conditions.map((condition, i) => 
+      conditions: prev.conditions.map((condition, i) =>
         i === index ? { ...condition, [field]: value } : condition
       )
     }))
@@ -551,7 +552,7 @@ export function EnhancedDashboard({
   const handleActionChange = (index: number, field: string, value: string) => {
     setRuleForm(prev => ({
       ...prev,
-      actions: prev.actions.map((action, i) => 
+      actions: prev.actions.map((action, i) =>
         i === index ? { ...action, [field]: value } : action
       )
     }))
@@ -566,7 +567,7 @@ export function EnhancedDashboard({
 
         {/* Main Content */}
         <main className="px-2 pt-0 pb-1 sm:px-4 md:px-6 sm:pt-1 sm:pb-2 space-y-2 sm:space-y-3">
-          
+         
           {/* Dashboard Header */}
           <div className="flex items-center justify-between mb-2">
             <div>
@@ -647,7 +648,7 @@ export function EnhancedDashboard({
                     </div>
                   </div>
                 )}
-                
+               
                 {isHealthLoading ? (
                   <div className="flex items-center justify-center py-4 sm:py-6">
                     <div className="text-center">
@@ -681,7 +682,7 @@ export function EnhancedDashboard({
                         </div>
                       </div>
                     ))}
-                    
+                   
                     {/* Health Summary */}
                     <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
@@ -729,7 +730,7 @@ export function EnhancedDashboard({
                         </div>
                       </div>
                     ))}
-                    
+                   
                     {/* Health Summary */}
                     <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
@@ -799,9 +800,9 @@ export function EnhancedDashboard({
                         {costAnalysisData.avgDepreciationRate.toFixed(2)}%
                       </span>
                     </div>
-                    <Progress 
-                      value={costAnalysisData.totalCurrentValue > 0 ? (costAnalysisData.totalCurrentValue / costAnalysisData.totalPurchaseCost) * 100 : 0} 
-                      className="h-2" 
+                    <Progress
+                      value={costAnalysisData.totalCurrentValue > 0 ? (costAnalysisData.totalCurrentValue / costAnalysisData.totalPurchaseCost) * 100 : 0}
+                      className="h-2"
                     />
                     <div className="space-y-1">
                       {costAnalysisData.breakdown.map((item, index) => (
@@ -816,7 +817,7 @@ export function EnhancedDashboard({
                         </div>
                       ))}
                     </div>
-                    
+                   
                     {/* Cost Summary */}
                     <div className="mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
@@ -851,7 +852,7 @@ export function EnhancedDashboard({
                       <span className="text-xs font-medium text-foreground">0.00%</span>
                     </div>
                     <Progress value={0} className="h-2" />
-                    
+                   
                     {/* Cost Summary */}
                     <div className="mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
@@ -929,7 +930,7 @@ export function EnhancedDashboard({
                         <span className="text-xs font-medium text-green-600 dark:text-green-400">{trendAnalysis.costSavings}</span>
                       </div>
                     </div>
-                    
+                   
                     {/* Trends Summary */}
                     <div className="mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
@@ -979,7 +980,7 @@ export function EnhancedDashboard({
                         <span className="text-xs font-medium text-green-600 dark:text-green-400">$0</span>
                       </div>
                     </div>
-                    
+                   
                     {/* Trends Summary */}
                     <div className="mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
@@ -1024,8 +1025,8 @@ export function EnhancedDashboard({
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
                       onClick={handleAddUserClick}
                       aria-label="Add a new user"
@@ -1033,8 +1034,8 @@ export function EnhancedDashboard({
                       <Users className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">Add User</span>
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
                       onClick={handleAddAssetClick}
                       aria-label="Add a new asset"
@@ -1042,8 +1043,8 @@ export function EnhancedDashboard({
                       <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">Add Asset</span>
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
                       onClick={handleAddLocationClick}
                       aria-label="Add a new location"
@@ -1051,8 +1052,8 @@ export function EnhancedDashboard({
                       <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">Add Location</span>
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
                       onClick={handleGenerateReportClick}
                       aria-label="Generate report"
@@ -1060,8 +1061,8 @@ export function EnhancedDashboard({
                       <FileText className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
                       <span className="text-xs sm:text-sm font-medium">Generate Report</span>
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2 col-span-2 sm:col-span-1"
                       onClick={handleViewAlertsClick}
                       aria-label="View system alerts"

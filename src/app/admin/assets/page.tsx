@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -10,10 +10,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets } from '@/lib/adminasset'
+import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset } from '@/lib/adminasset'
+
+// API Response interfaces
+interface ApiSubAsset {
+  _id?: string
+  id?: string
+  assetName: string
+  description: string
+  category: 'Movable' | 'Immovable'
+  brand: string
+  model: string
+  capacity: string
+  location: string
+  inventory: {
+    consumables: InventoryItem[]
+    spareParts: InventoryItem[]
+    tools: InventoryItem[]
+    operationalSupply: InventoryItem[]
+  }
+}
+
+interface ApiAsset extends Asset {
+  subAssets?: {
+    movable: ApiSubAsset[]
+    immovable: ApiSubAsset[]
+  }
+}
+
+interface ApiAssetsResponse {
+  success: boolean
+  assets: ApiAsset[]
+  pagination?: any
+  message?: string
+}
 
 // Use AssetData from adminasset.ts
-type Asset = AssetData
 
 // Extend jsPDF type to include autoTable
 declare module 'jspdf' {
@@ -33,21 +65,6 @@ declare module 'jspdf' {
     }
   }
 }
-
-interface InventoryItem {
-  itemName: string
-  quantity: number
-  status: 'Available' | 'Low Stock' | 'Out of Stock'
-  lastUpdated: string
-}
-
-interface AssetInventory {
-  consumables: InventoryItem[]
-  spareParts: InventoryItem[]
-  tools: InventoryItem[]
-  operationalSupply: InventoryItem[]
-}
-
 
 interface AssetClassificationItem {
   assetName: string
@@ -128,30 +145,6 @@ const sampleAssets: AssetData[] = [
   }
 ]
 
-// Dynamic Asset Classification based on actual API sub-assets data
-const getAssetClassification = (asset: AssetData): AssetClassification => {
-  // Use actual sub-assets from API response
-  const movableAssets = asset.subAssets?.movable || []
-  const immovableAssets = asset.subAssets?.immovable || []
-
-  return {
-    movable: movableAssets.map(subAsset => ({
-      assetName: subAsset.assetName,
-      description: subAsset.description,
-      category: subAsset.category,
-      reason: `Movable component: ${subAsset.description}`,
-      inventory: subAsset.inventory
-    })),
-    immovable: immovableAssets.map(subAsset => ({
-      assetName: subAsset.assetName,
-      description: subAsset.description,
-      category: subAsset.category,
-      reason: `Immovable component: ${subAsset.description}`,
-      inventory: subAsset.inventory
-    }))
-  }
-}
-
 export default function AdminAssetsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMobility, setSelectedMobility] = useState<'all' | 'movable' | 'immovable'>('all')
@@ -195,11 +188,9 @@ export default function AdminAssetsPage() {
 
   // Current step in the creation process
   const [currentStep, setCurrentStep] = useState<'main' | 'subassets' | 'inventory'>('main')
-  const [currentSubAsset, setCurrentSubAsset] = useState<SubAsset | null>(null)
-  const [currentInventoryType, setCurrentInventoryType] = useState<'consumables' | 'spareParts' | 'tools' | 'operationalSupply' | null>(null)
 
   // Fetch assets from API
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -215,10 +206,11 @@ export default function AdminAssetsPage() {
      
       if (response.success) {
         // Transform backend data to frontend format
-        const transformedAssets = response.assets.map((asset: any) => ({
+        const apiResponse = response as ApiAssetsResponse
+        const transformedAssets = apiResponse.assets.map((asset: ApiAsset) => ({
           ...asset,
           subAssets: asset.subAssets ? {
-            movable: asset.subAssets.movable.map((subAsset: any) => ({
+            movable: asset.subAssets.movable.map((subAsset: ApiSubAsset) => ({
               id: subAsset._id || subAsset.id,
               assetName: subAsset.assetName,
               description: subAsset.description,
@@ -229,7 +221,7 @@ export default function AdminAssetsPage() {
               location: subAsset.location,
               inventory: subAsset.inventory
             })),
-            immovable: asset.subAssets.immovable.map((subAsset: any) => ({
+            immovable: asset.subAssets.immovable.map((subAsset: ApiSubAsset) => ({
               id: subAsset._id || subAsset.id,
               assetName: subAsset.assetName,
               description: subAsset.description,
@@ -242,7 +234,7 @@ export default function AdminAssetsPage() {
             }))
           } : undefined
         }))
-        setAssets(transformedAssets)
+        setAssets(transformedAssets as AssetData[])
       } else {
         setError(response.message || 'Failed to fetch assets')
       }
@@ -254,7 +246,7 @@ export default function AdminAssetsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [searchTerm, selectedMobility])
 
   // Search functionality with debouncing
   useEffect(() => {
@@ -265,7 +257,7 @@ export default function AdminAssetsPage() {
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm])
+  }, [searchTerm, fetchAssets])
 
   const getFilteredAssets = () => {
     // Since we're fetching filtered data from API, we can return assets directly
@@ -275,7 +267,7 @@ export default function AdminAssetsPage() {
   // Load assets on component mount
   useEffect(() => {
     fetchAssets()
-  }, [])
+  }, [fetchAssets])
 
   // Generate PDF function
 
@@ -305,7 +297,7 @@ export default function AdminAssetsPage() {
   // Fetch assets on component mount and when filters change
   useEffect(() => {
     fetchAssets()
-  }, [selectedMobility])
+  }, [selectedMobility, fetchAssets])
 
   // Debounced search effect
   useEffect(() => {
@@ -320,7 +312,7 @@ export default function AdminAssetsPage() {
     }, 500) // 500ms debounce
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm])
+  }, [searchTerm, selectedMobility, fetchAssets])
 
 
   const handleMovableClick = (asset: AssetData) => {
@@ -435,8 +427,6 @@ export default function AdminAssetsPage() {
   const handleCloseAddAssetModal = () => {
     setShowAddAssetModal(false)
     setCurrentStep('main')
-    setCurrentSubAsset(null)
-    setCurrentInventoryType(null)
   }
 
   const handleMainAssetSave = () => {
@@ -644,47 +634,6 @@ export default function AdminAssetsPage() {
       const response = await createAsset(assetData)
      
       if (response.success) {
-        // Add the new asset to the local state
-        const assetToAdd: AssetData = {
-          _id: response.data._id,
-          tagId: response.data.tagId,
-          assetType: response.data.assetType,
-          subcategory: response.data.subcategory,
-          mobilityCategory: response.data.mobilityCategory as 'Movable' | 'Immovable',
-          brand: response.data.brand,
-          model: response.data.model,
-          serialNumber: response.data.serialNumber,
-          capacity: response.data.capacity,
-          yearOfInstallation: response.data.yearOfInstallation,
-          status: response.data.status,
-          priority: response.data.priority,
-          location: response.data.location,
-          subAssets: response.data.subAssets ? {
-            movable: response.data.subAssets.movable.map((subAsset: any) => ({
-              id: subAsset._id || subAsset.id,
-              assetName: subAsset.assetName,
-              description: subAsset.description,
-              category: subAsset.category,
-              brand: subAsset.brand,
-              model: subAsset.model,
-              capacity: subAsset.capacity,
-              location: subAsset.location,
-              inventory: subAsset.inventory
-            })),
-            immovable: response.data.subAssets.immovable.map((subAsset: any) => ({
-              id: subAsset._id || subAsset.id,
-              assetName: subAsset.assetName,
-              description: subAsset.description,
-              category: subAsset.category,
-              brand: subAsset.brand,
-              model: subAsset.model,
-              capacity: subAsset.capacity,
-              location: subAsset.location,
-              inventory: subAsset.inventory
-            }))
-          } : undefined
-        }
-
         // Refresh the assets list instead of manually adding
         await fetchAssets()
         handleCloseAddAssetModal()
@@ -728,7 +677,7 @@ export default function AdminAssetsPage() {
     const assetClassification = getAssetClassification(asset)
    
     // Helper function to get inventory item names
-    const getInventoryNames = (items: any[]) => {
+    const getInventoryNames = (items: InventoryItem[] | string[]) => {
       return items.map(item =>
         typeof item === 'string' ? item : item.itemName || item
       ).join(', ')

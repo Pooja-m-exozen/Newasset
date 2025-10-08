@@ -1,5 +1,286 @@
 const API_BASE_URL = 'https://digitalasset.zenapi.co.in/api'
 
+// Types for Asset Creation API
+export interface InventoryItem {
+  itemName: string
+  quantity: number
+  status: 'Available' | 'Low Stock' | 'Out of Stock'
+  lastUpdated: string
+}
+
+export interface SubAsset {
+  id?: string
+  _id?: string
+  assetName: string
+  description: string
+  category: 'Movable' | 'Immovable'
+  brand: string
+  model: string
+  capacity: string
+  location: string
+  inventory: {
+    consumables: InventoryItem[]
+    spareParts: InventoryItem[]
+    tools: InventoryItem[]
+    operationalSupply: InventoryItem[]
+  }
+}
+
+export interface CreateAssetRequest {
+  tagId: string
+  assetType: string
+  subcategory?: string
+  mobilityCategory: 'Movable' | 'Immovable'
+  brand: string
+  model?: string
+  serialNumber?: string
+  capacity?: string
+  yearOfInstallation?: string
+  status: 'Active' | 'Inactive' | 'Maintenance' | 'Retired'
+  priority: 'High' | 'Medium' | 'Low'
+  location: {
+    building?: string
+    floor?: string
+    room?: string
+  }
+  subAssets?: {
+    movable: SubAsset[]
+    immovable: SubAsset[]
+  }
+}
+
+export interface AssetData {
+  _id: string
+  tagId: string
+  assetType: string
+  subcategory?: string
+  mobilityCategory?: string
+  brand: string
+  model?: string
+  serialNumber?: string
+  capacity?: string
+  yearOfInstallation?: string
+  status?: string
+  priority?: string
+  location?: {
+    building?: string
+    floor?: string
+    room?: string
+  }
+  subAssets?: {
+    movable: SubAsset[]
+    immovable: SubAsset[]
+  }
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface CreateAssetResponse {
+  success: boolean
+  data: AssetData
+  message: string
+}
+
+// API Functions for Asset Creation
+export const createAsset = async (assetData: CreateAssetRequest): Promise<CreateAssetResponse> => {
+  try {
+    const token = localStorage.getItem('authToken')
+    
+    // Transform data to match backend expectations
+    const backendData = {
+      tagId: assetData.tagId,
+      assetType: assetData.assetType,
+      subcategory: assetData.subcategory,
+      mobilityCategory: assetData.mobilityCategory.toLowerCase(), // Convert to lowercase
+      brand: assetData.brand,
+      model: assetData.model,
+      serialNumber: assetData.serialNumber,
+      capacity: assetData.capacity,
+      yearOfInstallation: assetData.yearOfInstallation,
+      status: assetData.status.toLowerCase(), // Convert to lowercase
+      priority: assetData.priority.toLowerCase(), // Convert to lowercase
+      location: {
+        building: assetData.location.building,
+        floor: assetData.location.floor,
+        room: assetData.location.room
+      },
+      subAssets: assetData.subAssets ? {
+        movable: assetData.subAssets.movable.map(subAsset => ({
+          assetName: subAsset.assetName,
+          description: subAsset.description,
+          category: subAsset.category,
+          brand: subAsset.brand,
+          model: subAsset.model,
+          capacity: subAsset.capacity,
+          location: subAsset.location,
+          inventory: subAsset.inventory
+        })),
+        immovable: assetData.subAssets.immovable.map(subAsset => ({
+          assetName: subAsset.assetName,
+          description: subAsset.description,
+          category: subAsset.category,
+          brand: subAsset.brand,
+          model: subAsset.model,
+          capacity: subAsset.capacity,
+          location: subAsset.location,
+          inventory: subAsset.inventory
+        }))
+      } : undefined,
+      project: {
+        projectName: 'Default Project' // You might want to make this dynamic
+      }
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/assets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(backendData),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to create asset')
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('Error creating asset:', error)
+    throw error
+  }
+}
+
+// API Functions for Asset Management
+export const getAssets = async (): Promise<AssetsResponse> => {
+  try {
+    const token = localStorage.getItem('authToken')
+    
+    const response = await fetch(`${API_BASE_URL}/assets`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to fetch assets')
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('Error fetching assets:', error)
+    throw error
+  }
+}
+
+export const getAssetsByMobility = async (mobilityCategory: 'movable' | 'immovable' | 'all'): Promise<AssetsResponse> => {
+  try {
+    const token = localStorage.getItem('authToken')
+    
+    const url = mobilityCategory === 'all' 
+      ? `${API_BASE_URL}/assets`
+      : `${API_BASE_URL}/assets/mobility/${mobilityCategory}`
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to fetch assets')
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('Error fetching assets by mobility:', error)
+    throw error
+  }
+}
+
+export const searchAssets = async (searchTerm: string): Promise<AssetsResponse> => {
+  try {
+    const token = localStorage.getItem('authToken')
+    
+    const response = await fetch(`${API_BASE_URL}/assets?search=${encodeURIComponent(searchTerm)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to search assets')
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('Error searching assets:', error)
+    throw error
+  }
+}
+
+// Helper function to validate asset data before sending
+export const validateAssetData = (assetData: CreateAssetRequest): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = []
+
+  // Required field validations
+  if (!assetData.tagId?.trim()) {
+    errors.push('Asset ID is required')
+  }
+  
+  if (!assetData.assetType?.trim()) {
+    errors.push('Asset Type is required')
+  }
+  
+  if (!assetData.brand?.trim()) {
+    errors.push('Brand is required')
+  }
+
+  // Validate sub-assets if provided
+  if (assetData.subAssets) {
+    const { movable, immovable } = assetData.subAssets
+    
+    // Validate movable assets
+    movable.forEach((subAsset, index) => {
+      if (!subAsset.assetName?.trim()) {
+        errors.push(`Movable Asset #${index + 1}: Asset Name is required`)
+      }
+      if (!subAsset.brand?.trim()) {
+        errors.push(`Movable Asset #${index + 1}: Brand is required`)
+      }
+    })
+    
+    // Validate immovable assets
+    immovable.forEach((subAsset, index) => {
+      if (!subAsset.assetName?.trim()) {
+        errors.push(`Immovable Asset #${index + 1}: Asset Name is required`)
+      }
+      if (!subAsset.brand?.trim()) {
+        errors.push(`Immovable Asset #${index + 1}: Brand is required`)
+      }
+    })
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
+
 // Types for Asset Management - Updated with mobilityCategory
 export interface Location {
   latitude: string;
@@ -145,6 +426,7 @@ export interface AssetsResponse {
   success: boolean;
   assets: Asset[];
   pagination?: PaginationInfo;
+  message?: string;
 }
 
 // Project interfaces

@@ -392,7 +392,7 @@ export function EnhancedDashboard({
       const dateTo = lastDayOfMonth.toISOString().split('T')[0]
       
       // Get token from localStorage
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('authToken')
       if (!token) {
         throw new Error('Authentication token not found')
       }
@@ -430,7 +430,7 @@ export function EnhancedDashboard({
     setRuleCreationSuccess(false)
     
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('authToken')
       if (!token) {
         throw new Error('Authentication token not found')
       }

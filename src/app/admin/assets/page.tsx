@@ -727,41 +727,6 @@ export default function AdminAssetsPage() {
     const doc = new jsPDF()
     const assetClassification = getAssetClassification(asset)
     
-    // Function to add logo (placeholder for now - you can enhance this with actual image)
-    const addLogo = () => {
-      // Create a simple logo placeholder with EXOZEN branding
-      doc.setFillColor(255, 255, 255)
-      doc.rect(10, 5, 25, 25, 'F')
-      
-      // Add border
-      doc.setDrawColor(0, 100, 200)
-      doc.setLineWidth(1)
-      doc.rect(10, 5, 25, 25, 'S')
-      
-      // Add EXOZEN text
-      doc.setTextColor(0, 100, 200)
-      doc.setFontSize(12)
-      doc.setFont('helvetica', 'bold')
-      doc.text('EXO', 12, 15)
-      doc.text('ZEN', 12, 22)
-      
-      // Add decorative elements
-      doc.setFillColor(0, 100, 200)
-      doc.circle(22, 10, 2, 'F')
-      doc.circle(22, 20, 2, 'F')
-    }
-    
-    // Helper function to check if we need a new page
-    const checkPageBreak = (currentY: number, neededSpace: number = 20) => {
-      const pageHeight = doc.internal.pageSize.height
-      const margin = 20
-      if (currentY + neededSpace > pageHeight - margin) {
-        doc.addPage()
-        return margin
-      }
-      return currentY
-    }
-    
     // Helper function to get inventory item names
     const getInventoryNames = (items: any[]) => {
       return items.map(item => 
@@ -771,124 +736,80 @@ export default function AdminAssetsPage() {
     
     let yPosition = 20
     
-    // Professional Header with Logo
-    doc.setFillColor(0, 100, 200) // Blue background
-    doc.rect(0, 0, 210, 35, 'F')
-    
-    // Add the logo
-    addLogo()
-    
-    // Company name and report title
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(20)
+    // Simple Header
+    doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.text('EXOZEN Asset Management', 45, 15)
+    doc.text('Asset Classification Report', 14, yPosition)
+    yPosition += 10
     
-    doc.setFontSize(14)
+    doc.setFontSize(12)
     doc.setFont('helvetica', 'normal')
-    doc.text('Asset Classification Report', 45, 22)
-    
-    // Asset details
-    doc.setFontSize(10)
-    doc.text(`${asset.tagId} - ${asset.brand} ${asset.model}`, 45, 28)
-    doc.text(`${asset.assetType} (${asset.subcategory})`, 45, 32)
-    
-    // Report generation info
-    doc.setTextColor(0, 0, 0)
-    doc.setFontSize(8)
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 150, 32)
-    
-    yPosition = 45
-    
-    // Visual Flowchart Section with enhanced design
-    doc.setFontSize(16)
-    doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 40)
-    doc.text('Asset Classification Flowchart', 14, yPosition)
+    doc.text(`${asset.tagId} - ${asset.brand} ${asset.model}`, 14, yPosition)
+    yPosition += 7
+    doc.text(`${asset.assetType} (${asset.subcategory})`, 14, yPosition)
+    yPosition += 7
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, yPosition)
     yPosition += 20
     
-    // Enhanced Main Asset Box with gradient effect
-    const centerX = 105
-    const boxWidth = 50
-    const boxHeight = 20
+    // Simple Flowchart
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Asset Classification', 14, yPosition)
+    yPosition += 15
     
-    // Main asset box with shadow effect
+    // Main Asset Box
+    const centerX = 105
+    const boxWidth = 40
+    const boxHeight = 15
+    
     doc.setFillColor(0, 100, 200)
     doc.rect(centerX - boxWidth/2, yPosition, boxWidth, boxHeight, 'F')
-    
-    // Add border
-    doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.5)
-    doc.rect(centerX - boxWidth/2, yPosition, boxWidth, boxHeight, 'S')
-    
     doc.setTextColor(255, 255, 255)
-    doc.setFontSize(12)
+    doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
-    doc.text(asset.assetType, centerX - boxWidth/2 + 8, yPosition + 8)
-    doc.setFontSize(8)
-    doc.text('Main Asset', centerX - boxWidth/2 + 8, yPosition + 14)
-    doc.setFontSize(6)
-    doc.text(`${asset.tagId}`, centerX - boxWidth/2 + 8, yPosition + 18)
+    doc.text(asset.assetType, centerX - boxWidth/2 + 5, yPosition + 8)
+    doc.text('Main Asset', centerX - boxWidth/2 + 5, yPosition + 12)
     
-    yPosition += boxHeight + 15
+    yPosition += boxHeight + 10
     
-    // Enhanced arrow with label
+    // Arrow
     doc.setTextColor(0, 0, 0)
-    doc.setFontSize(14)
-    doc.text('↓', centerX - 3, yPosition)
-    yPosition += 8
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Classification', centerX - 18, yPosition)
+    doc.setFontSize(12)
+    doc.text('↓', centerX - 2, yPosition)
     yPosition += 15
     
-    // Enhanced branches with better styling
-    const leftX = 35
-    const rightX = 125
-    const branchWidth = 40
-    const branchHeight = 18
+    // Two branches
+    const leftX = 40
+    const rightX = 130
+    const branchWidth = 35
+    const branchHeight = 12
     
-    // Movable branch (left) with enhanced design
+    // Movable branch
     doc.setFillColor(0, 150, 0)
     doc.rect(leftX, yPosition, branchWidth, branchHeight, 'F')
-    doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.5)
-    doc.rect(leftX, yPosition, branchWidth, branchHeight, 'S')
-    
     doc.setTextColor(255, 255, 255)
-    doc.setFontSize(10)
+    doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
-    doc.text('Movable', leftX + 8, yPosition + 8)
-    doc.setFontSize(7)
-    doc.text(`${assetClassification.movable.length} components`, leftX + 8, yPosition + 14)
+    doc.text('Movable', leftX + 5, yPosition + 7)
+    doc.text(`${assetClassification.movable.length} items`, leftX + 5, yPosition + 11)
     
-    // Immovable branch (right) with enhanced design
+    // Immovable branch
     doc.setFillColor(0, 100, 200)
     doc.rect(rightX, yPosition, branchWidth, branchHeight, 'F')
-    doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.5)
-    doc.rect(rightX, yPosition, branchWidth, branchHeight, 'S')
-    
     doc.setTextColor(255, 255, 255)
-    doc.setFontSize(10)
+    doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
-    doc.text('Immovable', rightX + 8, yPosition + 8)
-    doc.setFontSize(7)
-    doc.text(`${assetClassification.immovable.length} components`, rightX + 8, yPosition + 14)
+    doc.text('Immovable', rightX + 5, yPosition + 7)
+    doc.text(`${assetClassification.immovable.length} items`, rightX + 5, yPosition + 11)
     
-    yPosition += branchHeight + 25
+    yPosition += branchHeight + 20
     
-    // Enhanced Asset Overview Section
+    // Simple Asset Overview
     doc.setTextColor(0, 0, 0)
-    doc.setFontSize(16)
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 25)
-    
-    // Section header with background
-    doc.setFillColor(240, 248, 255)
-    doc.rect(14, yPosition - 5, 182, 8, 'F')
-    doc.text('Asset Overview', 20, yPosition)
-    yPosition += 15
+    doc.text('Asset Overview', 14, yPosition)
+    yPosition += 10
     
     const overviewData = [
       ['Asset ID', asset.tagId],
@@ -907,45 +828,38 @@ export default function AdminAssetsPage() {
       head: [['Property', 'Value']],
       body: overviewData,
       styles: { 
-        fontSize: 10,
-        cellPadding: 4,
-        lineColor: [0, 100, 200],
-        lineWidth: 0.3,
-        halign: 'left'
+        fontSize: 9,
+        cellPadding: 3,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       headStyles: { 
-        fillColor: [0, 100, 200],
-        textColor: [255, 255, 255],
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
         fontStyle: 'bold',
-        lineColor: [0, 100, 200],
-        lineWidth: 0.3
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 100, 200],
-        lineWidth: 0.3
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       margin: { left: 14, right: 14 },
       columnStyles: {
-        0: { cellWidth: 60, fontStyle: 'bold', halign: 'left' },
-        1: { cellWidth: 130, halign: 'left' }
+        0: { cellWidth: 50, fontStyle: 'bold' },
+        1: { cellWidth: 140 }
       },
     })
     
-    yPosition = doc.lastAutoTable.finalY + 25
+    yPosition = doc.lastAutoTable.finalY + 20
     
-    // Enhanced Movable Assets Section
-    doc.setFontSize(16)
+    // Simple Movable Assets
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 25)
-    
-    // Section header with green background
-    doc.setFillColor(240, 255, 240)
-    doc.rect(14, yPosition - 5, 182, 8, 'F')
-    doc.setTextColor(0, 100, 0)
-    doc.text(`Movable Assets (${assetClassification.movable.length} components)`, 20, yPosition)
-    yPosition += 15
+    doc.text(`Movable Assets (${assetClassification.movable.length} components)`, 14, yPosition)
+    yPosition += 10
     
     const movableTableData = assetClassification.movable.map((item, index) => [
       index + 1,
@@ -961,49 +875,42 @@ export default function AdminAssetsPage() {
       head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools', 'Operational Supply']],
       body: movableTableData,
       styles: { 
-        fontSize: 8,
-        cellPadding: 3,
-        lineColor: [0, 150, 0],
-        lineWidth: 0.3,
-        halign: 'left'
+        fontSize: 7,
+        cellPadding: 2,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       headStyles: { 
-        fillColor: [0, 150, 0],
-        textColor: [255, 255, 255],
+        fillColor: [200, 255, 200],
+        textColor: [0, 0, 0],
         fontStyle: 'bold',
-        lineColor: [0, 150, 0],
-        lineWidth: 0.3
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 150, 0],
-        lineWidth: 0.3
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       margin: { left: 14, right: 14 },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 40, fontStyle: 'bold' },
-        2: { cellWidth: 35 },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 35 }
+        0: { cellWidth: 8 },
+        1: { cellWidth: 35, fontStyle: 'bold' },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 35 },
+        5: { cellWidth: 40 }
       },
     })
     
-    yPosition = doc.lastAutoTable.finalY + 25
+    yPosition = doc.lastAutoTable.finalY + 20
     
-    // Enhanced Immovable Assets Section
-    doc.setFontSize(16)
+    // Simple Immovable Assets
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 25)
-    
-    // Section header with blue background
-    doc.setFillColor(240, 248, 255)
-    doc.rect(14, yPosition - 5, 182, 8, 'F')
-    doc.setTextColor(0, 100, 200)
-    doc.text(`Immovable Assets (${assetClassification.immovable.length} components)`, 20, yPosition)
-    yPosition += 15
+    doc.text(`Immovable Assets (${assetClassification.immovable.length} components)`, 14, yPosition)
+    yPosition += 10
     
     const immovableTableData = assetClassification.immovable.map((item, index) => [
       index + 1,
@@ -1019,49 +926,42 @@ export default function AdminAssetsPage() {
       head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools', 'Operational Supply']],
       body: immovableTableData,
       styles: { 
-        fontSize: 8,
-        cellPadding: 3,
-        lineColor: [0, 100, 200],
-        lineWidth: 0.3,
-        halign: 'left'
+        fontSize: 7,
+        cellPadding: 2,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       headStyles: { 
-        fillColor: [0, 100, 200],
-        textColor: [255, 255, 255],
+        fillColor: [200, 200, 255],
+        textColor: [0, 0, 0],
         fontStyle: 'bold',
-        lineColor: [0, 100, 200],
-        lineWidth: 0.3
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 100, 200],
-        lineWidth: 0.3
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
       },
       margin: { left: 14, right: 14 },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 40, fontStyle: 'bold' },
-        2: { cellWidth: 35 },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 35 }
+        0: { cellWidth: 8 },
+        1: { cellWidth: 35, fontStyle: 'bold' },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 35 },
+        5: { cellWidth: 40 }
       },
     })
     
-    yPosition = doc.lastAutoTable.finalY + 25
+    yPosition = doc.lastAutoTable.finalY + 20
     
-    // Enhanced Summary Section
-    doc.setFontSize(16)
+    // Simple Summary
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 25)
-    
-    // Section header with gradient background
-    doc.setFillColor(250, 250, 250)
-    doc.rect(14, yPosition - 5, 182, 8, 'F')
-    doc.setTextColor(0, 0, 0)
-    doc.text('Summary', 20, yPosition)
-    yPosition += 15
+    doc.text('Summary', 14, yPosition)
+    yPosition += 10
     
     const summaryData = [
       ['Total Movable Components', assetClassification.movable.length.toString()],
@@ -1075,53 +975,38 @@ export default function AdminAssetsPage() {
       head: [['Metric', 'Value']],
       body: summaryData,
       styles: { 
-        fontSize: 11,
-        cellPadding: 5,
+        fontSize: 10,
+        cellPadding: 4,
         lineColor: [0, 0, 0],
-        lineWidth: 0.3,
-        halign: 'left'
+        lineWidth: 0.1
       },
       headStyles: { 
-        fillColor: [0, 0, 0],
-        textColor: [255, 255, 255],
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
         fontStyle: 'bold',
         lineColor: [0, 0, 0],
-        lineWidth: 0.3
+        lineWidth: 0.1
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
         lineColor: [0, 0, 0],
-        lineWidth: 0.3
+        lineWidth: 0.1
       },
       margin: { left: 14, right: 14 },
       columnStyles: {
-        0: { cellWidth: 100, fontStyle: 'bold', halign: 'left' },
-        1: { cellWidth: 90, halign: 'left' }
+        0: { cellWidth: 80, fontStyle: 'bold' },
+        1: { cellWidth: 110 }
       },
     })
     
-    // Professional Footer
+    // Simple Footer
     const pageHeight = doc.internal.pageSize.height
-    const pageWidth = doc.internal.pageSize.width
-    
-    // Footer background
-    doc.setFillColor(0, 100, 200)
-    doc.rect(0, pageHeight - 20, pageWidth, 20, 'F')
-    
-    // Footer text
-    doc.setTextColor(255, 255, 255)
     doc.setFontSize(8)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Generated by EXOZEN Asset Management System', 14, pageHeight - 12)
-    doc.text('© 2024 EXOZEN Technologies. All rights reserved.', 14, pageHeight - 6)
+    doc.text('Generated by EXOZEN Asset Management System', 14, pageHeight - 10)
     
-    // Page number
-    doc.text(`Page 1 of 1`, pageWidth - 30, pageHeight - 6)
-    
-    // Save the PDF with professional naming
-    const fileName = `${asset.tagId}_${asset.assetType}_Classification_Report_${new Date().toISOString().split('T')[0]}.pdf`
-    doc.save(fileName)
+    // Save the PDF
+    doc.save(`${asset.tagId}_${asset.assetType}_Classification_Report.pdf`)
   }
 
 

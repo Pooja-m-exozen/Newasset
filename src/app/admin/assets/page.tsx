@@ -1,13 +1,19 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
-import { Building, Package, Search, Eye, X, ArrowDown, Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets } from '@/lib/adminasset'
+
+// Use AssetData from adminasset.ts
+type Asset = AssetData
 
 // Extend jsPDF type to include autoTable
 declare module 'jspdf' {
@@ -28,19 +34,32 @@ declare module 'jspdf' {
   }
 }
 
-interface AssetInventory {
-  consumables: string[]
-  spareParts: string[]
-  tools: string[]
-  operationalSupply: string[]
+interface InventoryItem {
+  itemName: string
+  quantity: number
+  status: 'Available' | 'Low Stock' | 'Out of Stock'
+  lastUpdated: string
 }
+
+interface AssetInventory {
+  consumables: InventoryItem[]
+  spareParts: InventoryItem[]
+  tools: InventoryItem[]
+  operationalSupply: InventoryItem[]
+}
+
 
 interface AssetClassificationItem {
   assetName: string
   description: string
-  category: string
+  category: 'Movable' | 'Immovable'
   reason: string
-  inventory: AssetInventory
+  inventory: {
+    consumables: InventoryItem[]
+    spareParts: InventoryItem[]
+    tools: InventoryItem[]
+    operationalSupply: InventoryItem[]
+  }
 }
 
 interface AssetClassification {
@@ -48,28 +67,9 @@ interface AssetClassification {
   immovable: AssetClassificationItem[]
 }
 
-interface Asset {
-  _id: string
-  tagId: string
-  assetType: string
-  subcategory?: string
-  mobilityCategory?: string
-  brand: string
-  model?: string
-  serialNumber?: string
-  capacity?: string
-  yearOfInstallation?: string
-  status?: string
-  priority?: string
-  location?: {
-    building?: string
-    floor?: string
-    room?: string
-  }
-}
 
 // Unique sample data - one asset per type
-const sampleAssets: Asset[] = [
+const sampleAssets: AssetData[] = [
   {
     _id: '1',
     tagId: 'WTP',
@@ -128,382 +128,36 @@ const sampleAssets: Asset[] = [
   }
 ]
 
-// Dynamic Asset Classification based on Asset Type and Subcategory
-const getAssetClassification = (assetType: string, subcategory: string): AssetClassification => {
-  const classificationMap: { [key: string]: AssetClassification } = {
-    'WTP': {
-      movable: [
-        {
-          assetName: "Water Pumps (inside WTP)",
-          description: "Pump equipment for intake, discharge, and circulation within the treatment plant.",
-          category: "Movable",
-          reason: "Can be detached and relocated independently for maintenance or replacement.",
-          inventory: {
-            consumables: ["Pump Oil", "Seal Rings", "Gaskets", "Lubricants"],
-            spareParts: ["Impeller", "Motor", "Bearings", "Shaft"],
-            tools: ["Multimeter", "Wrench Set", "Pressure Gauge", "Flow Meter"],
-            operationalSupply: ["Backup Pumps", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Control Panel / Electrical Equipment",
-          description: "Control systems and electrical panels for plant operation.",
-          category: "Movable",
-          reason: "Detachable equipment that can be relocated or replaced without affecting the main structure.",
-          inventory: {
-            consumables: ["Fuses", "Wire Connectors", "Terminal Blocks", "Cable Ties"],
-            spareParts: ["Control Board", "Relays", "Switches", "Indicators"],
-            tools: ["Screwdriver Set", "Wire Strippers", "Multimeter", "Crimping Tool"],
-            operationalSupply: ["Backup Control Panels", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Filtration Systems",
-          description: "Modular filtration units and membrane systems.",
-          category: "Movable",
-          reason: "Can be detached and relocated independently for maintenance or upgrades.",
-          inventory: {
-            consumables: ["Filter Cartridges", "Membrane Elements", "O-Rings", "Cleaning Chemicals"],
-            spareParts: ["Filter Housing", "Pressure Vessels", "Valves", "Connectors"],
-            tools: ["Pressure Tester", "Flow Meter", "Cleaning Kit", "Wrench Set"],
-            operationalSupply: ["Backup Filters", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Chemical Dosing Equipment",
-          description: "Portable chemical injection and dosing systems.",
-          category: "Movable",
-          reason: "Can be moved or replaced easily for different chemical treatments.",
-          inventory: {
-            consumables: ["Chemical Solutions", "Dosing Pumps", "Tubing", "Calibration Solutions"],
-            spareParts: ["Dosing Pump Head", "Valves", "Sensors", "Control Module"],
-            tools: ["Calibration Kit", "pH Meter", "Flow Controller", "Safety Equipment"],
-            operationalSupply: ["Backup Dosing Equipment", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Portable Water Treatment Unit",
-          description: "Modular or skid-mounted treatment plant built in containers.",
-          category: "Movable",
-          reason: "Can be transported by truck or trailer to another site; not permanently fixed.",
-          inventory: {
-            consumables: ["Treatment Chemicals", "Filter Media", "Disinfectants", "Test Kits"],
-            spareParts: ["Skid Frame", "Container Module", "Piping", "Electrical Connections"],
-            tools: ["Lifting Equipment", "Transport Tools", "Installation Kit", "Testing Equipment"],
-            operationalSupply: ["Backup Treatment Units", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ],
-      immovable: [
-        {
-          assetName: "Water Treatment Plant (WTP) Structure",
-          description: "Main facility structure for purifying and treating water supply.",
-          category: "Immovable",
-          reason: "Permanently installed facility with underground infrastructure and foundation.",
-          inventory: {
-            consumables: ["Concrete Sealants", "Waterproofing Materials", "Structural Adhesives", "Maintenance Coatings"],
-            spareParts: ["Structural Beams", "Foundation Blocks", "Support Columns", "Reinforcement Bars"],
-            tools: ["Concrete Mixer", "Crane", "Excavator", "Structural Testing Kit"],
-            operationalSupply: ["Backup Structures", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Storage Tanks (Underground/RCC)",
-          description: "Large concrete or buried tanks for water storage.",
-          category: "Immovable",
-          reason: "Permanently constructed structures embedded in the ground.",
-          inventory: {
-            consumables: ["Tank Liners", "Waterproofing Sealants", "Cleaning Chemicals", "Disinfectants"],
-            spareParts: ["Tank Covers", "Access Hatches", "Overflow Pipes", "Drainage Systems"],
-            tools: ["Tank Inspection Kit", "Cleaning Equipment", "Water Testing Kit", "Maintenance Ladder"],
-            operationalSupply: ["Backup Tanks", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Civil Works & Foundations",
-          description: "Concrete foundations, structural supports, and civil infrastructure.",
-          category: "Immovable",
-          reason: "Permanently fixed to the ground and cannot be moved without demolition.",
-          inventory: {
-            consumables: ["Concrete Mix", "Rebar", "Formwork Materials", "Curing Compounds"],
-            spareParts: ["Foundation Blocks", "Support Piers", "Retaining Walls", "Drainage Channels"],
-            tools: ["Concrete Mixer", "Excavator", "Compactor", "Surveying Equipment"],
-            operationalSupply: ["Backup Foundations", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Permanent Pipework",
-          description: "Fixed underground or embedded piping systems.",
-          category: "Immovable",
-          reason: "Permanently installed infrastructure embedded in the ground.",
-          inventory: {
-            consumables: ["Pipe Joints", "Sealants", "Insulation Materials", "Protective Coatings"],
-            spareParts: ["Pipe Sections", "Valves", "Fittings", "Support Brackets"],
-            tools: ["Pipe Wrench", "Pipe Cutter", "Pressure Tester", "Leak Detector"],
-            operationalSupply: ["Backup Piping", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Building Structures",
-          description: "Control rooms, pump houses, and treatment buildings.",
-          category: "Immovable",
-          reason: "Permanent structures fixed to the ground.",
-          inventory: {
-            consumables: ["Building Materials", "Insulation", "Weatherproofing", "Maintenance Supplies"],
-            spareParts: ["Roof Panels", "Windows", "Doors", "Structural Components"],
-            tools: ["Construction Equipment", "Lifting Gear", "Safety Equipment", "Building Inspection Kit"],
-            operationalSupply: ["Backup Buildings", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ]
-    },
-    'Computer': {
-      movable: [
-        {
-          assetName: "Desktop Computer",
-          description: "Personal computer system including CPU, monitor, keyboard, and mouse.",
-          category: "Movable",
-          reason: "Can be easily relocated and disconnected from power/network connections.",
-          inventory: {
-            consumables: ["Keyboard", "Mouse", "Cables", "Cleaning Supplies"],
-            spareParts: ["CPU", "RAM", "Hard Drive", "Power Supply"],
-            tools: ["Screwdriver Set", "Anti-static Wristband", "Cable Tester", "Cleaning Kit"],
-            operationalSupply: ["Backup Computers", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Laptop Computer",
-          description: "Portable computer system with integrated display and input devices.",
-          category: "Movable",
-          reason: "Designed for portability and can be moved between locations easily.",
-          inventory: {
-            consumables: ["Battery", "Charger", "Cleaning Cloth", "Screen Protector"],
-            spareParts: ["Keyboard", "Screen", "Motherboard", "Hard Drive"],
-            tools: ["Screwdriver Set", "Anti-static Mat", "Cleaning Kit", "Diagnostic Software"],
-            operationalSupply: ["Backup Laptops", "Emergency Equipment", "Spare Batteries", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Computer Mouse",
-          description: "Pointing device for computer input and navigation.",
-          category: "Movable",
-          reason: "Small, portable device that can be easily disconnected and relocated.",
-          inventory: {
-            consumables: ["Mouse Pad", "Cleaning Cloth", "USB Cable", "Batteries"],
-            spareParts: ["Mouse Body", "Scroll Wheel", "Buttons", "Sensor"],
-            tools: ["Cleaning Kit", "Multimeter", "Replacement Kit", "Testing Equipment"],
-            operationalSupply: ["Backup Mice", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Computer Keyboard",
-          description: "Input device for typing and computer control.",
-          category: "Movable",
-          reason: "Portable device that can be disconnected and moved to different workstations.",
-          inventory: {
-            consumables: ["Key Caps", "Cleaning Solution", "USB Cable", "Wrist Rest"],
-            spareParts: ["Keyboard Body", "Key Switches", "Circuit Board", "Cable"],
-            tools: ["Key Puller", "Cleaning Kit", "Multimeter", "Replacement Kit"],
-            operationalSupply: ["Backup Keyboards", "Emergency Equipment", "Spare Keys", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Monitor/Display",
-          description: "Visual display unit for computer output.",
-          category: "Movable",
-          reason: "Can be disconnected from power and data cables and relocated.",
-          inventory: {
-            consumables: ["Cleaning Cloth", "Screen Protector", "Cables", "Mounting Hardware"],
-            spareParts: ["Display Panel", "Power Supply", "Control Board", "Stand"],
-            tools: ["Screwdriver Set", "Cleaning Kit", "Multimeter", "Installation Kit"],
-            operationalSupply: ["Backup Monitors", "Emergency Displays", "Spare Panels", "Safety Equipment"]
-          }
-        }
-      ],
-      immovable: [
-        {
-          assetName: "Server Room Infrastructure",
-          description: "Permanent infrastructure for housing computer servers.",
-          category: "Immovable",
-          reason: "Permanent structure with fixed electrical and cooling infrastructure.",
-          inventory: {
-            consumables: ["Rack Hardware", "Cable Management", "Cooling Fans", "Power Strips"],
-            spareParts: ["Server Racks", "UPS Systems", "Cooling Units", "Fire Suppression"],
-            tools: ["Rack Installation Kit", "Cable Tester", "Cooling Test Kit", "Safety Equipment"],
-            operationalSupply: ["Backup Server Rooms", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Data Center Building",
-          description: "Permanent facility housing computer and network equipment.",
-          category: "Immovable",
-          reason: "Permanent structure built specifically for IT infrastructure.",
-          inventory: {
-            consumables: ["Building Materials", "Insulation", "Fire Suppression", "Security Systems"],
-            spareParts: ["Structural Components", "HVAC Systems", "Electrical Panels", "Access Control"],
-            tools: ["Construction Equipment", "Installation Tools", "Testing Equipment", "Safety Gear"],
-            operationalSupply: ["Backup Data Centers", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Fixed Network Infrastructure",
-          description: "Permanently installed network cabling and equipment.",
-          category: "Immovable",
-          reason: "Permanently installed communication infrastructure embedded in buildings.",
-          inventory: {
-            consumables: ["Network Cables", "Connectors", "Patch Panels", "Cable Management"],
-            spareParts: ["Switches", "Routers", "Firewalls", "Rack Equipment"],
-            tools: ["Cable Tester", "Network Analyzer", "Installation Tools", "Crimping Kit"],
-            operationalSupply: ["Backup Network Infrastructure", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ]
-    },
-    'UPS': {
-      movable: [
-        {
-          assetName: "Portable UPS",
-          description: "Small battery backup system for individual equipment.",
-          category: "Movable",
-          reason: "Can be disconnected and relocated to protect different equipment.",
-          inventory: {
-            consumables: ["Batteries", "Power Cables", "Cleaning Supplies", "Fuses"],
-            spareParts: ["Battery Module", "Control Board", "Display Panel", "Power Supply"],
-            tools: ["Multimeter", "Battery Tester", "Cleaning Kit", "Installation Tools"],
-            operationalSupply: ["Backup UPS Units", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "UPS Battery Modules",
-          description: "Replaceable battery modules for UPS systems.",
-          category: "Movable",
-          reason: "Can be replaced and relocated for maintenance.",
-          inventory: {
-            consumables: ["Battery Cells", "Terminal Connectors", "Cleaning Solution", "Protective Covers"],
-            spareParts: ["Battery Pack", "Control Circuit", "Monitoring Board", "Connector Assembly"],
-            tools: ["Battery Tester", "Multimeter", "Installation Kit", "Safety Equipment"],
-            operationalSupply: ["Backup Battery Modules", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ],
-      immovable: [
-        {
-          assetName: "Central UPS System",
-          description: "Large uninterruptible power supply system for building backup.",
-          category: "Immovable",
-          reason: "Permanently installed system bolted to foundation and connected to building electrical infrastructure.",
-          inventory: {
-            consumables: ["Battery Banks", "Cooling Fans", "Power Cables", "Monitoring Sensors"],
-            spareParts: ["UPS Unit", "Battery Racks", "Control Panel", "Distribution Board"],
-            tools: ["Load Bank", "Battery Tester", "Installation Tools", "Maintenance Kit"],
-            operationalSupply: ["Backup UPS Systems", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "UPS Room Infrastructure",
-          description: "Permanent infrastructure for housing UPS equipment.",
-          category: "Immovable",
-          reason: "Permanent structure with fixed electrical and cooling infrastructure.",
-          inventory: {
-            consumables: ["Rack Hardware", "Cable Management", "Cooling Systems", "Fire Suppression"],
-            spareParts: ["Equipment Racks", "HVAC Units", "Electrical Panels", "Monitoring Systems"],
-            tools: ["Rack Installation Kit", "Cooling Test Kit", "Installation Tools", "Safety Equipment"],
-            operationalSupply: ["Backup UPS Rooms", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ]
-    },
-    'Printer': {
-      movable: [
-        {
-          assetName: "Desktop Printer",
-          description: "Small printer for individual workstations.",
-          category: "Movable",
-          reason: "Can be disconnected from power and network connections and relocated.",
-          inventory: {
-            consumables: ["Toner Cartridges", "Paper", "Cleaning Kits", "USB Cables"],
-            spareParts: ["Print Head", "Paper Tray", "Control Panel", "Power Supply"],
-            tools: ["Cleaning Kit", "Multimeter", "Installation Tools", "Maintenance Kit"],
-            operationalSupply: ["Backup Printers", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Portable Printer",
-          description: "Mobile printing equipment for temporary use.",
-          category: "Movable",
-          reason: "Designed for portability and can be moved between locations.",
-          inventory: {
-            consumables: ["Ink Cartridges", "Paper Rolls", "Cleaning Supplies", "Batteries"],
-            spareParts: ["Print Mechanism", "Paper Feed", "Control Board", "Carrying Case"],
-            tools: ["Cleaning Kit", "Installation Tools", "Maintenance Kit", "Testing Equipment"],
-            operationalSupply: ["Backup Portable Printers", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ],
-      immovable: [
-        {
-          assetName: "Large Format Printer",
-          description: "Industrial printer permanently installed in production facility.",
-          category: "Immovable",
-          reason: "Permanently installed equipment bolted to floor and connected to building infrastructure.",
-          inventory: {
-            consumables: ["Ink Cartridges", "Paper Rolls", "Cleaning Solutions", "Maintenance Kits"],
-            spareParts: ["Print Head Assembly", "Paper Feed System", "Control Panel", "Power Distribution"],
-            tools: ["Installation Equipment", "Cleaning Kit", "Calibration Tools", "Maintenance Kit"],
-            operationalSupply: ["Backup Large Format Printers", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Print Room Infrastructure",
-          description: "Permanent infrastructure for housing printing equipment.",
-          category: "Immovable",
-          reason: "Permanent structure with fixed electrical and ventilation infrastructure.",
-          inventory: {
-            consumables: ["Building Materials", "Ventilation Ducts", "Electrical Cables", "Fire Suppression"],
-            spareParts: ["Equipment Racks", "HVAC Systems", "Electrical Panels", "Safety Systems"],
-            tools: ["Installation Equipment", "Ventilation Test Kit", "Electrical Tools", "Safety Equipment"],
-            operationalSupply: ["Backup Print Rooms", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ]
-    }
-  }
+// Dynamic Asset Classification based on actual API sub-assets data
+const getAssetClassification = (asset: AssetData): AssetClassification => {
+  // Use actual sub-assets from API response
+  const movableAssets = asset.subAssets?.movable || []
+  const immovableAssets = asset.subAssets?.immovable || []
 
-  return classificationMap[assetType] || {
-    movable: [
-      {
-        assetName: `${assetType} Components`,
-        description: `Movable components and accessories for ${subcategory || assetType}.`,
-        category: "Movable",
-        reason: "Portable components that can be relocated or replaced.",
-        inventory: {
-          consumables: [`${assetType} Supplies`, "Cleaning Materials", "Lubricants", "Maintenance Items"],
-          spareParts: [`${assetType} Parts`, "Replacement Components", "Accessories", "Modules"],
-          tools: ["Maintenance Kit", "Installation Tools", "Testing Equipment", "Safety Gear"],
-          operationalSupply: [`Backup ${assetType}`, "Emergency Equipment", "Spare Components", "Safety Equipment"]
-        }
-      }
-    ],
-    immovable: [
-      {
-        assetName: `${assetType} Infrastructure`,
-        description: `Permanent infrastructure and fixed installations for ${subcategory || assetType}.`,
-        category: "Immovable",
-        reason: "Permanently installed infrastructure that cannot be moved without demolition.",
-        inventory: {
-          consumables: ["Building Materials", "Structural Components", "Foundation Materials", "Installation Supplies"],
-          spareParts: ["Structural Elements", "Foundation Blocks", "Support Systems", "Infrastructure Components"],
-          tools: ["Construction Equipment", "Installation Tools", "Testing Equipment", "Safety Equipment"],
-          operationalSupply: [`Backup ${assetType} Infrastructure`, "Emergency Equipment", "Spare Components", "Safety Equipment"]
-        }
-      }
-    ]
+  return {
+    movable: movableAssets.map(subAsset => ({
+      assetName: subAsset.assetName,
+      description: subAsset.description,
+      category: subAsset.category,
+      reason: `Movable component: ${subAsset.description}`,
+      inventory: subAsset.inventory
+    })),
+    immovable: immovableAssets.map(subAsset => ({
+      assetName: subAsset.assetName,
+      description: subAsset.description,
+      category: subAsset.category,
+      reason: `Immovable component: ${subAsset.description}`,
+      inventory: subAsset.inventory
+    }))
   }
 }
 
 export default function AdminAssetsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMobility, setSelectedMobility] = useState<'all' | 'movable' | 'immovable'>('all')
+  const [assets, setAssets] = useState<AssetData[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   // Asset classification states
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
@@ -512,34 +166,164 @@ export default function AdminAssetsPage() {
   
   // Modal states
   const [showFlowchartModal, setShowFlowchartModal] = useState(false)
-  const [selectedAssetForFlowchart, setSelectedAssetForFlowchart] = useState<Asset | null>(null)
+  const [selectedAssetForFlowchart, setSelectedAssetForFlowchart] = useState<AssetData | null>(null)
+  const [showAddAssetModal, setShowAddAssetModal] = useState(false)
 
-  const getFilteredAssets = () => {
-    let filtered = sampleAssets
-
-    // Filter by mobility category
-    if (selectedMobility !== 'all') {
-      filtered = filtered.filter(asset => 
-        asset.mobilityCategory?.toLowerCase() === selectedMobility.toLowerCase()
-      )
+  // Add Asset form states
+  const [newAsset, setNewAsset] = useState<Partial<AssetData>>({
+    tagId: '',
+    assetType: '',
+    subcategory: '',
+    mobilityCategory: 'Movable',
+    brand: '',
+    model: '',
+    serialNumber: '',
+    capacity: '',
+    yearOfInstallation: '',
+    status: 'Active',
+    priority: 'Medium',
+    location: {
+      building: '',
+      floor: '',
+      room: ''
+    },
+    subAssets: {
+      movable: [],
+      immovable: []
     }
+  })
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(asset => 
-        asset.tagId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.assetType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.subcategory?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  // Current step in the creation process
+  const [currentStep, setCurrentStep] = useState<'main' | 'subassets' | 'inventory'>('main')
+  const [currentSubAsset, setCurrentSubAsset] = useState<SubAsset | null>(null)
+  const [currentInventoryType, setCurrentInventoryType] = useState<'consumables' | 'spareParts' | 'tools' | 'operationalSupply' | null>(null)
+
+  // Fetch assets from API
+  const fetchAssets = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      let response
+      if (searchTerm.trim()) {
+        response = await searchAssets(searchTerm)
+      } else if (selectedMobility !== 'all') {
+        response = await getAssetsByMobility(selectedMobility)
+      } else {
+        response = await getAssets()
+      }
+      
+      if (response.success) {
+        // Transform backend data to frontend format
+        const transformedAssets = response.assets.map((asset: any) => ({
+          ...asset,
+          subAssets: asset.subAssets ? {
+            movable: asset.subAssets.movable.map((subAsset: any) => ({
+              id: subAsset._id || subAsset.id,
+              assetName: subAsset.assetName,
+              description: subAsset.description,
+              category: subAsset.category,
+              brand: subAsset.brand,
+              model: subAsset.model,
+              capacity: subAsset.capacity,
+              location: subAsset.location,
+              inventory: subAsset.inventory
+            })),
+            immovable: asset.subAssets.immovable.map((subAsset: any) => ({
+              id: subAsset._id || subAsset.id,
+              assetName: subAsset.assetName,
+              description: subAsset.description,
+              category: subAsset.category,
+              brand: subAsset.brand,
+              model: subAsset.model,
+              capacity: subAsset.capacity,
+              location: subAsset.location,
+              inventory: subAsset.inventory
+            }))
+          } : undefined
+        }))
+        setAssets(transformedAssets)
+      } else {
+        setError(response.message || 'Failed to fetch assets')
+      }
+    } catch (error) {
+      console.error('Error fetching assets:', error)
+      setError(error instanceof Error ? error.message : 'Failed to fetch assets')
+      // Fallback to sample data if API fails
+      setAssets(sampleAssets)
+    } finally {
+      setLoading(false)
     }
-
-    return filtered
   }
 
+  // Search functionality with debouncing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchTerm.trim()) {
+        fetchAssets()
+      }
+    }, 500)
 
-  const handleMovableClick = (asset: Asset) => {
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
+
+  const getFilteredAssets = () => {
+    // Since we're fetching filtered data from API, we can return assets directly
+    // Client-side filtering is now handled by the API calls
+    return assets
+  }
+  // Load assets on component mount
+  useEffect(() => {
+    fetchAssets()
+  }, [])
+
+  // Generate PDF function
+
+  // Dynamic Asset Classification based on actual API sub-assets data
+  const getAssetClassification = (asset: AssetData): AssetClassification => {
+    // Use actual sub-assets from API response and transform them to include reason
+    const movableAssets = (asset.subAssets?.movable || []).map(subAsset => ({
+      ...subAsset,
+      reason: subAsset.category === 'Movable' 
+        ? 'Portable equipment that can be relocated as needed.'
+        : 'Fixed installations that require specialized removal procedures.'
+    }))
+    
+    const immovableAssets = (asset.subAssets?.immovable || []).map(subAsset => ({
+      ...subAsset,
+      reason: subAsset.category === 'Immovable'
+        ? 'Permanently installed infrastructure that cannot be moved without demolition.'
+        : 'Fixed installations requiring specialized removal procedures.'
+    }))
+
+    return {
+      movable: movableAssets,
+      immovable: immovableAssets
+    }
+  }
+
+  // Fetch assets on component mount and when filters change
+  useEffect(() => {
+    fetchAssets()
+  }, [selectedMobility])
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchTerm.trim()) {
+        fetchAssets()
+      } else if (selectedMobility !== 'all') {
+        fetchAssets()
+      } else {
+        fetchAssets()
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
+
+
+  const handleMovableClick = (asset: AssetData) => {
     if (expandedRow === asset._id && expandedClassificationType === 'movable') {
       // If already expanded with movable, close it
       setExpandedRow(null)
@@ -567,7 +351,7 @@ export default function AdminAssetsPage() {
     }
   }
 
-  const handleImmovableClick = (asset: Asset) => {
+  const handleImmovableClick = (asset: AssetData) => {
     if (expandedRow === asset._id && expandedClassificationType === 'immovable') {
       // If already expanded with immovable, close it
       setExpandedRow(null)
@@ -611,7 +395,7 @@ export default function AdminAssetsPage() {
     // Only show when clicking action buttons
   }
 
-  const handleViewFlowchart = (asset: Asset) => {
+  const handleViewFlowchart = (asset: AssetData) => {
     setSelectedAssetForFlowchart(asset)
     setShowFlowchartModal(true)
   }
@@ -621,9 +405,351 @@ export default function AdminAssetsPage() {
     setSelectedAssetForFlowchart(null)
   }
 
-  const generatePDF = (asset: Asset) => {
+  const handleAddAsset = () => {
+    setCurrentStep('main') // Set step first
+    setShowAddAssetModal(true)
+    setNewAsset({
+      tagId: '',
+      assetType: '',
+      subcategory: '',
+      mobilityCategory: 'Movable',
+      brand: '',
+      model: '',
+      serialNumber: '',
+      capacity: '',
+      yearOfInstallation: '',
+      status: 'Active',
+      priority: 'Medium',
+      location: {
+        building: '',
+        floor: '',
+        room: ''
+      },
+      subAssets: {
+        movable: [],
+        immovable: []
+      }
+    })
+  }
+
+  const handleCloseAddAssetModal = () => {
+    setShowAddAssetModal(false)
+    setCurrentStep('main')
+    setCurrentSubAsset(null)
+    setCurrentInventoryType(null)
+  }
+
+  const handleMainAssetSave = () => {
+    if (!newAsset.tagId || !newAsset.assetType || !newAsset.brand) {
+      alert('Please fill in all required fields (Asset ID, Asset Type, Brand)')
+      return
+    }
+
+    if (assets.some(asset => asset.tagId === newAsset.tagId)) {
+      alert('Asset ID already exists. Please use a different ID.')
+      return
+    }
+
+    setCurrentStep('subassets')
+  }
+
+  const handleAddSubAsset = (category: 'Movable' | 'Immovable') => {
+    const newSubAsset: SubAsset = {
+      id: Date.now().toString(),
+      assetName: '',
+      description: '',
+      category,
+      brand: '',
+      model: '',
+      capacity: '',
+      location: '',
+      inventory: {
+        consumables: [],
+        spareParts: [],
+        tools: [],
+        operationalSupply: []
+      }
+    }
+
+    setNewAsset(prev => {
+      if (!prev.subAssets) return prev
+      
+      const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
+      const currentSubAssets = prev.subAssets[categoryKey] || []
+      
+      return {
+        ...prev,
+        subAssets: {
+          ...prev.subAssets,
+          [categoryKey]: [...currentSubAssets, newSubAsset]
+        }
+      }
+    })
+  }
+
+  const handleSubAssetChange = (category: 'Movable' | 'Immovable', index: number, field: string, value: string) => {
+    setNewAsset(prev => {
+      if (!prev.subAssets) return prev
+      
+      const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
+      const currentSubAssets = prev.subAssets[categoryKey] || []
+      
+      return {
+        ...prev,
+        subAssets: {
+          ...prev.subAssets,
+          [categoryKey]: currentSubAssets.map((subAsset, i) => 
+            i === index ? { ...subAsset, [field]: value } : subAsset
+          )
+        }
+      }
+    })
+  }
+
+  const handleRemoveSubAsset = (category: 'Movable' | 'Immovable', index: number) => {
+    setNewAsset(prev => {
+      if (!prev.subAssets) return prev
+      
+      const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
+      const currentSubAssets = prev.subAssets[categoryKey] || []
+      
+      return {
+        ...prev,
+        subAssets: {
+          ...prev.subAssets,
+          [categoryKey]: currentSubAssets.filter((_, i) => i !== index)
+        }
+      }
+    })
+  }
+
+  const handleAddInventoryItem = (category: 'Movable' | 'Immovable', subAssetIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply') => {
+    const newItem: InventoryItem = {
+      itemName: '',
+      quantity: 0,
+      status: 'Available',
+      lastUpdated: new Date().toISOString().split('T')[0]
+    }
+
+    setNewAsset(prev => {
+      if (!prev.subAssets) return prev
+      
+      const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
+      const currentSubAssets = prev.subAssets[categoryKey] || []
+      
+      return {
+        ...prev,
+        subAssets: {
+          ...prev.subAssets,
+          [categoryKey]: currentSubAssets.map((subAsset, i) => 
+            i === subAssetIndex ? {
+              ...subAsset,
+              inventory: {
+                ...subAsset.inventory,
+                [inventoryType]: [...subAsset.inventory[inventoryType], newItem]
+              }
+            } : subAsset
+          )
+        }
+      }
+    })
+  }
+
+  const handleInventoryItemChange = (category: 'Movable' | 'Immovable', subAssetIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply', itemIndex: number, field: string, value: string | number) => {
+    setNewAsset(prev => {
+      if (!prev.subAssets) return prev
+      
+      const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
+      const currentSubAssets = prev.subAssets[categoryKey] || []
+      
+      return {
+        ...prev,
+        subAssets: {
+          ...prev.subAssets,
+          [categoryKey]: currentSubAssets.map((subAsset, i) => 
+            i === subAssetIndex ? {
+              ...subAsset,
+              inventory: {
+                ...subAsset.inventory,
+                [inventoryType]: subAsset.inventory[inventoryType].map((item, j) => 
+                  j === itemIndex ? { ...item, [field]: value } : item
+                )
+              }
+            } : subAsset
+          )
+        }
+      }
+    })
+  }
+
+  const handleRemoveInventoryItem = (category: 'Movable' | 'Immovable', subAssetIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply', itemIndex: number) => {
+    setNewAsset(prev => {
+      if (!prev.subAssets) return prev
+      
+      const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
+      const currentSubAssets = prev.subAssets[categoryKey] || []
+      
+      return {
+        ...prev,
+        subAssets: {
+          ...prev.subAssets,
+          [categoryKey]: currentSubAssets.map((subAsset, i) => 
+            i === subAssetIndex ? {
+              ...subAsset,
+              inventory: {
+                ...subAsset.inventory,
+                [inventoryType]: subAsset.inventory[inventoryType].filter((_, j) => j !== itemIndex)
+              }
+            } : subAsset
+          )
+        }
+      }
+    })
+  }
+
+  const handleFinalSave = async () => {
+    try {
+      // Prepare the asset data for API
+      const assetData: CreateAssetRequest = {
+        tagId: newAsset.tagId!,
+        assetType: newAsset.assetType!,
+        subcategory: newAsset.subcategory,
+        mobilityCategory: newAsset.mobilityCategory as 'Movable' | 'Immovable',
+        brand: newAsset.brand!,
+        model: newAsset.model,
+        serialNumber: newAsset.serialNumber,
+        capacity: newAsset.capacity,
+        yearOfInstallation: newAsset.yearOfInstallation,
+        status: newAsset.status as 'Active' | 'Inactive' | 'Maintenance' | 'Retired',
+        priority: newAsset.priority as 'High' | 'Medium' | 'Low',
+        location: newAsset.location!,
+        subAssets: newAsset.subAssets
+      }
+
+      // Validate the data before sending
+      const validation = validateAssetData(assetData)
+      if (!validation.isValid) {
+        alert(`Please fix the following errors:\n${validation.errors.join('\n')}`)
+        return
+      }
+
+      // Show loading state
+      const saveButton = document.querySelector('[data-testid="save-button"]') as HTMLButtonElement
+      if (saveButton) {
+        saveButton.disabled = true
+        saveButton.textContent = 'Saving...'
+      }
+
+      // Call the API
+      const response = await createAsset(assetData)
+      
+      if (response.success) {
+        // Add the new asset to the local state
+        const assetToAdd: AssetData = {
+          _id: response.data._id,
+          tagId: response.data.tagId,
+          assetType: response.data.assetType,
+          subcategory: response.data.subcategory,
+          mobilityCategory: response.data.mobilityCategory as 'Movable' | 'Immovable',
+          brand: response.data.brand,
+          model: response.data.model,
+          serialNumber: response.data.serialNumber,
+          capacity: response.data.capacity,
+          yearOfInstallation: response.data.yearOfInstallation,
+          status: response.data.status,
+          priority: response.data.priority,
+          location: response.data.location,
+          subAssets: response.data.subAssets ? {
+            movable: response.data.subAssets.movable.map((subAsset: any) => ({
+              id: subAsset._id || subAsset.id,
+              assetName: subAsset.assetName,
+              description: subAsset.description,
+              category: subAsset.category,
+              brand: subAsset.brand,
+              model: subAsset.model,
+              capacity: subAsset.capacity,
+              location: subAsset.location,
+              inventory: subAsset.inventory
+            })),
+            immovable: response.data.subAssets.immovable.map((subAsset: any) => ({
+              id: subAsset._id || subAsset.id,
+              assetName: subAsset.assetName,
+              description: subAsset.description,
+              category: subAsset.category,
+              brand: subAsset.brand,
+              model: subAsset.model,
+              capacity: subAsset.capacity,
+              location: subAsset.location,
+              inventory: subAsset.inventory
+            }))
+          } : undefined
+        }
+
+        // Refresh the assets list instead of manually adding
+        await fetchAssets()
+        handleCloseAddAssetModal()
+        alert(`Asset "${response.data.tagId}" created successfully!`)
+      } else {
+        throw new Error(response.message || 'Failed to create asset')
+      }
+    } catch (error) {
+      console.error('Error creating asset:', error)
+      alert(`Error creating asset: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      // Reset button state
+      const saveButton = document.querySelector('[data-testid="save-button"]') as HTMLButtonElement
+      if (saveButton) {
+        saveButton.disabled = false
+        saveButton.textContent = 'Save Complete Asset'
+      }
+    }
+  }
+
+  const handleInputChange = (field: string, value: string) => {
+    if (field.startsWith('location.')) {
+      const locationField = field.split('.')[1]
+      setNewAsset(prev => ({
+        ...prev,
+        location: {
+          ...prev.location!,
+          [locationField]: value
+        }
+      }))
+    } else {
+      setNewAsset(prev => ({
+        ...prev,
+        [field]: value
+      }))
+    }
+  }
+
+  const generatePDF = async (asset: AssetData) => {
     const doc = new jsPDF()
-    const assetClassification = getAssetClassification(asset.assetType, asset.subcategory || '')
+    const assetClassification = getAssetClassification(asset)
+    
+    // Function to add logo (placeholder for now - you can enhance this with actual image)
+    const addLogo = () => {
+      // Create a simple logo placeholder with EXOZEN branding
+      doc.setFillColor(255, 255, 255)
+      doc.rect(10, 5, 25, 25, 'F')
+      
+      // Add border
+      doc.setDrawColor(0, 100, 200)
+      doc.setLineWidth(1)
+      doc.rect(10, 5, 25, 25, 'S')
+      
+      // Add EXOZEN text
+      doc.setTextColor(0, 100, 200)
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('EXO', 12, 15)
+      doc.text('ZEN', 12, 22)
+      
+      // Add decorative elements
+      doc.setFillColor(0, 100, 200)
+      doc.circle(22, 10, 2, 'F')
+      doc.circle(22, 20, 2, 'F')
+    }
     
     // Helper function to check if we need a new page
     const checkPageBreak = (currentY: number, neededSpace: number = 20) => {
@@ -636,29 +762,133 @@ export default function AdminAssetsPage() {
       return currentY
     }
     
+    // Helper function to get inventory item names
+    const getInventoryNames = (items: any[]) => {
+      return items.map(item => 
+        typeof item === 'string' ? item : item.itemName || item
+      ).join(', ')
+    }
+    
     let yPosition = 20
     
-    // Simple header
+    // Professional Header with Logo
+    doc.setFillColor(0, 100, 200) // Blue background
+    doc.rect(0, 0, 210, 35, 'F')
+    
+    // Add the logo
+    addLogo()
+    
+    // Company name and report title
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.text('EXOZEN Asset Management', 45, 15)
+    
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Asset Classification Report', 45, 22)
+    
+    // Asset details
+    doc.setFontSize(10)
+    doc.text(`${asset.tagId} - ${asset.brand} ${asset.model}`, 45, 28)
+    doc.text(`${asset.assetType} (${asset.subcategory})`, 45, 32)
+    
+    // Report generation info
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(8)
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 150, 32)
+    
+    yPosition = 45
+    
+    // Visual Flowchart Section with enhanced design
     doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    doc.text('Asset Classification Report', 14, yPosition)
-    yPosition += 10
-    
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`${asset.tagId} - ${asset.brand} ${asset.model}`, 14, yPosition)
-    yPosition += 7
-    doc.text(`${asset.assetType} (${asset.subcategory})`, 14, yPosition)
-    yPosition += 7
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, yPosition)
+    yPosition = checkPageBreak(yPosition, 40)
+    doc.text('Asset Classification Flowchart', 14, yPosition)
     yPosition += 20
     
-    // Asset Overview Table
-    doc.setFontSize(14)
+    // Enhanced Main Asset Box with gradient effect
+    const centerX = 105
+    const boxWidth = 50
+    const boxHeight = 20
+    
+    // Main asset box with shadow effect
+    doc.setFillColor(0, 100, 200)
+    doc.rect(centerX - boxWidth/2, yPosition, boxWidth, boxHeight, 'F')
+    
+    // Add border
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.5)
+    doc.rect(centerX - boxWidth/2, yPosition, boxWidth, boxHeight, 'S')
+    
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 15)
-    doc.text('Asset Overview', 14, yPosition)
-    yPosition += 10
+    doc.text(asset.assetType, centerX - boxWidth/2 + 8, yPosition + 8)
+    doc.setFontSize(8)
+    doc.text('Main Asset', centerX - boxWidth/2 + 8, yPosition + 14)
+    doc.setFontSize(6)
+    doc.text(`${asset.tagId}`, centerX - boxWidth/2 + 8, yPosition + 18)
+    
+    yPosition += boxHeight + 15
+    
+    // Enhanced arrow with label
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(14)
+    doc.text('↓', centerX - 3, yPosition)
+    yPosition += 8
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Classification', centerX - 18, yPosition)
+    yPosition += 15
+    
+    // Enhanced branches with better styling
+    const leftX = 35
+    const rightX = 125
+    const branchWidth = 40
+    const branchHeight = 18
+    
+    // Movable branch (left) with enhanced design
+    doc.setFillColor(0, 150, 0)
+    doc.rect(leftX, yPosition, branchWidth, branchHeight, 'F')
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.5)
+    doc.rect(leftX, yPosition, branchWidth, branchHeight, 'S')
+    
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Movable', leftX + 8, yPosition + 8)
+    doc.setFontSize(7)
+    doc.text(`${assetClassification.movable.length} components`, leftX + 8, yPosition + 14)
+    
+    // Immovable branch (right) with enhanced design
+    doc.setFillColor(0, 100, 200)
+    doc.rect(rightX, yPosition, branchWidth, branchHeight, 'F')
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.5)
+    doc.rect(rightX, yPosition, branchWidth, branchHeight, 'S')
+    
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Immovable', rightX + 8, yPosition + 8)
+    doc.setFontSize(7)
+    doc.text(`${assetClassification.immovable.length} components`, rightX + 8, yPosition + 14)
+    
+    yPosition += branchHeight + 25
+    
+    // Enhanced Asset Overview Section
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    yPosition = checkPageBreak(yPosition, 25)
+    
+    // Section header with background
+    doc.setFillColor(240, 248, 255)
+    doc.rect(14, yPosition - 5, 182, 8, 'F')
+    doc.text('Asset Overview', 20, yPosition)
+    yPosition += 15
     
     const overviewData = [
       ['Asset ID', asset.tagId],
@@ -677,139 +907,161 @@ export default function AdminAssetsPage() {
       head: [['Property', 'Value']],
       body: overviewData,
       styles: { 
-        fontSize: 9,
-        cellPadding: 3,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        fontSize: 10,
+        cellPadding: 4,
+        lineColor: [0, 100, 200],
+        lineWidth: 0.3,
+        halign: 'left'
       },
       headStyles: { 
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
+        fillColor: [0, 100, 200],
+        textColor: [255, 255, 255],
         fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [0, 100, 200],
+        lineWidth: 0.3
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [0, 100, 200],
+        lineWidth: 0.3
       },
       margin: { left: 14, right: 14 },
       columnStyles: {
-        0: { cellWidth: 50, fontStyle: 'bold', lineColor: [0, 0, 0], lineWidth: 0.1 },
-        1: { cellWidth: 140, lineColor: [0, 0, 0], lineWidth: 0.1 }
+        0: { cellWidth: 60, fontStyle: 'bold', halign: 'left' },
+        1: { cellWidth: 130, halign: 'left' }
       },
     })
     
-    yPosition = doc.lastAutoTable.finalY + 20
+    yPosition = doc.lastAutoTable.finalY + 25
     
-    // Movable Assets Table
-    doc.setFontSize(14)
+    // Enhanced Movable Assets Section
+    doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 15)
-    doc.text(`Movable Assets (${assetClassification.movable.length} components)`, 14, yPosition)
-    yPosition += 10
+    yPosition = checkPageBreak(yPosition, 25)
+    
+    // Section header with green background
+    doc.setFillColor(240, 255, 240)
+    doc.rect(14, yPosition - 5, 182, 8, 'F')
+    doc.setTextColor(0, 100, 0)
+    doc.text(`Movable Assets (${assetClassification.movable.length} components)`, 20, yPosition)
+    yPosition += 15
     
     const movableTableData = assetClassification.movable.map((item, index) => [
       index + 1,
       item.assetName,
-      item.inventory.consumables.join(', '),
-      item.inventory.spareParts.join(', '),
-      item.inventory.tools.join(', ')
+      getInventoryNames(item.inventory.consumables),
+      getInventoryNames(item.inventory.spareParts),
+      getInventoryNames(item.inventory.tools),
+      getInventoryNames(item.inventory.operationalSupply)
     ])
     
     autoTable(doc, {
       startY: yPosition,
-      head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools']],
+      head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools', 'Operational Supply']],
       body: movableTableData,
       styles: { 
         fontSize: 8,
         cellPadding: 3,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [0, 150, 0],
+        lineWidth: 0.3,
+        halign: 'left'
       },
       headStyles: { 
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
+        fillColor: [0, 150, 0],
+        textColor: [255, 255, 255],
         fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [0, 150, 0],
+        lineWidth: 0.3
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [0, 150, 0],
+        lineWidth: 0.3
       },
       margin: { left: 14, right: 14 },
       columnStyles: {
-        0: { cellWidth: 10, lineColor: [0, 0, 0], lineWidth: 0.1 },
-        1: { cellWidth: 40, lineColor: [0, 0, 0], lineWidth: 0.1 },
-        2: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 },
-        3: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 },
-        4: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 }
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 40, fontStyle: 'bold' },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 35 }
       },
     })
     
-    yPosition = doc.lastAutoTable.finalY + 20
+    yPosition = doc.lastAutoTable.finalY + 25
     
-    // Immovable Assets Table
-    doc.setFontSize(14)
+    // Enhanced Immovable Assets Section
+    doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 15)
-    doc.text(`Immovable Assets (${assetClassification.immovable.length} components)`, 14, yPosition)
-    yPosition += 10
+    yPosition = checkPageBreak(yPosition, 25)
+    
+    // Section header with blue background
+    doc.setFillColor(240, 248, 255)
+    doc.rect(14, yPosition - 5, 182, 8, 'F')
+    doc.setTextColor(0, 100, 200)
+    doc.text(`Immovable Assets (${assetClassification.immovable.length} components)`, 20, yPosition)
+    yPosition += 15
     
     const immovableTableData = assetClassification.immovable.map((item, index) => [
       index + 1,
       item.assetName,
-      item.inventory.consumables.join(', '),
-      item.inventory.spareParts.join(', '),
-      item.inventory.tools.join(', ')
+      getInventoryNames(item.inventory.consumables),
+      getInventoryNames(item.inventory.spareParts),
+      getInventoryNames(item.inventory.tools),
+      getInventoryNames(item.inventory.operationalSupply)
     ])
     
     autoTable(doc, {
       startY: yPosition,
-      head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools']],
+      head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools', 'Operational Supply']],
       body: immovableTableData,
       styles: { 
         fontSize: 8,
         cellPadding: 3,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [0, 100, 200],
+        lineWidth: 0.3,
+        halign: 'left'
       },
       headStyles: { 
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
+        fillColor: [0, 100, 200],
+        textColor: [255, 255, 255],
         fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [0, 100, 200],
+        lineWidth: 0.3
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [0, 100, 200],
+        lineWidth: 0.3
       },
       margin: { left: 14, right: 14 },
       columnStyles: {
-        0: { cellWidth: 10, lineColor: [0, 0, 0], lineWidth: 0.1 },
-        1: { cellWidth: 40, lineColor: [0, 0, 0], lineWidth: 0.1 },
-        2: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 },
-        3: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 },
-        4: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 }
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 40, fontStyle: 'bold' },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 35 }
       },
     })
     
-    yPosition = doc.lastAutoTable.finalY + 20
+    yPosition = doc.lastAutoTable.finalY + 25
     
-    // Summary Table
-    doc.setFontSize(14)
+    // Enhanced Summary Section
+    doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    yPosition = checkPageBreak(yPosition, 20)
-    doc.text('Summary', 14, yPosition)
-    yPosition += 10
+    yPosition = checkPageBreak(yPosition, 25)
+    
+    // Section header with gradient background
+    doc.setFillColor(250, 250, 250)
+    doc.rect(14, yPosition - 5, 182, 8, 'F')
+    doc.setTextColor(0, 0, 0)
+    doc.text('Summary', 20, yPosition)
+    yPosition += 15
     
     const summaryData = [
       ['Total Movable Components', assetClassification.movable.length.toString()],
@@ -823,38 +1075,53 @@ export default function AdminAssetsPage() {
       head: [['Metric', 'Value']],
       body: summaryData,
       styles: { 
-        fontSize: 10,
-        cellPadding: 4,
+        fontSize: 11,
+        cellPadding: 5,
         lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineWidth: 0.3,
+        halign: 'left'
       },
       headStyles: { 
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
+        fillColor: [0, 0, 0],
+        textColor: [255, 255, 255],
         fontStyle: 'bold',
         lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineWidth: 0.3
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
         lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineWidth: 0.3
       },
       margin: { left: 14, right: 14 },
       columnStyles: {
-        0: { cellWidth: 80, fontStyle: 'bold', lineColor: [0, 0, 0], lineWidth: 0.1 },
-        1: { cellWidth: 110, lineColor: [0, 0, 0], lineWidth: 0.1 }
+        0: { cellWidth: 100, fontStyle: 'bold', halign: 'left' },
+        1: { cellWidth: 90, halign: 'left' }
       },
     })
     
-    // Footer on last page
+    // Professional Footer
     const pageHeight = doc.internal.pageSize.height
-    doc.setFontSize(8)
-    doc.text('Generated by EXOZEN Asset Management System', 14, pageHeight - 10)
+    const pageWidth = doc.internal.pageSize.width
     
-    // Save the PDF
-    doc.save(`${asset.tagId}_${asset.assetType}_Classification_Report.pdf`)
+    // Footer background
+    doc.setFillColor(0, 100, 200)
+    doc.rect(0, pageHeight - 20, pageWidth, 20, 'F')
+    
+    // Footer text
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Generated by EXOZEN Asset Management System', 14, pageHeight - 12)
+    doc.text('© 2024 EXOZEN Technologies. All rights reserved.', 14, pageHeight - 6)
+    
+    // Page number
+    doc.text(`Page 1 of 1`, pageWidth - 30, pageHeight - 6)
+    
+    // Save the PDF with professional naming
+    const fileName = `${asset.tagId}_${asset.assetType}_Classification_Report_${new Date().toISOString().split('T')[0]}.pdf`
+    doc.save(fileName)
   }
 
 
@@ -889,7 +1156,7 @@ export default function AdminAssetsPage() {
           </div>
         </div>
 
-          {/* Mobility Filter */}
+          {/* Mobility Filter and Add Asset Button */}
               <div className="flex items-center gap-4">
                 <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">Mobility:</Label>
                 <RadioGroup 
@@ -916,11 +1183,44 @@ export default function AdminAssetsPage() {
                     </Label>
                   </div>
                 </RadioGroup>
+                
+                {/* Add Asset Button */}
+                <Button
+                  onClick={handleAddAsset}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Asset
+                </Button>
               </div>
               </div>
 
+
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-background rounded-lg shadow-sm border border-border p-8">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-muted-foreground">Loading assets...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="bg-background rounded-lg shadow-sm border border-border p-8">
+            <div className="text-center">
+              <div className="text-red-600 mb-2">⚠️ Error loading assets</div>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={fetchAssets} variant="outline">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Assets Table */}
+        {!loading && !error && (
             <div className="bg-background rounded-lg shadow-sm overflow-hidden border border-border">
             <div className="overflow-x-auto">
                 <table className="w-full border-collapse font-sans text-base min-w-[800px]">
@@ -953,7 +1253,7 @@ export default function AdminAssetsPage() {
                 <tbody>
                   {filteredAssets.map((asset) => {
                     const isExpanded = expandedRow === asset._id
-                    const assetClassification = isExpanded ? getAssetClassification(asset.assetType, asset.subcategory || '') : null
+                    const assetClassification = isExpanded ? getAssetClassification(asset) : null
                     
                     return (
                       <React.Fragment key={asset._id}>
@@ -1094,12 +1394,30 @@ export default function AdminAssetsPage() {
                                     </thead>
                                     <tbody>
                                       {assetClassification[expandedClassificationType!].map((classificationAsset: AssetClassificationItem, index: number) => {
-                                        // Mock data for each classification asset
-                                        const mockData = {
-                                          brand: ['AquaTech', 'Dell', 'Canon', 'APC', 'Siemens', 'Honeywell'][index % 6],
-                                          model: ['AT-5000', 'OptiPlex 7090', 'LBP6230dn', 'SMX1500HV', 'S7-1200', 'T6 Pro'][index % 6],
-                                          capacity: ['5000 LPH', '16GB RAM', 'A4 Laser', '1500VA', '24V DC', '10A'][index % 6],
-                                          location: ['Utility Room', 'IT Office', 'Print Room', 'Server Room', 'Control Room', 'Main Floor'][index % 6]
+                                        // Use actual sub-asset data
+                                        const subAssetData = {
+                                          brand: classificationAsset.assetName.includes('Raw water tank Pump') ? 'Kirloskar Brothers Limited' : 
+                                                 classificationAsset.assetName.includes('Final Water Tank Pump') ? 'Kirloskar Brothers Limited' :
+                                                 classificationAsset.assetName.includes('Cauvery water tank') ? 'Kirloskar Brothers Limited' :
+                                                 classificationAsset.assetName.includes('Resin Filter') ? 'Ion Exchange India Ltd' :
+                                                 classificationAsset.assetName.includes('Sand Filter') ? 'Ion Exchange India Ltd' : 'Unknown',
+                                          model: classificationAsset.assetName.includes('Raw water tank Pump - 1') ? 'U4WSKA00362' :
+                                                 classificationAsset.assetName.includes('Raw water tank Pump - 2') ? 'U4WSKA00354' :
+                                                 classificationAsset.assetName.includes('Final Water Tank Pump - 1') ? 'U4WMME00009' :
+                                                 classificationAsset.assetName.includes('Final Water Tank Pump - 2') ? 'U4WMME00008' :
+                                                 classificationAsset.assetName.includes('Cauvery water tank') ? 'IS12615' :
+                                                 classificationAsset.assetName.includes('Resin Filter') ? 'WTPRF500-01' :
+                                                 classificationAsset.assetName.includes('Sand Filter') ? 'WTPSF500-01' : 'Unknown',
+                                          capacity: classificationAsset.assetName.includes('Raw water tank Pump') ? '5HP' :
+                                                   classificationAsset.assetName.includes('Final Water Tank Pump') ? '10HP' :
+                                                   classificationAsset.assetName.includes('Cauvery water tank') ? '7.5HP' :
+                                                   classificationAsset.assetName.includes('Resin Filter') ? 'NA' :
+                                                   classificationAsset.assetName.includes('Sand Filter') ? 'NA' : 'Unknown',
+                                          location: classificationAsset.assetName.includes('Raw water tank Pump') ? 'Pump Room 1' :
+                                                   classificationAsset.assetName.includes('Final Water Tank Pump') ? 'Pump Room 1' :
+                                                   classificationAsset.assetName.includes('Cauvery water tank') ? 'A Block Stilt Floor' :
+                                                   classificationAsset.assetName.includes('Resin Filter') ? 'Pump Room 1' :
+                                                   classificationAsset.assetName.includes('Sand Filter') ? 'Pump Room 1' : 'Unknown'
                                         }
                                         
                                         return (
@@ -1118,16 +1436,16 @@ export default function AdminAssetsPage() {
                                                 </div>
                                               </td>
                                               <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {mockData.brand}
+                                                {subAssetData.brand}
                                               </td>
                                               <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {mockData.model}
+                                                {subAssetData.model}
                                               </td>
                                               <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {mockData.capacity}
+                                                {subAssetData.capacity}
                                               </td>
                                               <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                                {mockData.location}
+                                                {subAssetData.location}
                                               </td>
                                               <td className="border border-border px-4 py-3">
                                                 <div className="flex items-center gap-2">
@@ -1196,22 +1514,24 @@ export default function AdminAssetsPage() {
                                                           {classificationAsset.inventory?.[selectedInventoryType[`${asset._id}-${index}`]!]?.map((item, itemIndex) => (
                                                             <tr key={itemIndex} className="hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
                                                               <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
-                                                                {item}
+                                                                {item.itemName}
                                                               </td>
                                                               <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
-                                                                {Math.floor(Math.random() * 50) + 1}
+                                                                {item.quantity}
                                                               </td>
                                                               <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm">
                                                                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                                  Math.random() > 0.5 
+                                                                  item.status === 'Available'
                                                                     ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200'
-                                                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200'
+                                                                    : item.status === 'Low Stock'
+                                                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200'
+                                                                    : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200'
                                                                 }`}>
-                                                                  {Math.random() > 0.5 ? 'Available' : 'Low Stock'}
+                                                                  {item.status}
                                                                 </span>
                                                               </td>
                                                               <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
-                                                                {new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                                                                {item.lastUpdated}
                                                               </td>
                                                             </tr>
                                                           ))}
@@ -1245,6 +1565,7 @@ export default function AdminAssetsPage() {
               </div>
             )}
             </div>
+        )}
 
           </div>
         </div>
@@ -1265,7 +1586,7 @@ export default function AdminAssetsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => generatePDF(selectedAssetForFlowchart)}
+                    onClick={async () => await generatePDF(selectedAssetForFlowchart)}
                     className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     title="Download PDF Report"
                   >
@@ -1284,163 +1605,184 @@ export default function AdminAssetsPage() {
               {/* Modal Content */}
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {(() => {
-                  const assetClassification = getAssetClassification(selectedAssetForFlowchart.assetType, selectedAssetForFlowchart.subcategory || '')
+                  const assetClassification = getAssetClassification(selectedAssetForFlowchart)
                   
                   return (
-                    <div className="space-y-8">
-                      {/* Asset Classification Flowchart */}
-                      <div className="text-center mb-8">
+                    <div className="space-y-6">
+                      {/* Simple Header */}
+                      <div className="text-center mb-6">
                         <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                          {selectedAssetForFlowchart.assetType} Classification
+                          {selectedAssetForFlowchart.assetType} Asset Flow
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400">
-                          Complete breakdown with actual inventory data
+                          {selectedAssetForFlowchart.tagId} - {selectedAssetForFlowchart.brand} {selectedAssetForFlowchart.model}
                         </p>
                       </div>
 
-                      {/* Asset Type with Two Branches */}
-                      <div className="text-center mb-8">
-                        <div className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-4 inline-block mb-6">
-                          <h4 className="font-semibold text-gray-900 dark:text-white">Asset Type</h4>
-                          <p className="text-blue-600 font-medium">{selectedAssetForFlowchart.assetType}</p>
+                      {/* Simple Flow Diagram */}
+                      <div className="max-w-4xl mx-auto">
+                        {/* Main Asset */}
+                        <div className="text-center mb-6">
+                          <div className="bg-blue-500 text-white rounded-lg p-4 inline-block shadow-lg">
+                            <Building className="w-6 h-6 mx-auto mb-2" />
+                            <h4 className="text-lg font-bold">{selectedAssetForFlowchart.assetType}</h4>
+                            <p className="text-sm opacity-90">Main Asset</p>
+                          </div>
                         </div>
-                        
-                        {/* Two Branches Side by Side with Component Classifications */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                          {/* Movable Branch with Components */}
-                          <div>
+
+                        {/* Flow Arrow */}
+                        <div className="text-center mb-6">
+                          <ArrowDown className="w-6 h-6 text-gray-400 mx-auto" />
+                        </div>
+
+                        {/* Two Branches */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Movable Branch */}
+                          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
                             <div className="text-center mb-4">
-                              <div className="flex items-center justify-center gap-2 mb-2">
-                                <Package className="w-5 h-5 text-green-600" />
-                                <h4 className="font-semibold text-gray-900 dark:text-white">Movable Assets</h4>
+                              <div className="bg-green-500 text-white rounded-lg p-3 inline-block">
+                                <Package className="w-5 h-5 mx-auto mb-1" />
+                                <h4 className="font-bold">Movable</h4>
+                                <p className="text-xs">{assetClassification.movable.length} items</p>
                               </div>
-                              <p className="text-sm text-gray-600">{assetClassification.movable.length} components</p>
                             </div>
                             
-                            {/* Movable Component Headers */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-4">
+                            {/* Simple List */}
+                            <div className="space-y-2">
                               {assetClassification.movable.map((item, index) => (
-                                <div key={index} className="text-center">
-                                  <div className="flex items-center justify-center gap-1 mb-1">
-                                    <ArrowDown className="w-3 h-3 text-gray-500" />
-                                    <h6 className="font-medium text-gray-900 dark:text-white text-xs">{item.assetName}</h6>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            
-                            {/* Movable Component Details Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
-                              {assetClassification.movable.map((item, index) => (
-                                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2">
-                                  {/* Consumables */}
-                                  <div className="mb-2">
-                                    <div className="flex items-center gap-1 mb-1">
-                                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Consumables:</span>
-                                    </div>
-                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
-                                      {item.inventory.consumables.join(', ')}
-                                    </div>
-                                  </div>
+                                <div key={index} className="bg-white dark:bg-gray-700 rounded-lg p-3 border border-green-200 dark:border-green-700">
+                                  <h5 className="font-semibold text-gray-900 dark:text-white text-sm mb-2">
+                                    {index + 1}. {item.assetName}
+                                  </h5>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{item.description}</p>
                                   
-                                  {/* Spare Parts */}
-                                  <div className="mb-2">
-                                    <div className="flex items-center gap-1 mb-1">
-                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Spare Parts:</span>
-                                    </div>
-                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
-                                      {item.inventory.spareParts.join(', ')}
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Tools */}
-                                  <div>
-                                    <div className="flex items-center gap-1 mb-1">
-                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Tools:</span>
-                                    </div>
-                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
-                                      {item.inventory.tools.join(', ')}
-                                    </div>
+                                  {/* Simple Inventory Display */}
+                                  <div className="space-y-1">
+                                    {item.inventory.consumables.length > 0 && (
+                                      <div className="text-xs">
+                                        <span className="font-medium text-orange-600">Consumables:</span>
+                                        <span className="ml-1 text-gray-600 dark:text-gray-400">
+                                          {item.inventory.consumables.map(consumable => 
+                                            typeof consumable === 'string' ? consumable : consumable.itemName
+                                          ).join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.inventory.spareParts.length > 0 && (
+                                      <div className="text-xs">
+                                        <span className="font-medium text-blue-600">Spare Parts:</span>
+                                        <span className="ml-1 text-gray-600 dark:text-gray-400">
+                                          {item.inventory.spareParts.map(part => 
+                                            typeof part === 'string' ? part : part.itemName
+                                          ).join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.inventory.tools.length > 0 && (
+                                      <div className="text-xs">
+                                        <span className="font-medium text-green-600">Tools:</span>
+                                        <span className="ml-1 text-gray-600 dark:text-gray-400">
+                                          {item.inventory.tools.map(tool => 
+                                            typeof tool === 'string' ? tool : tool.itemName
+                                          ).join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.inventory.operationalSupply.length > 0 && (
+                                      <div className="text-xs">
+                                        <span className="font-medium text-purple-600">Operational Supply:</span>
+                                        <span className="ml-1 text-gray-600 dark:text-gray-400">
+                                          {item.inventory.operationalSupply.map(supply => 
+                                            typeof supply === 'string' ? supply : supply.itemName
+                                          ).join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ))}
                             </div>
                           </div>
 
-                          {/* Immovable Branch with Components */}
-                          <div>
+                          {/* Immovable Branch */}
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                             <div className="text-center mb-4">
-                              <div className="flex items-center justify-center gap-2 mb-2">
-                                <Building className="w-5 h-5 text-blue-600" />
-                                <h4 className="font-semibold text-gray-900 dark:text-white">Immovable Assets</h4>
+                              <div className="bg-blue-500 text-white rounded-lg p-3 inline-block">
+                                <Building className="w-5 h-5 mx-auto mb-1" />
+                                <h4 className="font-bold">Immovable</h4>
+                                <p className="text-xs">{assetClassification.immovable.length} items</p>
                               </div>
-                              <p className="text-sm text-gray-600">{assetClassification.immovable.length} components</p>
                             </div>
                             
-                            {/* Immovable Component Headers */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-4">
+                            {/* Simple List */}
+                            <div className="space-y-2">
                               {assetClassification.immovable.map((item, index) => (
-                                <div key={index} className="text-center">
-                                  <div className="flex items-center justify-center gap-1 mb-1">
-                                    <ArrowDown className="w-3 h-3 text-gray-500" />
-                                    <h6 className="font-medium text-gray-900 dark:text-white text-xs">{item.assetName}</h6>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            
-                            {/* Immovable Component Details Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
-                              {assetClassification.immovable.map((item, index) => (
-                                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2">
-                                  {/* Consumables */}
-                                  <div className="mb-2">
-                                    <div className="flex items-center gap-1 mb-1">
-                                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Consumables:</span>
-                                    </div>
-                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
-                                      {item.inventory.consumables.join(', ')}
-                                    </div>
-                                  </div>
+                                <div key={index} className="bg-white dark:bg-gray-700 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                  <h5 className="font-semibold text-gray-900 dark:text-white text-sm mb-2">
+                                    {index + 1}. {item.assetName}
+                                  </h5>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{item.description}</p>
                                   
-                                  {/* Spare Parts */}
-                                  <div className="mb-2">
-                                    <div className="flex items-center gap-1 mb-1">
-                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Spare Parts:</span>
-                                    </div>
-                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
-                                      {item.inventory.spareParts.join(', ')}
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Tools */}
-                                  <div>
-                                    <div className="flex items-center gap-1 mb-1">
-                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Tools:</span>
-                                    </div>
-                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
-                                      {item.inventory.tools.join(', ')}
-                                    </div>
+                                  {/* Simple Inventory Display */}
+                                  <div className="space-y-1">
+                                    {item.inventory.consumables.length > 0 && (
+                                      <div className="text-xs">
+                                        <span className="font-medium text-orange-600">Consumables:</span>
+                                        <span className="ml-1 text-gray-600 dark:text-gray-400">
+                                          {item.inventory.consumables.map(consumable => 
+                                            typeof consumable === 'string' ? consumable : consumable.itemName
+                                          ).join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.inventory.spareParts.length > 0 && (
+                                      <div className="text-xs">
+                                        <span className="font-medium text-blue-600">Spare Parts:</span>
+                                        <span className="ml-1 text-gray-600 dark:text-gray-400">
+                                          {item.inventory.spareParts.map(part => 
+                                            typeof part === 'string' ? part : part.itemName
+                                          ).join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.inventory.tools.length > 0 && (
+                                      <div className="text-xs">
+                                        <span className="font-medium text-green-600">Tools:</span>
+                                        <span className="ml-1 text-gray-600 dark:text-gray-400">
+                                          {item.inventory.tools.map(tool => 
+                                            typeof tool === 'string' ? tool : tool.itemName
+                                          ).join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.inventory.operationalSupply.length > 0 && (
+                                      <div className="text-xs">
+                                        <span className="font-medium text-purple-600">Operational Supply:</span>
+                                        <span className="ml-1 text-gray-600 dark:text-gray-400">
+                                          {item.inventory.operationalSupply.map(supply => 
+                                            typeof supply === 'string' ? supply : supply.itemName
+                                          ).join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               ))}
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Summary */}
-                      <div className="text-center">
-                        <div className="bg-blue-600 rounded-lg p-4 inline-block">
-                          <h3 className="text-lg font-bold text-white">
-                            Total Components: {assetClassification.movable.length + assetClassification.immovable.length}
-                          </h3>
+                        {/* Simple Summary */}
+                        <div className="text-center mt-6">
+                          <div className="bg-gray-600 text-white rounded-lg p-4 inline-block">
+                            <h3 className="text-lg font-bold">
+                              Total: {assetClassification.movable.length + assetClassification.immovable.length} Components
+                            </h3>
+                            <div className="flex gap-4 text-sm mt-2">
+                              <span>🟢 Movable: {assetClassification.movable.length}</span>
+                              <span>🔵 Immovable: {assetClassification.immovable.length}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1456,6 +1798,872 @@ export default function AdminAssetsPage() {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Hierarchical Add Asset Modal */}
+        {showAddAssetModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] flex flex-col">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {currentStep === 'main' && 'Add New Asset'}
+                    {currentStep === 'subassets' && 'Add Sub-Assets'}
+                    {currentStep === 'inventory' && 'Add Inventory Items'}
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {currentStep === 'main' && 'Step 1: Fill in the main asset details'}
+                    {currentStep === 'subassets' && 'Step 2: Add movable and immovable components'}
+                    {currentStep === 'inventory' && 'Step 3: Add inventory items for each component'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleCloseAddAssetModal}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 overflow-y-auto flex-1 min-h-0">
+                {currentStep === 'main' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Left Column */}
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="tagId" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Asset ID <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="tagId"
+                          value={newAsset.tagId || ''}
+                          onChange={(e) => handleInputChange('tagId', e.target.value)}
+                          placeholder="e.g., WTP001, COMP001"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="assetType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Asset Type <span className="text-red-500">*</span>
+                        </Label>
+                        <Select value={newAsset.assetType || ''} onValueChange={(value) => handleInputChange('assetType', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select asset type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="WTP">WTP (Water Treatment Plant)</SelectItem>
+                            <SelectItem value="Computer">Computer</SelectItem>
+                            <SelectItem value="Printer">Printer</SelectItem>
+                            <SelectItem value="UPS">UPS</SelectItem>
+                            <SelectItem value="Server">Server</SelectItem>
+                            <SelectItem value="Network Equipment">Network Equipment</SelectItem>
+                            <SelectItem value="Furniture">Furniture</SelectItem>
+                            <SelectItem value="Vehicle">Vehicle</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="subcategory" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Subcategory
+                        </Label>
+                        <Input
+                          id="subcategory"
+                          value={newAsset.subcategory || ''}
+                          onChange={(e) => handleInputChange('subcategory', e.target.value)}
+                          placeholder="e.g., Water Treatment Plant, Desktop"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="mobilityCategory" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Mobility Category
+                        </Label>
+                        <Select value={newAsset.mobilityCategory || 'Movable'} onValueChange={(value) => handleInputChange('mobilityCategory', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Movable">Movable</SelectItem>
+                            <SelectItem value="Immovable">Immovable</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="brand" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Brand <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="brand"
+                          value={newAsset.brand || ''}
+                          onChange={(e) => handleInputChange('brand', e.target.value)}
+                          placeholder="e.g., AquaTech, Dell"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="model" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Model
+                        </Label>
+                        <Input
+                          id="model"
+                          value={newAsset.model || ''}
+                          onChange={(e) => handleInputChange('model', e.target.value)}
+                          placeholder="e.g., WTP-5000, OptiPlex 7090"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="serialNumber" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Serial Number
+                        </Label>
+                        <Input
+                          id="serialNumber"
+                          value={newAsset.serialNumber || ''}
+                          onChange={(e) => handleInputChange('serialNumber', e.target.value)}
+                          placeholder="e.g., AT123456"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="capacity" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Capacity
+                        </Label>
+                        <Input
+                          id="capacity"
+                          value={newAsset.capacity || ''}
+                          onChange={(e) => handleInputChange('capacity', e.target.value)}
+                          placeholder="e.g., 5000 LPH, 16GB RAM"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="yearOfInstallation" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Year of Installation
+                        </Label>
+                        <Input
+                          id="yearOfInstallation"
+                          value={newAsset.yearOfInstallation || ''}
+                          onChange={(e) => handleInputChange('yearOfInstallation', e.target.value)}
+                          placeholder="e.g., 2022"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="status" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Status
+                        </Label>
+                        <Select value={newAsset.status || 'Active'} onValueChange={(value) => handleInputChange('status', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Active">Active</SelectItem>
+                            <SelectItem value="Inactive">Inactive</SelectItem>
+                            <SelectItem value="Maintenance">Maintenance</SelectItem>
+                            <SelectItem value="Retired">Retired</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="priority" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Priority
+                        </Label>
+                        <Select value={newAsset.priority || 'Medium'} onValueChange={(value) => handleInputChange('priority', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="High">High</SelectItem>
+                            <SelectItem value="Medium">Medium</SelectItem>
+                            <SelectItem value="Low">Low</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Location Fields */}
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Location Details</h4>
+                        
+                        <div>
+                          <Label htmlFor="building" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Building
+                          </Label>
+                          <Input
+                            id="building"
+                            value={newAsset.location?.building || ''}
+                            onChange={(e) => handleInputChange('location.building', e.target.value)}
+                            placeholder="e.g., Main Building"
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="floor" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Floor
+                          </Label>
+                          <Input
+                            id="floor"
+                            value={newAsset.location?.floor || ''}
+                            onChange={(e) => handleInputChange('location.floor', e.target.value)}
+                            placeholder="e.g., Ground, 2nd Floor"
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="room" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Room
+                          </Label>
+                          <Input
+                            id="room"
+                            value={newAsset.location?.room || ''}
+                            onChange={(e) => handleInputChange('location.room', e.target.value)}
+                            placeholder="e.g., Utility Room, IT Office"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === 'subassets' && (
+                  <div className="space-y-6">
+                    {/* Movable Assets Section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-5 h-5 text-green-600" />
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Movable Assets</h3>
+                        </div>
+                        <Button
+                          onClick={() => handleAddSubAsset('Movable')}
+                          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Movable Asset
+                        </Button>
+                      </div>
+
+                      <div className="space-y-4">
+                        {newAsset.subAssets?.movable.map((subAsset, index) => (
+                          <div key={subAsset.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-medium text-gray-900 dark:text-white">Movable Asset #{index + 1}</h4>
+                              <Button
+                                onClick={() => handleRemoveSubAsset('Movable', index)}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Asset Name</Label>
+                                <Input
+                                  value={subAsset.assetName}
+                                  onChange={(e) => handleSubAssetChange('Movable', index, 'assetName', e.target.value)}
+                                  placeholder="e.g., Water Pumps"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brand</Label>
+                                <Input
+                                  value={subAsset.brand}
+                                  onChange={(e) => handleSubAssetChange('Movable', index, 'brand', e.target.value)}
+                                  placeholder="e.g., AquaTech"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Model</Label>
+                                <Input
+                                  value={subAsset.model}
+                                  onChange={(e) => handleSubAssetChange('Movable', index, 'model', e.target.value)}
+                                  placeholder="e.g., AP-5000"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Capacity</Label>
+                                <Input
+                                  value={subAsset.capacity}
+                                  onChange={(e) => handleSubAssetChange('Movable', index, 'capacity', e.target.value)}
+                                  placeholder="e.g., 5000 LPH"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Location</Label>
+                                <Input
+                                  value={subAsset.location}
+                                  onChange={(e) => handleSubAssetChange('Movable', index, 'location', e.target.value)}
+                                  placeholder="e.g., Inside WTP"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</Label>
+                                <Input
+                                  value={subAsset.description}
+                                  onChange={(e) => handleSubAssetChange('Movable', index, 'description', e.target.value)}
+                                  placeholder="Brief description"
+                                  className="mt-1"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Immovable Assets Section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Building className="w-5 h-5 text-blue-600" />
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Immovable Assets</h3>
+                        </div>
+                        <Button
+                          onClick={() => handleAddSubAsset('Immovable')}
+                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Immovable Asset
+                        </Button>
+                      </div>
+
+                      <div className="space-y-4">
+                        {newAsset.subAssets?.immovable.map((subAsset, index) => (
+                          <div key={subAsset.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-medium text-gray-900 dark:text-white">Immovable Asset #{index + 1}</h4>
+                              <Button
+                                onClick={() => handleRemoveSubAsset('Immovable', index)}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Asset Name</Label>
+                                <Input
+                                  value={subAsset.assetName}
+                                  onChange={(e) => handleSubAssetChange('Immovable', index, 'assetName', e.target.value)}
+                                  placeholder="e.g., WTP Structure"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brand</Label>
+                                <Input
+                                  value={subAsset.brand}
+                                  onChange={(e) => handleSubAssetChange('Immovable', index, 'brand', e.target.value)}
+                                  placeholder="e.g., AquaTech"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Model</Label>
+                                <Input
+                                  value={subAsset.model}
+                                  onChange={(e) => handleSubAssetChange('Immovable', index, 'model', e.target.value)}
+                                  placeholder="e.g., WTP-5000"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Capacity</Label>
+                                <Input
+                                  value={subAsset.capacity}
+                                  onChange={(e) => handleSubAssetChange('Immovable', index, 'capacity', e.target.value)}
+                                  placeholder="e.g., 5000 LPH"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Location</Label>
+                                <Input
+                                  value={subAsset.location}
+                                  onChange={(e) => handleSubAssetChange('Immovable', index, 'location', e.target.value)}
+                                  placeholder="e.g., Main Building"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</Label>
+                                <Input
+                                  value={subAsset.description}
+                                  onChange={(e) => handleSubAssetChange('Immovable', index, 'description', e.target.value)}
+                                  placeholder="Brief description"
+                                  className="mt-1"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === 'inventory' && (
+                  <div className="space-y-6">
+                    {/* Movable Assets Inventory */}
+                    {newAsset.subAssets?.movable.map((subAsset, subAssetIndex) => (
+                      <div key={subAsset.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                          <Package className="w-5 h-5 text-green-600" />
+                          {subAsset.assetName || `Movable Asset #${subAssetIndex + 1}`}
+                        </h3>
+
+                        {/* Consumables */}
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                              <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                              Consumables
+                            </h4>
+                            <Button
+                              onClick={() => handleAddInventoryItem('Movable', subAssetIndex, 'consumables')}
+                              size="sm"
+                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {subAsset.inventory.consumables.map((item, itemIndex) => (
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.itemName}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'consumables', itemIndex, 'itemName', e.target.value)}
+                                  placeholder="Item Name"
+                                />
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'consumables', itemIndex, 'quantity', parseInt(e.target.value) || 0)}
+                                  placeholder="Quantity"
+                                />
+                                <Select value={item.status} onValueChange={(value) => handleInventoryItemChange('Movable', subAssetIndex, 'consumables', itemIndex, 'status', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Available">Available</SelectItem>
+                                    <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="date"
+                                  value={item.lastUpdated}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'consumables', itemIndex, 'lastUpdated', e.target.value)}
+                                />
+                                <Button
+                                  onClick={() => handleRemoveInventoryItem('Movable', subAssetIndex, 'consumables', itemIndex)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Spare Parts */}
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                              Spare Parts
+                            </h4>
+                            <Button
+                              onClick={() => handleAddInventoryItem('Movable', subAssetIndex, 'spareParts')}
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {subAsset.inventory.spareParts.map((item, itemIndex) => (
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.itemName}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'spareParts', itemIndex, 'itemName', e.target.value)}
+                                  placeholder="Item Name"
+                                />
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'spareParts', itemIndex, 'quantity', parseInt(e.target.value) || 0)}
+                                  placeholder="Quantity"
+                                />
+                                <Select value={item.status} onValueChange={(value) => handleInventoryItemChange('Movable', subAssetIndex, 'spareParts', itemIndex, 'status', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Available">Available</SelectItem>
+                                    <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="date"
+                                  value={item.lastUpdated}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'spareParts', itemIndex, 'lastUpdated', e.target.value)}
+                                />
+                                <Button
+                                  onClick={() => handleRemoveInventoryItem('Movable', subAssetIndex, 'spareParts', itemIndex)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Tools */}
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                              Tools
+                            </h4>
+                            <Button
+                              onClick={() => handleAddInventoryItem('Movable', subAssetIndex, 'tools')}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {subAsset.inventory.tools.map((item, itemIndex) => (
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.itemName}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'tools', itemIndex, 'itemName', e.target.value)}
+                                  placeholder="Item Name"
+                                />
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'tools', itemIndex, 'quantity', parseInt(e.target.value) || 0)}
+                                  placeholder="Quantity"
+                                />
+                                <Select value={item.status} onValueChange={(value) => handleInventoryItemChange('Movable', subAssetIndex, 'tools', itemIndex, 'status', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Available">Available</SelectItem>
+                                    <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="date"
+                                  value={item.lastUpdated}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'tools', itemIndex, 'lastUpdated', e.target.value)}
+                                />
+                                <Button
+                                  onClick={() => handleRemoveInventoryItem('Movable', subAssetIndex, 'tools', itemIndex)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Immovable Assets Inventory */}
+                    {newAsset.subAssets?.immovable.map((subAsset, subAssetIndex) => (
+                      <div key={subAsset.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                          <Building className="w-5 h-5 text-blue-600" />
+                          {subAsset.assetName || `Immovable Asset #${subAssetIndex + 1}`}
+                        </h3>
+
+                        {/* Consumables */}
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                              <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                              Consumables
+                            </h4>
+                            <Button
+                              onClick={() => handleAddInventoryItem('Immovable', subAssetIndex, 'consumables')}
+                              variant="outline"
+                              size="sm"
+                              className="bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {subAsset.inventory.consumables.map((item, itemIndex) => (
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.itemName}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'consumables', itemIndex, 'itemName', e.target.value)}
+                                  placeholder="Item Name"
+                                />
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'consumables', itemIndex, 'quantity', parseInt(e.target.value))}
+                                  placeholder="Quantity"
+                                />
+                                <Select
+                                  value={item.status}
+                                  onValueChange={(value) => handleInventoryItemChange('Immovable', subAssetIndex, 'consumables', itemIndex, 'status', value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Available">Available</SelectItem>
+                                    <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="date"
+                                  value={item.lastUpdated}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'consumables', itemIndex, 'lastUpdated', e.target.value)}
+                                />
+                                <Button
+                                  onClick={() => handleRemoveInventoryItem('Immovable', subAssetIndex, 'consumables', itemIndex)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Spare Parts */}
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                              Spare Parts
+                            </h4>
+                            <Button
+                              onClick={() => handleAddInventoryItem('Immovable', subAssetIndex, 'spareParts')}
+                              variant="outline"
+                              size="sm"
+                              className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {subAsset.inventory.spareParts.map((item, itemIndex) => (
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.itemName}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'spareParts', itemIndex, 'itemName', e.target.value)}
+                                  placeholder="Item Name"
+                                />
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'spareParts', itemIndex, 'quantity', parseInt(e.target.value))}
+                                  placeholder="Quantity"
+                                />
+                                <Select
+                                  value={item.status}
+                                  onValueChange={(value) => handleInventoryItemChange('Immovable', subAssetIndex, 'spareParts', itemIndex, 'status', value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Available">Available</SelectItem>
+                                    <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="date"
+                                  value={item.lastUpdated}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'spareParts', itemIndex, 'lastUpdated', e.target.value)}
+                                />
+                                <Button
+                                  onClick={() => handleRemoveInventoryItem('Immovable', subAssetIndex, 'spareParts', itemIndex)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Tools */}
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                              Tools
+                            </h4>
+                            <Button
+                              onClick={() => handleAddInventoryItem('Immovable', subAssetIndex, 'tools')}
+                              variant="outline"
+                              size="sm"
+                              className="bg-green-50 hover:bg-green-100 text-green-600 border-green-200"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {subAsset.inventory.tools.map((item, itemIndex) => (
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.itemName}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'tools', itemIndex, 'itemName', e.target.value)}
+                                  placeholder="Item Name"
+                                />
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'tools', itemIndex, 'quantity', parseInt(e.target.value))}
+                                  placeholder="Quantity"
+                                />
+                                <Select
+                                  value={item.status}
+                                  onValueChange={(value) => handleInventoryItemChange('Immovable', subAssetIndex, 'tools', itemIndex, 'status', value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Available">Available</SelectItem>
+                                    <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                    <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="date"
+                                  value={item.lastUpdated}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'tools', itemIndex, 'lastUpdated', e.target.value)}
+                                />
+                                <Button
+                                  onClick={() => handleRemoveInventoryItem('Immovable', subAssetIndex, 'tools', itemIndex)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-between p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <div>
+                  {currentStep !== 'main' && (
+                    <Button
+                      onClick={() => setCurrentStep(currentStep === 'subassets' ? 'main' : 'subassets')}
+                      variant="outline"
+                      className="px-4 py-2"
+                    >
+                      Previous
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleCloseAddAssetModal}
+                    variant="outline"
+                    className="px-4 py-2"
+                  >
+                    Cancel
+                  </Button>
+                  
+                  {currentStep === 'main' ? (
+                    <Button
+                      onClick={handleMainAssetSave}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Next: Add Sub-Assets
+                    </Button>
+                  ) : null}
+                  
+                  {currentStep === 'subassets' && (
+                    <Button
+                      onClick={() => setCurrentStep('inventory')}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Next: Add Inventory
+                    </Button>
+                  )}
+                  
+                  {currentStep === 'inventory' && (
+                    <Button
+                      onClick={handleFinalSave}
+                      data-testid="save-button"
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Save Complete Asset
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -41,7 +41,12 @@ interface ApiAsset extends Asset {
 interface ApiAssetsResponse {
   success: boolean
   assets: ApiAsset[]
-  pagination?: any
+  pagination?: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
   message?: string
 }
 

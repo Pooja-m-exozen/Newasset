@@ -2,11 +2,31 @@
 
 import React, { useState } from 'react'
 import ProtectedRoute from "@/components/ProtectedRoute"
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
-import { Building, Package, Search, ChevronLeft } from 'lucide-react'
+import { Building, Package, Search, Eye, X, ArrowDown, Download } from 'lucide-react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+
+// Extend jsPDF type to include autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: {
+      startY?: number
+      head?: string[][]
+      body?: string[][]
+      styles?: Record<string, unknown>
+      headStyles?: Record<string, unknown>
+      bodyStyles?: Record<string, unknown>
+      margin?: { left: number; right: number }
+      columnStyles?: Record<string, Record<string, unknown>>
+    }) => jsPDF
+    lastAutoTable: {
+      finalY: number
+    }
+  }
+}
 
 interface AssetInventory {
   consumables: string[]
@@ -80,34 +100,6 @@ const sampleAssets: Asset[] = [
   },
   {
     _id: '3',
-    tagId: 'GEN',
-    assetType: 'Generator',
-    subcategory: 'Diesel Generator',
-    mobilityCategory: 'Immovable',
-    brand: 'Cummins',
-    model: 'C150D5',
-    capacity: '150 KVA',
-    yearOfInstallation: '2019',
-    status: 'Active',
-    priority: 'High',
-    location: { building: 'Main Building', floor: 'Ground', room: 'Generator Room' }
-  },
-  {
-    _id: '4',
-    tagId: 'HVAC',
-    assetType: 'HVAC',
-    subcategory: 'Air Conditioning',
-    mobilityCategory: 'Immovable',
-    brand: 'Carrier',
-    model: '42QHC018',
-    capacity: '1.5 Ton',
-    yearOfInstallation: '2020',
-    status: 'Active',
-    priority: 'Medium',
-    location: { building: 'Main Building', floor: '1st', room: 'Reception' }
-  },
-  {
-    _id: '5',
     tagId: 'PRINTER',
     assetType: 'Printer',
     subcategory: 'Laser Printer',
@@ -121,7 +113,7 @@ const sampleAssets: Asset[] = [
     location: { building: 'Main Building', floor: '2nd', room: 'IT Office' }
   },
   {
-    _id: '6',
+    _id: '4',
     tagId: 'UPS',
     assetType: 'UPS',
     subcategory: 'Uninterruptible Power Supply',
@@ -261,234 +253,6 @@ const getAssetClassification = (assetType: string, subcategory: string): AssetCl
             spareParts: ["Roof Panels", "Windows", "Doors", "Structural Components"],
             tools: ["Construction Equipment", "Lifting Gear", "Safety Equipment", "Building Inspection Kit"],
             operationalSupply: ["Backup Buildings", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ]
-    },
-    'Generator': {
-      movable: [
-        {
-          assetName: "Portable Generator",
-          description: "Mobile power generation equipment for temporary use.",
-          category: "Movable",
-          reason: "Designed for portability and can be transported to different sites.",
-          inventory: {
-            consumables: ["Diesel Fuel", "Engine Oil", "Air Filters", "Coolant"],
-            spareParts: ["Engine Block", "Alternator", "Starter Motor", "Fuel Pump"],
-            tools: ["Fuel Transfer Pump", "Oil Change Kit", "Multimeter", "Load Bank"],
-            operationalSupply: ["Backup Generators", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Generator Control Panel",
-          description: "Control systems and monitoring equipment for generator operation.",
-          category: "Movable",
-          reason: "Can be detached and relocated for maintenance or replacement.",
-          inventory: {
-            consumables: ["Control Fuses", "Wire Connectors", "Display Screens", "Control Buttons"],
-            spareParts: ["Control Board", "Relays", "Sensors", "Display Unit"],
-            tools: ["Multimeter", "Screwdriver Set", "Wire Strippers", "Calibration Kit"],
-            operationalSupply: ["Backup Control Panels", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Fuel Storage Tanks (Portable)",
-          description: "Above-ground fuel storage tanks for generator operation.",
-          category: "Movable",
-          reason: "Can be moved or replaced easily for different locations.",
-          inventory: {
-            consumables: ["Diesel Fuel", "Fuel Additives", "Tank Cleaners", "Sealants"],
-            spareParts: ["Tank Body", "Fuel Lines", "Valves", "Level Indicators"],
-            tools: ["Fuel Transfer Pump", "Tank Cleaning Kit", "Fuel Testing Kit", "Level Gauge"],
-            operationalSupply: ["Backup Fuel Tanks", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Generator Maintenance Tools",
-          description: "Portable tools and equipment for generator maintenance.",
-          category: "Movable",
-          reason: "Small, portable tools that can be carried to different work locations.",
-          inventory: {
-            consumables: ["Cleaning Solvents", "Lubricants", "Rags", "Safety Gloves"],
-            spareParts: ["Tool Handles", "Replacement Parts", "Calibration Standards", "Test Equipment"],
-            tools: ["Wrench Set", "Socket Set", "Torque Wrench", "Compression Tester"],
-            operationalSupply: ["Backup Tools", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ],
-      immovable: [
-        {
-          assetName: "Diesel Generator (Fixed Installation)",
-          description: "Permanently installed diesel generator for backup power.",
-          category: "Immovable",
-          reason: "Bolted to concrete foundation and connected to permanent electrical infrastructure.",
-          inventory: {
-            consumables: ["Diesel Fuel", "Engine Oil", "Coolant", "Air Filters"],
-            spareParts: ["Engine Assembly", "Alternator", "Exhaust System", "Mounting Brackets"],
-            tools: ["Crane", "Lifting Equipment", "Installation Tools", "Testing Equipment"],
-            operationalSupply: ["Backup Generators", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Generator Foundation",
-          description: "Concrete foundation and structural support for generator.",
-          category: "Immovable",
-          reason: "Permanently constructed foundation embedded in the ground.",
-          inventory: {
-            consumables: ["Concrete Mix", "Rebar", "Formwork", "Curing Compounds"],
-            spareParts: ["Foundation Blocks", "Anchor Bolts", "Vibration Isolators", "Support Pads"],
-            tools: ["Concrete Mixer", "Excavator", "Compactor", "Foundation Testing Kit"],
-            operationalSupply: ["Backup Foundations", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Underground Fuel Storage",
-          description: "Buried fuel storage tanks for generator operation.",
-          category: "Immovable",
-          reason: "Permanently installed underground infrastructure.",
-          inventory: {
-            consumables: ["Diesel Fuel", "Tank Liners", "Leak Detection Fluids", "Corrosion Inhibitors"],
-            spareParts: ["Tank Sections", "Piping", "Valves", "Monitoring Systems"],
-            tools: ["Excavator", "Tank Installation Kit", "Leak Detection Kit", "Environmental Testing Kit"],
-            operationalSupply: ["Backup Fuel Storage", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Generator Building/Enclosure",
-          description: "Permanent structure housing the generator equipment.",
-          category: "Immovable",
-          reason: "Permanent structure fixed to the ground.",
-          inventory: {
-            consumables: ["Building Materials", "Insulation", "Ventilation Ducts", "Fire Suppression"],
-            spareParts: ["Roof Panels", "Walls", "Doors", "Ventilation Fans"],
-            tools: ["Construction Equipment", "Lifting Gear", "Installation Tools", "Safety Equipment"],
-            operationalSupply: ["Backup Buildings", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Electrical Infrastructure",
-          description: "Fixed electrical connections and distribution systems.",
-          category: "Immovable",
-          reason: "Permanently installed electrical infrastructure embedded in buildings.",
-          inventory: {
-            consumables: ["Electrical Wire", "Conduit", "Insulation", "Terminal Blocks"],
-            spareParts: ["Switchgear", "Transformers", "Distribution Panels", "Cable Trays"],
-            tools: ["Wire Pulling Equipment", "Cable Tester", "Insulation Tester", "Electrical Tools"],
-            operationalSupply: ["Backup Electrical Systems", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ]
-    },
-    'HVAC': {
-      movable: [
-        {
-          assetName: "Portable Air Conditioner",
-          description: "Mobile cooling equipment for temporary climate control.",
-          category: "Movable",
-          reason: "Can be disconnected and moved to different rooms or locations.",
-          inventory: {
-            consumables: ["Refrigerant", "Air Filters", "Cleaning Solutions", "Drainage Pans"],
-            spareParts: ["Compressor", "Evaporator Coil", "Condenser Fan", "Control Board"],
-            tools: ["Refrigerant Gauge", "Multimeter", "Cleaning Kit", "Installation Kit"],
-            operationalSupply: ["Backup AC Units", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Portable Heater",
-          description: "Mobile heating equipment for temporary use.",
-          category: "Movable",
-          reason: "Can be easily relocated to different areas as needed.",
-          inventory: {
-            consumables: ["Heating Elements", "Thermostat Batteries", "Safety Switches", "Cleaning Supplies"],
-            spareParts: ["Heating Coil", "Fan Motor", "Control Panel", "Power Cord"],
-            tools: ["Multimeter", "Thermometer", "Cleaning Kit", "Installation Tools"],
-            operationalSupply: ["Backup Heaters", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "HVAC Control Panel",
-          description: "Control systems and thermostats for HVAC operation.",
-          category: "Movable",
-          reason: "Can be detached and relocated for maintenance or replacement.",
-          inventory: {
-            consumables: ["Thermostat Batteries", "Wire Connectors", "Display Screens", "Control Buttons"],
-            spareParts: ["Control Board", "Sensors", "Relays", "Display Unit"],
-            tools: ["Multimeter", "Screwdriver Set", "Wire Strippers", "Calibration Kit"],
-            operationalSupply: ["Backup Control Panels", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Portable Fans",
-          description: "Mobile air circulation equipment.",
-          category: "Movable",
-          reason: "Can be easily moved between different locations.",
-          inventory: {
-            consumables: ["Fan Blades", "Motor Oil", "Cleaning Solutions", "Power Cords"],
-            spareParts: ["Fan Motor", "Blade Assembly", "Control Switch", "Base Unit"],
-            tools: ["Multimeter", "Cleaning Kit", "Installation Tools", "Maintenance Kit"],
-            operationalSupply: ["Backup Fans", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        }
-      ],
-      immovable: [
-        {
-          assetName: "Central HVAC System",
-          description: "Central heating, ventilation, and air conditioning system.",
-          category: "Immovable",
-          reason: "Permanently installed system with ductwork embedded in building structure.",
-          inventory: {
-            consumables: ["Refrigerant", "Air Filters", "Duct Insulation", "Cleaning Chemicals"],
-            spareParts: ["Central Unit", "Ductwork Sections", "Vents", "Control Systems"],
-            tools: ["Refrigerant Recovery Unit", "Duct Cleaning Equipment", "Air Balance Kit", "Installation Tools"],
-            operationalSupply: ["Backup HVAC Systems", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Air Handling Units",
-          description: "Large HVAC equipment permanently installed in mechanical rooms.",
-          category: "Immovable",
-          reason: "Permanently installed equipment connected to building infrastructure.",
-          inventory: {
-            consumables: ["Air Filters", "Belt Drives", "Lubricants", "Cleaning Solutions"],
-            spareParts: ["Fan Assembly", "Motor", "Coil Sections", "Control Panel"],
-            tools: ["Belt Tension Gauge", "Air Flow Meter", "Cleaning Equipment", "Installation Tools"],
-            operationalSupply: ["Backup Air Handlers", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Ductwork System",
-          description: "Fixed air distribution system throughout the building.",
-          category: "Immovable",
-          reason: "Permanently installed ductwork embedded in building structure.",
-          inventory: {
-            consumables: ["Duct Insulation", "Sealants", "Fasteners", "Cleaning Solutions"],
-            spareParts: ["Duct Sections", "Fittings", "Dampers", "Grilles"],
-            tools: ["Duct Cleaning Equipment", "Sealant Gun", "Installation Tools", "Air Balance Kit"],
-            operationalSupply: ["Backup Ductwork", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Chiller Plant",
-          description: "Central cooling equipment for large buildings.",
-          category: "Immovable",
-          reason: "Permanently installed equipment bolted to foundation.",
-          inventory: {
-            consumables: ["Refrigerant", "Cooling Water", "Chemicals", "Lubricants"],
-            spareParts: ["Compressor", "Heat Exchanger", "Pump Assembly", "Control System"],
-            tools: ["Refrigerant Recovery Unit", "Water Testing Kit", "Installation Tools", "Maintenance Kit"],
-            operationalSupply: ["Backup Chillers", "Emergency Equipment", "Spare Components", "Safety Equipment"]
-          }
-        },
-        {
-          assetName: "Boiler System",
-          description: "Central heating equipment for building heating.",
-          category: "Immovable",
-          reason: "Permanently installed equipment connected to building infrastructure.",
-          inventory: {
-            consumables: ["Fuel Oil", "Water Treatment", "Chemicals", "Lubricants"],
-            spareParts: ["Boiler Assembly", "Burner", "Heat Exchanger", "Control Panel"],
-            tools: ["Combustion Analyzer", "Water Testing Kit", "Installation Tools", "Safety Equipment"],
-            operationalSupply: ["Backup Boilers", "Emergency Equipment", "Spare Components", "Safety Equipment"]
           }
         }
       ]
@@ -742,9 +506,13 @@ export default function AdminAssetsPage() {
   const [selectedMobility, setSelectedMobility] = useState<'all' | 'movable' | 'immovable'>('all')
 
   // Asset classification states
-  const [selectedClassificationType, setSelectedClassificationType] = useState<'movable' | 'immovable' | null>(null)
-  const [currentView, setCurrentView] = useState<'main' | 'classification'>('main')
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
+  const [expandedRow, setExpandedRow] = useState<string | null>(null)
+  const [expandedClassificationType, setExpandedClassificationType] = useState<'movable' | 'immovable' | null>(null)
+  const [selectedInventoryType, setSelectedInventoryType] = useState<{[key: string]: 'consumables' | 'spareParts' | 'tools' | null}>({})
+  
+  // Modal states
+  const [showFlowchartModal, setShowFlowchartModal] = useState(false)
+  const [selectedAssetForFlowchart, setSelectedAssetForFlowchart] = useState<Asset | null>(null)
 
   const getFilteredAssets = () => {
     let filtered = sampleAssets
@@ -772,21 +540,69 @@ export default function AdminAssetsPage() {
 
 
   const handleMovableClick = (asset: Asset) => {
-    setSelectedAsset(asset)
-    setSelectedClassificationType('movable')
-    setCurrentView('classification')
+    if (expandedRow === asset._id && expandedClassificationType === 'movable') {
+      // If already expanded with movable, close it
+      setExpandedRow(null)
+      setExpandedClassificationType(null)
+      // Clear inventory selections for this asset
+      const newInventoryState = { ...selectedInventoryType }
+      Object.keys(newInventoryState).forEach(key => {
+        if (key.startsWith(asset._id)) {
+          delete newInventoryState[key]
+        }
+      })
+      setSelectedInventoryType(newInventoryState)
+    } else {
+      // Expand with movable classification
+      setExpandedRow(asset._id)
+      setExpandedClassificationType('movable')
+      // Clear inventory selections for this asset
+      const newInventoryState = { ...selectedInventoryType }
+      Object.keys(newInventoryState).forEach(key => {
+        if (key.startsWith(asset._id)) {
+          delete newInventoryState[key]
+        }
+      })
+      setSelectedInventoryType(newInventoryState)
+    }
   }
 
   const handleImmovableClick = (asset: Asset) => {
-    setSelectedAsset(asset)
-    setSelectedClassificationType('immovable')
-    setCurrentView('classification')
+    if (expandedRow === asset._id && expandedClassificationType === 'immovable') {
+      // If already expanded with immovable, close it
+      setExpandedRow(null)
+      setExpandedClassificationType(null)
+      // Clear inventory selections for this asset
+      const newInventoryState = { ...selectedInventoryType }
+      Object.keys(newInventoryState).forEach(key => {
+        if (key.startsWith(asset._id)) {
+          delete newInventoryState[key]
+        }
+      })
+      setSelectedInventoryType(newInventoryState)
+    } else {
+      // Expand with immovable classification
+      setExpandedRow(asset._id)
+      setExpandedClassificationType('immovable')
+      // Clear inventory selections for this asset
+      const newInventoryState = { ...selectedInventoryType }
+      Object.keys(newInventoryState).forEach(key => {
+        if (key.startsWith(asset._id)) {
+          delete newInventoryState[key]
+        }
+      })
+      setSelectedInventoryType(newInventoryState)
+    }
   }
 
-  const handleBackToMain = () => {
-    setCurrentView('main')
-    setSelectedClassificationType(null)
-    setSelectedAsset(null)
+  const handleInventoryClick = (assetId: string, classificationIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools') => {
+    const key = `${assetId}-${classificationIndex}`
+    const currentSelection = selectedInventoryType[key]
+    
+    setSelectedInventoryType(prev => ({
+      ...prev,
+      [key]: currentSelection === inventoryType ? null : inventoryType
+    }))
   }
 
   const handleRadioChange = (value: string) => {
@@ -795,134 +611,255 @@ export default function AdminAssetsPage() {
     // Only show when clicking action buttons
   }
 
+  const handleViewFlowchart = (asset: Asset) => {
+    setSelectedAssetForFlowchart(asset)
+    setShowFlowchartModal(true)
+  }
+
+  const handleCloseFlowchartModal = () => {
+    setShowFlowchartModal(false)
+    setSelectedAssetForFlowchart(null)
+  }
+
+  const generatePDF = (asset: Asset) => {
+    const doc = new jsPDF()
+    const assetClassification = getAssetClassification(asset.assetType, asset.subcategory || '')
+    
+    // Helper function to check if we need a new page
+    const checkPageBreak = (currentY: number, neededSpace: number = 20) => {
+      const pageHeight = doc.internal.pageSize.height
+      const margin = 20
+      if (currentY + neededSpace > pageHeight - margin) {
+        doc.addPage()
+        return margin
+      }
+      return currentY
+    }
+    
+    let yPosition = 20
+    
+    // Simple header
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Asset Classification Report', 14, yPosition)
+    yPosition += 10
+    
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`${asset.tagId} - ${asset.brand} ${asset.model}`, 14, yPosition)
+    yPosition += 7
+    doc.text(`${asset.assetType} (${asset.subcategory})`, 14, yPosition)
+    yPosition += 7
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, yPosition)
+    yPosition += 20
+    
+    // Asset Overview Table
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    yPosition = checkPageBreak(yPosition, 15)
+    doc.text('Asset Overview', 14, yPosition)
+    yPosition += 10
+    
+    const overviewData = [
+      ['Asset ID', asset.tagId],
+      ['Asset Type', asset.assetType],
+      ['Subcategory', asset.subcategory || 'N/A'],
+      ['Brand', asset.brand],
+      ['Model', asset.model || 'N/A'],
+      ['Capacity', asset.capacity || 'N/A'],
+      ['Status', asset.status || 'Active'],
+      ['Priority', asset.priority || 'Medium'],
+      ['Location', asset.location ? `${asset.location.building}, ${asset.location.floor}, ${asset.location.room}` : 'Not Set']
+    ]
+    
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['Property', 'Value']],
+      body: overviewData,
+      styles: { 
+        fontSize: 9,
+        cellPadding: 3,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      headStyles: { 
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { cellWidth: 50, fontStyle: 'bold', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        1: { cellWidth: 140, lineColor: [0, 0, 0], lineWidth: 0.1 }
+      },
+    })
+    
+    yPosition = doc.lastAutoTable.finalY + 20
+    
+    // Movable Assets Table
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    yPosition = checkPageBreak(yPosition, 15)
+    doc.text(`Movable Assets (${assetClassification.movable.length} components)`, 14, yPosition)
+    yPosition += 10
+    
+    const movableTableData = assetClassification.movable.map((item, index) => [
+      index + 1,
+      item.assetName,
+      item.inventory.consumables.join(', '),
+      item.inventory.spareParts.join(', '),
+      item.inventory.tools.join(', ')
+    ])
+    
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools']],
+      body: movableTableData,
+      styles: { 
+        fontSize: 8,
+        cellPadding: 3,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      headStyles: { 
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { cellWidth: 10, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        1: { cellWidth: 40, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        2: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        3: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        4: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 }
+      },
+    })
+    
+    yPosition = doc.lastAutoTable.finalY + 20
+    
+    // Immovable Assets Table
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    yPosition = checkPageBreak(yPosition, 15)
+    doc.text(`Immovable Assets (${assetClassification.immovable.length} components)`, 14, yPosition)
+    yPosition += 10
+    
+    const immovableTableData = assetClassification.immovable.map((item, index) => [
+      index + 1,
+      item.assetName,
+      item.inventory.consumables.join(', '),
+      item.inventory.spareParts.join(', '),
+      item.inventory.tools.join(', ')
+    ])
+    
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools']],
+      body: immovableTableData,
+      styles: { 
+        fontSize: 8,
+        cellPadding: 3,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      headStyles: { 
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { cellWidth: 10, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        1: { cellWidth: 40, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        2: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        3: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        4: { cellWidth: 50, lineColor: [0, 0, 0], lineWidth: 0.1 }
+      },
+    })
+    
+    yPosition = doc.lastAutoTable.finalY + 20
+    
+    // Summary Table
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    yPosition = checkPageBreak(yPosition, 20)
+    doc.text('Summary', 14, yPosition)
+    yPosition += 10
+    
+    const summaryData = [
+      ['Total Movable Components', assetClassification.movable.length.toString()],
+      ['Total Immovable Components', assetClassification.immovable.length.toString()],
+      ['Total Components', (assetClassification.movable.length + assetClassification.immovable.length).toString()],
+      ['Report Generated', new Date().toLocaleString()]
+    ]
+    
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['Metric', 'Value']],
+      body: summaryData,
+      styles: { 
+        fontSize: 10,
+        cellPadding: 4,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      headStyles: { 
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1
+      },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { cellWidth: 80, fontStyle: 'bold', lineColor: [0, 0, 0], lineWidth: 0.1 },
+        1: { cellWidth: 110, lineColor: [0, 0, 0], lineWidth: 0.1 }
+      },
+    })
+    
+    // Footer on last page
+    const pageHeight = doc.internal.pageSize.height
+    doc.setFontSize(8)
+    doc.text('Generated by EXOZEN Asset Management System', 14, pageHeight - 10)
+    
+    // Save the PDF
+    doc.save(`${asset.tagId}_${asset.assetType}_Classification_Report.pdf`)
+  }
+
 
   const filteredAssets = getFilteredAssets()
 
-  // Show classification view
-  if (currentView === 'classification' && selectedClassificationType && selectedAsset) {
-    const assetClassification = getAssetClassification(selectedAsset.assetType, selectedAsset.subcategory || '')
-    
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-background transition-colors duration-200">
-          <div className="p-0">
-            <div className="max-w-7xl mx-auto">
-              {/* Header with Back Button */}
-              <div className="mb-6 px-4 py-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-semibold text-blue-800 dark:text-blue-200">
-                      {selectedAsset.tagId} - {selectedAsset.brand} {selectedAsset.model}
-                    </h1>
-                    <p className="text-muted-foreground">
-                      {selectedClassificationType === 'movable' ? 'Movable' : 'Immovable'} Assets Classification for {selectedAsset.assetType} ({selectedAsset.subcategory})
-                    </p>
-                  </div>
-              <Button 
-                variant="outline" 
-                onClick={handleBackToMain}
-                className="flex items-center space-x-2"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                    <span>Back to Assets</span>
-              </Button>
-            </div>
-          </div>
-
-              {/* Classification Table */}
-              <div className="bg-background rounded-lg shadow-sm overflow-hidden border border-border">
-              <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                  <thead>
-                      <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
-                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
-                          Asset Name / Type
-                        </th>
-                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
-                          Description
-                        </th>
-                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
-                          Category
-                        </th>
-                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
-                          Inventory
-                        </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                      {assetClassification[selectedClassificationType].map((asset: AssetClassificationItem, index: number) => (
-                        <tr key={index} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                          <td className="border border-border px-4 py-3">
-                          <div className="flex items-center space-x-2">
-                              {selectedClassificationType === 'movable' ? (
-                                <Package className="w-4 h-4 text-green-600" />
-                            ) : (
-                                <Building className="w-4 h-4 text-blue-600" />
-                            )}
-                              <span className="font-medium text-blue-800 dark:text-blue-200">
-                                {asset.assetName}
-                              </span>
-                          </div>
-                        </td>
-                          <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                            {asset.description}
-                        </td>
-                          <td className="border border-border px-4 py-3">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              asset.category === 'Movable' 
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200'
-                                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200'
-                            }`}>
-                              {asset.category}
-                            </span>
-                        </td>
-                          <td className="border border-border px-4 py-3">
-                            <div className="space-y-3">
-                              {/* Consumables */}
-                              <div>
-                                <div className="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">Consumables</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400">
-                                  {asset.inventory?.consumables?.join(', ')}
-                                </div>
-                              </div>
-                              
-                              {/* Spare Parts */}
-                              <div>
-                                <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">Spare Parts</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400">
-                                  {asset.inventory?.spareParts?.join(', ')}
-                                </div>
-                              </div>
-                              
-                              {/* Tools */}
-                              <div>
-                                <div className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">Tools</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400">
-                                  {asset.inventory?.tools?.join(', ')}
-                                </div>
-                              </div>
-                              
-                              {/* Operational Supply */}
-                              <div>
-                                <div className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Operational Supply</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400">
-                                  {asset.inventory?.operationalSupply?.join(', ')}
-                                </div>
-                              </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-                </div>
-            </div>
-          </div>
-        </div>
-      </ProtectedRoute>
-    )
-  }
 
   // Show main assets view
   return (
@@ -1014,90 +951,290 @@ export default function AdminAssetsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAssets.map((asset) => (
-                      <tr 
-                        key={asset._id} 
-                        className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                      >
-                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
-                            {asset.tagId}
-                          </span>
-                      </td>
-                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="p-1 sm:p-2 bg-blue-50 rounded-lg">
-                          {asset.mobilityCategory === 'Movable' ? (
-                                <Package className="w-3 h-3 sm:w-5 sm:h-5 text-blue-800" />
-                              ) : (
-                                <Building className="w-3 h-3 sm:w-5 sm:h-5 text-blue-800" />
-                              )}
+                  {filteredAssets.map((asset) => {
+                    const isExpanded = expandedRow === asset._id
+                    const assetClassification = isExpanded ? getAssetClassification(asset.assetType, asset.subcategory || '') : null
+                    
+                    return (
+                      <React.Fragment key={asset._id}>
+                        {/* Main Asset Row */}
+                        <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                            <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
+                              {asset.tagId}
+                            </span>
+                          </td>
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="p-1 sm:p-2 bg-blue-50 rounded-lg">
+                                {asset.mobilityCategory === 'Movable' ? (
+                                  <Package className="w-3 h-3 sm:w-5 sm:h-5 text-blue-800" />
+                                ) : (
+                                  <Building className="w-3 h-3 sm:w-5 sm:h-5 text-blue-800" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="text-xs sm:text-sm font-medium text-blue-800">
+                                  {asset.assetType}
+                                </div>
+                                <div className="text-xs text-blue-600">
+                                  {asset.subcategory || 'No subcategory'}
+                                </div>
+                              </div>
                             </div>
+                          </td>
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
                             <div>
                               <div className="text-xs sm:text-sm font-medium text-blue-800">
-                            {asset.assetType}
+                                {asset.brand}
                               </div>
                               <div className="text-xs text-blue-600">
-                                {asset.subcategory || 'No subcategory'}
+                                {asset.model || 'No model'}
                               </div>
                             </div>
-                        </div>
-                      </td>
-                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <div>
-                            <div className="text-xs sm:text-sm font-medium text-blue-800">
-                              {asset.brand}
+                          </td>
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                            <span className="text-xs sm:text-sm text-blue-800">
+                              {asset.capacity || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                            <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
+                              {asset.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                            <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200">
+                              {asset.priority || 'Medium'}
+                            </span>
+                          </td>
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                            <div className="text-xs sm:text-sm text-blue-800">
+                              {asset.location?.building && asset.location?.floor && asset.location?.room 
+                                ? `${asset.location.building}, ${asset.location.floor}, ${asset.location.room}`
+                                : 'Location not set'
+                              }
                             </div>
-                            <div className="text-xs text-blue-600">
-                              {asset.model || 'No model'}
+                          </td>
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                            <div className="flex items-center gap-1 sm:gap-2 justify-center">
+                              <button 
+                                onClick={() => handleMovableClick(asset)}
+                                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                  isExpanded && expandedClassificationType === 'movable'
+                                    ? 'text-white bg-green-600 hover:bg-green-700'
+                                    : 'text-green-700 bg-green-100 hover:bg-green-200'
+                                }`}
+                                title="View Movable Assets"
+                              >
+                                <Package className="w-3 h-3" />
+                                Movable
+                              </button>
+                              <button 
+                                onClick={() => handleImmovableClick(asset)}
+                                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                  isExpanded && expandedClassificationType === 'immovable'
+                                    ? 'text-white bg-blue-600 hover:bg-blue-700'
+                                    : 'text-blue-700 bg-blue-100 hover:bg-blue-200'
+                                }`}
+                                title="View Immovable Assets"
+                              >
+                                <Building className="w-3 h-3" />
+                                Immovable
+                              </button>
+                              <button 
+                                onClick={() => handleViewFlowchart(asset)}
+                                className="px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 text-purple-700 bg-purple-100 hover:bg-purple-200"
+                                title="View Asset Classification Flowchart"
+                              >
+                                <Eye className="w-3 h-3" />
+                                View
+                              </button>
                             </div>
-                          </div>
-                      </td>
-                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <span className="text-xs sm:text-sm text-blue-800">
-                            {asset.capacity || 'N/A'}
-                          </span>
-                      </td>
-                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
-                            {asset.status || 'Active'}
-                          </span>
-                      </td>
-                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200">
-                            {asset.priority || 'Medium'}
-                          </span>
-                        </td>
-                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <div className="text-xs sm:text-sm text-blue-800">
-                            {asset.location?.building && asset.location?.floor && asset.location?.room 
-                              ? `${asset.location.building}, ${asset.location.floor}, ${asset.location.room}`
-                              : 'Location not set'
-                            }
-                          </div>
-                        </td>
-                        <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                          <div className="flex items-center gap-1 sm:gap-2 justify-center">
-                            <button 
-                              onClick={() => handleMovableClick(asset)}
-                              className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded-md transition-colors flex items-center gap-1"
-                              title="View Movable Assets"
-                            >
-                              <Package className="w-3 h-3" />
-                              Movable
-                            </button>
-                            <button 
-                              onClick={() => handleImmovableClick(asset)}
-                              className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md transition-colors flex items-center gap-1"
-                              title="View Immovable Assets"
-                            >
-                              <Building className="w-3 h-3" />
-                              Immovable
-                            </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          </td>
+                        </tr>
+                        
+                        {/* Expanded Classification Row */}
+                        {isExpanded && assetClassification && (
+                          <tr>
+                            <td colSpan={8} className="border border-border p-0 bg-gray-50 dark:bg-gray-800">
+                              <div className="p-4">
+                                <div className="mb-3">
+                                  <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                                    {asset.tagId} - {asset.brand} {asset.model}
+                                  </h3>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {expandedClassificationType === 'movable' ? 'Movable' : 'Immovable'} Assets Classification for {asset.assetType} ({asset.subcategory})
+                                  </p>
+                                </div>
+                                
+                                <div className="overflow-x-auto">
+                                  <table className="w-full border-collapse">
+                                    <thead>
+                                      <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                          Asset Name / Type
+                                        </th>
+                                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                          Brand
+                                        </th>
+                                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                          Model
+                                        </th>
+                                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                          Capacity
+                                        </th>
+                                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                          Location
+                                        </th>
+                                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                          Actions
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {assetClassification[expandedClassificationType!].map((classificationAsset: AssetClassificationItem, index: number) => {
+                                        // Mock data for each classification asset
+                                        const mockData = {
+                                          brand: ['AquaTech', 'Dell', 'Canon', 'APC', 'Siemens', 'Honeywell'][index % 6],
+                                          model: ['AT-5000', 'OptiPlex 7090', 'LBP6230dn', 'SMX1500HV', 'S7-1200', 'T6 Pro'][index % 6],
+                                          capacity: ['5000 LPH', '16GB RAM', 'A4 Laser', '1500VA', '24V DC', '10A'][index % 6],
+                                          location: ['Utility Room', 'IT Office', 'Print Room', 'Server Room', 'Control Room', 'Main Floor'][index % 6]
+                                        }
+                                        
+                                        return (
+                                          <React.Fragment key={index}>
+                                            <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                              <td className="border border-border px-4 py-3">
+                                                <div className="flex items-center space-x-2">
+                                                  {expandedClassificationType === 'movable' ? (
+                                                    <Package className="w-4 h-4 text-green-600" />
+                                                  ) : (
+                                                    <Building className="w-4 h-4 text-blue-600" />
+                                                  )}
+                                                  <span className="font-medium text-blue-800 dark:text-blue-200">
+                                                    {classificationAsset.assetName}
+                                                  </span>
+                                                </div>
+                                              </td>
+                                              <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                {mockData.brand}
+                                              </td>
+                                              <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                {mockData.model}
+                                              </td>
+                                              <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                {mockData.capacity}
+                                              </td>
+                                              <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                {mockData.location}
+                                              </td>
+                                              <td className="border border-border px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                  <button 
+                                                    onClick={() => handleInventoryClick(asset._id, index, 'consumables')}
+                                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                                      selectedInventoryType[`${asset._id}-${index}`] === 'consumables'
+                                                        ? 'text-white bg-orange-600 hover:bg-orange-700'
+                                                        : 'text-orange-700 bg-orange-100 hover:bg-orange-200'
+                                                    }`}
+                                                  >
+                                                    Consumables
+                                                  </button>
+                                                  <button 
+                                                    onClick={() => handleInventoryClick(asset._id, index, 'spareParts')}
+                                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                                      selectedInventoryType[`${asset._id}-${index}`] === 'spareParts'
+                                                        ? 'text-white bg-blue-600 hover:bg-blue-700'
+                                                        : 'text-blue-700 bg-blue-100 hover:bg-blue-200'
+                                                    }`}
+                                                  >
+                                                    Spare Parts
+                                                  </button>
+                                                  <button 
+                                                    onClick={() => handleInventoryClick(asset._id, index, 'tools')}
+                                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                                      selectedInventoryType[`${asset._id}-${index}`] === 'tools'
+                                                        ? 'text-white bg-green-600 hover:bg-green-700'
+                                                        : 'text-green-700 bg-green-100 hover:bg-green-200'
+                                                    }`}
+                                                  >
+                                                    Tools
+                                                  </button>
+                                                </div>
+                                              </td>
+                                            </tr>
+                                            
+                                            {/* Inventory Details Row */}
+                                            {selectedInventoryType[`${asset._id}-${index}`] && (
+                                              <tr>
+                                                <td colSpan={6} className="border border-border p-0 bg-gray-50 dark:bg-gray-800">
+                                                  <div className="p-4">
+                                                    <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                                                      {selectedInventoryType[`${asset._id}-${index}`] === 'consumables' ? 'Consumables' : 
+                                                       selectedInventoryType[`${asset._id}-${index}`] === 'spareParts' ? 'Spare Parts' : 'Tools'} - {classificationAsset.assetName}
+                                                    </h4>
+                                                    <div className="overflow-x-auto">
+                                                      <table className="w-full border-collapse">
+                                                        <thead>
+                                                          <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                                                            <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 text-sm">
+                                                              Item Name
+                                                            </th>
+                                                            <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 text-sm">
+                                                              Quantity
+                                                            </th>
+                                                            <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 text-sm">
+                                                              Status
+                                                            </th>
+                                                            <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 text-sm">
+                                                              Last Updated
+                                                            </th>
+                                                          </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                          {classificationAsset.inventory?.[selectedInventoryType[`${asset._id}-${index}`]!]?.map((item, itemIndex) => (
+                                                            <tr key={itemIndex} className="hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                                              <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                                                {item}
+                                                              </td>
+                                                              <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                                                {Math.floor(Math.random() * 50) + 1}
+                                                              </td>
+                                                              <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm">
+                                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                                  Math.random() > 0.5 
+                                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200'
+                                                                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200'
+                                                                }`}>
+                                                                  {Math.random() > 0.5 ? 'Available' : 'Low Stock'}
+                                                                </span>
+                                                              </td>
+                                                              <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                                                {new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                                                              </td>
+                                                            </tr>
+                                                          ))}
+                                                        </tbody>
+                                                      </table>
+                                                    </div>
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                            )}
+                                          </React.Fragment>
+                                        )
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1111,6 +1248,218 @@ export default function AdminAssetsPage() {
 
           </div>
         </div>
+
+        {/* Flowchart Modal */}
+        {showFlowchartModal && selectedAssetForFlowchart && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Asset Classification Flowchart
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {selectedAssetForFlowchart.tagId} - {selectedAssetForFlowchart.brand} {selectedAssetForFlowchart.model}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => generatePDF(selectedAssetForFlowchart)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    title="Download PDF Report"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={handleCloseFlowchartModal}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {(() => {
+                  const assetClassification = getAssetClassification(selectedAssetForFlowchart.assetType, selectedAssetForFlowchart.subcategory || '')
+                  
+                  return (
+                    <div className="space-y-8">
+                      {/* Asset Classification Flowchart */}
+                      <div className="text-center mb-8">
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                          {selectedAssetForFlowchart.assetType} Classification
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          Complete breakdown with actual inventory data
+                        </p>
+                      </div>
+
+                      {/* Asset Type with Two Branches */}
+                      <div className="text-center mb-8">
+                        <div className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-4 inline-block mb-6">
+                          <h4 className="font-semibold text-gray-900 dark:text-white">Asset Type</h4>
+                          <p className="text-blue-600 font-medium">{selectedAssetForFlowchart.assetType}</p>
+                        </div>
+                        
+                        {/* Two Branches Side by Side with Component Classifications */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                          {/* Movable Branch with Components */}
+                          <div>
+                            <div className="text-center mb-4">
+                              <div className="flex items-center justify-center gap-2 mb-2">
+                                <Package className="w-5 h-5 text-green-600" />
+                                <h4 className="font-semibold text-gray-900 dark:text-white">Movable Assets</h4>
+                              </div>
+                              <p className="text-sm text-gray-600">{assetClassification.movable.length} components</p>
+                            </div>
+                            
+                            {/* Movable Component Headers */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-4">
+                              {assetClassification.movable.map((item, index) => (
+                                <div key={index} className="text-center">
+                                  <div className="flex items-center justify-center gap-1 mb-1">
+                                    <ArrowDown className="w-3 h-3 text-gray-500" />
+                                    <h6 className="font-medium text-gray-900 dark:text-white text-xs">{item.assetName}</h6>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {/* Movable Component Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                              {assetClassification.movable.map((item, index) => (
+                                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+                                  {/* Consumables */}
+                                  <div className="mb-2">
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Consumables:</span>
+                                    </div>
+                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
+                                      {item.inventory.consumables.join(', ')}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Spare Parts */}
+                                  <div className="mb-2">
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Spare Parts:</span>
+                                    </div>
+                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
+                                      {item.inventory.spareParts.join(', ')}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Tools */}
+                                  <div>
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Tools:</span>
+                                    </div>
+                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
+                                      {item.inventory.tools.join(', ')}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Immovable Branch with Components */}
+                          <div>
+                            <div className="text-center mb-4">
+                              <div className="flex items-center justify-center gap-2 mb-2">
+                                <Building className="w-5 h-5 text-blue-600" />
+                                <h4 className="font-semibold text-gray-900 dark:text-white">Immovable Assets</h4>
+                              </div>
+                              <p className="text-sm text-gray-600">{assetClassification.immovable.length} components</p>
+                            </div>
+                            
+                            {/* Immovable Component Headers */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-4">
+                              {assetClassification.immovable.map((item, index) => (
+                                <div key={index} className="text-center">
+                                  <div className="flex items-center justify-center gap-1 mb-1">
+                                    <ArrowDown className="w-3 h-3 text-gray-500" />
+                                    <h6 className="font-medium text-gray-900 dark:text-white text-xs">{item.assetName}</h6>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {/* Immovable Component Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                              {assetClassification.immovable.map((item, index) => (
+                                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+                                  {/* Consumables */}
+                                  <div className="mb-2">
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Consumables:</span>
+                                    </div>
+                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
+                                      {item.inventory.consumables.join(', ')}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Spare Parts */}
+                                  <div className="mb-2">
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Spare Parts:</span>
+                                    </div>
+                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
+                                      {item.inventory.spareParts.join(', ')}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Tools */}
+                                  <div>
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Tools:</span>
+                                    </div>
+                                    <div className="ml-3 text-xs text-gray-600 dark:text-gray-400">
+                                      {item.inventory.tools.join(', ')}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      <div className="text-center">
+                        <div className="bg-blue-600 rounded-lg p-4 inline-block">
+                          <h3 className="text-lg font-bold text-white">
+                            Total Components: {assetClassification.movable.length + assetClassification.immovable.length}
+                          </h3>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={handleCloseFlowchartModal}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </ProtectedRoute>

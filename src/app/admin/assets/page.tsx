@@ -1621,22 +1621,13 @@ export default function AdminAssetsPage() {
                         <Label htmlFor="assetType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                           Asset Type <span className="text-red-500">*</span>
                         </Label>
-                        <Select value={newAsset.assetType || ''} onValueChange={(value) => handleInputChange('assetType', value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="Select asset type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="WTP">WTP (Water Treatment Plant)</SelectItem>
-                            <SelectItem value="Computer">Computer</SelectItem>
-                            <SelectItem value="Printer">Printer</SelectItem>
-                            <SelectItem value="UPS">UPS</SelectItem>
-                            <SelectItem value="Server">Server</SelectItem>
-                            <SelectItem value="Network Equipment">Network Equipment</SelectItem>
-                            <SelectItem value="Furniture">Furniture</SelectItem>
-                            <SelectItem value="Vehicle">Vehicle</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          id="assetType"
+                          value={newAsset.assetType || ''}
+                          onChange={(e) => handleInputChange('assetType', e.target.value)}
+                          placeholder="e.g., WTP, Computer, Printer"
+                          className="mt-1"
+                        />
                       </div>
 
                       <div>

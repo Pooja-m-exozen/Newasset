@@ -1,4 +1,5 @@
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -142,11 +143,23 @@ interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
   ({ className, children, ...props }, ref) => {
-    const { isOpen, contentRef } = useSelectContext()
+    const { isOpen, contentRef, triggerRef } = useSelectContext()
+    const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 })
+    
+    React.useEffect(() => {
+      if (isOpen && triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect()
+        setPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        })
+      }
+    }, [isOpen])
     
     if (!isOpen) return null
 
-    return (
+    const content = (
       <div
         ref={(node) => {
           contentRef.current = node
@@ -157,13 +170,13 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
           }
         }}
         className={cn(
-          "absolute z-50 w-full max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-white text-gray-900 shadow-lg",
+          "fixed z-[9999] max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-white text-gray-900 shadow-lg",
           className
         )}
         style={{
-          top: 'calc(100% + 4px)',
-          left: 0,
-          right: 0,
+          top: position.top,
+          left: position.left,
+          width: position.width,
         }}
         {...props}
       >
@@ -172,6 +185,8 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
         </div>
       </div>
     )
+
+    return createPortal(content, document.body)
   }
 )
 SelectContent.displayName = "SelectContent"

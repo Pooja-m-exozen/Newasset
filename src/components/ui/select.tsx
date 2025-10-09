@@ -155,7 +155,7 @@ const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
           width: rect.width
         })
       }
-    }, [isOpen])
+    }, [isOpen, triggerRef])
     
     if (!isOpen) return null
 

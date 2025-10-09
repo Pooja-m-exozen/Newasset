@@ -5,17 +5,13 @@ import { Input } from './input';
 import { Label } from './label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { Textarea } from './textarea';
-import { Checkbox } from './checkbox';
 import { Badge } from './badge';
 import { Asset, AssetType } from '../../lib/adminasset';
 import { geocodeAddress, reverseGeocode } from '../../lib/location';
 import {
-  MapPin,
   Loader2,
   Navigation,
-  Globe,
   Info,
-  CheckCircle,
   X,
   QrCode,
   Barcode,
@@ -27,7 +23,6 @@ import {
   Plus,
   Minus,
   Shield,
-  Trash2,
   Package
 } from 'lucide-react';
 import { QRGenerationModal } from './qr-generation-modal';
@@ -147,11 +142,11 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const [loadingUsers, setLoadingUsers] = useState(false);
  
   // Feature toggles
-  const [coordinatesFound, setCoordinatesFound] = useState(false);
+  // const [coordinatesFound, setCoordinatesFound] = useState(false);
  
   // Error states
-  const [geocodingError, setGeocodingError] = useState<string | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  // const [geocodingError, setGeocodingError] = useState<string | null>(null);
+  // const [locationError, setLocationError] = useState<string | null>(null);
  
   // Modal states
   const [users, setUsers] = useState<User[]>([]);
@@ -166,31 +161,19 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const [showQRModal, setShowQRModal] = useState(false);
   const [createdAsset, setCreatedAsset] = useState<Asset | null>(null);
   const [assetCreationStatus, setAssetCreationStatus] = useState<'idle' | 'creating' | 'success' | 'ready-for-qr'>('idle');
-<<<<<<< HEAD
  
-=======
-  
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
   // Collapsible sections state
   const [isAdditionalInfoExpanded, setIsAdditionalInfoExpanded] = useState(false);
   const [isTagsExpanded, setIsTagsExpanded] = useState(false);
   const [isCustomFieldsExpanded, setIsCustomFieldsExpanded] = useState(false);
   const [isComplianceExpanded, setIsComplianceExpanded] = useState(false);
   const [isSubAssetsExpanded, setIsSubAssetsExpanded] = useState(false);
-<<<<<<< HEAD
  
-=======
-  
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
   // Compliance state
   const [certificationInput, setCertificationInput] = useState('');
   const [expiryDateInput, setExpiryDateInput] = useState('');
   const [regulatoryRequirementInput, setRegulatoryRequirementInput] = useState('');
-<<<<<<< HEAD
  
-=======
-  
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
   // Sub-assets state
   const [newMovableAsset, setNewMovableAsset] = useState({ assetName: '', description: '', brand: '', model: '', capacity: '', location: '' });
   const [newImmovableAsset, setNewImmovableAsset] = useState({ assetName: '', description: '', brand: '', model: '', capacity: '', location: '' });
@@ -432,7 +415,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
             }))
           }
         });
-        setCoordinatesFound((asset.location?.latitude || '0') !== '0' && (asset.location?.longitude || '0') !== '0');
+        // setCoordinatesFound((asset.location?.latitude || '0') !== '0' && (asset.location?.longitude || '0') !== '0');
        
         // Fetch users for the asset's project if it has one
         if (asset.project?.projectName) {
@@ -468,7 +451,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
        
         // Don't generate initial tag ID - let user select asset type first
         // generateSerialNumber(); // Keep this if you want serial number auto-generated
-        setCoordinatesFound(false);
+        // setCoordinatesFound(false);
         setAddressInput('');
       }
     }
@@ -492,8 +475,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           const lngNum = parseFloat(lng as string);
          
           if (!isNaN(latNum) && !isNaN(lngNum) && latNum >= -90 && latNum <= 90 && lngNum >= -180 && lngNum <= 180) {
-            setCoordinatesFound(true);
-            setGeocodingError(null);
+            // setCoordinatesFound(true);
+            // setGeocodingError(null);
            
             // Get address name from coordinates
             getAddressFromCoordinates(lat as string, lng as string);
@@ -519,7 +502,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
   const handleAddressChange = async (address: string) => {
     setAddressInput(address);
-    setGeocodingError(null);
+    // setGeocodingError(null);
 
     if (address.trim()) {
       setGeocodingLoading(true);
@@ -529,11 +512,11 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           ...prev,
           location: { ...prev.location, latitude: coordinates.latitude.toString(), longitude: coordinates.longitude.toString() }
         }));
-        setCoordinatesFound(true);
+        // setCoordinatesFound(true);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to geocode address';
-        setGeocodingError(errorMessage);
-        setCoordinatesFound(false);
+        // setGeocodingError(errorMessage);
+        // setCoordinatesFound(false);
        
         // Clear the address input when geocoding fails to show it's not working
         setAddressInput('');
@@ -548,12 +531,12 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
   const getCurrentLocation = async () => {
     if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by this browser');
+      // setLocationError('Geolocation is not supported by this browser');
       return;
     }
 
     setLocationLoading(true);
-    setLocationError(null);
+    // setLocationError(null);
 
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -571,15 +554,15 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           ...prev,
         location: { ...prev.location, latitude: latitude.toString(), longitude: longitude.toString() }
         }));
-        setCoordinatesFound(true);
-      setGeocodingError(null); // Clear any previous geocoding errors
+        // setCoordinatesFound(true);
+      // setGeocodingError(null); // Clear any previous geocoding errors
      
       // Get address name from coordinates
       await getAddressFromCoordinates(latitude.toString(), longitude.toString());
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setLocationError(`Failed to get current location: ${errorMessage}. Please check your browser permissions or try manual entry.`);
-      setCoordinatesFound(false);
+      // setLocationError(`Failed to get current location: ${errorMessage}. Please check your browser permissions or try manual entry.`);
+      // setCoordinatesFound(false);
     } finally {
       setLocationLoading(false);
     }
@@ -684,51 +667,51 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   };
 
   // Sub-assets handlers
-  const handleMovableAssetAdd = () => {
-    if (newMovableAsset.assetName.trim() && newMovableAsset.brand.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        subAssets: {
-          ...prev.subAssets,
-          movable: [...prev.subAssets.movable, { ...newMovableAsset }]
-        }
-      }));
-      setNewMovableAsset({ assetName: '', description: '', brand: '', model: '', capacity: '', location: '' });
-    }
-  };
+  // const handleMovableAssetAdd = () => {
+  //   if (newMovableAsset.assetName.trim() && newMovableAsset.brand.trim()) {
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       subAssets: {
+  //         ...prev.subAssets,
+  //         movable: [...prev.subAssets.movable, { ...newMovableAsset }]
+  //       }
+  //     }));
+  //     setNewMovableAsset({ assetName: '', description: '', brand: '', model: '', capacity: '', location: '' });
+  //   }
+  // };
 
-  const handleMovableAssetRemove = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      subAssets: {
-        ...prev.subAssets,
-        movable: prev.subAssets.movable.filter((_, i) => i !== index)
-      }
-    }));
-  };
+  // const handleMovableAssetRemove = (index: number) => {
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     subAssets: {
+  //       ...prev.subAssets,
+  //       movable: prev.subAssets.movable.filter((_, i) => i !== index)
+  //     }
+  //   }));
+  // };
 
-  const handleImmovableAssetAdd = () => {
-    if (newImmovableAsset.assetName.trim() && newImmovableAsset.brand.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        subAssets: {
-          ...prev.subAssets,
-          immovable: [...prev.subAssets.immovable, { ...newImmovableAsset }]
-        }
-      }));
-      setNewImmovableAsset({ assetName: '', description: '', brand: '', model: '', capacity: '', location: '' });
-    }
-  };
+  // const handleImmovableAssetAdd = () => {
+  //   if (newImmovableAsset.assetName.trim() && newImmovableAsset.brand.trim()) {
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       subAssets: {
+  //         ...prev.subAssets,
+  //         immovable: [...prev.subAssets.immovable, { ...newImmovableAsset }]
+  //       }
+  //     }));
+  //     setNewImmovableAsset({ assetName: '', description: '', brand: '', model: '', capacity: '', location: '' });
+  //   }
+  // };
 
-  const handleImmovableAssetRemove = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      subAssets: {
-        ...prev.subAssets,
-        immovable: prev.subAssets.immovable.filter((_, i) => i !== index)
-      }
-    }));
-  };
+  // const handleImmovableAssetRemove = (index: number) => {
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     subAssets: {
+  //       ...prev.subAssets,
+  //       immovable: prev.subAssets.immovable.filter((_, i) => i !== index)
+  //     }
+  //   }));
+  // };
 
   // Get address name from coordinates
   const getAddressFromCoordinates = async (latitude: string, longitude: string) => {
@@ -968,11 +951,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
               </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h3>
             </div>
-<<<<<<< HEAD
            
-=======
-            
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
             {/* Basic Information Table */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-visible border border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto overflow-y-visible">
@@ -996,13 +975,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   <tbody>
                     <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                       <td className="border border-border px-4 py-3">
-<<<<<<< HEAD
                         <Select
                           value={formData.assetType}
-=======
-                        <Select 
-                          value={formData.assetType} 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                           onValueChange={(value) => handleInputChange('assetType', value)}
                         >
                           <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
@@ -1046,13 +1020,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         />
                       </td>
                       <td className="border border-border px-4 py-3">
-<<<<<<< HEAD
                         <Select
                           value={formData.mobilityCategory}
-=======
-                        <Select 
-                          value={formData.mobilityCategory} 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                           onValueChange={(value) => handleInputChange('mobilityCategory', value)}
                         >
                           <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
@@ -1064,13 +1033,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                                 <div className="w-3 h-3 bg-red-600 rounded-sm"></div>
                               )}
                               <span className={formData.mobilityCategory ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}>
-<<<<<<< HEAD
                                 {formData.mobilityCategory === 'movable' ? 'Movable' :
                                  formData.mobilityCategory === 'immovable' ? 'Immovable' :
-=======
-                                {formData.mobilityCategory === 'movable' ? 'Movable' : 
-                                 formData.mobilityCategory === 'immovable' ? 'Immovable' : 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                                  'Select mobility category'}
                               </span>
                             </div>
@@ -1205,13 +1169,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         />
                       </td>
                       <td className="border border-border px-4 py-3">
-<<<<<<< HEAD
                         <Select
                           value={formData.priority}
-=======
-                        <Select 
-                          value={formData.priority} 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                           onValueChange={(value) => handleInputChange('priority', value)}
                         >
                           <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
@@ -1226,13 +1185,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         </Select>
                       </td>
                       <td className="border border-border px-4 py-3">
-<<<<<<< HEAD
                         <Select
                           value={formData.status}
-=======
-                        <Select 
-                          value={formData.status} 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                           onValueChange={(value) => handleInputChange('status', value)}
                         >
                           <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
@@ -1247,13 +1201,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         </Select>
                       </td>
                       <td className="border border-border px-4 py-3">
-<<<<<<< HEAD
                         <Select
                           value={formData.digitalTagType}
-=======
-                        <Select 
-                          value={formData.digitalTagType} 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                           onValueChange={handleDigitalTagTypeChange}
                         >
                           <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
@@ -1271,11 +1220,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                                 <div className="w-4 h-4 bg-blue-600 rounded-sm"></div>
                               )}
                               <span className={formData.digitalTagType ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}>
-<<<<<<< HEAD
                                 {formData.digitalTagType === 'qr' ? 'QR Code' :
-=======
-                                {formData.digitalTagType === 'qr' ? 'QR Code' : 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                                  formData.digitalTagType === 'barcode' ? 'Barcode' :
                                  formData.digitalTagType === 'nfc' ? 'NFC' :
                                  formData.digitalTagType === 'rfid' ? 'RFID' : 'Select tag type'}
@@ -1431,11 +1376,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
           {/* Location Information */}
           <div className="space-y-6">
-<<<<<<< HEAD
            
-=======
-            
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
             {/* Location Information Table */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-visible border border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto overflow-y-visible">
@@ -1555,11 +1496,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                 )}
               </Button>
             </div>
-<<<<<<< HEAD
            
-=======
-            
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
             {isAdditionalInfoExpanded && (
               <>
                 {/* Notes Table */}
@@ -1580,11 +1517,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                 />
               </div>
             </div>
-<<<<<<< HEAD
            
-=======
-            
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
             {/* Tags Table */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
               <div className="px-4 py-3 bg-blue-50 dark:bg-slate-800 border-b border-border">
@@ -1782,11 +1715,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
                       />
                     </div>
-<<<<<<< HEAD
                    
-=======
-                    
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                     <div>
                       <Label htmlFor="hsn" className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">HSN Code</Label>
                       <Input
@@ -1797,11 +1726,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
                       />
                     </div>
-<<<<<<< HEAD
                    
-=======
-                    
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                     <div>
                       <Label htmlFor="rateUOM" className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Rate/UOM</Label>
                       <Input
@@ -1812,11 +1737,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         className="border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
                       />
                     </div>
-<<<<<<< HEAD
                    
-=======
-                    
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                     <div>
                       <Label htmlFor="baseValue" className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Base Value</Label>
                       <Input
@@ -1828,11 +1749,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                       />
                     </div>
                   </div>
-<<<<<<< HEAD
                  
-=======
-                  
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                   {/* Additional Custom Fields */}
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                     <Label className="text-xs text-gray-600 dark:text-gray-400 mb-2 block">Additional Custom Fields</Label>
@@ -1909,11 +1826,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         {formData.subAssets.movable.length} items
                       </p>
                     </div>
-<<<<<<< HEAD
                    
-=======
-                    
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                     {/* Movable Assets Cards */}
                     {formData.subAssets.movable.length > 0 ? (
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1923,11 +1836,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                               <h6 className="text-sm font-semibold text-black dark:text-white">Asset -{index + 1}</h6>
                               <p className="text-xs text-gray-600 dark:text-gray-400">Movable Equipment</p>
                             </div>
-<<<<<<< HEAD
                            
-=======
-                            
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                             <div className="space-y-3">
                               {/* Asset Name */}
                               <div>
@@ -2059,11 +1968,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                         {formData.subAssets.immovable.length} items
                       </p>
                     </div>
-<<<<<<< HEAD
                    
-=======
-                    
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                     {/* Immovable Assets Cards */}
                     {formData.subAssets.immovable.length > 0 ? (
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -2073,11 +1978,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                               <h6 className="text-sm font-semibold text-black dark:text-white">Asset -{index + 1}</h6>
                               <p className="text-xs text-gray-600 dark:text-gray-400">Immovable Equipment</p>
                             </div>
-<<<<<<< HEAD
                            
-=======
-                            
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                             <div className="space-y-3">
                               {/* Asset Name */}
                               <div>
@@ -2232,8 +2133,4 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       )}
     </Dialog>
   );
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799

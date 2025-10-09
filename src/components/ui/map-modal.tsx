@@ -11,21 +11,33 @@ declare global {
   interface Window {
     google: {
       maps: {
-        Map: new (element: HTMLElement, options: GoogleMapOptions) => GoogleMap;
-        Marker: new (options: GoogleMarkerOptions) => GoogleMarker;
-        LatLngBounds: new () => {
-          extend: (position: { lat: number; lng: number }) => void;
+        Map: {
+          new (element: HTMLElement, options: GoogleMapOptions): GoogleMap;
         };
-        Size: new (width: number, height: number) => {
-          width: number;
-          height: number;
+        Marker: {
+          new (options: GoogleMarkerOptions): GoogleMarker;
         };
-        Point: new (x: number, y: number) => {
-          x: number;
-          y: number;
+        LatLngBounds: {
+          new (): {
+            extend: (position: { lat: number; lng: number }) => void;
+          };
         };
-        InfoWindow: new (options: GoogleInfoWindowOptions) => {
-          open: (map: GoogleMap, marker: GoogleMarker) => void;
+        Size: {
+          new (width: number, height: number): {
+            width: number;
+            height: number;
+          };
+        };
+        Point: {
+          new (x: number, y: number): {
+            x: number;
+            y: number;
+          };
+        };
+        InfoWindow: {
+          new (options: GoogleInfoWindowOptions): {
+            open: (map: GoogleMap, marker: GoogleMarker) => void;
+          };
         };
         MapTypeId: {
           ROADMAP: string;
@@ -36,7 +48,7 @@ declare global {
 }
 
 // Type aliases for cleaner usage
-type GoogleMapConstructor = Window['google']['maps']['Map'];
+// type GoogleMapConstructor = Window['google']['maps']['Map'];
 type GoogleMarkerConstructor = Window['google']['maps']['Marker'];
 type GoogleLatLngBoundsConstructor = Window['google']['maps']['LatLngBounds'];
 type GoogleSizeConstructor = Window['google']['maps']['Size'];
@@ -48,6 +60,7 @@ interface GoogleMap {
   setZoom: (zoom: number) => void;
   getCenter: () => { lat: () => number; lng: () => number };
   getZoom: () => number;
+  fitBounds: (bounds: { extend: (position: { lat: number; lng: number }) => void }) => void;
 }
 
 interface GoogleMarker {
@@ -155,7 +168,8 @@ export const MapModal: React.FC<MapModalProps> = ({ isOpen, onClose, locations }
       const centerLng = longitudes.reduce((sum, lng) => sum + lng, 0) / longitudes.length;
 
       // Initialize map
-      const map = new (getGoogleMapsAPI().maps.Map as any)(mapRef.current, {
+      const MapConstructor = getGoogleMapsAPI().maps.Map;
+      const map = new MapConstructor(mapRef.current, {
         center: { lat: centerLat, lng: centerLng },
         zoom: 12,
         mapTypeId: getGoogleMapsAPI().maps.MapTypeId.ROADMAP,

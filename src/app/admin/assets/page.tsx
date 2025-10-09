@@ -646,7 +646,7 @@ export default function AdminAssetsPage() {
       // Add EXOZEN logo image
       const logoUrl = '/exozen_logo1.png'
       doc.addImage(logoUrl, 'PNG', 15, 8, 30, 12)
-    } catch (error) {
+    } catch (_error) {
       // Fallback to text if image fails to load
       doc.setTextColor(0, 0, 0)
       doc.setFontSize(18)

@@ -214,7 +214,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
 
     if (debugMode) console.log('No QR patterns detected')
     return null
-  }, [debugMode])
+  }, [debugMode, extractQRData, findQRFinderPatterns])
 
   const scanQRCode = useCallback(() => {
     if (!isScanning || !videoRef.current || !canvasRef.current) return
@@ -302,9 +302,8 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
         canvasRef.current.parentNode.removeChild(canvasRef.current)
       }
       // Clean up processing timeout
-      const timeoutId = processingTimeoutRef.current
-      if (timeoutId) {
-        clearTimeout(timeoutId)
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current)
       }
     }
   }, [isOpen, startScanning, stopScanning])

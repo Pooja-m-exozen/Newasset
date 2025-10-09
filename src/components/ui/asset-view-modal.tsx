@@ -473,11 +473,7 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
           setQrGenerationSuccess(false);
         }, 2000);
       }
-<<<<<<< HEAD
      
-=======
-      
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
       // Only refresh asset data if we don't have complete data
       // This prevents unnecessary API calls when clicking view multiple times
       if (!asset?.digitalAssets || !asset?.subAssets || !asset?.compliance) {
@@ -551,7 +547,6 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                     </div>
                     <Button
                       variant="outline"
-<<<<<<< HEAD
                       size="sm"
                       onClick={() => setShowScanner(true)}
                       className="h-7 px-2 border-blue-300/60 dark:border-blue-600/60 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all duration-200 text-xs"
@@ -613,69 +608,6 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                     </Button>
                   </div>
 
-=======
-                      size="sm"
-                      onClick={() => setShowScanner(true)}
-                      className="h-7 px-2 border-blue-300/60 dark:border-blue-600/60 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all duration-200 text-xs"
-                    >
-                      <Scan className="w-3 h-3 mr-1" />
-                      Scanner
-                    </Button>
-                  </div>
-
-                  <div className="flex justify-center mb-4">
-                    <div className="relative">
-                      <div className="w-32 h-32 rounded-lg border-2 border-dashed border-blue-300/60 dark:border-blue-600/60 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center shadow-sm">
-                        {asset?.digitalAssets?.qrCode?.url && (
-                          <Image
-                            src={`${API_BASE_URL}${asset.digitalAssets.qrCode.url}`}
-                            alt={`QR Code for ${asset?.tagId || 'Asset'}`}
-                            width={128}
-                            height={128}
-                            className="object-contain rounded-md"
-                            priority={true}
-                          />
-                        )}
-                      </div>
-                      {/* Simplified corner elements */}
-                      <div className="absolute -top-1 -left-1 w-3 h-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-sm"></div>
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-sm"></div>
-                      <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-sm"></div>
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-sm"></div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center gap-1.5 mb-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleDownloadQR} 
-                      className="h-7 px-2 border-slate-200/60 dark:border-slate-600/60 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition-all duration-200 text-xs"
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCopyToClipboard(qrCodeData.t || asset?.tagId || '')}
-                      className="h-7 px-2 border-slate-200/60 dark:border-slate-600/60 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition-all duration-200 text-xs"
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy ID
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCopyToClipboard(qrCodeData.url || qrCodeData.u || '')}
-                      className="h-7 px-2 border-slate-200/60 dark:border-slate-600/60 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-md transition-all duration-200 text-xs"
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy URL
-                    </Button>
-                  </div>
-
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                 </div>
               ) : (
                 <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200/60 dark:border-amber-700/60 rounded-xl p-6 text-center shadow-lg">
@@ -689,40 +621,24 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                     )}
                   </div>
                   <h4 className="text-base font-bold text-amber-800 dark:text-amber-200 mb-1.5">
-<<<<<<< HEAD
                     {generatingQR ? 'Generating QR Code...' :
                      qrGenerationSuccess ? 'QR Code Generated!' : 'No QR Code Available'}
                   </h4>
                   <p className="text-xs text-amber-700 dark:text-amber-300 mb-4 max-w-xs mx-auto">
                     {generatingQR
-=======
-                    {generatingQR ? 'Generating QR Code...' : 
-                     qrGenerationSuccess ? 'QR Code Generated!' : 'No QR Code Available'}
-                  </h4>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mb-4 max-w-xs mx-auto">
-                    {generatingQR 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                       ? 'Please wait while we generate your QR code. This may take a few seconds.'
                       : qrGenerationSuccess
                       ? 'Your QR code has been generated successfully and is now available above.'
                       : 'Generate a QR code to enable quick access and digital asset management.'
                     }
                   </p>
-<<<<<<< HEAD
                  
-=======
-                  
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                   {qrGenerationError && (
                     <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
                       <p className="text-xs text-red-700 dark:text-red-300">{qrGenerationError}</p>
                     </div>
                   )}
-<<<<<<< HEAD
                  
-=======
-                  
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                   {qrGenerationSuccess && (
                     <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
                       <div className="flex items-center justify-center gap-2">
@@ -733,19 +649,11 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                       </div>
                     </div>
                   )}
-<<<<<<< HEAD
                  
                   <Button
                     variant="outline"
                     size="sm"
                     className="h-8 px-4 border-amber-300/60 dark:border-amber-600/60 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all duration-200 hover:scale-105 text-xs"
-=======
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="h-8 px-4 border-amber-300/60 dark:border-amber-600/60 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all duration-200 hover:scale-105 text-xs" 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                     onClick={handleGenerateQR}
                     disabled={generatingQR}
                   >
@@ -907,13 +815,8 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                             {asset?.location?.room || 'N/A'}
                           </td>
                           <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
-<<<<<<< HEAD
                             {asset?.location?.latitude && asset?.location?.longitude
                               ? `${asset.location.latitude}, ${asset.location.longitude}`
-=======
-                            {asset?.location?.latitude && asset?.location?.longitude 
-                              ? `${asset.location.latitude}, ${asset.location.longitude}` 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                               : 'N/A'}
                           </td>
                         </tr>
@@ -960,7 +863,6 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                       <tbody>
                         <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                           <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
-<<<<<<< HEAD
                             {asset?.assignedTo && typeof asset.assignedTo === 'object'
                               ? asset.assignedTo.name || 'N/A'
                               : 'Not Assigned'}
@@ -968,15 +870,6 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                           <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
                             {asset?.assignedTo && typeof asset.assignedTo === 'object'
                               ? asset.assignedTo.email || 'N/A'
-=======
-                            {asset?.assignedTo && typeof asset.assignedTo === 'object' 
-                              ? asset.assignedTo.name || 'N/A' 
-                              : 'Not Assigned'}
-                          </td>
-                          <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
-                            {asset?.assignedTo && typeof asset.assignedTo === 'object' 
-                              ? asset.assignedTo.email || 'N/A' 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                               : 'N/A'}
                           </td>
                           <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
@@ -1003,15 +896,9 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                     <div className="p-4">
                       <div className="flex flex-wrap gap-1.5">
                         {asset.tags.map((tag, index) => (
-<<<<<<< HEAD
                           <Badge
                             key={index}
                             variant="secondary"
-=======
-                          <Badge 
-                            key={index} 
-                            variant="secondary" 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                             className="text-xs bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-300 border-blue-200/60 dark:border-blue-700/60 px-2 py-1 rounded-lg font-medium"
                           >
                             {tag}
@@ -1034,14 +921,10 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse font-sans text-base">
                         <tbody>
-                          {Object.entries(asset.customFields).map(([key, value], index) => {
+                          {Object.entries(asset.customFields).map(([key, value]) => {
                             // Skip if value is empty, null, or undefined
                             if (!value || value === '' || value === null || value === undefined) return null;
-<<<<<<< HEAD
                            
-=======
-                            
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                             return (
                               <tr key={key} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                                 <td className="border border-border px-4 py-3 font-medium text-gray-700 dark:text-gray-300 w-1/4">
@@ -1086,7 +969,6 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                         <tbody>
                           <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                             <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
-<<<<<<< HEAD
                               {asset.compliance.certifications && asset.compliance.certifications.length > 0
                                 ? asset.compliance.certifications.join(', ')
                                 : 'No certifications'}
@@ -1099,20 +981,6 @@ export const AssetViewModal: React.FC<AssetViewModalProps> = ({
                             <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
                               {asset.compliance.regulatoryRequirements && asset.compliance.regulatoryRequirements.length > 0
                                 ? asset.compliance.regulatoryRequirements.join(', ')
-=======
-                              {asset.compliance.certifications && asset.compliance.certifications.length > 0 
-                                ? asset.compliance.certifications.join(', ') 
-                                : 'No certifications'}
-                            </td>
-                            <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
-                              {asset.compliance.expiryDates && asset.compliance.expiryDates.length > 0 
-                                ? asset.compliance.expiryDates.join(', ') 
-                                : 'No expiry dates'}
-                            </td>
-                            <td className="border border-border px-4 py-3 text-gray-900 dark:text-gray-100">
-                              {asset.compliance.regulatoryRequirements && asset.compliance.regulatoryRequirements.length > 0 
-                                ? asset.compliance.regulatoryRequirements.join(', ') 
->>>>>>> 50f718c128a3fa35c29ea9c64ffb85afaa44c799
                                 : 'No regulatory requirements'}
                             </td>
                           </tr>

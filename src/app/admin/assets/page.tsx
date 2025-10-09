@@ -71,10 +71,15 @@ declare module 'jspdf' {
   }
 }
 
+// Updated interface to include all sub-asset properties
 interface AssetClassificationItem {
   assetName: string
   description: string
   category: 'Movable' | 'Immovable'
+  brand: string
+  model: string
+  capacity: string
+  location: string
   reason: string
   inventory: {
     consumables: InventoryItem[]
@@ -280,14 +285,28 @@ export default function AdminAssetsPage() {
   const getAssetClassification = (asset: AssetData): AssetClassification => {
     // Use actual sub-assets from API response and transform them to include reason
     const movableAssets = (asset.subAssets?.movable || []).map(subAsset => ({
-      ...subAsset,
+      assetName: subAsset.assetName,
+      description: subAsset.description,
+      category: subAsset.category,
+      brand: subAsset.brand,
+      model: subAsset.model,
+      capacity: subAsset.capacity,
+      location: subAsset.location,
+      inventory: subAsset.inventory,
       reason: subAsset.category === 'Movable'
         ? 'Portable equipment that can be relocated as needed.'
         : 'Fixed installations that require specialized removal procedures.'
     }))
    
     const immovableAssets = (asset.subAssets?.immovable || []).map(subAsset => ({
-      ...subAsset,
+      assetName: subAsset.assetName,
+      description: subAsset.description,
+      category: subAsset.category,
+      brand: subAsset.brand,
+      model: subAsset.model,
+      capacity: subAsset.capacity,
+      location: subAsset.location,
+      inventory: subAsset.inventory,
       reason: subAsset.category === 'Immovable'
         ? 'Permanently installed infrastructure that cannot be moved without demolition.'
         : 'Fixed installations requiring specialized removal procedures.'
@@ -1233,30 +1252,12 @@ export default function AdminAssetsPage() {
                                     </thead>
                                     <tbody>
                                       {assetClassification[expandedClassificationType!].map((classificationAsset: AssetClassificationItem, index: number) => {
-                                        // Use actual sub-asset data
+                                        // Use actual sub-asset data from the API response
                                         const subAssetData = {
-                                          brand: classificationAsset.assetName.includes('Raw water tank Pump') ? 'Kirloskar Brothers Limited' :
-                                                 classificationAsset.assetName.includes('Final Water Tank Pump') ? 'Kirloskar Brothers Limited' :
-                                                 classificationAsset.assetName.includes('Cauvery water tank') ? 'Kirloskar Brothers Limited' :
-                                                 classificationAsset.assetName.includes('Resin Filter') ? 'Ion Exchange India Ltd' :
-                                                 classificationAsset.assetName.includes('Sand Filter') ? 'Ion Exchange India Ltd' : 'Unknown',
-                                          model: classificationAsset.assetName.includes('Raw water tank Pump - 1') ? 'U4WSKA00362' :
-                                                 classificationAsset.assetName.includes('Raw water tank Pump - 2') ? 'U4WSKA00354' :
-                                                 classificationAsset.assetName.includes('Final Water Tank Pump - 1') ? 'U4WMME00009' :
-                                                 classificationAsset.assetName.includes('Final Water Tank Pump - 2') ? 'U4WMME00008' :
-                                                 classificationAsset.assetName.includes('Cauvery water tank') ? 'IS12615' :
-                                                 classificationAsset.assetName.includes('Resin Filter') ? 'WTPRF500-01' :
-                                                 classificationAsset.assetName.includes('Sand Filter') ? 'WTPSF500-01' : 'Unknown',
-                                          capacity: classificationAsset.assetName.includes('Raw water tank Pump') ? '5HP' :
-                                                   classificationAsset.assetName.includes('Final Water Tank Pump') ? '10HP' :
-                                                   classificationAsset.assetName.includes('Cauvery water tank') ? '7.5HP' :
-                                                   classificationAsset.assetName.includes('Resin Filter') ? 'NA' :
-                                                   classificationAsset.assetName.includes('Sand Filter') ? 'NA' : 'Unknown',
-                                          location: classificationAsset.assetName.includes('Raw water tank Pump') ? 'Pump Room 1' :
-                                                   classificationAsset.assetName.includes('Final Water Tank Pump') ? 'Pump Room 1' :
-                                                   classificationAsset.assetName.includes('Cauvery water tank') ? 'A Block Stilt Floor' :
-                                                   classificationAsset.assetName.includes('Resin Filter') ? 'Pump Room 1' :
-                                                   classificationAsset.assetName.includes('Sand Filter') ? 'Pump Room 1' : 'Unknown'
+                                          brand: classificationAsset.brand || 'Unknown',
+                                          model: classificationAsset.model || 'Unknown',
+                                          capacity: classificationAsset.capacity || 'Unknown',
+                                          location: classificationAsset.location || 'Unknown'
                                         }
                                        
                                         return (

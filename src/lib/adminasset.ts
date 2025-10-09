@@ -12,7 +12,7 @@ export interface SubAsset {
   id?: string
   _id?: string
   assetName: string
-  description: string
+  description?: string
   category: 'Movable' | 'Immovable'
   brand: string
   model: string
@@ -314,6 +314,21 @@ export interface ScanHistory {
   notes?: string;
 }
 
+export interface SubAsset {
+  _id?: string;
+  assetName: string;
+  description?: string;
+  brand: string;
+  model: string;
+  capacity: string;
+  location: string;
+}
+
+export interface SubAssets {
+  movable?: SubAsset[];
+  immovable?: SubAsset[];
+}
+
 export interface DigitalAsset {
   qrCode?: {
     url: string;
@@ -357,30 +372,30 @@ export interface DigitalAsset {
     };
     generatedAt: string;
   };
-  nfc?: {
+  nfcData?: {
     url: string;
     data: {
-      t: string;        // tagId
-      a: string;        // assetType
-      s: string;        // subcategory
-      b: string;        // brand
-      m: string;        // model
-      st: string;       // status
-      p: string;        // priority
-      l: Location;      // location
-      u: string;        // url
-      pr: string;       // projectName
-      lm: string | null; // location metadata
-      nm: string | null; // notes metadata
-      url: string;      // asset url
-      ts: number;       // timestamp
-      c: string;        // checksum
+      id: string;
+      type: string;
+      assetType: string;
+      subcategory: string;
+      brand: string;
+      model: string;
+      status: string;
+      priority: string;
+      location: Location;
+      assignedTo: string;
+      projectName: string;
+      timestamp: number;
+      checksum: string;
+      signature: string;
     };
     generatedAt: string;
   };
 }
 
 export interface Asset {
+  subAssets?: SubAssets;
   _id?: string;
   tagId: string;
   assetType: string;

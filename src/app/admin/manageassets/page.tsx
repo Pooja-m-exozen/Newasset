@@ -661,28 +661,6 @@ const ManageAssetsPage: React.FC = () => {
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <Button 
-                  onClick={() => router.push('/admin/asset-types')}
-                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Create Asset Type
-                </Button>
-                <Button 
-                  onClick={() => {
-                    // Trigger the create asset modal in AssetsList
-                    const event = new CustomEvent('openCreateAssetModal');
-                    window.dispatchEvent(event);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Add New Asset
-                </Button>
-                <Button 
                   onClick={() => setShowPermissions(true)}
                   className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
                 >

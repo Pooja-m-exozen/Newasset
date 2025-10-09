@@ -548,7 +548,7 @@ export default function AdminManageUsersPage() {
                               </td>
                               <td className="border border-border px-4 py-3">
                                 <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
-                                  {user.projectName}
+                                  {user.projectName || 'N/A'}
                                 </span>
                               </td>
                               <td className="border border-border px-4 py-3 text-sm text-muted-foreground">

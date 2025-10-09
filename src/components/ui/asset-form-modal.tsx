@@ -557,7 +557,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       // Get address name from coordinates
       await getAddressFromCoordinates(latitude.toString(), longitude.toString());
     } catch (error) {
-      // setLocationError(`Failed to get current location: ${errorMessage}. Please check your browser permissions or try manual entry.`);
+      // setLocationError(`Failed to get current location. Please check your browser permissions or try manual entry.`);
       // setCoordinatesFound(false);
     } finally {
       setLocationLoading(false);

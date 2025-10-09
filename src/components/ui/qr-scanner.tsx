@@ -375,8 +375,9 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
   const processImageForQR = (img: HTMLImageElement) => {
     try {
       // Clear any existing timeout
-      if (processingTimeoutRef.current) {
-        clearTimeout(processingTimeoutRef.current)
+      const timeoutId = processingTimeoutRef.current
+      if (timeoutId) {
+        clearTimeout(timeoutId)
       }
 
       if (debugMode) {
@@ -500,8 +501,9 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
       setError(`Failed to process image: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setIsProcessing(false)
       setProcessingProgress(0)
-      if (processingTimeoutRef.current) {
-        clearTimeout(processingTimeoutRef.current)
+      const timeoutId = processingTimeoutRef.current
+      if (timeoutId) {
+        clearTimeout(timeoutId)
       }
     }
   }
@@ -685,8 +687,9 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
                         setIsProcessing(false)
                         setProcessingProgress(0)
                         setDetectedQRType(null)
-                        if (processingTimeoutRef.current) {
-                          clearTimeout(processingTimeoutRef.current)
+                        const timeoutId = processingTimeoutRef.current
+                        if (timeoutId) {
+                          clearTimeout(timeoutId)
                         }
                       }}
                       className="text-xs"

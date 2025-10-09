@@ -301,7 +301,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
       if (canvasRef.current && canvasRef.current.parentNode) {
         canvasRef.current.parentNode.removeChild(canvasRef.current)
       }
-      // Clean up processing timeout
+      // Clean up processing timeout - capture the current value
       const timeoutId = processingTimeoutRef.current
       if (timeoutId) {
         clearTimeout(timeoutId)

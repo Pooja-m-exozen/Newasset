@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { LocationModal } from '../../../components/ui/location-modal';
 import { DeleteConfirmationDialog } from '../../../components/ui/delete-confirmation-dialog';
+import { MapModal } from '../../../components/ui/map-modal';
 import { 
   Plus, 
   Download,
@@ -14,7 +15,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  Loader2
+  Loader2,
+  Map
 } from 'lucide-react';
 import { Location, CreateLocationRequest, UpdateLocationRequest } from '../../../lib/location';
 import { Input } from '../../../components/ui/input';
@@ -51,6 +53,7 @@ const LocationManagementContent = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showMapView, setShowMapView] = useState(false);
 
   // Remove the duplicate fetchLocations call since the context already handles this
   // useEffect(() => {
@@ -203,6 +206,15 @@ const LocationManagementContent = () => {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setShowMapView(true)}
+                  disabled={locations.length === 0}
+                  variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Map className="w-4 h-4" />
+                    <span>View on Map</span>
+                </Button>
                 <Button
                   onClick={handleDownloadExcel}
                   disabled={downloadLoading || locations.length === 0}
@@ -367,6 +379,13 @@ const LocationManagementContent = () => {
         title="Delete Location"
         description="Are you sure you want to delete"
         itemName={locationToDelete?.name}
+      />
+
+      {/* Map Modal */}
+      <MapModal
+        isOpen={showMapView}
+        onClose={() => setShowMapView(false)}
+        locations={locations}
       />
     </div>
   );

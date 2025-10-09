@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
+import { Card, CardContent } from './card'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
@@ -12,7 +12,7 @@ import { generateQRCode } from '@/lib/DigitalAssets'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, MapPin, Hash, CheckCircle, Search, Scan, Download, Copy, Clock, Globe, Smartphone, Zap } from 'lucide-react'
+import { QrCode, Hash, CheckCircle, Search, Scan, Download, Copy, Clock, Globe, Smartphone } from 'lucide-react'
 import Image from 'next/image'
 
 // API Base URL constant

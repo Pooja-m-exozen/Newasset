@@ -4,10 +4,10 @@ import { Button } from './button';
 import { Input } from './input';
 import { Label } from './label';
 import { Badge } from './badge';
-import { Checkbox } from './checkbox';
 import { ScrollArea } from './scroll-area';
 import { Location, CreateLocationRequest, geocodeAddress } from '../../lib/location';
 import { Loader2, Navigation, CheckCircle, AlertCircle, Calendar, Map, ExternalLink } from 'lucide-react';
+import { MapModal } from './map-modal';
 
 interface LocationModalProps {
   isOpen: boolean;
@@ -32,13 +32,14 @@ export const LocationModal: React.FC<LocationModalProps> = ({
     address: '',
     coordinates: { latitude: 0, longitude: 0 },
   });
-  const [enableGeocoding, setEnableGeocoding] = useState(true);
+  const [enableGeocoding] = useState(true);
   const [geocodingLoading, setGeocodingLoading] = useState(false);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [coordinatesFound, setCoordinatesFound] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [showMapPreviewModal, setShowMapPreviewModal] = useState(false);
 
   useEffect(() => {
     if (location && mode === 'edit') {
@@ -188,6 +189,29 @@ export const LocationModal: React.FC<LocationModalProps> = ({
       const url = `https://www.google.com/maps?q=${formData.coordinates.latitude},${formData.coordinates.longitude}`;
       window.open(url, '_blank');
     }
+  };
+
+  const handleShowMapPreview = () => {
+    if (formData.coordinates.latitude && formData.coordinates.longitude) {
+      setShowMapPreviewModal(true);
+    }
+  };
+
+  const getPreviewLocation = () => {
+    if (!formData.coordinates.latitude || !formData.coordinates.longitude) return null;
+    
+    return {
+      _id: 'preview',
+      name: formData.name || 'Preview Location',
+      type: formData.type || 'Unknown',
+      parentId: null,
+      address: formData.address || 'Address not specified',
+      coordinates: formData.coordinates,
+      isDeleted: false,
+      createdBy: 'preview',
+      createdAt: new Date().toISOString(),
+      __v: 0
+    };
   };
 
   return (
@@ -347,16 +371,28 @@ export const LocationModal: React.FC<LocationModalProps> = ({
                           </p>
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={openInMaps}
-                        className="text-green-700 border-green-300 hover:bg-green-100"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        View Map
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleShowMapPreview}
+                          className="text-green-700 border-green-300 hover:bg-green-100"
+                        >
+                          <Map className="w-4 h-4 mr-2" />
+                          Preview Map
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={openInMaps}
+                          className="text-green-700 border-green-300 hover:bg-green-100"
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Open in Maps
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -403,6 +439,15 @@ export const LocationModal: React.FC<LocationModalProps> = ({
           </div>
         )}
       </DialogContent>
+
+      {/* Map Preview Modal */}
+      {showMapPreviewModal && (
+        <MapModal
+          isOpen={showMapPreviewModal}
+          onClose={() => setShowMapPreviewModal(false)}
+          locations={getPreviewLocation() ? [getPreviewLocation()!] : []}
+        />
+      )}
     </Dialog>
   );
 };
@@ -471,14 +516,28 @@ const LocationDetails = ({ location, onClose }: { location: Location | null | un
           )}
 
           {location.coordinates && (
-            <Button
-              variant="outline"
-              onClick={openInMaps}
-              className="w-full"
-            >
-              <Map className="w-4 h-4 mr-2" />
-              View on Google Maps
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // We need to pass this to parent component to show map
+                  // For now, just open in external maps
+                  openInMaps();
+                }}
+                className="flex-1"
+              >
+                <Map className="w-4 h-4 mr-2" />
+                Preview Map
+              </Button>
+              <Button
+                variant="outline"
+                onClick={openInMaps}
+                className="flex-1"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open in Maps
+              </Button>
+            </div>
           )}
         </div>
       </div>

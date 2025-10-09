@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
+import { Card, CardContent} from './card'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
@@ -12,7 +12,7 @@ import { generateAllDigitalAssets, type BulkDigitalAssetsGenerationResponse } fr
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { QrCode, Barcode, Wifi, Info, Hash, MapPin, Settings, Package, CheckCircle, Search } from 'lucide-react'
+import { QrCode, Barcode, Wifi, Info, Package, CheckCircle, Search } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 // API Base URL constant

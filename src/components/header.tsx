@@ -15,7 +15,6 @@ import {
   FileText,
   User,
   LogOut,
-  QrCode
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 

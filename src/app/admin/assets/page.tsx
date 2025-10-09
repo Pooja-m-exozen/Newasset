@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -10,10 +10,47 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets } from '@/lib/adminasset'
+import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset } from '@/lib/adminasset'
+
+// API Response interfaces
+interface ApiSubAsset {
+  _id?: string
+  id?: string
+  assetName: string
+  description: string
+  category: 'Movable' | 'Immovable'
+  brand: string
+  model: string
+  capacity: string
+  location: string
+  inventory: {
+    consumables: InventoryItem[]
+    spareParts: InventoryItem[]
+    tools: InventoryItem[]
+    operationalSupply: InventoryItem[]
+  }
+}
+
+interface ApiAsset extends Asset {
+  subAssets?: {
+    movable: ApiSubAsset[]
+    immovable: ApiSubAsset[]
+  }
+}
+
+interface ApiAssetsResponse {
+  success: boolean
+  assets: ApiAsset[]
+  pagination?: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  message?: string
+}
 
 // Use AssetData from adminasset.ts
-type Asset = AssetData
 
 // Extend jsPDF type to include autoTable
 declare module 'jspdf' {
@@ -34,25 +71,15 @@ declare module 'jspdf' {
   }
 }
 
-interface InventoryItem {
-  itemName: string
-  quantity: number
-  status: 'Available' | 'Low Stock' | 'Out of Stock'
-  lastUpdated: string
-}
-
-interface AssetInventory {
-  consumables: InventoryItem[]
-  spareParts: InventoryItem[]
-  tools: InventoryItem[]
-  operationalSupply: InventoryItem[]
-}
-
-
+// Updated interface to include all sub-asset properties
 interface AssetClassificationItem {
   assetName: string
   description: string
   category: 'Movable' | 'Immovable'
+  brand: string
+  model: string
+  capacity: string
+  location: string
   reason: string
   inventory: {
     consumables: InventoryItem[]
@@ -68,90 +95,6 @@ interface AssetClassification {
 }
 
 
-// Unique sample data - one asset per type
-const sampleAssets: AssetData[] = [
-  {
-    _id: '1',
-    tagId: 'WTP',
-    assetType: 'WTP',
-    subcategory: 'Water Treatment Plant',
-    mobilityCategory: 'Immovable',
-    brand: 'AquaTech',
-    model: 'WTP-5000',
-    capacity: '5000 LPH',
-    yearOfInstallation: '2020',
-    status: 'Active',
-    priority: 'High',
-    location: { building: 'Main Building', floor: 'Ground', room: 'Utility Room' }
-  },
-  {
-    _id: '2',
-    tagId: 'COMP',
-    assetType: 'Computer',
-    subcategory: 'Desktop',
-    mobilityCategory: 'Movable',
-    brand: 'Dell',
-    model: 'OptiPlex 7090',
-    serialNumber: 'DL123456',
-    yearOfInstallation: '2022',
-    status: 'Active',
-    priority: 'Low',
-    location: { building: 'Main Building', floor: '2nd', room: 'IT Office' }
-  },
-  {
-    _id: '3',
-    tagId: 'PRINTER',
-    assetType: 'Printer',
-    subcategory: 'Laser Printer',
-    mobilityCategory: 'Movable',
-    brand: 'Canon',
-    model: 'LBP6230dn',
-    serialNumber: 'CN345678',
-    yearOfInstallation: '2022',
-    status: 'Active',
-    priority: 'Low',
-    location: { building: 'Main Building', floor: '2nd', room: 'IT Office' }
-  },
-  {
-    _id: '4',
-    tagId: 'UPS',
-    assetType: 'UPS',
-    subcategory: 'Uninterruptible Power Supply',
-    mobilityCategory: 'Movable',
-    brand: 'APC',
-    model: 'SMX1500HV',
-    capacity: '1500VA',
-    yearOfInstallation: '2021',
-    status: 'Active',
-    priority: 'High',
-    location: { building: 'Main Building', floor: '2nd', room: 'Server Room' }
-  }
-]
-
-// Dynamic Asset Classification based on actual API sub-assets data
-const getAssetClassification = (asset: AssetData): AssetClassification => {
-  // Use actual sub-assets from API response
-  const movableAssets = asset.subAssets?.movable || []
-  const immovableAssets = asset.subAssets?.immovable || []
-
-  return {
-    movable: movableAssets.map(subAsset => ({
-      assetName: subAsset.assetName,
-      description: subAsset.description,
-      category: subAsset.category,
-      reason: `Movable component: ${subAsset.description}`,
-      inventory: subAsset.inventory
-    })),
-    immovable: immovableAssets.map(subAsset => ({
-      assetName: subAsset.assetName,
-      description: subAsset.description,
-      category: subAsset.category,
-      reason: `Immovable component: ${subAsset.description}`,
-      inventory: subAsset.inventory
-    }))
-  }
-}
-
 export default function AdminAssetsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMobility, setSelectedMobility] = useState<'all' | 'movable' | 'immovable'>('all')
@@ -163,7 +106,7 @@ export default function AdminAssetsPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
   const [expandedClassificationType, setExpandedClassificationType] = useState<'movable' | 'immovable' | null>(null)
   const [selectedInventoryType, setSelectedInventoryType] = useState<{[key: string]: 'consumables' | 'spareParts' | 'tools' | null}>({})
-  
+ 
   // Modal states
   const [showFlowchartModal, setShowFlowchartModal] = useState(false)
   const [selectedAssetForFlowchart, setSelectedAssetForFlowchart] = useState<AssetData | null>(null)
@@ -195,15 +138,13 @@ export default function AdminAssetsPage() {
 
   // Current step in the creation process
   const [currentStep, setCurrentStep] = useState<'main' | 'subassets' | 'inventory'>('main')
-  const [currentSubAsset, setCurrentSubAsset] = useState<SubAsset | null>(null)
-  const [currentInventoryType, setCurrentInventoryType] = useState<'consumables' | 'spareParts' | 'tools' | 'operationalSupply' | null>(null)
 
   // Fetch assets from API
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      
+     
       let response
       if (searchTerm.trim()) {
         response = await searchAssets(searchTerm)
@@ -212,13 +153,14 @@ export default function AdminAssetsPage() {
       } else {
         response = await getAssets()
       }
-      
+     
       if (response.success) {
         // Transform backend data to frontend format
-        const transformedAssets = response.assets.map((asset: any) => ({
+        const apiResponse = response as ApiAssetsResponse
+        const transformedAssets = apiResponse.assets.map((asset: ApiAsset) => ({
           ...asset,
           subAssets: asset.subAssets ? {
-            movable: asset.subAssets.movable.map((subAsset: any) => ({
+            movable: asset.subAssets.movable.map((subAsset: ApiSubAsset) => ({
               id: subAsset._id || subAsset.id,
               assetName: subAsset.assetName,
               description: subAsset.description,
@@ -229,7 +171,7 @@ export default function AdminAssetsPage() {
               location: subAsset.location,
               inventory: subAsset.inventory
             })),
-            immovable: asset.subAssets.immovable.map((subAsset: any) => ({
+            immovable: asset.subAssets.immovable.map((subAsset: ApiSubAsset) => ({
               id: subAsset._id || subAsset.id,
               assetName: subAsset.assetName,
               description: subAsset.description,
@@ -242,7 +184,7 @@ export default function AdminAssetsPage() {
             }))
           } : undefined
         }))
-        setAssets(transformedAssets)
+        setAssets(transformedAssets as AssetData[])
       } else {
         setError(response.message || 'Failed to fetch assets')
       }
@@ -250,11 +192,10 @@ export default function AdminAssetsPage() {
       console.error('Error fetching assets:', error)
       setError(error instanceof Error ? error.message : 'Failed to fetch assets')
       // Fallback to sample data if API fails
-      setAssets(sampleAssets)
     } finally {
       setLoading(false)
     }
-  }
+  }, [searchTerm, selectedMobility])
 
   // Search functionality with debouncing
   useEffect(() => {
@@ -265,7 +206,7 @@ export default function AdminAssetsPage() {
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm])
+  }, [searchTerm, fetchAssets])
 
   const getFilteredAssets = () => {
     // Since we're fetching filtered data from API, we can return assets directly
@@ -275,7 +216,7 @@ export default function AdminAssetsPage() {
   // Load assets on component mount
   useEffect(() => {
     fetchAssets()
-  }, [])
+  }, [fetchAssets])
 
   // Generate PDF function
 
@@ -283,14 +224,28 @@ export default function AdminAssetsPage() {
   const getAssetClassification = (asset: AssetData): AssetClassification => {
     // Use actual sub-assets from API response and transform them to include reason
     const movableAssets = (asset.subAssets?.movable || []).map(subAsset => ({
-      ...subAsset,
-      reason: subAsset.category === 'Movable' 
+      assetName: subAsset.assetName,
+      description: subAsset.description,
+      category: subAsset.category,
+      brand: subAsset.brand,
+      model: subAsset.model,
+      capacity: subAsset.capacity,
+      location: subAsset.location,
+      inventory: subAsset.inventory,
+      reason: subAsset.category === 'Movable'
         ? 'Portable equipment that can be relocated as needed.'
         : 'Fixed installations that require specialized removal procedures.'
     }))
-    
+   
     const immovableAssets = (asset.subAssets?.immovable || []).map(subAsset => ({
-      ...subAsset,
+      assetName: subAsset.assetName,
+      description: subAsset.description,
+      category: subAsset.category,
+      brand: subAsset.brand,
+      model: subAsset.model,
+      capacity: subAsset.capacity,
+      location: subAsset.location,
+      inventory: subAsset.inventory,
       reason: subAsset.category === 'Immovable'
         ? 'Permanently installed infrastructure that cannot be moved without demolition.'
         : 'Fixed installations requiring specialized removal procedures.'
@@ -305,7 +260,7 @@ export default function AdminAssetsPage() {
   // Fetch assets on component mount and when filters change
   useEffect(() => {
     fetchAssets()
-  }, [selectedMobility])
+  }, [selectedMobility, fetchAssets])
 
   // Debounced search effect
   useEffect(() => {
@@ -320,7 +275,7 @@ export default function AdminAssetsPage() {
     }, 500) // 500ms debounce
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm])
+  }, [searchTerm, selectedMobility, fetchAssets])
 
 
   const handleMovableClick = (asset: AssetData) => {
@@ -382,7 +337,7 @@ export default function AdminAssetsPage() {
   const handleInventoryClick = (assetId: string, classificationIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools') => {
     const key = `${assetId}-${classificationIndex}`
     const currentSelection = selectedInventoryType[key]
-    
+   
     setSelectedInventoryType(prev => ({
       ...prev,
       [key]: currentSelection === inventoryType ? null : inventoryType
@@ -435,8 +390,6 @@ export default function AdminAssetsPage() {
   const handleCloseAddAssetModal = () => {
     setShowAddAssetModal(false)
     setCurrentStep('main')
-    setCurrentSubAsset(null)
-    setCurrentInventoryType(null)
   }
 
   const handleMainAssetSave = () => {
@@ -473,10 +426,10 @@ export default function AdminAssetsPage() {
 
     setNewAsset(prev => {
       if (!prev.subAssets) return prev
-      
+     
       const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
       const currentSubAssets = prev.subAssets[categoryKey] || []
-      
+     
       return {
         ...prev,
         subAssets: {
@@ -490,15 +443,15 @@ export default function AdminAssetsPage() {
   const handleSubAssetChange = (category: 'Movable' | 'Immovable', index: number, field: string, value: string) => {
     setNewAsset(prev => {
       if (!prev.subAssets) return prev
-      
+     
       const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
       const currentSubAssets = prev.subAssets[categoryKey] || []
-      
+     
       return {
         ...prev,
         subAssets: {
           ...prev.subAssets,
-          [categoryKey]: currentSubAssets.map((subAsset, i) => 
+          [categoryKey]: currentSubAssets.map((subAsset, i) =>
             i === index ? { ...subAsset, [field]: value } : subAsset
           )
         }
@@ -509,10 +462,10 @@ export default function AdminAssetsPage() {
   const handleRemoveSubAsset = (category: 'Movable' | 'Immovable', index: number) => {
     setNewAsset(prev => {
       if (!prev.subAssets) return prev
-      
+     
       const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
       const currentSubAssets = prev.subAssets[categoryKey] || []
-      
+     
       return {
         ...prev,
         subAssets: {
@@ -533,15 +486,15 @@ export default function AdminAssetsPage() {
 
     setNewAsset(prev => {
       if (!prev.subAssets) return prev
-      
+     
       const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
       const currentSubAssets = prev.subAssets[categoryKey] || []
-      
+     
       return {
         ...prev,
         subAssets: {
           ...prev.subAssets,
-          [categoryKey]: currentSubAssets.map((subAsset, i) => 
+          [categoryKey]: currentSubAssets.map((subAsset, i) =>
             i === subAssetIndex ? {
               ...subAsset,
               inventory: {
@@ -558,20 +511,20 @@ export default function AdminAssetsPage() {
   const handleInventoryItemChange = (category: 'Movable' | 'Immovable', subAssetIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply', itemIndex: number, field: string, value: string | number) => {
     setNewAsset(prev => {
       if (!prev.subAssets) return prev
-      
+     
       const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
       const currentSubAssets = prev.subAssets[categoryKey] || []
-      
+     
       return {
         ...prev,
         subAssets: {
           ...prev.subAssets,
-          [categoryKey]: currentSubAssets.map((subAsset, i) => 
+          [categoryKey]: currentSubAssets.map((subAsset, i) =>
             i === subAssetIndex ? {
               ...subAsset,
               inventory: {
                 ...subAsset.inventory,
-                [inventoryType]: subAsset.inventory[inventoryType].map((item, j) => 
+                [inventoryType]: subAsset.inventory[inventoryType].map((item, j) =>
                   j === itemIndex ? { ...item, [field]: value } : item
                 )
               }
@@ -585,15 +538,15 @@ export default function AdminAssetsPage() {
   const handleRemoveInventoryItem = (category: 'Movable' | 'Immovable', subAssetIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply', itemIndex: number) => {
     setNewAsset(prev => {
       if (!prev.subAssets) return prev
-      
+     
       const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
       const currentSubAssets = prev.subAssets[categoryKey] || []
-      
+     
       return {
         ...prev,
         subAssets: {
           ...prev.subAssets,
-          [categoryKey]: currentSubAssets.map((subAsset, i) => 
+          [categoryKey]: currentSubAssets.map((subAsset, i) =>
             i === subAssetIndex ? {
               ...subAsset,
               inventory: {
@@ -642,49 +595,8 @@ export default function AdminAssetsPage() {
 
       // Call the API
       const response = await createAsset(assetData)
-      
+     
       if (response.success) {
-        // Add the new asset to the local state
-        const assetToAdd: AssetData = {
-          _id: response.data._id,
-          tagId: response.data.tagId,
-          assetType: response.data.assetType,
-          subcategory: response.data.subcategory,
-          mobilityCategory: response.data.mobilityCategory as 'Movable' | 'Immovable',
-          brand: response.data.brand,
-          model: response.data.model,
-          serialNumber: response.data.serialNumber,
-          capacity: response.data.capacity,
-          yearOfInstallation: response.data.yearOfInstallation,
-          status: response.data.status,
-          priority: response.data.priority,
-          location: response.data.location,
-          subAssets: response.data.subAssets ? {
-            movable: response.data.subAssets.movable.map((subAsset: any) => ({
-              id: subAsset._id || subAsset.id,
-              assetName: subAsset.assetName,
-              description: subAsset.description,
-              category: subAsset.category,
-              brand: subAsset.brand,
-              model: subAsset.model,
-              capacity: subAsset.capacity,
-              location: subAsset.location,
-              inventory: subAsset.inventory
-            })),
-            immovable: response.data.subAssets.immovable.map((subAsset: any) => ({
-              id: subAsset._id || subAsset.id,
-              assetName: subAsset.assetName,
-              description: subAsset.description,
-              category: subAsset.category,
-              brand: subAsset.brand,
-              model: subAsset.model,
-              capacity: subAsset.capacity,
-              location: subAsset.location,
-              inventory: subAsset.inventory
-            }))
-          } : undefined
-        }
-
         // Refresh the assets list instead of manually adding
         await fetchAssets()
         handleCloseAddAssetModal()
@@ -726,91 +638,57 @@ export default function AdminAssetsPage() {
   const generatePDF = async (asset: AssetData) => {
     const doc = new jsPDF()
     const assetClassification = getAssetClassification(asset)
-    
-    // Helper function to get inventory item names
-    const getInventoryNames = (items: any[]) => {
-      return items.map(item => 
-        typeof item === 'string' ? item : item.itemName || item
-      ).join(', ')
+   
+    let yPosition = 15
+   
+    // Clean Header Design
+    try {
+      // Add EXOZEN logo image
+      const logoUrl = '/exozen_logo1.png'
+      doc.addImage(logoUrl, 'PNG', 15, 8, 30, 12)
+    } catch {
+      // Fallback to text if image fails to load
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.text('EXOZEN', 15, 18)
     }
     
-    let yPosition = 20
-    
-    // Simple Header
-    doc.setFontSize(18)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Asset Classification Report', 14, yPosition)
-    yPosition += 10
-    
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`${asset.tagId} - ${asset.brand} ${asset.model}`, 14, yPosition)
-    yPosition += 7
-    doc.text(`${asset.assetType} (${asset.subcategory})`, 14, yPosition)
-    yPosition += 7
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, yPosition)
-    yPosition += 20
-    
-    // Simple Flowchart
+    // Report Title and Asset Info
+    doc.setTextColor(0, 0, 0)
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('Asset Classification', 14, yPosition)
-    yPosition += 15
+    doc.text('Asset Classification Report', 50, 12)
     
-    // Main Asset Box
-    const centerX = 105
-    const boxWidth = 40
-    const boxHeight = 15
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Asset ID: ${asset.tagId}`, 50, 18)
     
-    doc.setFillColor(0, 100, 200)
-    doc.rect(centerX - boxWidth/2, yPosition, boxWidth, boxHeight, 'F')
-    doc.setTextColor(255, 255, 255)
+    // Date and Brand Info
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 150, 12)
+    doc.text(`Type: ${asset.assetType}`, 150, 16)
+    doc.text(`Brand: ${asset.brand}`, 150, 20)
+    
+    // Header separator line
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.3)
+    doc.line(15, 25, 195, 25)
+    
+    yPosition = 35
+   
+    // Two Column Layout
+    const leftColumnX = 15
+    const rightColumnX = 110
+    const columnWidth = 85
+   
+    // Left Column - Asset Overview Table
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
-    doc.text(asset.assetType, centerX - boxWidth/2 + 5, yPosition + 8)
-    doc.text('Main Asset', centerX - boxWidth/2 + 5, yPosition + 12)
-    
-    yPosition += boxHeight + 10
-    
-    // Arrow
-    doc.setTextColor(0, 0, 0)
-    doc.setFontSize(12)
-    doc.text('↓', centerX - 2, yPosition)
-    yPosition += 15
-    
-    // Two branches
-    const leftX = 40
-    const rightX = 130
-    const branchWidth = 35
-    const branchHeight = 12
-    
-    // Movable branch
-    doc.setFillColor(0, 150, 0)
-    doc.rect(leftX, yPosition, branchWidth, branchHeight, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Movable', leftX + 5, yPosition + 7)
-    doc.text(`${assetClassification.movable.length} items`, leftX + 5, yPosition + 11)
-    
-    // Immovable branch
-    doc.setFillColor(0, 100, 200)
-    doc.rect(rightX, yPosition, branchWidth, branchHeight, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Immovable', rightX + 5, yPosition + 7)
-    doc.text(`${assetClassification.immovable.length} items`, rightX + 5, yPosition + 11)
-    
-    yPosition += branchHeight + 20
-    
-    // Simple Asset Overview
-    doc.setTextColor(0, 0, 0)
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Asset Overview', 14, yPosition)
-    yPosition += 10
-    
+    doc.text('Asset Overview', leftColumnX, yPosition)
+    yPosition += 8
+   
     const overviewData = [
       ['Asset ID', asset.tagId],
       ['Asset Type', asset.assetType],
@@ -822,189 +700,213 @@ export default function AdminAssetsPage() {
       ['Priority', asset.priority || 'Medium'],
       ['Location', asset.location ? `${asset.location.building}, ${asset.location.floor}, ${asset.location.room}` : 'Not Set']
     ]
-    
+   
     autoTable(doc, {
       startY: yPosition,
       head: [['Property', 'Value']],
       body: overviewData,
-      styles: { 
-        fontSize: 9,
-        cellPadding: 3,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
-      },
-      headStyles: { 
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
-      },
-      bodyStyles: {
-        fillColor: [255, 255, 255],
-        textColor: [0, 0, 0],
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
-      },
-      margin: { left: 14, right: 14 },
-      columnStyles: {
-        0: { cellWidth: 50, fontStyle: 'bold' },
-        1: { cellWidth: 140 }
-      },
-    })
-    
-    yPosition = doc.lastAutoTable.finalY + 20
-    
-    // Simple Movable Assets
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.text(`Movable Assets (${assetClassification.movable.length} components)`, 14, yPosition)
-    yPosition += 10
-    
-    const movableTableData = assetClassification.movable.map((item, index) => [
-      index + 1,
-      item.assetName,
-      getInventoryNames(item.inventory.consumables),
-      getInventoryNames(item.inventory.spareParts),
-      getInventoryNames(item.inventory.tools),
-      getInventoryNames(item.inventory.operationalSupply)
-    ])
-    
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools', 'Operational Supply']],
-      body: movableTableData,
-      styles: { 
+      styles: {
         fontSize: 7,
         cellPadding: 2,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [220, 220, 220],
+        lineWidth: 0.3,
+        textColor: [0, 0, 0]
       },
-      headStyles: { 
-        fillColor: [200, 255, 200],
-        textColor: [0, 0, 0],
+      headStyles: {
+        fillColor: [59, 130, 246], // Blue header background
+        textColor: [255, 255, 255], // White text
         fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [37, 99, 235], // Darker blue border
+        lineWidth: 0.5
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [220, 220, 220],
+        lineWidth: 0.3
       },
-      margin: { left: 14, right: 14 },
+      margin: { left: leftColumnX, right: 15 },
       columnStyles: {
-        0: { cellWidth: 8 },
-        1: { cellWidth: 35, fontStyle: 'bold' },
-        2: { cellWidth: 40 },
-        3: { cellWidth: 40 },
-        4: { cellWidth: 35 },
-        5: { cellWidth: 40 }
+        0: { cellWidth: 35, fontStyle: 'bold' },
+        1: { cellWidth: 45 }
       },
     })
-    
-    yPosition = doc.lastAutoTable.finalY + 20
-    
-    // Simple Immovable Assets
-    doc.setFontSize(14)
+   
+    const leftTableEndY = doc.lastAutoTable.finalY
+   
+    // Right Column - Flowchart
+    let rightY = 35
+    doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
-    doc.text(`Immovable Assets (${assetClassification.immovable.length} components)`, 14, yPosition)
-    yPosition += 10
-    
-    const immovableTableData = assetClassification.immovable.map((item, index) => [
+    doc.text('Asset Classification Flowchart', rightColumnX, rightY)
+    rightY += 15
+   
+    // Main Asset Box
+    const centerX = rightColumnX + columnWidth / 2
+    const boxWidth = 50
+    const boxHeight = 15
+   
+    doc.setFillColor(245, 245, 245)
+    doc.setDrawColor(100, 100, 100)
+    doc.setLineWidth(0.5)
+    doc.rect(centerX - boxWidth/2, rightY, boxWidth, boxHeight, 'FD')
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.text(asset.assetType, centerX - boxWidth/2 + 3, rightY + 8)
+    doc.setFontSize(6)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Main Asset', centerX - boxWidth/2 + 3, rightY + 12)
+   
+    rightY += boxHeight + 8
+   
+    // Arrow Indicator (using a simple line-based arrow)
+    doc.setDrawColor(100, 100, 100)
+    doc.setLineWidth(1)
+    // Draw a simple arrow using lines
+    doc.line(centerX - 3, rightY, centerX + 3, rightY) // horizontal line
+    doc.line(centerX, rightY, centerX - 2, rightY + 3) // left diagonal
+    doc.line(centerX, rightY, centerX + 2, rightY + 3) // right diagonal
+    rightY += 8
+   
+    // Two Branches
+    const leftX = rightColumnX + 10
+    const rightX = rightColumnX + 50
+    const branchWidth = 30
+    const branchHeight = 12
+   
+    // Movable branch
+    doc.setFillColor(240, 248, 255)
+    doc.setDrawColor(100, 100, 100)
+    doc.setLineWidth(0.5)
+    doc.rect(leftX, rightY, branchWidth, branchHeight, 'FD')
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Movable', leftX + 2, rightY + 6)
+    doc.setFontSize(5)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`${assetClassification.movable.length} items`, leftX + 2, rightY + 10)
+   
+    // Immovable branch
+    doc.setFillColor(248, 255, 248)
+    doc.setDrawColor(100, 100, 100)
+    doc.setLineWidth(0.5)
+    doc.rect(rightX, rightY, branchWidth, branchHeight, 'FD')
+    doc.setTextColor(0, 0, 0)
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Immovable', rightX + 2, rightY + 6)
+    doc.setFontSize(5)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`${assetClassification.immovable.length} items`, rightX + 2, rightY + 10)
+   
+    rightY += branchHeight + 15
+   
+    // Components Table (Right Column)
+    const allComponents = [
+      ...assetClassification.movable.map(item => ({ ...item, type: 'Movable' })),
+      ...assetClassification.immovable.map(item => ({ ...item, type: 'Immovable' }))
+    ]
+   
+    const componentsTableData = allComponents.map((item, index) => [
       index + 1,
-      item.assetName,
-      getInventoryNames(item.inventory.consumables),
-      getInventoryNames(item.inventory.spareParts),
-      getInventoryNames(item.inventory.tools),
-      getInventoryNames(item.inventory.operationalSupply)
+      `${item.type === 'Movable' ? '[M]' : '[I]'} ${item.assetName}`,
+      item.brand || 'N/A',
+      item.model || 'N/A',
+      item.capacity || 'N/A',
+      item.location || 'N/A'
     ])
-    
+   
     autoTable(doc, {
-      startY: yPosition,
-      head: [['#', 'Component Name', 'Consumables', 'Spare Parts', 'Tools', 'Operational Supply']],
-      body: immovableTableData,
-      styles: { 
-        fontSize: 7,
-        cellPadding: 2,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+      startY: rightY,
+      head: [['#', 'Component Name', 'Brand', 'Model', 'Capacity', 'Location']],
+      body: componentsTableData,
+      styles: {
+        fontSize: 6,
+        cellPadding: 1.5,
+        lineColor: [220, 220, 220],
+        lineWidth: 0.3,
+        textColor: [0, 0, 0]
       },
-      headStyles: { 
-        fillColor: [200, 200, 255],
-        textColor: [0, 0, 0],
+      headStyles: {
+        fillColor: [59, 130, 246], // Blue header background
+        textColor: [255, 255, 255], // White text
         fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [37, 99, 235], // Darker blue border
+        lineWidth: 0.5
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [220, 220, 220],
+        lineWidth: 0.3
       },
-      margin: { left: 14, right: 14 },
+      margin: { left: rightColumnX, right: 15 },
       columnStyles: {
-        0: { cellWidth: 8 },
-        1: { cellWidth: 35, fontStyle: 'bold' },
-        2: { cellWidth: 40 },
-        3: { cellWidth: 40 },
-        4: { cellWidth: 35 },
-        5: { cellWidth: 40 }
+        0: { cellWidth: 6 },
+        1: { cellWidth: 28, fontStyle: 'bold' },
+        2: { cellWidth: 15 },
+        3: { cellWidth: 15 },
+        4: { cellWidth: 10 },
+        5: { cellWidth: 16 }
       },
     })
-    
-    yPosition = doc.lastAutoTable.finalY + 20
-    
-    // Simple Summary
-    doc.setFontSize(14)
+   
+    // Summary Section (Left Column - below Asset Overview)
+    const summaryY = leftTableEndY + 15
+    doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
-    doc.text('Summary', 14, yPosition)
-    yPosition += 10
-    
+    doc.text('Summary', leftColumnX, summaryY)
+   
     const summaryData = [
-      ['Total Movable Components', assetClassification.movable.length.toString()],
-      ['Total Immovable Components', assetClassification.immovable.length.toString()],
-      ['Total Components', (assetClassification.movable.length + assetClassification.immovable.length).toString()],
+      ['Movable', assetClassification.movable.length.toString()],
+      ['Immovable', assetClassification.immovable.length.toString()],
+      ['Total', (assetClassification.movable.length + assetClassification.immovable.length).toString()],
       ['Report Generated', new Date().toLocaleString()]
     ]
-    
+   
     autoTable(doc, {
-      startY: yPosition,
+      startY: summaryY + 8,
       head: [['Metric', 'Value']],
       body: summaryData,
-      styles: { 
-        fontSize: 10,
-        cellPadding: 4,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+        lineColor: [220, 220, 220],
+        lineWidth: 0.3,
+        textColor: [0, 0, 0]
       },
-      headStyles: { 
-        fillColor: [240, 240, 240],
-        textColor: [0, 0, 0],
+      headStyles: {
+        fillColor: [59, 130, 246], // Blue header background
+        textColor: [255, 255, 255], // White text
         fontStyle: 'bold',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [37, 99, 235], // Darker blue border
+        lineWidth: 0.5
       },
       bodyStyles: {
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1
+        lineColor: [220, 220, 220],
+        lineWidth: 0.3
       },
-      margin: { left: 14, right: 14 },
+      margin: { left: leftColumnX, right: 15 },
       columnStyles: {
-        0: { cellWidth: 80, fontStyle: 'bold' },
-        1: { cellWidth: 110 }
+        0: { cellWidth: 40, fontStyle: 'bold' },
+        1: { cellWidth: 40 }
       },
     })
-    
+   
     // Simple Footer
     const pageHeight = doc.internal.pageSize.height
-    doc.setFontSize(8)
-    doc.text('Generated by EXOZEN Asset Management System', 14, pageHeight - 10)
+    const footerY = pageHeight - 10
     
+    doc.setTextColor(100, 100, 100)
+    doc.setFontSize(6)
+    doc.setFont('helvetica', 'normal')
+    doc.text('EXOZEN Digital Asset Management System', 15, footerY)
+    doc.text(`Report ID: ${asset.tagId}-${Date.now()}`, 150, footerY)
+   
     // Save the PDF
     doc.save(`${asset.tagId}_${asset.assetType}_Classification_Report.pdf`)
   }
@@ -1044,8 +946,8 @@ export default function AdminAssetsPage() {
           {/* Mobility Filter and Add Asset Button */}
               <div className="flex items-center gap-4">
                 <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">Mobility:</Label>
-                <RadioGroup 
-                  value={selectedMobility} 
+                <RadioGroup
+                  value={selectedMobility}
                   onValueChange={handleRadioChange}
                   className="flex gap-4"
                 >
@@ -1068,7 +970,7 @@ export default function AdminAssetsPage() {
                     </Label>
                   </div>
                 </RadioGroup>
-                
+               
                 {/* Add Asset Button */}
                 <Button
                   onClick={handleAddAsset}
@@ -1139,7 +1041,7 @@ export default function AdminAssetsPage() {
                   {filteredAssets.map((asset) => {
                     const isExpanded = expandedRow === asset._id
                     const assetClassification = isExpanded ? getAssetClassification(asset) : null
-                    
+                   
                     return (
                       <React.Fragment key={asset._id}>
                         {/* Main Asset Row */}
@@ -1195,7 +1097,7 @@ export default function AdminAssetsPage() {
                           </td>
                           <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
                             <div className="text-xs sm:text-sm text-blue-800">
-                              {asset.location?.building && asset.location?.floor && asset.location?.room 
+                              {asset.location?.building && asset.location?.floor && asset.location?.room
                                 ? `${asset.location.building}, ${asset.location.floor}, ${asset.location.room}`
                                 : 'Location not set'
                               }
@@ -1203,7 +1105,7 @@ export default function AdminAssetsPage() {
                           </td>
                           <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
                             <div className="flex items-center gap-1 sm:gap-2 justify-center">
-                              <button 
+                              <button
                                 onClick={() => handleMovableClick(asset)}
                                 className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
                                   isExpanded && expandedClassificationType === 'movable'
@@ -1215,7 +1117,7 @@ export default function AdminAssetsPage() {
                                 <Package className="w-3 h-3" />
                                 Movable
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleImmovableClick(asset)}
                                 className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
                                   isExpanded && expandedClassificationType === 'immovable'
@@ -1227,7 +1129,7 @@ export default function AdminAssetsPage() {
                                 <Building className="w-3 h-3" />
                                 Immovable
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleViewFlowchart(asset)}
                                 className="px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 text-purple-700 bg-purple-100 hover:bg-purple-200"
                                 title="View Asset Classification Flowchart"
@@ -1238,7 +1140,7 @@ export default function AdminAssetsPage() {
                             </div>
                           </td>
                         </tr>
-                        
+                       
                         {/* Expanded Classification Row */}
                         {isExpanded && assetClassification && (
                           <tr>
@@ -1252,7 +1154,7 @@ export default function AdminAssetsPage() {
                                     {expandedClassificationType === 'movable' ? 'Movable' : 'Immovable'} Assets Classification for {asset.assetType} ({asset.subcategory})
                                   </p>
                                 </div>
-                                
+                               
                                 <div className="overflow-x-auto">
                                   <table className="w-full border-collapse">
                                     <thead>
@@ -1279,32 +1181,14 @@ export default function AdminAssetsPage() {
                                     </thead>
                                     <tbody>
                                       {assetClassification[expandedClassificationType!].map((classificationAsset: AssetClassificationItem, index: number) => {
-                                        // Use actual sub-asset data
+                                        // Use actual sub-asset data from the API response
                                         const subAssetData = {
-                                          brand: classificationAsset.assetName.includes('Raw water tank Pump') ? 'Kirloskar Brothers Limited' : 
-                                                 classificationAsset.assetName.includes('Final Water Tank Pump') ? 'Kirloskar Brothers Limited' :
-                                                 classificationAsset.assetName.includes('Cauvery water tank') ? 'Kirloskar Brothers Limited' :
-                                                 classificationAsset.assetName.includes('Resin Filter') ? 'Ion Exchange India Ltd' :
-                                                 classificationAsset.assetName.includes('Sand Filter') ? 'Ion Exchange India Ltd' : 'Unknown',
-                                          model: classificationAsset.assetName.includes('Raw water tank Pump - 1') ? 'U4WSKA00362' :
-                                                 classificationAsset.assetName.includes('Raw water tank Pump - 2') ? 'U4WSKA00354' :
-                                                 classificationAsset.assetName.includes('Final Water Tank Pump - 1') ? 'U4WMME00009' :
-                                                 classificationAsset.assetName.includes('Final Water Tank Pump - 2') ? 'U4WMME00008' :
-                                                 classificationAsset.assetName.includes('Cauvery water tank') ? 'IS12615' :
-                                                 classificationAsset.assetName.includes('Resin Filter') ? 'WTPRF500-01' :
-                                                 classificationAsset.assetName.includes('Sand Filter') ? 'WTPSF500-01' : 'Unknown',
-                                          capacity: classificationAsset.assetName.includes('Raw water tank Pump') ? '5HP' :
-                                                   classificationAsset.assetName.includes('Final Water Tank Pump') ? '10HP' :
-                                                   classificationAsset.assetName.includes('Cauvery water tank') ? '7.5HP' :
-                                                   classificationAsset.assetName.includes('Resin Filter') ? 'NA' :
-                                                   classificationAsset.assetName.includes('Sand Filter') ? 'NA' : 'Unknown',
-                                          location: classificationAsset.assetName.includes('Raw water tank Pump') ? 'Pump Room 1' :
-                                                   classificationAsset.assetName.includes('Final Water Tank Pump') ? 'Pump Room 1' :
-                                                   classificationAsset.assetName.includes('Cauvery water tank') ? 'A Block Stilt Floor' :
-                                                   classificationAsset.assetName.includes('Resin Filter') ? 'Pump Room 1' :
-                                                   classificationAsset.assetName.includes('Sand Filter') ? 'Pump Room 1' : 'Unknown'
+                                          brand: classificationAsset.brand || 'Unknown',
+                                          model: classificationAsset.model || 'Unknown',
+                                          capacity: classificationAsset.capacity || 'Unknown',
+                                          location: classificationAsset.location || 'Unknown'
                                         }
-                                        
+                                       
                                         return (
                                           <React.Fragment key={index}>
                                             <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
@@ -1334,7 +1218,7 @@ export default function AdminAssetsPage() {
                                               </td>
                                               <td className="border border-border px-4 py-3">
                                                 <div className="flex items-center gap-2">
-                                                  <button 
+                                                  <button
                                                     onClick={() => handleInventoryClick(asset._id, index, 'consumables')}
                                                     className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                                                       selectedInventoryType[`${asset._id}-${index}`] === 'consumables'
@@ -1344,7 +1228,7 @@ export default function AdminAssetsPage() {
                                                   >
                                                     Consumables
                                                   </button>
-                                                  <button 
+                                                  <button
                                                     onClick={() => handleInventoryClick(asset._id, index, 'spareParts')}
                                                     className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                                                       selectedInventoryType[`${asset._id}-${index}`] === 'spareParts'
@@ -1354,7 +1238,7 @@ export default function AdminAssetsPage() {
                                                   >
                                                     Spare Parts
                                                   </button>
-                                                  <button 
+                                                  <button
                                                     onClick={() => handleInventoryClick(asset._id, index, 'tools')}
                                                     className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                                                       selectedInventoryType[`${asset._id}-${index}`] === 'tools'
@@ -1367,14 +1251,14 @@ export default function AdminAssetsPage() {
                                                 </div>
                                               </td>
                                             </tr>
-                                            
+                                           
                                             {/* Inventory Details Row */}
                                             {selectedInventoryType[`${asset._id}-${index}`] && (
                                               <tr>
                                                 <td colSpan={6} className="border border-border p-0 bg-gray-50 dark:bg-gray-800">
                                                   <div className="p-4">
                                                     <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">
-                                                      {selectedInventoryType[`${asset._id}-${index}`] === 'consumables' ? 'Consumables' : 
+                                                      {selectedInventoryType[`${asset._id}-${index}`] === 'consumables' ? 'Consumables' :
                                                        selectedInventoryType[`${asset._id}-${index}`] === 'spareParts' ? 'Spare Parts' : 'Tools'} - {classificationAsset.assetName}
                                                     </h4>
                                                     <div className="overflow-x-auto">
@@ -1443,7 +1327,7 @@ export default function AdminAssetsPage() {
                 </tbody>
               </table>
             </div>
-              
+             
             {filteredAssets.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 No assets found matching your criteria.
@@ -1491,7 +1375,7 @@ export default function AdminAssetsPage() {
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {(() => {
                   const assetClassification = getAssetClassification(selectedAssetForFlowchart)
-                  
+                 
                   return (
                     <div className="space-y-6">
                       {/* Simple Header */}
@@ -1531,7 +1415,7 @@ export default function AdminAssetsPage() {
                                 <p className="text-xs">{assetClassification.movable.length} items</p>
                               </div>
                             </div>
-                            
+                           
                             {/* Simple List */}
                             <div className="space-y-2">
                               {assetClassification.movable.map((item, index) => (
@@ -1540,14 +1424,14 @@ export default function AdminAssetsPage() {
                                     {index + 1}. {item.assetName}
                                   </h5>
                                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{item.description}</p>
-                                  
+                                 
                                   {/* Simple Inventory Display */}
                                   <div className="space-y-1">
                                     {item.inventory.consumables.length > 0 && (
                                       <div className="text-xs">
                                         <span className="font-medium text-orange-600">Consumables:</span>
                                         <span className="ml-1 text-gray-600 dark:text-gray-400">
-                                          {item.inventory.consumables.map(consumable => 
+                                          {item.inventory.consumables.map(consumable =>
                                             typeof consumable === 'string' ? consumable : consumable.itemName
                                           ).join(', ')}
                                         </span>
@@ -1557,7 +1441,7 @@ export default function AdminAssetsPage() {
                                       <div className="text-xs">
                                         <span className="font-medium text-blue-600">Spare Parts:</span>
                                         <span className="ml-1 text-gray-600 dark:text-gray-400">
-                                          {item.inventory.spareParts.map(part => 
+                                          {item.inventory.spareParts.map(part =>
                                             typeof part === 'string' ? part : part.itemName
                                           ).join(', ')}
                                         </span>
@@ -1567,7 +1451,7 @@ export default function AdminAssetsPage() {
                                       <div className="text-xs">
                                         <span className="font-medium text-green-600">Tools:</span>
                                         <span className="ml-1 text-gray-600 dark:text-gray-400">
-                                          {item.inventory.tools.map(tool => 
+                                          {item.inventory.tools.map(tool =>
                                             typeof tool === 'string' ? tool : tool.itemName
                                           ).join(', ')}
                                         </span>
@@ -1577,7 +1461,7 @@ export default function AdminAssetsPage() {
                                       <div className="text-xs">
                                         <span className="font-medium text-purple-600">Operational Supply:</span>
                                         <span className="ml-1 text-gray-600 dark:text-gray-400">
-                                          {item.inventory.operationalSupply.map(supply => 
+                                          {item.inventory.operationalSupply.map(supply =>
                                             typeof supply === 'string' ? supply : supply.itemName
                                           ).join(', ')}
                                         </span>
@@ -1598,7 +1482,7 @@ export default function AdminAssetsPage() {
                                 <p className="text-xs">{assetClassification.immovable.length} items</p>
                               </div>
                             </div>
-                            
+                           
                             {/* Simple List */}
                             <div className="space-y-2">
                               {assetClassification.immovable.map((item, index) => (
@@ -1607,14 +1491,14 @@ export default function AdminAssetsPage() {
                                     {index + 1}. {item.assetName}
                                   </h5>
                                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{item.description}</p>
-                                  
+                                 
                                   {/* Simple Inventory Display */}
                                   <div className="space-y-1">
                                     {item.inventory.consumables.length > 0 && (
                                       <div className="text-xs">
                                         <span className="font-medium text-orange-600">Consumables:</span>
                                         <span className="ml-1 text-gray-600 dark:text-gray-400">
-                                          {item.inventory.consumables.map(consumable => 
+                                          {item.inventory.consumables.map(consumable =>
                                             typeof consumable === 'string' ? consumable : consumable.itemName
                                           ).join(', ')}
                                         </span>
@@ -1624,7 +1508,7 @@ export default function AdminAssetsPage() {
                                       <div className="text-xs">
                                         <span className="font-medium text-blue-600">Spare Parts:</span>
                                         <span className="ml-1 text-gray-600 dark:text-gray-400">
-                                          {item.inventory.spareParts.map(part => 
+                                          {item.inventory.spareParts.map(part =>
                                             typeof part === 'string' ? part : part.itemName
                                           ).join(', ')}
                                         </span>
@@ -1634,7 +1518,7 @@ export default function AdminAssetsPage() {
                                       <div className="text-xs">
                                         <span className="font-medium text-green-600">Tools:</span>
                                         <span className="ml-1 text-gray-600 dark:text-gray-400">
-                                          {item.inventory.tools.map(tool => 
+                                          {item.inventory.tools.map(tool =>
                                             typeof tool === 'string' ? tool : tool.itemName
                                           ).join(', ')}
                                         </span>
@@ -1644,7 +1528,7 @@ export default function AdminAssetsPage() {
                                       <div className="text-xs">
                                         <span className="font-medium text-purple-600">Operational Supply:</span>
                                         <span className="ml-1 text-gray-600 dark:text-gray-400">
-                                          {item.inventory.operationalSupply.map(supply => 
+                                          {item.inventory.operationalSupply.map(supply =>
                                             typeof supply === 'string' ? supply : supply.itemName
                                           ).join(', ')}
                                         </span>
@@ -1887,7 +1771,7 @@ export default function AdminAssetsPage() {
                       {/* Location Fields */}
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Location Details</h4>
-                        
+                       
                         <div>
                           <Label htmlFor="building" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Building
@@ -1963,7 +1847,7 @@ export default function AdminAssetsPage() {
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
-                            
+                           
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Asset Name</Label>
@@ -2055,7 +1939,7 @@ export default function AdminAssetsPage() {
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
-                            
+                           
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Asset Name</Label>
@@ -2511,7 +2395,7 @@ export default function AdminAssetsPage() {
                     </Button>
                   )}
                 </div>
-                
+               
                 <div className="flex gap-3">
                   <Button
                     onClick={handleCloseAddAssetModal}
@@ -2520,7 +2404,7 @@ export default function AdminAssetsPage() {
                   >
                     Cancel
                   </Button>
-                  
+                 
                   {currentStep === 'main' ? (
                     <Button
                       onClick={handleMainAssetSave}
@@ -2529,7 +2413,7 @@ export default function AdminAssetsPage() {
                       Next: Add Sub-Assets
                     </Button>
                   ) : null}
-                  
+                 
                   {currentStep === 'subassets' && (
                     <Button
                       onClick={() => setCurrentStep('inventory')}
@@ -2538,7 +2422,7 @@ export default function AdminAssetsPage() {
                       Next: Add Inventory
                     </Button>
                   )}
-                  
+                 
                   {currentStep === 'inventory' && (
                     <Button
                       onClick={handleFinalSave}
@@ -2559,4 +2443,3 @@ export default function AdminAssetsPage() {
   )
 
 }
-

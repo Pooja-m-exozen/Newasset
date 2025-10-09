@@ -2,34 +2,24 @@
 
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { EnhancedDashboard } from "@/components/ui/enhanced-dashboard"
-import { Button } from "@/components/ui/button"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useAdminDashboard } from "@/contexts/AdminDashboard"
-import { useAuth } from "@/contexts/AuthContext"
-import { AlertCircle, RefreshCw } from "lucide-react"
 import { useMemo } from "react"
 
 export default function AdminDashboardPage() {
-  const { user } = useAuth()
   const { 
     dashboardData, 
-    isLoading, 
     error,
     refreshDashboard,
     predictionsData,
-    isPredictionsLoading,
     predictionsError,
     refreshPredictions,
     healthData,
-    isHealthLoading,
     healthError,
     refreshHealth,
     costData,
-    isCostLoading,
     costError,
     refreshCost,
     trendsData,
-    isTrendsLoading,
     trendsError,
     refreshTrends
   } = useAdminDashboard()

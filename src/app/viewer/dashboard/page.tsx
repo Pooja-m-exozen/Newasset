@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button'
 import { AssetViewModal } from '@/components/ui/asset-view-modal'
 import { Asset } from '@/lib/adminasset'
 import { 
-  Building2, Package, User, CheckCircle, AlertTriangle, 
-  CheckSquare, RefreshCw, BarChart3, Target, MapPin,
-  TrendingUp, PieChart, Activity, Calendar, Clock
+  Building2, Package, CheckCircle, AlertTriangle, 
+  CheckSquare, RefreshCw, MapPin,
+  TrendingUp, Activity, Clock
 } from 'lucide-react'
 
 interface Checklist {
@@ -28,7 +28,6 @@ export default function ViewerDashboard() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [error, setError] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [showAssetModal, setShowAssetModal] = useState(false)
@@ -127,7 +126,6 @@ export default function ViewerDashboard() {
     setError(null)
     try {
       await Promise.all([fetchAssets(), fetchChecklists()])
-      setLastRefresh(new Date())
     } catch (err) {
       console.error('Error fetching data:', err)
       setError('Failed to fetch data. Please try again.')
@@ -289,13 +287,6 @@ export default function ViewerDashboard() {
       healthTrend
     }
   }, [assets])
-
-
-  // Handle asset view
-  const handleViewAsset = (asset: Asset) => {
-    setSelectedAsset(asset)
-    setShowAssetModal(true)
-  }
 
   // Handle asset modal close
   const handleCloseAssetModal = () => {

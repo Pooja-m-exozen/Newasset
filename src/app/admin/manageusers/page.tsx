@@ -53,7 +53,6 @@ export default function AdminManageUsersPage() {
   const [viewingUser, setViewingUser] = useState<User | null>(null)
   const [sortField, setSortField] = useState<string>("name")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
-  const [itemsPerPage] = useState(10)
   const [newUserData, setNewUserData] = useState({
     name: "",
     email: "",
@@ -345,7 +344,7 @@ export default function AdminManageUsersPage() {
     if (diffInHours < 24) return `${diffInHours} hours ago`
     if (diffInHours < 48) return "1 day ago"
     return `${Math.floor(diffInHours / 24)} days ago`
-    } catch (error) {
+    } catch {
       return "Invalid date"
     }
   }

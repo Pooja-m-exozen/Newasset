@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { LoadingSpinner } from '../../../../components/ui/loading-spinner';
 import { ReportProvider, useReportContext } from '../../../../contexts/ReportContext';
-import { filterAssets, type Asset } from '../../../../lib/Report';
+import { filterAssets, type Asset, type SubAsset } from '../../../../lib/Report';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Badge } from '../../../../components/ui/badge';
@@ -15,9 +15,6 @@ import {
   Search,
   FileText,
   Edit,
-  Calendar,
-  Clock,
-  User,
   Building,
   Smartphone,
   Monitor,
@@ -25,7 +22,8 @@ import {
   Eye,
   Database,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download
 } from 'lucide-react';
 
 // API Base URL constant
@@ -39,13 +37,22 @@ interface AssetsResponse {
   results?: Asset[];
 }
 
+interface SubAssets {
+  movable?: SubAsset[];
+  immovable?: SubAsset[];
+}
+
+interface ExtendedAsset extends Asset {
+  subAssets?: SubAssets;
+}
+
 function AssetsLogsContent() {
   const { user } = useAuth();
   const { loading, error } = useReportContext();
   const [projectAssets, setProjectAssets] = useState<Asset[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('updatedAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy] = useState('updatedAt');
+  const [sortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -285,50 +292,43 @@ function AssetsLogsContent() {
       // Dynamic import to avoid SSR issues
       const jsPDF = (await import('jspdf')).default;
       
-      const doc = new jsPDF('landscape'); // Use landscape orientation
+      const doc = new jsPDF('portrait'); // Use portrait orientation
       
-      // Add EXOZEN logo
+      // Clean Header Design
       try {
-        // Load and add the actual logo image
-        const logoImg = new Image();
-        logoImg.src = process.env.NODE_ENV === 'production' ? '/v1/asset/exozen_logo1.png' : '/exozen_logo1.png';
-        
-        // Wait for image to load
-        await new Promise((resolve, reject) => {
-          logoImg.onload = resolve;
-          logoImg.onerror = reject;
-        });
-        
-        // Add logo to PDF (reduced height for better layout)
-        doc.addImage(logoImg, 'PNG', 15, 15, 35, 12);
+        // Add EXOZEN logo image
+        const logoUrl = '/exozen_logo1.png'
+        doc.addImage(logoUrl, 'PNG', 15, 8, 30, 12)
       } catch {
-        console.log('Logo not available, using text fallback');
-        // Fallback to text if image fails
-        doc.setFillColor(255, 165, 0); // Orange color for ZEN logo
-        doc.rect(15, 15, 30, 12, 'F');
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text('ZEN', 22, 21);
+        // Fallback to text if image fails to load
+        doc.setTextColor(0, 0, 0)
+        doc.setFontSize(18)
+        doc.setFont('helvetica', 'bold')
+        doc.text('EXOZEN', 15, 18)
       }
       
-      // Add project name below logo
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text(user?.projectName || 'Unknown Project', 15, 35);
+      // Report Title and Project Info
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Asset Classification Report', 50, 12)
       
-      // Add title
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('ASSET DETAILS', 150, 28, { align: 'center' });
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Project: ${user?.projectName || 'Unknown Project'}`, 50, 18)
       
-      // Add date
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 45);
-       
+      // Date and Summary Info
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 150, 12)
+      doc.text(`Total Assets: ${filteredAssets.length}`, 150, 16)
+      doc.text(`Report Type: Asset Inventory`, 150, 20)
+      
+      // Header separator line
+      doc.setDrawColor(200, 200, 200)
+      doc.setLineWidth(0.3)
+      doc.line(15, 25, 195, 25)
+      
       // Count unique TAG IDs - this is the true asset count
       const uniqueTagIds = [...new Set(filteredAssets.map(asset => asset.tagId))];
       
@@ -337,38 +337,40 @@ function AssetsLogsContent() {
         index === self.findIndex(a => a.tagId === asset.tagId)
       );
       
-      // Define table structure
+      // Define table structure for main assets (portrait format)
       const columns = [
-        { header: 'S.No', key: 'sno', width: 20 },
-        { header: 'Serial Number', key: 'serialNumber', width: 60 },
-        { header: 'Asset Tag Number', key: 'tagId', width: 50 },
-        { header: 'Vendor Name', key: 'vendorName', width: 40 },
-        { header: 'Asset Category', key: 'assetType', width: 35 },
-        { header: 'Mobility Category', key: 'mobilityCategory', width: 35 },
-        { header: 'Location', key: 'location', width: 60 }
+        { header: 'S.No', key: 'sno', width: 12 },
+        { header: 'Asset Tag', key: 'tagId', width: 30 },
+        { header: 'Asset Type', key: 'assetType', width: 25 },
+        { header: 'Brand', key: 'brand', width: 35 },
+        { header: 'Model', key: 'model', width: 25 },
+        { header: 'Serial Number', key: 'serialNumber', width: 30 },
+        { header: 'Status', key: 'status', width: 20 }
       ];
       
       const startX = 15;
-      const startY = 55;
-      const rowHeight = 12;
-      const headerHeight = 10;
+      const startY = 35;
+      const rowHeight = 10;
+      const headerHeight = 8;
       const totalTableWidth = columns.reduce((sum, col) => sum + col.width, 0);
       
-      // Draw table headers
-      doc.setFillColor(240, 240, 240);
+      // Draw table headers with blue styling
+      doc.setFillColor(59, 130, 246); // Blue header background
       doc.rect(startX, startY, totalTableWidth, headerHeight, 'F');
       
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255); // White text
       let currentX = startX;
       
       columns.forEach(column => {
-        doc.text(column.header, currentX + 1, startY + 7);
+        doc.text(column.header, currentX + 1, startY + 6);
         currentX += column.width;
       });
       
       // Draw header borders
-      doc.setDrawColor(200, 200, 200);
+      doc.setDrawColor(37, 99, 235); // Darker blue border
+      doc.setLineWidth(0.5);
       doc.line(startX, startY, startX + totalTableWidth, startY);
       doc.line(startX, startY + headerHeight, startX + totalTableWidth, startY + headerHeight);
       
@@ -385,20 +387,21 @@ function AssetsLogsContent() {
         const asset = uniqueAssets[i];
         
         // Check if we need a new page
-        if (currentY > 190) {
-          doc.addPage('landscape');
+        if (currentY > 250) {
+          doc.addPage('portrait');
           currentY = 20;
           
           // Redraw table headers on new page
-          doc.setFillColor(240, 240, 240);
+          doc.setFillColor(59, 130, 246);
           doc.rect(startX, currentY, totalTableWidth, headerHeight, 'F');
           
-          doc.setFontSize(10);
+          doc.setFontSize(9);
           doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
           currentX = startX;
           
           columns.forEach(column => {
-            doc.text(column.header, currentX + 1, currentY + 7);
+            doc.text(column.header, currentX + 1, currentY + 6);
             currentX += column.width;
           });
           
@@ -408,16 +411,17 @@ function AssetsLogsContent() {
         // Prepare row data
         const rowData = [
           (i + 1).toString(),
-          asset.serialNumber || 'N/A',
           asset.tagId || 'N/A',
-          asset.customFields?.['Vendor Name'] || asset.brand || 'N/A',
           asset.assetType || 'N/A',
-          asset.mobilityCategory ? asset.mobilityCategory.charAt(0).toUpperCase() + asset.mobilityCategory.slice(1) : 'Not Set',
-          formatLocation(asset.location)
+          asset.brand || 'N/A',
+          asset.model || 'N/A',
+          asset.serialNumber || 'N/A',
+          asset.status || 'N/A'
         ];
         
         // Draw row borders
-        doc.setDrawColor(200, 200, 200);
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.3);
         doc.line(startX, currentY, startX + totalTableWidth, currentY);
         doc.line(startX, currentY + rowHeight, startX + totalTableWidth, currentY + rowHeight);
         
@@ -429,8 +433,9 @@ function AssetsLogsContent() {
         });
         
         // Add row data
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
         currentX = startX;
         
         rowData.forEach((text, index) => {
@@ -439,13 +444,13 @@ function AssetsLogsContent() {
           
           // Handle text wrapping for long content
           const lines = doc.splitTextToSize(text.toString(), maxWidth);
-          const lineHeight = 4;
+          const lineHeight = 3;
           
           lines.forEach((line: string, lineIndex: number) => {
             if (lineIndex === 0) {
-              doc.text(line, currentX + 1, currentY + 7);
-            } else if (currentY + 7 + (lineIndex * lineHeight) < currentY + rowHeight) {
-              doc.text(line, currentX + 1, currentY + 7 + (lineIndex * lineHeight));
+              doc.text(line, currentX + 1, currentY + 6);
+            } else if (currentY + 6 + (lineIndex * lineHeight) < currentY + rowHeight) {
+              doc.text(line, currentX + 1, currentY + 6 + (lineIndex * lineHeight));
             }
           });
           
@@ -455,25 +460,257 @@ function AssetsLogsContent() {
         currentY += rowHeight;
       }
       
-      // Draw final bottom border
-      doc.setDrawColor(200, 200, 200);
-      doc.line(startX, currentY, startX + totalTableWidth, currentY);
+      // No final bottom border needed
       
-      // Add summary
-      if (currentY > 150) {
-        doc.addPage('landscape');
+      // Add Sub-Assets section for each main asset
+      currentY += 15;
+      
+      for (let i = 0; i < uniqueAssets.length; i++) {
+        const asset = uniqueAssets[i];
+        
+        // Check if we need a new page
+        if (currentY > 200) {
+          doc.addPage('portrait');
+          currentY = 20;
+        }
+        
+        // Asset header
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${asset.tagId} - ${asset.subcategory || asset.assetType}`, startX, currentY);
+        
+        currentY += 8;
+        
+        // Location info
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Location: ${formatLocation(asset.location || null)}`, startX, currentY);
+        currentY += 5;
+        
+        // Sub-assets tables
+        if ((asset as ExtendedAsset).subAssets) {
+          const subAssets = (asset as ExtendedAsset).subAssets;
+          
+          // Movable Assets Table
+          if (subAssets?.movable && subAssets.movable.length > 0) {
+            const movableColumns = [
+              { header: '#', key: 'sno', width: 10 },
+              { header: 'Component Name', key: 'name', width: 45 },
+              { header: 'Brand', key: 'brand', width: 30 },
+              { header: 'Model', key: 'model', width: 30 },
+              { header: 'Capacity', key: 'capacity', width: 18 },
+              { header: 'Location', key: 'location', width: 42 }
+            ];
+            
+            const movableTableWidth = movableColumns.reduce((sum, col) => sum + col.width, 0);
+            
+            // Movable header
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text('Movable Components:', startX, currentY);
+            currentY += 6;
+            
+            // Draw movable table headers
+            doc.setFillColor(240, 248, 255); // Light blue for movable
+            doc.rect(startX, currentY, movableTableWidth, headerHeight, 'F');
+            
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            currentX = startX;
+            
+            movableColumns.forEach(column => {
+              doc.text(column.header, currentX + 1, currentY + 6);
+              currentX += column.width;
+            });
+            
+            // Draw borders
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.3);
+            doc.line(startX, currentY, startX + movableTableWidth, currentY);
+            doc.line(startX, currentY + headerHeight, startX + movableTableWidth, currentY + headerHeight);
+            
+            currentX = startX;
+            movableColumns.forEach(column => {
+              doc.line(currentX, currentY, currentX, currentY + headerHeight);
+              currentX += column.width;
+            });
+            
+            currentY += headerHeight;
+            
+            // Add movable data rows
+            (asset as ExtendedAsset).subAssets?.movable?.forEach((subAsset: SubAsset, index: number) => {
+              const rowData = [
+                (index + 1).toString(),
+                subAsset.assetName || 'N/A',
+                subAsset.brand || 'N/A',
+                subAsset.model || 'N/A',
+                subAsset.capacity || 'N/A',
+                subAsset.location || 'N/A'
+              ];
+              
+              // Draw row borders
+              doc.setDrawColor(220, 220, 220);
+              doc.line(startX, currentY, startX + movableTableWidth, currentY);
+              doc.line(startX, currentY + rowHeight, startX + movableTableWidth, currentY + rowHeight);
+              
+              // Draw column borders
+              currentX = startX;
+              movableColumns.forEach(column => {
+                doc.line(currentX, currentY, currentX, currentY + rowHeight);
+                currentX += column.width;
+              });
+              
+              // Add row data
+              doc.setFontSize(7);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(0, 0, 0);
+              currentX = startX;
+              
+              rowData.forEach((text, colIndex) => {
+                const column = movableColumns[colIndex];
+                const maxWidth = column.width - 2;
+                
+                const lines = doc.splitTextToSize(text.toString(), maxWidth);
+                const lineHeight = 3;
+                
+                lines.forEach((line: string, lineIndex: number) => {
+                  if (lineIndex === 0) {
+                    doc.text(line, currentX + 1, currentY + 6);
+                  } else if (currentY + 6 + (lineIndex * lineHeight) < currentY + rowHeight) {
+                    doc.text(line, currentX + 1, currentY + 6 + (lineIndex * lineHeight));
+                  }
+                });
+                
+                currentX += column.width;
+              });
+              
+              currentY += rowHeight;
+            });
+            
+            currentY += 5;
+          }
+          
+          // Immovable Assets Table
+          if (subAssets?.immovable && subAssets.immovable.length > 0) {
+            const immovableColumns = [
+              { header: '#', key: 'sno', width: 10 },
+              { header: 'Component Name', key: 'name', width: 45 },
+              { header: 'Brand', key: 'brand', width: 30 },
+              { header: 'Model', key: 'model', width: 30 },
+              { header: 'Capacity', key: 'capacity', width: 18 },
+              { header: 'Location', key: 'location', width: 42 }
+            ];
+            
+            const immovableTableWidth = immovableColumns.reduce((sum, col) => sum + col.width, 0);
+            
+            // Immovable header
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text('Immovable Components:', startX, currentY);
+            currentY += 6;
+            
+            // Draw immovable table headers
+            doc.setFillColor(248, 255, 248); // Light green for immovable
+            doc.rect(startX, currentY, immovableTableWidth, headerHeight, 'F');
+            
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            currentX = startX;
+            
+            immovableColumns.forEach(column => {
+              doc.text(column.header, currentX + 1, currentY + 6);
+              currentX += column.width;
+            });
+            
+            // Draw borders
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.3);
+            doc.line(startX, currentY, startX + immovableTableWidth, currentY);
+            doc.line(startX, currentY + headerHeight, startX + immovableTableWidth, currentY + headerHeight);
+            
+            currentX = startX;
+            immovableColumns.forEach(column => {
+              doc.line(currentX, currentY, currentX, currentY + headerHeight);
+              currentX += column.width;
+            });
+            
+            currentY += headerHeight;
+            
+            // Add immovable data rows
+            (asset as ExtendedAsset).subAssets?.immovable?.forEach((subAsset: SubAsset, index: number) => {
+              const rowData = [
+                (index + 1).toString(),
+                subAsset.assetName || 'N/A',
+                subAsset.brand || 'N/A',
+                subAsset.model || 'N/A',
+                subAsset.capacity || 'N/A',
+                subAsset.location || 'N/A'
+              ];
+              
+              // Draw row borders
+              doc.setDrawColor(220, 220, 220);
+              doc.line(startX, currentY, startX + immovableTableWidth, currentY);
+              doc.line(startX, currentY + rowHeight, startX + immovableTableWidth, currentY + rowHeight);
+              
+              // Draw column borders
+              currentX = startX;
+              immovableColumns.forEach(column => {
+                doc.line(currentX, currentY, currentX, currentY + rowHeight);
+                currentX += column.width;
+              });
+              
+              // Add row data
+              doc.setFontSize(7);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(0, 0, 0);
+              currentX = startX;
+              
+              rowData.forEach((text, colIndex) => {
+                const column = immovableColumns[colIndex];
+                const maxWidth = column.width - 2;
+                
+                const lines = doc.splitTextToSize(text.toString(), maxWidth);
+                const lineHeight = 3;
+                
+                lines.forEach((line: string, lineIndex: number) => {
+                  if (lineIndex === 0) {
+                    doc.text(line, currentX + 1, currentY + 6);
+                  } else if (currentY + 6 + (lineIndex * lineHeight) < currentY + rowHeight) {
+                    doc.text(line, currentX + 1, currentY + 6 + (lineIndex * lineHeight));
+                  }
+                });
+                
+                currentX += column.width;
+              });
+              
+              currentY += rowHeight;
+            });
+            
+            currentY += 10;
+          }
+        }
+      }
+      
+      // Add summary section
+      if (currentY > 200) {
+        doc.addPage('portrait');
         currentY = 20;
       }
       
-      const summaryStartY = currentY + 20;
+      const summaryStartY = currentY + 10;
       
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0, 0, 0);
-      doc.text('ASSET SUMMARY', startX + 5, summaryStartY);
+      doc.text('ASSET SUMMARY', startX, summaryStartY);
       
       let summaryContentY = summaryStartY + 15;
-      const summaryContentX = startX + 5;
+      const summaryContentX = startX;
       
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
@@ -486,18 +723,556 @@ function AssetsLogsContent() {
       summaryContentY += 6;
       doc.text(`Generated: ${new Date().toLocaleDateString()}`, summaryContentX, summaryContentY);
       
+      // Add footer
+      const pageHeight = doc.internal.pageSize.height;
+      const footerY = pageHeight - 10;
+      
+      // Footer separator line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(15, footerY - 5, 195, footerY - 5);
+      
+      // Footer text
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text('Generated by EXOZEN Digital Asset Management System', 15, footerY);
+      doc.text(`Page 1 of 1`, 195, footerY, { align: 'right' });
+      
       // Save the PDF
       const filename = `assets-report-${user?.projectName || 'project'}-${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(filename);
       
-    } catch (error) {
+    } catch {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
     }
   };
 
-  const handleExcelDownload = () => {
-    console.log('Excel download initiated');
+  const handleIndividualDownload = async (asset: Asset) => {
+    try {
+      // Dynamic import to avoid SSR issues
+      const jsPDF = (await import('jspdf')).default;
+      
+      const doc = new jsPDF('portrait');
+      
+      // Clean Header Design
+      try {
+        // Add EXOZEN logo image
+        const logoUrl = '/exozen_logo1.png'
+        doc.addImage(logoUrl, 'PNG', 15, 8, 30, 12)
+      } catch {
+        // Fallback to text if image fails to load
+        doc.setTextColor(0, 0, 0)
+        doc.setFontSize(18)
+        doc.setFont('helvetica', 'bold')
+        doc.text('EXOZEN', 15, 18)
+      }
+      
+      // Report Title and Asset Info
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Individual Asset Report', 50, 12)
+      
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Asset: ${asset.tagId || 'Unknown'}`, 50, 18)
+      doc.text(`Project: ${user?.projectName || 'Unknown Project'}`, 50, 22)
+      
+      // Date and Summary Info
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 150, 12)
+      doc.text(`Asset Type: ${asset.assetType || 'Unknown'}`, 150, 16)
+      doc.text(`Status: ${asset.status || 'Unknown'}`, 150, 20)
+      
+      // Header separator line
+      doc.setDrawColor(200, 200, 200)
+      doc.setLineWidth(0.3)
+      doc.line(15, 25, 195, 25)
+      
+      // Asset Details Section
+      let currentY = 35;
+      
+      // Asset Header
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Asset Details: ${asset.tagId || 'Unknown Asset'}`, 15, currentY);
+      currentY += 8;
+      
+      // Comprehensive Asset Information Table
+      const assetDetails = [
+        ['Asset Tag', asset.tagId || 'N/A'],
+        ['Asset Type', asset.assetType || 'N/A'],
+        ['Subcategory', asset.subcategory || 'N/A'],
+        ['Brand', asset.brand || 'N/A'],
+        ['Model', asset.model || 'N/A'],
+        ['Serial Number', asset.serialNumber || 'N/A'],
+        ['Capacity', asset.capacity || 'N/A'],
+        ['Year of Installation', asset.yearOfInstallation || 'N/A'],
+        ['Mobility Category', asset.mobilityCategory || 'N/A'],
+        ['Digital Tag Type', asset.digitalTagType || 'N/A'],
+        ['Status', asset.status || 'N/A'],
+        ['Priority', asset.priority || 'N/A'],
+        ['Assigned To', (() => {
+          if (typeof asset.assignedTo === 'object' && asset.assignedTo?.name) {
+            return `${asset.assignedTo.name} (${asset.assignedTo.email})`;
+          } else if (typeof asset.assignedTo === 'string') {
+            return asset.assignedTo;
+          }
+          return 'Unassigned';
+        })()],
+        ['Created By', asset.createdBy?.name ? `${asset.createdBy.name} (${asset.createdBy.email})` : 'N/A'],
+        ['Project', asset.project?.projectName || 'N/A'],
+        ['Location', formatLocation(asset.location || null)],
+        ['Created Date', asset.createdAt ? formatDate(asset.createdAt) : 'N/A'],
+        ['Last Updated', asset.updatedAt ? formatDate(asset.updatedAt) : 'N/A']
+      ];
+      
+      // Draw asset details table
+      const tableWidth = 180;
+      const rowHeight = 8;
+      const headerHeight = 6;
+      let currentX = 15;
+      
+      // Table header
+      doc.setFillColor(59, 130, 246);
+      doc.rect(15, currentY, tableWidth, headerHeight, 'F');
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('Property', 17, currentY + 4);
+      doc.text('Value', 100, currentY + 4);
+      
+      // Draw header borders
+      doc.setDrawColor(37, 99, 235);
+      doc.setLineWidth(0.5);
+      doc.line(15, currentY, 15 + tableWidth, currentY);
+      doc.line(15, currentY + headerHeight, 15 + tableWidth, currentY + headerHeight);
+      doc.line(15, currentY, 15, currentY + headerHeight);
+      doc.line(100, currentY, 100, currentY + headerHeight);
+      doc.line(15 + tableWidth, currentY, 15 + tableWidth, currentY + headerHeight);
+      
+      currentY += headerHeight;
+      
+      // Add asset details rows
+      assetDetails.forEach(([property, value]) => {
+        // Check if we need a new page
+        if (currentY > 250) {
+          doc.addPage('portrait');
+          currentY = 20;
+        }
+        
+        // Draw row borders
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.3);
+        doc.line(15, currentY, 15 + tableWidth, currentY);
+        doc.line(15, currentY + rowHeight, 15 + tableWidth, currentY + rowHeight);
+        doc.line(15, currentY, 15, currentY + rowHeight);
+        doc.line(100, currentY, 100, currentY + rowHeight);
+        doc.line(15 + tableWidth, currentY, 15 + tableWidth, currentY + rowHeight);
+        
+        // Add row data
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(property, 17, currentY + 5);
+        
+        // Handle long values with text wrapping
+        const maxWidth = tableWidth - 85;
+        const lines = doc.splitTextToSize(value.toString(), maxWidth);
+        const lineHeight = 3;
+        
+        lines.forEach((line: string, lineIndex: number) => {
+          if (lineIndex === 0) {
+            doc.text(line, 102, currentY + 5);
+          } else if (currentY + 5 + (lineIndex * lineHeight) < currentY + rowHeight) {
+            doc.text(line, 102, currentY + 5 + (lineIndex * lineHeight));
+          }
+        });
+        
+        currentY += rowHeight;
+      });
+      
+      // Add Digital Assets section if available
+      if ((asset as ExtendedAsset).digitalAssets) {
+        currentY += 10;
+        
+        if (currentY > 200) {
+          doc.addPage('portrait');
+          currentY = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Digital Assets:', 15, currentY);
+        currentY += 8;
+        
+        const digitalAssetsTable = [
+          ['Type', 'Generated At', 'Status']
+        ];
+        
+        if ((asset as ExtendedAsset).digitalAssets?.qrCode) {
+          digitalAssetsTable.push([
+            'QR Code',
+            (asset as ExtendedAsset).digitalAssets?.qrCode?.generatedAt ? formatDate((asset as ExtendedAsset).digitalAssets?.qrCode?.generatedAt || '') : 'N/A',
+            'Generated'
+          ]);
+        }
+        
+        if ((asset as ExtendedAsset).digitalAssets?.barcode) {
+          digitalAssetsTable.push([
+            'Barcode',
+            (asset as ExtendedAsset).digitalAssets?.barcode?.generatedAt ? formatDate((asset as ExtendedAsset).digitalAssets?.barcode?.generatedAt || '') : 'N/A',
+            'Generated'
+          ]);
+        }
+        
+        if ((asset as ExtendedAsset).digitalAssets?.nfcData) {
+          digitalAssetsTable.push([
+            'NFC Data',
+            (asset as ExtendedAsset).digitalAssets?.nfcData?.generatedAt ? formatDate((asset as ExtendedAsset).digitalAssets?.nfcData?.generatedAt || '') : 'N/A',
+            'Generated'
+          ]);
+        }
+        
+        if (digitalAssetsTable.length > 1) {
+          const digitalTableWidth = 180;
+          const digitalRowHeight = 8;
+          const digitalHeaderHeight = 6;
+          
+          // Table header
+          doc.setFillColor(59, 130, 246);
+          doc.rect(15, currentY, digitalTableWidth, digitalHeaderHeight, 'F');
+          
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.text('Type', 17, currentY + 4);
+          doc.text('Generated At', 70, currentY + 4);
+          doc.text('Status', 140, currentY + 4);
+          
+          // Draw header borders
+          doc.setDrawColor(37, 99, 235);
+          doc.setLineWidth(0.5);
+          doc.line(15, currentY, 15 + digitalTableWidth, currentY);
+          doc.line(15, currentY + digitalHeaderHeight, 15 + digitalTableWidth, currentY + digitalHeaderHeight);
+          doc.line(15, currentY, 15, currentY + digitalHeaderHeight);
+          doc.line(70, currentY, 70, currentY + digitalHeaderHeight);
+          doc.line(140, currentY, 140, currentY + digitalHeaderHeight);
+          doc.line(15 + digitalTableWidth, currentY, 15 + digitalTableWidth, currentY + digitalHeaderHeight);
+          
+          currentY += digitalHeaderHeight;
+          
+          // Add digital assets rows
+          digitalAssetsTable.slice(1).forEach(([type, generatedAt, status]) => {
+            if (currentY > 250) {
+              doc.addPage('portrait');
+              currentY = 20;
+            }
+            
+            // Draw row borders
+            doc.setDrawColor(220, 220, 220);
+            doc.setLineWidth(0.3);
+            doc.line(15, currentY, 15 + digitalTableWidth, currentY);
+            doc.line(15, currentY + digitalRowHeight, 15 + digitalTableWidth, currentY + digitalRowHeight);
+            doc.line(15, currentY, 15, currentY + digitalRowHeight);
+            doc.line(70, currentY, 70, currentY + digitalRowHeight);
+            doc.line(140, currentY, 140, currentY + digitalRowHeight);
+            doc.line(15 + digitalTableWidth, currentY, 15 + digitalTableWidth, currentY + digitalRowHeight);
+            
+            // Add row data
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(0, 0, 0);
+            doc.text(type, 17, currentY + 5);
+            doc.text(generatedAt, 72, currentY + 5);
+            doc.text(status, 142, currentY + 5);
+            
+            currentY += digitalRowHeight;
+          });
+        }
+      }
+      
+      // Add Sub-Assets section if available
+      if ((asset as ExtendedAsset).subAssets) {
+        currentY += 10;
+        
+        // Movable Assets
+        if ((asset as ExtendedAsset).subAssets?.movable && ((asset as ExtendedAsset).subAssets?.movable as SubAsset[]).length > 0) {
+          if (currentY > 200) {
+            doc.addPage('portrait');
+            currentY = 20;
+          }
+          
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          doc.text(`Movable Components (${((asset as ExtendedAsset).subAssets?.movable as SubAsset[]).length}):`, 15, currentY);
+          currentY += 8;
+          
+          const movableColumns = [
+            { header: '#', key: 'sno', width: 10 },
+            { header: 'Component Name', key: 'name', width: 50 },
+            { header: 'Brand', key: 'brand', width: 35 },
+            { header: 'Model', key: 'model', width: 35 },
+            { header: 'Capacity', key: 'capacity', width: 20 },
+            { header: 'Location', key: 'location', width: 30 }
+          ];
+          
+          const movableTableWidth = movableColumns.reduce((sum, col) => sum + col.width, 0);
+          
+          // Draw movable table headers
+          doc.setFillColor(240, 248, 255); // Light blue for movable
+          doc.rect(15, currentY, movableTableWidth, headerHeight, 'F');
+          
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          let currentX = 15;
+          
+          movableColumns.forEach(column => {
+            doc.text(column.header, currentX + 1, currentY + 4);
+            currentX += column.width;
+          });
+          
+          // Draw borders
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.line(15, currentY, 15 + movableTableWidth, currentY);
+          doc.line(15, currentY + headerHeight, 15 + movableTableWidth, currentY + headerHeight);
+          
+          currentX = 15;
+          movableColumns.forEach(column => {
+            doc.line(currentX, currentY, currentX, currentY + headerHeight);
+            currentX += column.width;
+          });
+          
+          currentY += headerHeight;
+          
+          // Add movable data rows
+          ((asset as ExtendedAsset).subAssets?.movable as SubAsset[]).forEach((subAsset: SubAsset, index: number) => {
+            if (currentY > 250) {
+              doc.addPage('portrait');
+              currentY = 20;
+            }
+            
+            const rowData = [
+              (index + 1).toString(),
+              subAsset.assetName || 'N/A',
+              subAsset.brand || 'N/A',
+              subAsset.model || 'N/A',
+              subAsset.capacity || 'N/A',
+              subAsset.location || 'N/A'
+            ];
+            
+            // Draw row borders
+            doc.setDrawColor(220, 220, 220);
+            doc.line(15, currentY, 15 + movableTableWidth, currentY);
+            doc.line(15, currentY + rowHeight, 15 + movableTableWidth, currentY + rowHeight);
+            
+            // Draw column borders
+            currentX = 15;
+            movableColumns.forEach(column => {
+              doc.line(currentX, currentY, currentX, currentY + rowHeight);
+              currentX += column.width;
+            });
+            
+            // Add row data
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(0, 0, 0);
+            currentX = 15;
+            
+            rowData.forEach((text, colIndex) => {
+              const column = movableColumns[colIndex];
+              const maxWidth = column.width - 2;
+              
+              const lines = doc.splitTextToSize(text.toString(), maxWidth);
+              const lineHeight = 3;
+              
+              lines.forEach((line: string, lineIndex: number) => {
+                if (lineIndex === 0) {
+                  doc.text(line, currentX + 1, currentY + 5);
+                } else if (currentY + 5 + (lineIndex * lineHeight) < currentY + rowHeight) {
+                  doc.text(line, currentX + 1, currentY + 5 + (lineIndex * lineHeight));
+                }
+              });
+              
+              currentX += column.width;
+            });
+            
+            currentY += rowHeight;
+          });
+          
+          currentY += 5;
+        }
+        
+        // Immovable Assets
+        if ((asset as ExtendedAsset).subAssets?.immovable && ((asset as ExtendedAsset).subAssets?.immovable as SubAsset[]).length > 0) {
+          if (currentY > 200) {
+            doc.addPage('portrait');
+            currentY = 20;
+          }
+          
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          doc.text(`Immovable Components (${((asset as ExtendedAsset).subAssets?.immovable as SubAsset[]).length}):`, 15, currentY);
+          currentY += 8;
+          
+          const immovableColumns = [
+            { header: '#', key: 'sno', width: 10 },
+            { header: 'Component Name', key: 'name', width: 50 },
+            { header: 'Brand', key: 'brand', width: 35 },
+            { header: 'Model', key: 'model', width: 35 },
+            { header: 'Capacity', key: 'capacity', width: 20 },
+            { header: 'Location', key: 'location', width: 30 }
+          ];
+          
+          const immovableTableWidth = immovableColumns.reduce((sum, col) => sum + col.width, 0);
+          
+          // Draw immovable table headers
+          doc.setFillColor(248, 255, 248); // Light green for immovable
+          doc.rect(15, currentY, immovableTableWidth, headerHeight, 'F');
+          
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(0, 0, 0);
+          currentX = 15;
+          
+          immovableColumns.forEach(column => {
+            doc.text(column.header, currentX + 1, currentY + 4);
+            currentX += column.width;
+          });
+          
+          // Draw borders
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.line(15, currentY, 15 + immovableTableWidth, currentY);
+          doc.line(15, currentY + headerHeight, 15 + immovableTableWidth, currentY + headerHeight);
+          
+          currentX = 15;
+          immovableColumns.forEach(column => {
+            doc.line(currentX, currentY, currentX, currentY + headerHeight);
+            currentX += column.width;
+          });
+          
+          currentY += headerHeight;
+          
+          // Add immovable data rows
+          ((asset as ExtendedAsset).subAssets?.immovable as SubAsset[]).forEach((subAsset: SubAsset, index: number) => {
+            if (currentY > 250) {
+              doc.addPage('portrait');
+              currentY = 20;
+            }
+            
+            const rowData = [
+              (index + 1).toString(),
+              subAsset.assetName || 'N/A',
+              subAsset.brand || 'N/A',
+              subAsset.model || 'N/A',
+              subAsset.capacity || 'N/A',
+              subAsset.location || 'N/A'
+            ];
+            
+            // Draw row borders
+            doc.setDrawColor(220, 220, 220);
+            doc.line(15, currentY, 15 + immovableTableWidth, currentY);
+            doc.line(15, currentY + rowHeight, 15 + immovableTableWidth, currentY + rowHeight);
+            
+            // Draw column borders
+            currentX = 15;
+            immovableColumns.forEach(column => {
+              doc.line(currentX, currentY, currentX, currentY + rowHeight);
+              currentX += column.width;
+            });
+            
+            // Add row data
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(0, 0, 0);
+            currentX = 15;
+            
+            rowData.forEach((text, colIndex) => {
+              const column = immovableColumns[colIndex];
+              const maxWidth = column.width - 2;
+              
+              const lines = doc.splitTextToSize(text.toString(), maxWidth);
+              const lineHeight = 3;
+              
+              lines.forEach((line: string, lineIndex: number) => {
+                if (lineIndex === 0) {
+                  doc.text(line, currentX + 1, currentY + 5);
+                } else if (currentY + 5 + (lineIndex * lineHeight) < currentY + rowHeight) {
+                  doc.text(line, currentX + 1, currentY + 5 + (lineIndex * lineHeight));
+                }
+              });
+              
+              currentX += column.width;
+            });
+            
+            currentY += rowHeight;
+          });
+          
+          currentY += 10;
+        }
+      }
+      
+      // Add notes if available
+      if (asset.notes) {
+        if (currentY > 200) {
+          doc.addPage('portrait');
+          currentY = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Notes:', 15, currentY);
+        currentY += 8;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const noteLines = doc.splitTextToSize(asset.notes, 180);
+        noteLines.forEach((line: string) => {
+          if (currentY > 250) {
+            doc.addPage('portrait');
+            currentY = 20;
+          }
+          doc.text(line, 15, currentY);
+          currentY += 5;
+        });
+      }
+      
+      // Add footer
+      const pageHeight = doc.internal.pageSize.height;
+      const footerY = pageHeight - 10;
+      
+      // Footer separator line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(15, footerY - 5, 195, footerY - 5);
+      
+      // Footer text
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text('Generated by EXOZEN Digital Asset Management System', 15, footerY);
+      doc.text(`Asset: ${asset.tagId || 'Unknown'}`, 195, footerY, { align: 'right' });
+      
+      // Save the PDF
+      const filename = `asset-${asset.tagId || 'unknown'}-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      
+    } catch {
+      console.error('Error generating individual asset PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -556,311 +1331,6 @@ function AssetsLogsContent() {
 
 
 
-  // Custom table component for the specific columns
-  const ProjectAssetsTable = ({ assets }: { assets: Asset[] }) => {
-    return (
-      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-        {/* Mobile Card View */}
-        <div className="block lg:hidden">
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 px-4 py-3 border-b border-slate-200 dark:border-slate-600">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Asset Inventory</h3>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                  {assets.length} assets
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-3 p-4">
-            {assets.map((asset) => (
-              <div key={asset._id} className="group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-4 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200">
-                {/* Asset Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg shadow-sm">
-                      {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
-                        className: "w-5 h-5 text-white"
-                      })}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-slate-900 dark:text-slate-100 text-base">
-                        {asset.brand} {asset.model || ''}
-                      </div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400">
-                        {asset.assetType} • {asset.tagId || 'No Tag'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(asset.status || 'active')}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewDetails(asset)}
-                      className="h-9 w-9 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Asset Details Grid */}
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Tag ID</span>
-                    <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 text-sm">
-                      {asset.tagId || 'N/A'}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Vendor</span>
-                    <span className="font-medium text-slate-900 dark:text-slate-100 text-sm">
-                      {(() => {
-                        const vendorName = asset.customFields?.['Vendor Name'];
-                        return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
-                      })()}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Location</span>
-                    <span className="font-medium text-slate-900 dark:text-slate-100 text-sm text-right max-w-[60%] truncate">
-                      {formatLocation(asset.location)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Serial Number</span>
-                    <span className="font-medium text-slate-900 dark:text-slate-100 text-sm">
-                      {asset.serialNumber || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Desktop Table View */}
-        <div className="hidden lg:block">
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 px-6 py-4 border-b border-slate-200 dark:border-slate-600">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">Asset Inventory</h3>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-                  {assets.length} assets
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-600">
-                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 w-16">#</th>
-                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 min-w-[200px]">Asset Details</th>
-                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 min-w-[150px]">Tag & Serial</th>
-                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 min-w-[120px]">Vendor</th>
-                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 w-32">Category</th>
-                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 min-w-[180px]">Location</th>
-                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 w-28">Status</th>
-                  <th className="text-left p-4 font-semibold text-sm text-slate-700 dark:text-slate-300 w-24">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assets.map((asset, index) => (
-                  <tr key={asset._id} className="group border-b border-slate-200/50 dark:border-slate-700/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all duration-200">
-                    <td className="p-4 text-sm text-slate-600 dark:text-slate-400 font-medium">
-                      <div className="flex items-center justify-center w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-full text-xs font-semibold">
-                        {index + 1}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg shadow-sm">
-                          {React.createElement(getAssetTypeIcon(asset.assetType || 'unknown'), {
-                            className: "w-5 h-5 text-white"
-                          })}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
-                            {asset.brand} {asset.model || ''}
-                          </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            {asset.assetType}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="space-y-1">
-                        <div className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {asset.tagId || 'N/A'}
-                        </div>
-                        {asset.serialNumber && (
-                          <div className="text-xs text-slate-500 dark:text-slate-400">
-                            SN: {asset.serialNumber}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="text-sm text-slate-900 dark:text-slate-100 font-medium">
-                        {(() => {
-                          const vendorName = asset.customFields?.['Vendor Name'];
-                          return (typeof vendorName === 'string' ? vendorName : null) || asset.brand || 'N/A';
-                        })()}
-                      </div>
-                      {asset.customFields?.['HSN'] && (
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          HSN: {String(asset.customFields['HSN'])}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <Badge variant="outline" className="text-xs font-medium border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-                        {asset.assetType || 'Unknown'}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                        <div className="text-sm text-slate-900 dark:text-slate-100 truncate">
-                          {formatLocation(asset.location)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      {getStatusBadge(asset.status || 'active')}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(asset)}
-                          className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Pagination Component
-  const PaginationComponent = () => {
-    if (totalPages <= 1) return null;
-
-    const getPageNumbers = () => {
-      const pages = [];
-      const maxVisiblePages = 5;
-      
-      if (totalPages <= maxVisiblePages) {
-        for (let i = 1; i <= totalPages; i++) {
-          pages.push(i);
-        }
-      } else {
-        if (currentPage <= 3) {
-          for (let i = 1; i <= 4; i++) {
-            pages.push(i);
-          }
-          pages.push('...');
-          pages.push(totalPages);
-        } else if (currentPage >= totalPages - 2) {
-          pages.push(1);
-          pages.push('...');
-          for (let i = totalPages - 3; i <= totalPages; i++) {
-            pages.push(i);
-          }
-        } else {
-          pages.push(1);
-          pages.push('...');
-          for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-            pages.push(i);
-          }
-          pages.push('...');
-          pages.push(totalPages);
-        }
-      }
-      
-      return pages;
-    };
-
-    return (
-      <div className="flex items-center justify-between px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-600">
-        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-          <span>Showing</span>
-          <span className="font-semibold text-slate-900 dark:text-slate-100">
-            {startIndex + 1}-{Math.min(endIndex, filteredAssets.length)}
-          </span>
-          <span>of</span>
-          <span className="font-semibold text-slate-900 dark:text-slate-100">
-            {filteredAssets.length}
-          </span>
-          <span>assets</span>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePreviousPage}
-            disabled={currentPage === 1}
-            className="h-8 w-8 p-0 border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          
-          <div className="flex items-center gap-1">
-            {getPageNumbers().map((page, index) => (
-              <React.Fragment key={index}>
-                {page === '...' ? (
-                  <span className="px-2 py-1 text-slate-500 dark:text-slate-400">...</span>
-                ) : (
-                  <Button
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handlePageChange(page as number)}
-                    className={`h-8 w-8 p-0 text-sm ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {page}
-                  </Button>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-            className="h-8 w-8 p-0 border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
 
   if (loading) {
     return (
@@ -961,6 +1431,9 @@ function AssetsLogsContent() {
                         <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           STATUS
                         </th>
+                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
+                          ACTIONS
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1013,7 +1486,7 @@ function AssetsLogsContent() {
                             <div className="flex items-center gap-2">
                               <MapPin className="w-4 h-4 text-primary" />
                               <span className="truncate max-w-[120px]">
-                                {formatLocation(asset.location)}
+                                {formatLocation(asset.location || null)}
                               </span>
                             </div>
                           </td>
@@ -1021,6 +1494,28 @@ function AssetsLogsContent() {
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
                               {asset.status || 'active'}
                             </span>
+                          </td>
+                          <td className="border border-border px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewDetails(asset)}
+                                className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleIndividualDownload(asset)}
+                                className="h-8 w-8 p-0 hover:bg-green-100 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1115,7 +1610,7 @@ function AssetsLogsContent() {
 
           {/* Asset View Modal */}
           <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-            <DialogContent className="max-w-3xl bg-card border-border">
+            <DialogContent className="max-w-4xl max-h-[90vh] bg-card border-border overflow-hidden flex flex-col">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-foreground">
                   <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
@@ -1126,7 +1621,8 @@ function AssetsLogsContent() {
               </DialogHeader>
               
               {selectedAsset && (
-                <div className="space-y-6">
+                <div className="flex-1 overflow-y-auto pr-2">
+                  <div className="space-y-6">
                   {/* Asset Header */}
                   <div className="flex items-center gap-4 p-6 bg-muted rounded-xl border border-border">
                     <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl">
@@ -1148,68 +1644,254 @@ function AssetsLogsContent() {
                     </div>
                   </div>
 
-                  {/* Asset Information Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Assigned To */}
+                  {/* Comprehensive Asset Information Table */}
+                  <div className="space-y-6">
+                    {/* Basic Asset Information */}
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <User className="w-4 h-4" />
-                        Assigned To
+                      <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                        <Database className="w-5 h-5" />
+                        Asset Information
+                      </h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-border rounded-lg">
+                          <thead>
+                            <tr className="bg-muted">
+                              <th className="border border-border px-4 py-2 text-left font-semibold text-sm">Property</th>
+                              <th className="border border-border px-4 py-2 text-left font-semibold text-sm">Value</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Asset Tag</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.tagId || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Asset Type</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.assetType || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Subcategory</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.subcategory || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Brand</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.brand || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Model</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.model || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Serial Number</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.serialNumber || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Capacity</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.capacity || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Year of Installation</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.yearOfInstallation || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Mobility Category</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.mobilityCategory || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Digital Tag Type</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.digitalTagType || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Status</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.status || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Priority</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">{selectedAsset.priority || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Assigned To</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.name 
+                                  ? `${selectedAsset.assignedTo.name} (${selectedAsset.assignedTo.email})`
+                                  : typeof selectedAsset.assignedTo === 'string' 
+                                  ? selectedAsset.assignedTo 
+                                  : 'Unassigned'}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Created By</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                {selectedAsset.createdBy?.name ? `${selectedAsset.createdBy.name} (${selectedAsset.createdBy.email})` : 'N/A'}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Project</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                {selectedAsset.project?.projectName || 'N/A'}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Location</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                {selectedAsset.location ? formatLocation(selectedAsset.location) : 'N/A'}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Created Date</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                {selectedAsset.createdAt ? formatDate(selectedAsset.createdAt) : 'N/A'}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Last Updated</td>
+                              <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                {selectedAsset.updatedAt ? formatDate(selectedAsset.updatedAt) : 'N/A'}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
-                      <div className="p-4 bg-muted rounded-lg border border-border">
-                        <p className="text-sm text-foreground font-medium">
-                          {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.name 
-                            ? selectedAsset.assignedTo.name 
-                            : typeof selectedAsset.assignedTo === 'string' 
-                            ? selectedAsset.assignedTo 
-                            : 'Unassigned'}
-                        </p>
-                        {typeof selectedAsset.assignedTo === 'object' && selectedAsset.assignedTo?.email && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {selectedAsset.assignedTo.email}
-                          </p>
+                    </div>
+
+                    {/* Digital Assets Section */}
+                    {(selectedAsset as ExtendedAsset).digitalAssets && (
+                      <div className="space-y-3">
+                        <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                          <FileText className="w-5 h-5" />
+                          Digital Assets
+                        </h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse border border-border rounded-lg">
+                            <thead>
+                              <tr className="bg-muted">
+                                <th className="border border-border px-4 py-2 text-left font-semibold text-sm">Type</th>
+                                <th className="border border-border px-4 py-2 text-left font-semibold text-sm">Generated At</th>
+                                <th className="border border-border px-4 py-2 text-left font-semibold text-sm">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(selectedAsset as ExtendedAsset).digitalAssets?.qrCode && (
+                                <tr>
+                                  <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">QR Code</td>
+                                  <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                    {(selectedAsset as ExtendedAsset).digitalAssets?.qrCode?.generatedAt ? formatDate((selectedAsset as ExtendedAsset).digitalAssets?.qrCode?.generatedAt || '') : 'N/A'}
+                                  </td>
+                                  <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                    <Badge variant="outline" className="bg-green-100 text-green-800">Generated</Badge>
+                                  </td>
+                                </tr>
+                              )}
+                              {(selectedAsset as ExtendedAsset).digitalAssets?.barcode && (
+                                <tr>
+                                  <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Barcode</td>
+                                  <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                    {(selectedAsset as ExtendedAsset).digitalAssets?.barcode?.generatedAt ? formatDate((selectedAsset as ExtendedAsset).digitalAssets?.barcode?.generatedAt || '') : 'N/A'}
+                                  </td>
+                                  <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                    <Badge variant="outline" className="bg-green-100 text-green-800">Generated</Badge>
+                                  </td>
+                                </tr>
+                              )}
+                              {(selectedAsset as ExtendedAsset).digitalAssets?.nfcData && (
+                                <tr>
+                                  <td className="border border-border px-4 py-2 text-sm font-medium text-muted-foreground">NFC Data</td>
+                                  <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                    {(selectedAsset as ExtendedAsset).digitalAssets?.nfcData?.generatedAt ? formatDate((selectedAsset as ExtendedAsset).digitalAssets?.nfcData?.generatedAt || '') : 'N/A'}
+                                  </td>
+                                  <td className="border border-border px-4 py-2 text-sm text-foreground">
+                                    <Badge variant="outline" className="bg-green-100 text-green-800">Generated</Badge>
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sub-Assets Section */}
+                    {(selectedAsset as ExtendedAsset).subAssets && (
+                      <div className="space-y-6">
+                        {/* Movable Assets */}
+                        {(() => {
+                          const subAssets = (selectedAsset as ExtendedAsset).subAssets;
+                          return subAssets?.movable && subAssets.movable.length > 0;
+                        })() && (
+                          <div className="space-y-3">
+                            <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                              <Building className="w-5 h-5" />
+                              Movable Components ({(selectedAsset as ExtendedAsset).subAssets?.movable?.length || 0})
+                            </h4>
+                            <div className="overflow-x-auto">
+                              <table className="w-full border-collapse border border-border rounded-lg">
+                                <thead>
+                                  <tr className="bg-muted">
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">#</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Component Name</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Brand</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Model</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Capacity</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Location</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {((selectedAsset as ExtendedAsset).subAssets?.movable as SubAsset[]).map((subAsset: SubAsset, index: number) => (
+                                    <tr key={subAsset._id}>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{index + 1}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.assetName || 'N/A'}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.brand || 'N/A'}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.model || 'N/A'}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.capacity || 'N/A'}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.location || 'N/A'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Immovable Assets */}
+                        {(() => {
+                          const subAssets = (selectedAsset as ExtendedAsset).subAssets;
+                          return subAssets?.immovable && subAssets.immovable.length > 0;
+                        })() && (
+                          <div className="space-y-3">
+                            <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                              <Building className="w-5 h-5" />
+                              Immovable Components ({(selectedAsset as ExtendedAsset).subAssets?.immovable?.length || 0})
+                            </h4>
+                            <div className="overflow-x-auto">
+                              <table className="w-full border-collapse border border-border rounded-lg">
+                                <thead>
+                                  <tr className="bg-muted">
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">#</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Component Name</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Brand</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Model</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Capacity</th>
+                                    <th className="border border-border px-3 py-2 text-left font-semibold text-sm">Location</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {((selectedAsset as ExtendedAsset).subAssets?.immovable as SubAsset[]).map((subAsset: SubAsset, index: number) => (
+                                    <tr key={subAsset._id}>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{index + 1}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.assetName || 'N/A'}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.brand || 'N/A'}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.model || 'N/A'}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.capacity || 'N/A'}</td>
+                                      <td className="border border-border px-3 py-2 text-sm text-foreground">{subAsset.location || 'N/A'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    </div>
-
-                    {/* Location */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <MapPin className="w-4 h-4" />
-                        Location
-                      </div>
-                      <div className="p-4 bg-muted rounded-lg border border-border">
-                        <p className="text-sm text-foreground font-medium">
-                          {selectedAsset.location ? formatLocation(selectedAsset.location) : 'Location not specified'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Created Date */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <Calendar className="w-4 h-4" />
-                        Created
-                      </div>
-                      <div className="p-4 bg-muted rounded-lg border border-border">
-                        <p className="text-sm text-foreground font-medium">
-                          {selectedAsset.createdAt ? formatDate(selectedAsset.createdAt) : 'Date not available'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Last Updated */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <Clock className="w-4 h-4" />
-                        Last Updated
-                      </div>
-                      <div className="p-4 bg-muted rounded-lg border border-border">
-                        <p className="text-sm text-foreground font-medium">
-                          {selectedAsset.updatedAt ? formatDate(selectedAsset.updatedAt) : 'Date not available'}
-                        </p>
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Additional Details */}
@@ -1227,22 +1909,25 @@ function AssetsLogsContent() {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-end gap-3 pt-6 border-t border-border">
-                    <Button
-                      variant="outline"
-                      onClick={closeViewModal}
-                      className="border-border text-foreground hover:bg-muted"
-                    >
-                      Close
-                    </Button>
-                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white">
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Asset
-                    </Button>
                   </div>
                 </div>
               )}
+                
+                {/* Action Buttons - Fixed at bottom */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-border bg-card">
+                  <Button
+                    variant="outline"
+                    onClick={closeViewModal}
+                    className="border-border text-foreground hover:bg-muted"
+                  >
+                    Close
+                  </Button>
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Asset
+                  </Button>
+                </div>
+              )
             </DialogContent>
           </Dialog>
         </main>

@@ -2,11 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Badge } from './badge'
 import { Switch } from './switch'
-import { Label } from './label'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog'
@@ -27,8 +25,7 @@ import {
   MapPin,
   CreditCard,
   Workflow,
-  Smartphone,
-  Filter
+  Smartphone
 } from 'lucide-react'
 
 interface PermissionCategory {

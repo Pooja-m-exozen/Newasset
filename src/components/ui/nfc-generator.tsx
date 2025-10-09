@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
+import { Card } from './card'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
@@ -11,7 +11,7 @@ import { generateNFCData, type NFCGenerationResponse } from '@/lib/DigitalAssets
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { Wifi, Info, Hash, MapPin, User, Shield, CheckCircle, Search } from 'lucide-react'
+import { Wifi, Info, CheckCircle, Search } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 

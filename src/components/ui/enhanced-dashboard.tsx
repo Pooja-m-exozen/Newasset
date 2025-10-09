@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './car
 import { Button } from './button'
 import { Badge } from './badge'
 import { Progress } from './progress'
-import { LoadingSpinner } from './loading-spinner'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog'
 import { Input } from './input'
 import { Label } from './label'
@@ -24,7 +23,6 @@ import {
   RefreshCw,
   Brain,
   Settings,
-  Gauge,
   Thermometer,
   AlertTriangle,
   FileText,
@@ -154,15 +152,12 @@ export function EnhancedDashboard({
   healthData,
   isHealthLoading = false,
   healthError = null,
-  onRefreshHealth,
   costData,
   isCostLoading = false,
   costError = null,
-  onRefreshCost,
   trendsData,
   isTrendsLoading = false,
   trendsError = null,
-  onRefreshTrends
 }: EnhancedDashboardProps) {
   const router = useRouter()
   const { user } = useAuth()
@@ -358,9 +353,6 @@ export function EnhancedDashboard({
     }
   ), [trendsData])
 
-  const handleAIAnalyticsClick = () => {
-    router.push('/admin/ai-analytics')
-  }
 
   const handleAddUserClick = () => {
     router.push('/admin/manageusers')
@@ -557,8 +549,6 @@ export function EnhancedDashboard({
     }))
   }
 
-  // Show loading spinner only in the header area, not blocking the entire dashboard
-  const showLoadingOverlay = isLoading && !dashboardData
 
     return (
     <div className="flex h-screen bg-background transition-colors duration-200">

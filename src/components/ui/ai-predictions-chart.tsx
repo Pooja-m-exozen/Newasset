@@ -9,7 +9,6 @@ import {
   Brain,
   BarChart3,
   PieChart,
-  RefreshCw,
   Target,
   AlertTriangle,
   Filter

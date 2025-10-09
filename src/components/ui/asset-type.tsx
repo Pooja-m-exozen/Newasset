@@ -5,13 +5,11 @@ import { useRouter } from 'next/navigation';
 import { AssetProvider, useAssetContext } from '../../contexts/AdminAssetContext';
 import { AssetType } from '../../lib/adminasset';
 import { Button } from './button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { Input } from './input';
 import { AssetTypeFormModal } from './asset-type-form-modal';
 import { SuccessToast } from './success-toast';
 import { ErrorDisplay } from './error-display';
 import { EmptyState } from './empty-state';
-import { useToast, ToastContainer } from './toast';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Asset Type Management Component

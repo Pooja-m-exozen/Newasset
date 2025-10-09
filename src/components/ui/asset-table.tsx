@@ -1,8 +1,6 @@
 import React from 'react';
-import { Button } from './button';
-import { Asset, getStatusBadge, getPriorityBadge } from '../../lib/Report';
+import { Asset, getStatusBadge } from '../../lib/Report';
 import { 
-  Building2,
   ArrowUpDown,
   Eye,
   Edit,
@@ -15,14 +13,14 @@ interface AssetTableProps {
   sortOrder: 'asc' | 'desc';
   onSort: (field: string) => void;
   onViewDetails?: (asset: Asset) => void;
+  selectedAsset?: Asset | null;
 }
 
 export const AssetTable: React.FC<AssetTableProps> = ({
   assets,
-  sortBy,
-  sortOrder,
   onSort,
-  onViewDetails
+  onViewDetails,
+  selectedAsset
 }) => {
   const handleSort = (field: string) => {
     onSort(field);
@@ -115,7 +113,11 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                 <td className="border border-blue-200 px-3 py-2">
                   <div className="flex items-center gap-1 justify-center">
                     <button 
-                      className="w-8 h-8 flex items-center justify-center text-blue-600 border border-blue-600 rounded hover:bg-blue-50 transition-colors"
+                      className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${
+                        selectedAsset && selectedAsset._id === asset._id
+                          ? 'text-white bg-blue-600 border border-blue-600 hover:bg-blue-700'
+                          : 'text-blue-600 border border-blue-600 hover:bg-blue-50'
+                      }`}
                       onClick={() => onViewDetails?.(asset)}
                       title="View Asset"
                     >

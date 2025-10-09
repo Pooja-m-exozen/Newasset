@@ -56,6 +56,23 @@ const apiRequest = async <T>(
   }
 };
 
+export interface SubAsset {
+  _id?: string;
+  assetName: string;
+  description?: string;
+  brand: string;
+  model?: string;
+  capacity?: string;
+  location?: string;
+  category?: 'Movable' | 'Immovable';
+  inventory?: {
+    consumables: any[];
+    spareParts: any[];
+    tools: any[];
+    operationalSupply: any[];
+  };
+}
+
 export interface Asset {
   _id: string;
   tagId: string;
@@ -185,6 +202,10 @@ export interface Asset {
     temperature: number;
     energyConsumption: number;
     vibration: number;
+  };
+  subAssets?: {
+    movable?: SubAsset[];
+    immovable?: SubAsset[];
   };
 }
 

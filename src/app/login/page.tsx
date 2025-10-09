@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Eye, EyeOff, ArrowRight, History, Calendar, Lock, Mail, Shield, Zap, Building2, Users, Settings, TrendingUp, AlertCircle, Sparkles } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Eye, EyeOff, ArrowRight, History, Calendar, Lock, Mail, Building2, TrendingUp, AlertCircle, Sparkles } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useToast, ToastContainer } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
@@ -22,7 +21,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const { login } = useAuth()

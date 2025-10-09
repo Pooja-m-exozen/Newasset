@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -550,7 +551,30 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
             project: data.project,
             assignedTo: data.assignedTo ? { _id: data.assignedTo, name: '', email: '' } : undefined,
             // Ensure customFields are included
-            customFields: data.customFields || {}
+            customFields: data.customFields || {},
+            // Transform subAssets to match the expected SubAsset interface
+            subAssets: data.subAssets ? {
+              movable: data.subAssets.movable?.map(subAsset => ({
+                ...subAsset,
+                category: 'Movable' as const,
+                inventory: {
+                  consumables: [],
+                  spareParts: [],
+                  tools: [],
+                  operationalSupply: []
+                }
+              })) || [],
+              immovable: data.subAssets.immovable?.map(subAsset => ({
+                ...subAsset,
+                category: 'Immovable' as const,
+                inventory: {
+                  consumables: [],
+                  spareParts: [],
+                  tools: [],
+                  operationalSupply: []
+                }
+              })) || []
+            } : undefined
           };
           
           console.log('Transformed data for API:', transformedData);
@@ -660,28 +684,6 @@ const ManageAssetsPage: React.FC = () => {
               
               {/* Action Buttons */}
               <div className="flex gap-3">
-                <Button 
-                  onClick={() => router.push('/admin/asset-types')}
-                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Create Asset Type
-                </Button>
-                <Button 
-                  onClick={() => {
-                    // Trigger the create asset modal in AssetsList
-                    const event = new CustomEvent('openCreateAssetModal');
-                    window.dispatchEvent(event);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Add New Asset
-                </Button>
                 <Button 
                   onClick={() => setShowPermissions(true)}
                   className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 shadow-sm hover:shadow-md transition-all duration-200 text-sm"

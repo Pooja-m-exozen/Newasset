@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
+import { Card, CardContent} from './card'
 import { Button } from './button'
 import { Input } from './input'
 import { Label } from './label'
@@ -11,7 +11,7 @@ import { generateBarcode, type BarcodeGenerationResponse } from '@/lib/DigitalAs
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { SuccessToast } from './success-toast'
-import { Barcode, Settings, Info, Hash, CheckCircle, Search, Building } from 'lucide-react'
+import { Barcode, Info, CheckCircle, Search, Building } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import Image from 'next/image'
 

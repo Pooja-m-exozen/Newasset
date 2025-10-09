@@ -97,9 +97,9 @@ export default function ChecklistPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [currentPage] = useState(1)
   const [itemsPerPage] = useState(10)
-  const [filterPriority, setFilterPriority] = useState<string>("")
-  const [filterStatus, setFilterStatus] = useState<string>("")
-  const [filterType, setFilterType] = useState<string>("")
+  const [filterPriority] = useState<string>("")
+  const [filterStatus] = useState<string>("")
+  const [filterType] = useState<string>("")
 
 
 

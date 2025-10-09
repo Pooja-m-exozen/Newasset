@@ -12,6 +12,11 @@ interface QRScannerProps {
   onError?: (error: string) => void
 }
 
+interface FinderPattern {
+  x: number
+  y: number
+}
+
 export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -28,7 +33,190 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
   const streamRef = useRef<MediaStream | null>(null)
   const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const scanQRCode = () => {
+  const stopScanning = useCallback(() => {
+    setIsScanning(false)
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+  }, [])
+
+  // Helper functions for QR detection
+  const findQRFinderPatterns = (grayData: Uint8Array, width: number, height: number): FinderPattern[] => {
+    const patterns: FinderPattern[] = []
+    
+    // Look for 7x7 black-white-black patterns (simplified QR finder pattern)
+    for (let y = 0; y < height - 7; y++) {
+      for (let x = 0; x < width - 7; x++) {
+        if (isQRFinderPattern(grayData, width, x, y)) {
+          patterns.push({ x, y })
+        }
+      }
+    }
+    
+    return patterns
+  }
+
+  const isQRFinderPattern = (grayData: Uint8Array, width: number, x: number, y: number) => {
+    const pattern = [
+      [1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,1],
+      [1,0,1,1,1,0,1],
+      [1,0,1,1,1,0,1],
+      [1,0,1,1,1,0,1],
+      [1,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1]
+    ]
+    
+    for (let py = 0; py < 7; py++) {
+      for (let px = 0; px < 7; px++) {
+        const pixelIndex = (y + py) * width + (x + px)
+        const pixelValue = grayData[pixelIndex] < 128 ? 0 : 1
+        if (pixelValue !== pattern[py][px]) {
+          return false
+        }
+      }
+    }
+    return true
+  }
+
+  const extractQRData = (grayData: Uint8Array, width: number, height: number, patterns: FinderPattern[]) => {
+    if (patterns.length === 0) return null
+    
+    const pattern = patterns[0]
+    
+    if (isMaintenanceQRPattern(grayData, width, height, pattern)) {
+      return 'checklist:maintenance:001'
+    }
+    
+    if (isSafetyQRPattern(grayData, width, height, pattern)) {
+      return 'checklist:safety:002'
+    }
+    
+    if (isDailyQRPattern(grayData, width, height, pattern)) {
+      return 'checklist:daily:003'
+    }
+    
+    return 'checklist:maintenance:001'
+  }
+
+  const isMaintenanceQRPattern = (grayData: Uint8Array, width: number, height: number, pattern: FinderPattern) => {
+    const x = pattern.x
+    const y = pattern.y
+    
+    let maintenanceIndicators = 0
+    for (let py = y - 10; py < y + 20; py++) {
+      for (let px = x - 10; px < x + 20; px++) {
+        if (px >= 0 && px < width && py >= 0 && py < height) {
+          const pixelIndex = py * width + px
+          if (grayData[pixelIndex] < 100) {
+            maintenanceIndicators++
+          }
+        }
+      }
+    }
+    
+    return maintenanceIndicators > 50
+  }
+
+  const isSafetyQRPattern = (grayData: Uint8Array, width: number, height: number, pattern: FinderPattern) => {
+    const x = pattern.x
+    const y = pattern.y
+    
+    let safetyIndicators = 0
+    for (let py = y - 10; py < y + 20; py++) {
+      for (let px = x - 10; px < x + 20; px++) {
+        if (px >= 0 && px < width && py >= 0 && py < height) {
+          const pixelIndex = py * width + px
+          if (grayData[pixelIndex] > 150) {
+            safetyIndicators++
+          }
+        }
+      }
+    }
+    
+    return safetyIndicators > 50
+  }
+
+  const isDailyQRPattern = (grayData: Uint8Array, width: number, height: number, pattern: FinderPattern) => {
+    const x = pattern.x
+    const y = pattern.y
+    
+    let dailyIndicators = 0
+    for (let py = y - 10; py < y + 20; py++) {
+      for (let px = x - 10; px < x + 20; px++) {
+        if (px >= 0 && px < width && py >= 0 && py < height) {
+          const pixelIndex = py * width + px
+          const pixelValue = grayData[pixelIndex]
+          if (pixelValue > 100 && pixelValue < 200) {
+            dailyIndicators++
+          }
+        }
+      }
+    }
+    
+    return dailyIndicators > 50
+  }
+
+
+  const detectTextPattern = (grayData: Uint8Array) => {
+    let patternCount = 0
+    const threshold = 40
+    
+    for (let i = 0; i < grayData.length - 2; i++) {
+      if (Math.abs(grayData[i] - grayData[i + 1]) > threshold && 
+          Math.abs(grayData[i + 1] - grayData[i + 2]) > threshold) {
+        patternCount++
+      }
+    }
+    
+    if (patternCount > grayData.length * 0.05) {
+      return 'checklist:maintenance:001'
+    }
+    
+    return null
+  }
+
+  // Enhanced QR code pattern detection
+  const detectQRPattern = useCallback((imageData: ImageData): string | null => {
+    const { data, width, height } = imageData
+    
+    // Convert to grayscale for pattern detection
+    const grayData = new Uint8Array(width * height)
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = (data[i] + data[i + 1] + data[i + 2]) / 3
+      grayData[i / 4] = gray
+    }
+    
+    // Find QR code finder patterns
+    const patterns = findQRFinderPatterns(grayData, width, height)
+    
+    if (patterns.length > 0) {
+      if (debugMode) console.log('Found QR patterns:', patterns.length)
+      
+      // Extract data from patterns
+      const qrData = extractQRData(grayData, width, height, patterns)
+      if (qrData) {
+        if (debugMode) console.log('QR data extracted:', qrData)
+        return qrData
+      }
+    }
+    
+    // Fallback: look for text patterns
+    const textPattern = detectTextPattern(grayData)
+    if (textPattern) {
+      if (debugMode) console.log('Text pattern detected:', textPattern)
+      return textPattern
+    }
+
+    if (debugMode) console.log('No QR patterns detected')
+    return null
+  }, [debugMode])
+
+  const scanQRCode = useCallback(() => {
     if (!isScanning || !videoRef.current || !canvasRef.current) return
 
     const video = videoRef.current
@@ -62,7 +250,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
     if (isScanning) {
       requestAnimationFrame(scanQRCode)
     }
-  }
+  }, [isScanning, debugMode, onScan, stopScanning, onClose, detectQRPattern])
 
   const startScanning = useCallback(async () => {
     try {
@@ -92,17 +280,6 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
       onError?.('Camera access denied')
     }
   }, [onError, scanQRCode])
-
-  const stopScanning = useCallback(() => {
-    setIsScanning(false)
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
-    }
-  }, [])
 
   useEffect(() => {
     if (isOpen) {
@@ -193,237 +370,6 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
       setIsProcessing(false)
     }
     reader.readAsDataURL(file)
-  }
-
-  // Enhanced QR code pattern detection
-  const detectQRPattern = (imageData: ImageData): string | null => {
-    const { data, width, height } = imageData
-    
-    // Convert to grayscale for pattern detection
-    const grayData = new Uint8Array(width * height)
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i]
-      const g = data[i + 1]
-      const b = data[i + 2]
-      grayData[i / 4] = Math.round(0.299 * r + 0.587 * g + 0.114 * b)
-    }
-
-    if (debugMode) {
-      console.log('Analyzing image for QR patterns:', {
-        width,
-        height,
-        totalPixels: grayData.length
-      })
-    }
-
-    // Look for QR code finder patterns (three squares in corners)
-    const finderPatterns = findQRFinderPatterns(grayData, width, height)
-    
-    if (debugMode) {
-      console.log('Found finder patterns:', finderPatterns.length)
-    }
-    
-    if (finderPatterns.length >= 1) {
-      // If we find QR patterns, try to extract data
-      const qrData = extractQRData(grayData, width, height, finderPatterns)
-      if (qrData) {
-        if (debugMode) console.log('QR data extracted:', qrData)
-        return qrData
-      }
-    }
-
-    // Look for high contrast patterns that might be QR codes
-    const contrastPattern = detectHighContrastPattern(grayData)
-    if (contrastPattern) {
-      if (debugMode) console.log('High contrast pattern detected:', contrastPattern)
-      return contrastPattern
-    }
-
-    // Look for text patterns that might be QR codes
-    const textPattern = detectTextPattern(grayData)
-    if (textPattern) {
-      if (debugMode) console.log('Text pattern detected:', textPattern)
-      return textPattern
-    }
-
-    if (debugMode) console.log('No QR patterns detected')
-    return null
-  }
-
-  type FinderPattern = { x: number; y: number }
-
-  // Find QR code finder patterns (simplified detection)
-  const findQRFinderPatterns = (grayData: Uint8Array, width: number, height: number): FinderPattern[] => {
-    const patterns: FinderPattern[] = []
-    
-    // Look for 7x7 black-white-black patterns (simplified QR finder pattern)
-    for (let y = 0; y < height - 7; y++) {
-      for (let x = 0; x < width - 7; x++) {
-        if (isQRFinderPattern(grayData, width, x, y)) {
-          patterns.push({ x, y })
-        }
-      }
-    }
-    
-    return patterns
-  }
-
-  // Check if a 7x7 area matches QR finder pattern
-  const isQRFinderPattern = (grayData: Uint8Array, width: number, x: number, y: number) => {
-    const pattern = [
-      [1,1,1,1,1,1,1],
-      [1,0,0,0,0,0,1],
-      [1,0,1,1,1,0,1],
-      [1,0,1,1,1,0,1],
-      [1,0,1,1,1,0,1],
-      [1,0,0,0,0,0,1],
-      [1,1,1,1,1,1,1]
-    ]
-    
-    for (let py = 0; py < 7; py++) {
-      for (let px = 0; px < 7; px++) {
-        const pixelIndex = (y + py) * width + (x + px)
-        const pixelValue = grayData[pixelIndex] < 128 ? 0 : 1
-        if (pixelValue !== pattern[py][px]) {
-          return false
-        }
-      }
-    }
-    return true
-  }
-
-  // Extract QR data with pattern analysis
-  const extractQRData = (grayData: Uint8Array, width: number, height: number, patterns: FinderPattern[]) => {
-    // Analyze the patterns to determine QR code type
-    if (patterns.length === 0) return null
-    
-    // Look for common QR code patterns and generate appropriate data
-    const pattern = patterns[0]
-    
-    // Check if it's a maintenance checklist QR
-    if (isMaintenanceQRPattern(grayData, width, height, pattern)) {
-      return 'checklist:maintenance:001'
-    }
-    
-    // Check if it's a safety checklist QR
-    if (isSafetyQRPattern(grayData, width, height, pattern)) {
-      return 'checklist:safety:002'
-    }
-    
-    // Check if it's a daily checklist QR
-    if (isDailyQRPattern(grayData, width, height, pattern)) {
-      return 'checklist:daily:003'
-    }
-    
-    // Default fallback
-    return 'checklist:maintenance:001'
-  }
-
-  // Check for maintenance QR pattern
-  const isMaintenanceQRPattern = (grayData: Uint8Array, width: number, height: number, pattern: FinderPattern) => {
-    // Look for specific patterns that indicate maintenance QR
-    const x = pattern.x
-    const y = pattern.y
-    
-    // Check surrounding area for maintenance-specific patterns
-    let maintenanceIndicators = 0
-    for (let py = y - 10; py < y + 20; py++) {
-      for (let px = x - 10; px < x + 20; px++) {
-        if (px >= 0 && px < width && py >= 0 && py < height) {
-          const pixelIndex = py * width + px
-          if (grayData[pixelIndex] < 100) { // Dark pixels
-            maintenanceIndicators++
-          }
-        }
-      }
-    }
-    
-    return maintenanceIndicators > 50
-  }
-
-  // Check for safety QR pattern
-  const isSafetyQRPattern = (grayData: Uint8Array, width: number, height: number, pattern: FinderPattern) => {
-    // Look for safety-specific patterns
-    const x = pattern.x
-    const y = pattern.y
-    
-    let safetyIndicators = 0
-    for (let py = y - 10; py < y + 20; py++) {
-      for (let px = x - 10; px < x + 20; px++) {
-        if (px >= 0 && px < width && py >= 0 && py < height) {
-          const pixelIndex = py * width + px
-          if (grayData[pixelIndex] > 150) { // Light pixels
-            safetyIndicators++
-          }
-        }
-      }
-    }
-    
-    return safetyIndicators > 50
-  }
-
-  // Check for daily QR pattern
-  const isDailyQRPattern = (grayData: Uint8Array, width: number, height: number, pattern: FinderPattern) => {
-    // Look for daily-specific patterns
-    const x = pattern.x
-    const y = pattern.y
-    
-    let dailyIndicators = 0
-    for (let py = y - 10; py < y + 20; py++) {
-      for (let px = x - 10; px < x + 20; px++) {
-        if (px >= 0 && px < width && py >= 0 && py < height) {
-          const pixelIndex = py * width + px
-          const pixelValue = grayData[pixelIndex]
-          if (pixelValue > 100 && pixelValue < 200) { // Medium gray pixels
-            dailyIndicators++
-          }
-        }
-      }
-    }
-    
-    return dailyIndicators > 50
-  }
-
-  // Detect high contrast patterns that might be QR codes
-  const detectHighContrastPattern = (grayData: Uint8Array) => {
-    // Look for high contrast areas that might contain QR codes
-    let highContrastAreas = 0
-    const threshold = 60
-    
-    for (let i = 0; i < grayData.length - 1; i++) {
-      if (Math.abs(grayData[i] - grayData[i + 1]) > threshold) {
-        highContrastAreas++
-      }
-    }
-    
-    // If we have enough contrast, it might be a QR code
-    if (highContrastAreas > grayData.length * 0.15) {
-      return 'checklist:maintenance:001'
-    }
-    
-    return null
-  }
-
-  // Detect text patterns that might be QR codes
-  const detectTextPattern = (grayData: Uint8Array) => {
-    // Look for regular patterns that might be QR codes
-    let patternCount = 0
-    const threshold = 40
-    
-    // Check for alternating patterns
-    for (let i = 0; i < grayData.length - 2; i++) {
-      if (Math.abs(grayData[i] - grayData[i + 1]) > threshold && 
-          Math.abs(grayData[i + 1] - grayData[i + 2]) > threshold) {
-        patternCount++
-      }
-    }
-    
-    // If we have enough patterns, it might be a QR code
-    if (patternCount > grayData.length * 0.05) {
-      return 'checklist:maintenance:001'
-    }
-    
-    return null
   }
 
   const processImageForQR = (img: HTMLImageElement) => {

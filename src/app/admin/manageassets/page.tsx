@@ -7,7 +7,6 @@ import { AssetProvider, useAssetContext } from '../../../contexts/AdminAssetCont
 import { Asset } from '../../../lib/adminasset';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { AssetCard } from '../../../components/ui/asset-card';
 import { AssetViewModal } from '../../../components/ui/asset-view-modal';
 
 import { AssetFormModal } from '../../../components/ui/asset-form-modal';
@@ -641,7 +640,6 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
 const ManageAssetsPage: React.FC = () => {
   const [showPermissions, setShowPermissions] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const router = useRouter();
 
   if (showPermissions) {
     return (

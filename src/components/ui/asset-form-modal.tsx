@@ -174,9 +174,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
   const [expiryDateInput, setExpiryDateInput] = useState('');
   const [regulatoryRequirementInput, setRegulatoryRequirementInput] = useState('');
  
-  // Sub-assets state
-  const [newMovableAsset, setNewMovableAsset] = useState({ assetName: '', description: '', brand: '', model: '', capacity: '', location: '' });
-  const [newImmovableAsset, setNewImmovableAsset] = useState({ assetName: '', description: '', brand: '', model: '', capacity: '', location: '' });
 
   // Fetch data functions
   const fetchProjects = useCallback(async () => {
@@ -560,7 +557,6 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
       // Get address name from coordinates
       await getAddressFromCoordinates(latitude.toString(), longitude.toString());
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       // setLocationError(`Failed to get current location: ${errorMessage}. Please check your browser permissions or try manual entry.`);
       // setCoordinatesFound(false);
     } finally {

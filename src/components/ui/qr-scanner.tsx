@@ -45,7 +45,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
   }, [])
 
   // Helper functions for QR detection
-  const findQRFinderPatterns = (grayData: Uint8Array, width: number, height: number): FinderPattern[] => {
+  const findQRFinderPatterns = useCallback((grayData: Uint8Array, width: number, height: number): FinderPattern[] => {
     const patterns: FinderPattern[] = []
     
     // Look for 7x7 black-white-black patterns (simplified QR finder pattern)
@@ -58,7 +58,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
     }
     
     return patterns
-  }
+  }, [])
 
   const isQRFinderPattern = (grayData: Uint8Array, width: number, x: number, y: number) => {
     const pattern = [
@@ -83,7 +83,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
     return true
   }
 
-  const extractQRData = (grayData: Uint8Array, width: number, height: number, patterns: FinderPattern[]) => {
+  const extractQRData = useCallback((grayData: Uint8Array, width: number, height: number, patterns: FinderPattern[]) => {
     if (patterns.length === 0) return null
     
     const pattern = patterns[0]
@@ -101,7 +101,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
     }
     
     return 'checklist:maintenance:001'
-  }
+  }, [])
 
   const isMaintenanceQRPattern = (grayData: Uint8Array, width: number, height: number, pattern: FinderPattern) => {
     const x = pattern.x
@@ -302,8 +302,9 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
         canvasRef.current.parentNode.removeChild(canvasRef.current)
       }
       // Clean up processing timeout
-      if (processingTimeoutRef.current) {
-        clearTimeout(processingTimeoutRef.current)
+      const timeoutId = processingTimeoutRef.current
+      if (timeoutId) {
+        clearTimeout(timeoutId)
       }
     }
   }, [isOpen, startScanning, stopScanning])

@@ -180,7 +180,7 @@ export const BulkDigitalAssetsModal: React.FC<BulkDigitalAssetsModalProps> = ({
             ...asset.digitalAssets,
             qrCode: data.qrCode || asset.digitalAssets?.qrCode,
             barcode: data.barcode || asset.digitalAssets?.barcode,
-            nfc: data.nfc || asset.digitalAssets?.nfc
+            nfcData: data.nfcData || asset.digitalAssets?.nfcData
           }
         }
         

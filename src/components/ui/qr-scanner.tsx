@@ -282,6 +282,9 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
   }, [onError, scanQRCode])
 
   useEffect(() => {
+    // Capture ref values at the beginning of the effect
+    const timeoutId = processingTimeoutRef.current
+    
     if (isOpen) {
       // Ensure canvas is available
       if (!canvasRef.current) {
@@ -301,8 +304,7 @@ export function QRScanner({ isOpen, onClose, onScan, onError }: QRScannerProps) 
       if (canvasRef.current && canvasRef.current.parentNode) {
         canvasRef.current.parentNode.removeChild(canvasRef.current)
       }
-      // Clean up processing timeout - capture the current value
-      const timeoutId = processingTimeoutRef.current
+      // Clean up processing timeout using captured value
       if (timeoutId) {
         clearTimeout(timeoutId)
       }

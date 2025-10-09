@@ -225,7 +225,7 @@ export default function AdminAssetsPage() {
     // Use actual sub-assets from API response and transform them to include reason
     const movableAssets = (asset.subAssets?.movable || []).map(subAsset => ({
       assetName: subAsset.assetName,
-      description: subAsset.description,
+      description: subAsset.description || '',
       category: subAsset.category,
       brand: subAsset.brand,
       model: subAsset.model,
@@ -239,7 +239,7 @@ export default function AdminAssetsPage() {
    
     const immovableAssets = (asset.subAssets?.immovable || []).map(subAsset => ({
       assetName: subAsset.assetName,
-      description: subAsset.description,
+      description: subAsset.description || '',
       category: subAsset.category,
       brand: subAsset.brand,
       model: subAsset.model,
@@ -646,36 +646,36 @@ export default function AdminAssetsPage() {
       // Add EXOZEN logo image
       const logoUrl = '/exozen_logo1.png'
       doc.addImage(logoUrl, 'PNG', 15, 8, 30, 12)
-    } catch {
+    } catch (error) {
       // Fallback to text if image fails to load
       doc.setTextColor(0, 0, 0)
       doc.setFontSize(18)
       doc.setFont('helvetica', 'bold')
       doc.text('EXOZEN', 15, 18)
     }
-    
+   
     // Report Title and Asset Info
     doc.setTextColor(0, 0, 0)
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.text('Asset Classification Report', 50, 12)
-    
+   
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.text(`Asset ID: ${asset.tagId}`, 50, 18)
-    
+   
     // Date and Brand Info
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 150, 12)
     doc.text(`Type: ${asset.assetType}`, 150, 16)
     doc.text(`Brand: ${asset.brand}`, 150, 20)
-    
+   
     // Header separator line
     doc.setDrawColor(200, 200, 200)
     doc.setLineWidth(0.3)
     doc.line(15, 25, 195, 25)
-    
+   
     yPosition = 35
    
     // Two Column Layout
@@ -900,7 +900,7 @@ export default function AdminAssetsPage() {
     // Simple Footer
     const pageHeight = doc.internal.pageSize.height
     const footerY = pageHeight - 10
-    
+   
     doc.setTextColor(100, 100, 100)
     doc.setFontSize(6)
     doc.setFont('helvetica', 'normal')

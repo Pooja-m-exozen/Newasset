@@ -56,6 +56,15 @@ const apiRequest = async <T>(
   }
 };
 
+export interface InventoryItem {
+  name: string;
+  description?: string;
+  quantity?: number;
+  unit?: string;
+  condition?: string;
+  location?: string;
+}
+
 export interface SubAsset {
   _id?: string;
   assetName: string;
@@ -66,10 +75,10 @@ export interface SubAsset {
   location?: string;
   category?: 'Movable' | 'Immovable';
   inventory?: {
-    consumables: any[];
-    spareParts: any[];
-    tools: any[];
-    operationalSupply: any[];
+    consumables: InventoryItem[];
+    spareParts: InventoryItem[];
+    tools: InventoryItem[];
+    operationalSupply: InventoryItem[];
   };
 }
 

@@ -8,6 +8,46 @@ export interface InventoryItem {
   lastUpdated: string
 }
 
+// Enhanced interfaces for Purchase Order, Replacement, and Lifecycle Management
+export interface PurchaseOrder {
+  poNumber: string
+  poDate: string
+  vendor: string
+  vendorContact: string
+  purchaseCost: number
+  currency: string
+  paymentTerms: string
+  deliveryDate: string
+  invoiceNumber?: string
+  invoiceDate?: string
+  notes?: string
+}
+
+export interface ReplacementRecord {
+  replacedAssetTagId: string
+  replacementDate: string
+  replacementReason: string
+  costOfReplacement: number
+  replacedBy: string
+  notes?: string
+}
+
+export interface LifecycleStatus {
+  status: 'procured' | 'received' | 'installed' | 'commissioned' | 'operational' | 'under_maintenance' | 'retired' | 'disposed'
+  date: string
+  notes?: string
+  updatedBy: string
+}
+
+export interface FinancialData {
+  purchaseOrder?: PurchaseOrder
+  replacementHistory?: ReplacementRecord[]
+  lifecycle?: LifecycleStatus[]
+  totalCost?: number
+  depreciationRate?: number
+  currentValue?: number
+}
+
 export interface SubAsset {
   id?: string
   _id?: string
@@ -24,6 +64,9 @@ export interface SubAsset {
   hasDigitalAssets?: boolean  // NEW: Quick check flag
   status?: string
   priority?: string
+  purchaseOrder?: PurchaseOrder  // NEW: Sub-asset PO tracking
+  replacementHistory?: ReplacementRecord[]  // NEW: Sub-asset replacement tracking
+  lifecycle?: LifecycleStatus[]  // NEW: Sub-asset lifecycle tracking
   inventory: {
     consumables: InventoryItem[]
     spareParts: InventoryItem[]
@@ -73,6 +116,7 @@ export interface AssetData {
     floor?: string
     room?: string
   }
+  financial?: FinancialData  // NEW: Financial tracking data
   subAssets?: {
     movable: SubAsset[]
     immovable: SubAsset[]
@@ -1136,6 +1180,138 @@ export const assetApi = {
       includeSubAssets: includeSubAssets.toString()
     });
     return apiRequest<AssetsResponse>(`/assets?${params.toString()}`);
+  },
+
+  // Purchase Order Management APIs
+  // Link main asset to Purchase Order
+  linkAssetToPO: async (assetId: string, poData: PurchaseOrder): Promise<{ success: boolean; message: string; asset: Asset }> => {
+    return apiRequest(`/assets/${assetId}/link-po`, {
+      method: 'POST',
+      body: JSON.stringify(poData),
+    });
+  },
+
+  // Link sub-asset to Purchase Order
+  linkSubAssetToPO: async (
+    assetId: string,
+    subAssetIndex: number,
+    category: 'movable' | 'immovable',
+    poData: PurchaseOrder
+  ): Promise<{ success: boolean; message: string; asset: Asset }> => {
+    return apiRequest(`/assets/${assetId}/sub-asset/${subAssetIndex}/${category}/link-po`, {
+      method: 'POST',
+      body: JSON.stringify(poData),
+    });
+  },
+
+  // Get all assets by Purchase Order number
+  getAssetsByPO: async (poNumber: string): Promise<AssetsResponse> => {
+    return apiRequest(`/assets/po/${encodeURIComponent(poNumber)}`);
+  },
+
+  // Asset Replacement Tracking APIs
+  // Record asset replacement
+  recordAssetReplacement: async (assetId: string, replacementData: ReplacementRecord): Promise<{ success: boolean; message: string; asset: Asset }> => {
+    return apiRequest(`/assets/${assetId}/replace`, {
+      method: 'POST',
+      body: JSON.stringify(replacementData),
+    });
+  },
+
+  // Record sub-asset replacement
+  recordSubAssetReplacement: async (
+    assetId: string,
+    subAssetIndex: number,
+    category: 'movable' | 'immovable',
+    replacementData: ReplacementRecord
+  ): Promise<{ success: boolean; message: string; asset: Asset }> => {
+    return apiRequest(`/assets/${assetId}/sub-asset/${subAssetIndex}/${category}/replace`, {
+      method: 'POST',
+      body: JSON.stringify(replacementData),
+    });
+  },
+
+  // Get asset replacement history
+  getAssetReplacementHistory: async (assetId: string): Promise<{ success: boolean; replacementHistory: ReplacementRecord[] }> => {
+    return apiRequest(`/assets/${assetId}/replacement-history`);
+  },
+
+  // Get sub-asset replacement history
+  getSubAssetReplacementHistory: async (
+    assetId: string,
+    subAssetIndex: number,
+    category: 'movable' | 'immovable'
+  ): Promise<{ success: boolean; replacementHistory: ReplacementRecord[] }> => {
+    return apiRequest(`/assets/${assetId}/sub-asset/${subAssetIndex}/${category}/replacement-history`);
+  },
+
+  // Asset Lifecycle Management APIs
+  // Update asset lifecycle status
+  updateAssetLifecycleStatus: async (assetId: string, lifecycleData: LifecycleStatus): Promise<{ success: boolean; message: string; asset: Asset }> => {
+    return apiRequest(`/assets/${assetId}/lifecycle-status`, {
+      method: 'PUT',
+      body: JSON.stringify(lifecycleData),
+    });
+  },
+
+  // Update sub-asset lifecycle status
+  updateSubAssetLifecycleStatus: async (
+    assetId: string,
+    subAssetIndex: number,
+    category: 'movable' | 'immovable',
+    lifecycleData: LifecycleStatus
+  ): Promise<{ success: boolean; message: string; asset: Asset }> => {
+    return apiRequest(`/assets/${assetId}/sub-asset/${subAssetIndex}/${category}/lifecycle-status`, {
+      method: 'PUT',
+      body: JSON.stringify(lifecycleData),
+    });
+  },
+
+  // Get assets by lifecycle status
+  getAssetsByLifecycleStatus: async (status: string): Promise<AssetsResponse> => {
+    return apiRequest(`/assets/lifecycle/${encodeURIComponent(status)}`);
+  },
+
+  // Get asset lifecycle history
+  getAssetLifecycleHistory: async (assetId: string): Promise<{ success: boolean; lifecycleHistory: LifecycleStatus[] }> => {
+    return apiRequest(`/assets/${assetId}/lifecycle-history`);
+  },
+
+  // Get sub-asset lifecycle history
+  getSubAssetLifecycleHistory: async (
+    assetId: string,
+    subAssetIndex: number,
+    category: 'movable' | 'immovable'
+  ): Promise<{ success: boolean; lifecycleHistory: LifecycleStatus[] }> => {
+    return apiRequest(`/assets/${assetId}/sub-asset/${subAssetIndex}/${category}/lifecycle-history`);
+  },
+
+  // Financial Management APIs
+  // Get asset financial summary
+  getAssetFinancialSummary: async (assetId: string): Promise<{ success: boolean; financialData: FinancialData }> => {
+    return apiRequest(`/assets/${assetId}/financial-summary`);
+  },
+
+  // Update asset financial data
+  updateAssetFinancialData: async (assetId: string, financialData: Partial<FinancialData>): Promise<{ success: boolean; message: string; asset: Asset }> => {
+    return apiRequest(`/assets/${assetId}/financial`, {
+      method: 'PUT',
+      body: JSON.stringify(financialData),
+    });
+  },
+
+  // Get assets by cost range
+  getAssetsByCostRange: async (minCost: number, maxCost: number): Promise<AssetsResponse> => {
+    const params = new URLSearchParams({
+      minCost: minCost.toString(),
+      maxCost: maxCost.toString()
+    });
+    return apiRequest(`/assets/financial/cost-range?${params.toString()}`);
+  },
+
+  // Get assets by vendor
+  getAssetsByVendor: async (vendor: string): Promise<AssetsResponse> => {
+    return apiRequest(`/assets/financial/vendor/${encodeURIComponent(vendor)}`);
   },
 };
 

@@ -7,10 +7,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Barcode, Wifi } from 'lucide-react'
+import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Barcode, Wifi, Receipt, RotateCcw, Activity, DollarSign, Calendar, User, FileText } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset, assetApi } from '@/lib/adminasset'
+import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset, assetApi, PurchaseOrder, ReplacementRecord, LifecycleStatus, FinancialData } from '@/lib/adminasset'
 
 // API Response interfaces
 interface ApiSubAsset {
@@ -186,6 +186,24 @@ export default function AdminAssetsPage() {
   const [showFlowchartModal, setShowFlowchartModal] = useState(false)
   const [selectedAssetForFlowchart, setSelectedAssetForFlowchart] = useState<AssetData | null>(null)
   const [showAddAssetModal, setShowAddAssetModal] = useState(false)
+  
+  // Enhanced Asset Management Modal States
+  const [showPOModal, setShowPOModal] = useState(false)
+  const [showReplacementModal, setShowReplacementModal] = useState(false)
+  const [showLifecycleModal, setShowLifecycleModal] = useState(false)
+  const [showFinancialModal, setShowFinancialModal] = useState(false)
+  const [selectedAssetForManagement, setSelectedAssetForManagement] = useState<AssetData | null>(null)
+  const [selectedSubAssetForManagement, setSelectedSubAssetForManagement] = useState<{
+    asset: AssetData
+    subAssetIndex: number
+    category: 'movable' | 'immovable'
+  } | null>(null)
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [selectedQRData, setSelectedQRData] = useState<{
+    url: string
+    data: Record<string, unknown>
+    generatedAt: string
+  } | null>(null)
 
   // Add Asset form states
   const [newAsset, setNewAsset] = useState<Partial<AssetData>>({
@@ -213,6 +231,43 @@ export default function AdminAssetsPage() {
 
   // Current step in the creation process
   const [currentStep, setCurrentStep] = useState<'main' | 'subassets' | 'inventory'>('main')
+
+  // Enhanced Asset Management Form States
+  const [poData, setPOData] = useState<Partial<PurchaseOrder>>({
+    poNumber: '',
+    poDate: '',
+    vendor: '',
+    vendorContact: '',
+    purchaseCost: 0,
+    currency: 'INR',
+    paymentTerms: '',
+    deliveryDate: '',
+    invoiceNumber: '',
+    invoiceDate: '',
+    notes: ''
+  })
+
+  const [replacementData, setReplacementData] = useState<Partial<ReplacementRecord>>({
+    replacedAssetTagId: '',
+    replacementDate: '',
+    replacementReason: '',
+    costOfReplacement: 0,
+    replacedBy: '',
+    notes: ''
+  })
+
+  const [lifecycleData, setLifecycleData] = useState<Partial<LifecycleStatus>>({
+    status: 'operational',
+    date: '',
+    notes: '',
+    updatedBy: ''
+  })
+
+  const [financialData, setFinancialData] = useState<Partial<FinancialData>>({
+    totalCost: 0,
+    depreciationRate: 0,
+    currentValue: 0
+  })
 
   // Fetch assets from API
   const fetchAssets = useCallback(async () => {
@@ -780,6 +835,243 @@ export default function AdminAssetsPage() {
     }
   }
 
+  // Enhanced Asset Management Handlers
+  const handleOpenPOModal = (asset: AssetData, subAsset?: { subAssetIndex: number; category: 'movable' | 'immovable' }) => {
+    setSelectedAssetForManagement(asset)
+    if (subAsset) {
+      setSelectedSubAssetForManagement({
+        asset,
+        subAssetIndex: subAsset.subAssetIndex,
+        category: subAsset.category
+      })
+    } else {
+      setSelectedSubAssetForManagement(null)
+    }
+    setShowPOModal(true)
+    // Reset form
+    setPOData({
+      poNumber: '',
+      poDate: '',
+      vendor: '',
+      vendorContact: '',
+      purchaseCost: 0,
+      currency: 'INR',
+      paymentTerms: '',
+      deliveryDate: '',
+      invoiceNumber: '',
+      invoiceDate: '',
+      notes: ''
+    })
+  }
+
+  const handleOpenReplacementModal = (asset: AssetData, subAsset?: { subAssetIndex: number; category: 'movable' | 'immovable' }) => {
+    setSelectedAssetForManagement(asset)
+    if (subAsset) {
+      setSelectedSubAssetForManagement({
+        asset,
+        subAssetIndex: subAsset.subAssetIndex,
+        category: subAsset.category
+      })
+    } else {
+      setSelectedSubAssetForManagement(null)
+    }
+    setShowReplacementModal(true)
+    // Reset form
+    setReplacementData({
+      replacedAssetTagId: '',
+      replacementDate: '',
+      replacementReason: '',
+      costOfReplacement: 0,
+      replacedBy: '',
+      notes: ''
+    })
+  }
+
+  const handleOpenLifecycleModal = (asset: AssetData, subAsset?: { subAssetIndex: number; category: 'movable' | 'immovable' }) => {
+    setSelectedAssetForManagement(asset)
+    if (subAsset) {
+      setSelectedSubAssetForManagement({
+        asset,
+        subAssetIndex: subAsset.subAssetIndex,
+        category: subAsset.category
+      })
+    } else {
+      setSelectedSubAssetForManagement(null)
+    }
+    setShowLifecycleModal(true)
+    // Reset form
+    setLifecycleData({
+      status: 'operational',
+      date: new Date().toISOString().split('T')[0],
+      notes: '',
+      updatedBy: ''
+    })
+  }
+
+  const handleOpenFinancialModal = (asset: AssetData) => {
+    setSelectedAssetForManagement(asset)
+    setShowFinancialModal(true)
+    // Reset form
+    setFinancialData({
+      totalCost: 0,
+      depreciationRate: 0,
+      currentValue: 0
+    })
+  }
+
+  const handleQRCodeClick = (qrData: {
+    url: string
+    data: Record<string, unknown>
+    generatedAt: string
+  }) => {
+    setSelectedQRData(qrData)
+    setShowQRModal(true)
+  }
+
+  const handleSavePO = async () => {
+    if (!selectedAssetForManagement || !poData.poNumber || !poData.vendor) {
+      alert('Please fill in all required fields (PO Number, Vendor)')
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      let response
+      if (selectedSubAssetForManagement) {
+        // Link sub-asset to PO
+        response = await assetApi.linkSubAssetToPO(
+          selectedAssetForManagement._id,
+          selectedSubAssetForManagement.subAssetIndex,
+          selectedSubAssetForManagement.category,
+          poData as PurchaseOrder
+        )
+      } else {
+        // Link main asset to PO
+        response = await assetApi.linkAssetToPO(selectedAssetForManagement._id, poData as PurchaseOrder)
+      }
+
+      if (response.success) {
+        await fetchAssets()
+        setShowPOModal(false)
+        setSuccessMessage('Purchase Order linked successfully!')
+        setShowSuccess(true)
+      } else {
+        throw new Error(response.message || 'Failed to link Purchase Order')
+      }
+    } catch (error) {
+      console.error('Error linking PO:', error)
+      alert(`Error linking PO: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveReplacement = async () => {
+    if (!selectedAssetForManagement || !replacementData.replacedAssetTagId || !replacementData.replacementReason) {
+      alert('Please fill in all required fields (Replaced Asset Tag ID, Replacement Reason)')
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      let response
+      if (selectedSubAssetForManagement) {
+        // Record sub-asset replacement
+        response = await assetApi.recordSubAssetReplacement(
+          selectedAssetForManagement._id,
+          selectedSubAssetForManagement.subAssetIndex,
+          selectedSubAssetForManagement.category,
+          replacementData as ReplacementRecord
+        )
+      } else {
+        // Record main asset replacement
+        response = await assetApi.recordAssetReplacement(selectedAssetForManagement._id, replacementData as ReplacementRecord)
+      }
+
+      if (response.success) {
+        await fetchAssets()
+        setShowReplacementModal(false)
+        setSuccessMessage('Replacement recorded successfully!')
+        setShowSuccess(true)
+      } else {
+        throw new Error(response.message || 'Failed to record replacement')
+      }
+    } catch (error) {
+      console.error('Error recording replacement:', error)
+      alert(`Error recording replacement: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveLifecycle = async () => {
+    if (!selectedAssetForManagement || !lifecycleData.status || !lifecycleData.date) {
+      alert('Please fill in all required fields (Status, Date)')
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      let response
+      if (selectedSubAssetForManagement) {
+        // Update sub-asset lifecycle status
+        response = await assetApi.updateSubAssetLifecycleStatus(
+          selectedAssetForManagement._id,
+          selectedSubAssetForManagement.subAssetIndex,
+          selectedSubAssetForManagement.category,
+          lifecycleData as LifecycleStatus
+        )
+      } else {
+        // Update main asset lifecycle status
+        response = await assetApi.updateAssetLifecycleStatus(selectedAssetForManagement._id, lifecycleData as LifecycleStatus)
+      }
+
+      if (response.success) {
+        await fetchAssets()
+        setShowLifecycleModal(false)
+        setSuccessMessage('Lifecycle status updated successfully!')
+        setShowSuccess(true)
+      } else {
+        throw new Error(response.message || 'Failed to update lifecycle status')
+      }
+    } catch (error) {
+      console.error('Error updating lifecycle:', error)
+      alert(`Error updating lifecycle: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveFinancial = async () => {
+    if (!selectedAssetForManagement) {
+      alert('No asset selected')
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      const response = await assetApi.updateAssetFinancialData(selectedAssetForManagement._id, financialData)
+
+      if (response.success) {
+        await fetchAssets()
+        setShowFinancialModal(false)
+        setSuccessMessage('Financial data updated successfully!')
+        setShowSuccess(true)
+      } else {
+        throw new Error(response.message || 'Failed to update financial data')
+      }
+    } catch (error) {
+      console.error('Error updating financial data:', error)
+      alert(`Error updating financial data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   const generatePDF = async (asset: AssetData) => {
     const doc = new jsPDF()
@@ -1074,61 +1366,64 @@ export default function AdminAssetsPage() {
       `}</style>
       <div className="min-h-screen bg-background transition-colors duration-200">
         <div className="p-0">
-          <div className="max-w-7xl mx-auto">
+          <div className="w-full">
 
             {/* Search and Filters */}
-            <div className="mb-4 px-4 py-2 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-              {/* Search Input */}
-              <div className="flex-1 max-w-md">
-            <div className="relative">
+            <div className="mb-4 px-4 py-2">
+              <div className="space-y-4">
+                {/* Search Input */}
+                <div className="relative w-full">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
+                  <Input
                     placeholder="Search assets by ID, brand, model, or subcategory..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10"
-              />
-          </div>
-        </div>
+                  />
+                </div>
 
-          {/* Mobility Filter and Add Asset Button */}
-              <div className="flex items-center gap-4">
-                <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">Mobility:</Label>
-                <RadioGroup
-                  value={selectedMobility}
-                  onValueChange={handleRadioChange}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="all" id="all" />
-                    <Label htmlFor="all" className="cursor-pointer text-sm">All</Label>
+                {/* Mobile Layout for Filters */}
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                  {/* Mobility Filter */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <Label className="text-sm font-medium text-blue-800 dark:text-blue-200 whitespace-nowrap">Mobility:</Label>
+                    <RadioGroup
+                      value={selectedMobility}
+                      onValueChange={handleRadioChange}
+                      className="flex flex-col sm:flex-row gap-2 sm:gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="all" id="all" />
+                        <Label htmlFor="all" className="cursor-pointer text-sm">All</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="movable" id="movable" />
+                        <Label htmlFor="movable" className="cursor-pointer flex items-center space-x-1 text-sm">
+                          <Package className="w-4 h-4" />
+                          <span>Movable</span>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="immovable" id="immovable" />
+                        <Label htmlFor="immovable" className="cursor-pointer flex items-center space-x-1 text-sm">
+                          <Building className="w-4 h-4" />
+                          <span>Immovable</span>
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="movable" id="movable" />
-                    <Label htmlFor="movable" className="cursor-pointer flex items-center space-x-1 text-sm">
-                      <Package className="w-4 h-4" />
-                      <span>Movable</span>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="immovable" id="immovable" />
-                    <Label htmlFor="immovable" className="cursor-pointer flex items-center space-x-1 text-sm">
-                      <Building className="w-4 h-4" />
-                      <span>Immovable</span>
-                    </Label>
-                  </div>
-                </RadioGroup>
-               
-                {/* Add Asset Button */}
-                <Button
-                  onClick={handleAddAsset}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Asset
-                </Button>
+                   
+                  {/* Add Asset Button */}
+                  <Button
+                    onClick={handleAddAsset}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Asset
+                  </Button>
+                </div>
               </div>
-              </div>
+            </div>
 
             {/* Success Message */}
             {showSuccess && (
@@ -1168,35 +1463,48 @@ export default function AdminAssetsPage() {
           </div>
         )}
 
-        {/* Assets Table */}
+        {/* Assets Table - Desktop View */}
         {!loading && !error && (
-            <div className="bg-background rounded-lg shadow-sm overflow-hidden border border-border">
-            <div className="overflow-x-auto">
-                <table className="w-full border-collapse font-sans text-base min-w-[800px]">
+          <div className="bg-background rounded-lg shadow-lg overflow-hidden border border-border w-full">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto w-full">
+              <table className="w-full border-collapse font-sans text-base table-fixed" style={{width: '100%', tableLayout: 'fixed'}}>
                 <thead>
-                    <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
-                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
-                        ASSET ID
-                      </th>
-                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
-                        TYPE & SUBCATEGORY
-                      </th>
-                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
-                        BRAND & MODEL
-                      </th>
-                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
-                        CAPACITY
-                      </th>
-                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
-                        STATUS
-                      </th>
-                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
-                        PRIORITY
-                      </th>
-                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
-                        LOCATION
-                      </th>
-                      <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">ACTIONS</th>
+                  <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '8%'}}>
+                      ASSET ID
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                      TYPE & SUBCATEGORY
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                      BRAND & MODEL
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '8%'}}>
+                      CAPACITY
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '8%'}}>
+                      STATUS
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                      LOCATION
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>PURCHASE DETAILS</span>
+                        <div className="text-xs font-normal text-blue-600 dark:text-blue-300">
+                          PO, Replace, Lifecycle
+                        </div>
+                      </div>
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>ACTIONS</span>
+                        <div className="text-xs font-normal text-blue-600 dark:text-blue-300">
+                          Classification & View
+                        </div>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1208,7 +1516,7 @@ export default function AdminAssetsPage() {
                       <React.Fragment key={asset._id}>
                         {/* Main Asset Row */}
                         <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '8%'}}>
                             <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
                               {asset.tagId}
                             </span>
@@ -1242,19 +1550,14 @@ export default function AdminAssetsPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '8%'}}>
                             <span className="text-xs sm:text-sm text-blue-800">
                               {asset.capacity || 'N/A'}
                             </span>
                           </td>
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '8%'}}>
                             <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
                               {asset.status || 'Active'}
-                            </span>
-                          </td>
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                            <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200">
-                              {asset.priority || 'Medium'}
                             </span>
                           </td>
                           <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
@@ -1265,15 +1568,43 @@ export default function AdminAssetsPage() {
                               }
                             </div>
                           </td>
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                            <div className="flex items-center gap-1 sm:gap-2 justify-center">
+                          <td className="border border-border px-4 py-3">
+                            <div className="flex items-center gap-1 justify-center">
+                              <button
+                                onClick={() => handleOpenPOModal(asset)}
+                                className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm whitespace-nowrap"
+                                title="Link Purchase Order"
+                              >
+                                <Receipt className="w-3 h-3" />
+                                PO
+                              </button>
+                              <button
+                                onClick={() => handleOpenReplacementModal(asset)}
+                                className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:shadow-sm whitespace-nowrap"
+                                title="Record Replacement"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                Replace
+                              </button>
+                              <button
+                                onClick={() => handleOpenLifecycleModal(asset)}
+                                className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm whitespace-nowrap"
+                                title="Update Lifecycle Status"
+                              >
+                                <Activity className="w-3 h-3" />
+                                Lifecycle
+                              </button>
+                            </div>
+                          </td>
+                          <td className="border border-border px-4 py-3">
+                            <div className="flex items-center gap-1 justify-center">
                               <button
                                 onClick={() => handleMovableClick(asset)}
-                                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
                                   isExpanded && expandedClassificationType === 'movable'
-                                    ? 'text-white bg-green-600 hover:bg-green-700'
-                                    : 'text-green-700 bg-green-100 hover:bg-green-200'
-                                }`}
+                                    ? 'text-white bg-green-600 hover:bg-green-700 shadow-md transform scale-105'
+                                    : 'text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm'
+                                } whitespace-nowrap`}
                                 title="View Movable Assets"
                               >
                                 <Package className="w-3 h-3" />
@@ -1281,11 +1612,11 @@ export default function AdminAssetsPage() {
                               </button>
                               <button
                                 onClick={() => handleImmovableClick(asset)}
-                                className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
                                   isExpanded && expandedClassificationType === 'immovable'
-                                    ? 'text-white bg-blue-600 hover:bg-blue-700'
-                                    : 'text-blue-700 bg-blue-100 hover:bg-blue-200'
-                                }`}
+                                    ? 'text-white bg-blue-600 hover:bg-blue-700 shadow-md transform scale-105'
+                                    : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm'
+                                } whitespace-nowrap`}
                                 title="View Immovable Assets"
                               >
                                 <Building className="w-3 h-3" />
@@ -1293,11 +1624,10 @@ export default function AdminAssetsPage() {
                               </button>
                               <button
                                 onClick={() => handleViewFlowchart(asset)}
-                                className="px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 text-purple-700 bg-purple-100 hover:bg-purple-200"
+                                className="px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 hover:shadow-sm whitespace-nowrap"
                                 title="View Asset Classification Flowchart"
                               >
                                 <Eye className="w-3 h-3" />
-                                View
                               </button>
                             </div>
                           </td>
@@ -1336,8 +1666,21 @@ export default function AdminAssetsPage() {
                                         <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
                                           Location
                                         </th>
-                                        <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
-                                          Actions
+                                        <th className="border border-border px-4 py-3 text-center font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                          <div className="flex flex-col gap-1">
+                                            <span>Purchase Details</span>
+                                            <div className="text-xs font-normal text-blue-600 dark:text-blue-300">
+                                              PO, Replace, Lifecycle
+                                            </div>
+                                          </div>
+                                        </th>
+                                        <th className="border border-border px-4 py-3 text-center font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                          <div className="flex flex-col gap-1">
+                                            <span>Actions</span>
+                                            <div className="text-xs font-normal text-blue-600 dark:text-blue-300">
+                                              Digital Assets & Inventory
+                                            </div>
+                                          </div>
                                         </th>
                                       </tr>
                                     </thead>
@@ -1402,57 +1745,87 @@ export default function AdminAssetsPage() {
                                                 {subAssetData.location}
                                               </td>
                                               <td className="border border-border px-4 py-3">
-                                                <div className="flex flex-col gap-2">
-                                                  {/* Digital Assets Section */}
-                                                  <div className="flex items-center gap-2">
-                                                    {classificationAsset.hasDigitalAssets && (
-                                                      <div className="flex items-center gap-1">
-                                                        {classificationAsset.digitalAssets?.qrCode && (
-                                                          <QrCode className="w-4 h-4 text-green-600" />
-                                                        )}
-                                                        {classificationAsset.digitalAssets?.barcode && (
-                                                          <Barcode className="w-4 h-4 text-blue-600" />
-                                                        )}
-                                                        {classificationAsset.digitalAssets?.nfcData && (
-                                                          <Wifi className="w-4 h-4 text-purple-600" />
-                                                        )}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                  
-                                                  {/* Inventory Actions */}
-                                                  <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1 justify-center">
+                                                  <button
+                                                    onClick={() => handleOpenPOModal(asset, { subAssetIndex: index, category: expandedClassificationType! })}
+                                                    className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm whitespace-nowrap"
+                                                    title="Link Purchase Order"
+                                                  >
+                                                    <Receipt className="w-3 h-3" />
+                                                    PO
+                                                  </button>
+                                                  <button
+                                                    onClick={() => handleOpenReplacementModal(asset, { subAssetIndex: index, category: expandedClassificationType! })}
+                                                    className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:shadow-sm whitespace-nowrap"
+                                                    title="Record Replacement"
+                                                  >
+                                                    <RotateCcw className="w-3 h-3" />
+                                                    Replace
+                                                  </button>
+                                                  <button
+                                                    onClick={() => handleOpenLifecycleModal(asset, { subAssetIndex: index, category: expandedClassificationType! })}
+                                                    className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm whitespace-nowrap"
+                                                    title="Update Lifecycle Status"
+                                                  >
+                                                    <Activity className="w-3 h-3" />
+                                                    Lifecycle
+                                                  </button>
+                                                </div>
+                                              </td>
+                                              <td className="border border-border px-4 py-3">
+                                                <div className="flex items-center gap-1 justify-center">
+                                                  {classificationAsset.hasDigitalAssets && classificationAsset.digitalAssets?.qrCode && (
                                                     <button
-                                                      onClick={() => handleInventoryClick(asset._id, index, 'consumables')}
-                                                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                                                        selectedInventoryType[`${asset._id}-${index}`] === 'consumables'
-                                                          ? 'text-white bg-orange-600 hover:bg-orange-700'
-                                                          : 'text-orange-700 bg-orange-100 hover:bg-orange-200'
-                                                      }`}
+                                                      onClick={() => handleQRCodeClick(classificationAsset.digitalAssets!.qrCode!)}
+                                                      className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-md border border-green-200 hover:bg-green-100 transition-colors cursor-pointer whitespace-nowrap"
+                                                      title="Click to view QR Code"
                                                     >
-                                                      Consumables
+                                                      <QrCode className="w-3 h-3 text-green-600" />
+                                                      <span className="text-xs text-green-700">QR</span>
                                                     </button>
-                                                    <button
-                                                      onClick={() => handleInventoryClick(asset._id, index, 'spareParts')}
-                                                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                                                        selectedInventoryType[`${asset._id}-${index}`] === 'spareParts'
-                                                          ? 'text-white bg-blue-600 hover:bg-blue-700'
-                                                          : 'text-blue-700 bg-blue-100 hover:bg-blue-200'
-                                                      }`}
-                                                    >
-                                                      Spare Parts
-                                                    </button>
-                                                    <button
-                                                      onClick={() => handleInventoryClick(asset._id, index, 'tools')}
-                                                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                                                        selectedInventoryType[`${asset._id}-${index}`] === 'tools'
-                                                          ? 'text-white bg-green-600 hover:bg-green-700'
-                                                          : 'text-green-700 bg-green-100 hover:bg-green-200'
-                                                      }`}
-                                                    >
-                                                      Tools
-                                                    </button>
-                                                  </div>
+                                                  )}
+                                                  {classificationAsset.digitalAssets?.nfcData && (
+                                                    <div className="flex items-center gap-1 px-2 py-1 bg-purple-50 rounded-md border border-purple-200 whitespace-nowrap">
+                                                      <Wifi className="w-3 h-3 text-purple-600" />
+                                                      <span className="text-xs text-purple-700">NFC</span>
+                                                    </div>
+                                                  )}
+                                                  <button
+                                                    onClick={() => handleInventoryClick(asset._id, index, 'consumables')}
+                                                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                                      selectedInventoryType[`${asset._id}-${index}`] === 'consumables'
+                                                        ? 'text-white bg-orange-600 hover:bg-orange-700 shadow-sm'
+                                                        : 'text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200'
+                                                    } whitespace-nowrap`}
+                                                    title="View Consumables"
+                                                  >
+                                                    <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                                    Consumables
+                                                  </button>
+                                                  <button
+                                                    onClick={() => handleInventoryClick(asset._id, index, 'spareParts')}
+                                                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                                      selectedInventoryType[`${asset._id}-${index}`] === 'spareParts'
+                                                        ? 'text-white bg-blue-600 hover:bg-blue-700 shadow-sm'
+                                                        : 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200'
+                                                    } whitespace-nowrap`}
+                                                    title="View Spare Parts"
+                                                  >
+                                                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                                    Spare Parts
+                                                  </button>
+                                                  <button
+                                                    onClick={() => handleInventoryClick(asset._id, index, 'tools')}
+                                                    className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                                      selectedInventoryType[`${asset._id}-${index}`] === 'tools'
+                                                        ? 'text-white bg-green-600 hover:bg-green-700 shadow-sm'
+                                                        : 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-200'
+                                                    } whitespace-nowrap`}
+                                                    title="View Tools"
+                                                  >
+                                                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                                    Tools
+                                                  </button>
                                                 </div>
                                               </td>
                                             </tr>
@@ -1460,7 +1833,7 @@ export default function AdminAssetsPage() {
                                             {/* Inventory Details Row */}
                                             {selectedInventoryType[`${asset._id}-${index}`] && (
                                               <tr>
-                                                <td colSpan={6} className="border border-border p-0 bg-gray-50 dark:bg-gray-800">
+                                                <td colSpan={7} className="border border-border p-0 bg-gray-50 dark:bg-gray-800">
                                                   <div className="p-4">
                                                     <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">
                                                       {selectedInventoryType[`${asset._id}-${index}`] === 'consumables' ? 'Consumables' :
@@ -1531,6 +1904,303 @@ export default function AdminAssetsPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden">
+              <div className="p-4 space-y-4">
+                {filteredAssets.map((asset) => {
+                  const isExpanded = expandedRow === asset._id
+                  const assetClassification = isExpanded ? getAssetClassification(asset) : null
+                  
+                  return (
+                    <div key={asset._id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                      {/* Card Header */}
+                      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-50 rounded-lg">
+                              {asset.mobilityCategory === 'Movable' ? (
+                                <Package className="w-5 h-5 text-blue-800" />
+                              ) : (
+                                <Building className="w-5 h-5 text-blue-800" />
+                              )}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-blue-800 dark:text-blue-200 text-lg">
+                                {asset.tagId}
+                              </h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {asset.assetType} • {asset.subcategory || 'No subcategory'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200">
+                              {asset.status || 'Active'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Body */}
+                      <div className="p-4 space-y-3">
+                        {/* Brand & Model */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Brand & Model:</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {asset.brand} {asset.model || 'No model'}
+                          </span>
+                        </div>
+
+                        {/* Capacity */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Capacity:</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {asset.capacity || 'N/A'}
+                          </span>
+                        </div>
+
+                        {/* Location */}
+                        <div className="flex justify-between items-start">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Location:</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white text-right">
+                            {asset.location?.building && asset.location?.floor && asset.location?.room
+                              ? `${asset.location.building}, ${asset.location.floor}, ${asset.location.room}`
+                              : 'Location not set'
+                            }
+                          </span>
+                        </div>
+
+                        {/* Purchase Details */}
+                        <div className="pt-2">
+                          <span className="text-sm text-gray-600 dark:text-gray-400 block mb-2">Purchase Details:</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => handleOpenPOModal(asset)}
+                              className="px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm"
+                              title="Link Purchase Order"
+                            >
+                              <Receipt className="w-3 h-3" />
+                              PO
+                            </button>
+                            <button
+                              onClick={() => handleOpenReplacementModal(asset)}
+                              className="px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:shadow-sm"
+                              title="Record Replacement"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              Replace
+                            </button>
+                            <button
+                              onClick={() => handleOpenLifecycleModal(asset)}
+                              className="px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm"
+                              title="Update Lifecycle Status"
+                            >
+                              <Activity className="w-3 h-3" />
+                              Lifecycle
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="pt-2">
+                          <span className="text-sm text-gray-600 dark:text-gray-400 block mb-2">Actions:</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => handleMovableClick(asset)}
+                              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
+                                isExpanded && expandedClassificationType === 'movable'
+                                  ? 'text-white bg-green-600 hover:bg-green-700 shadow-md'
+                                  : 'text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm'
+                              }`}
+                              title="View Movable Assets"
+                            >
+                              <Package className="w-3 h-3" />
+                              Movable
+                            </button>
+                            <button
+                              onClick={() => handleImmovableClick(asset)}
+                              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
+                                isExpanded && expandedClassificationType === 'immovable'
+                                  ? 'text-white bg-blue-600 hover:bg-blue-700 shadow-md'
+                                  : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm'
+                              }`}
+                              title="View Immovable Assets"
+                            >
+                              <Building className="w-3 h-3" />
+                              Immovable
+                            </button>
+                            <button
+                              onClick={() => handleViewFlowchart(asset)}
+                              className="px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 hover:shadow-sm"
+                              title="View Asset Classification Flowchart"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Classification for Mobile */}
+                      {isExpanded && assetClassification && (
+                        <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                          <div className="mb-3">
+                            <h4 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                              {asset.tagId} - {asset.brand} {asset.model}
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {expandedClassificationType === 'movable' ? 'Movable' : 'Immovable'} Assets Classification for {asset.assetType} ({asset.subcategory})
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            {assetClassification[expandedClassificationType!].map((classificationAsset: AssetClassificationItem, index: number) => {
+                              const subAssetData = {
+                                brand: classificationAsset.brand || 'Unknown',
+                                model: classificationAsset.model || 'Unknown',
+                                capacity: classificationAsset.capacity || 'Unknown',
+                                location: classificationAsset.location || 'Unknown'
+                              }
+                              
+                              return (
+                                <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      {expandedClassificationType === 'movable' ? (
+                                        <Package className="w-4 h-4 text-green-600" />
+                                      ) : (
+                                        <Building className="w-4 h-4 text-blue-600" />
+                                      )}
+                                      <span className="font-medium text-blue-800 dark:text-blue-200">
+                                        {classificationAsset.assetName}
+                                      </span>
+                                    </div>
+                                    {classificationAsset.tagId && (
+                                      <span className="text-xs font-mono bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded text-gray-700 dark:text-gray-300">
+                                        {classificationAsset.tagId}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                      <span className="text-gray-600 dark:text-gray-400">Brand:</span>
+                                      <span className="ml-1 font-medium">{subAssetData.brand}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-600 dark:text-gray-400">Model:</span>
+                                      <span className="ml-1 font-medium">{subAssetData.model}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-600 dark:text-gray-400">Capacity:</span>
+                                      <span className="ml-1 font-medium">{subAssetData.capacity}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-600 dark:text-gray-400">Location:</span>
+                                      <span className="ml-1 font-medium">{subAssetData.location}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Mobile Purchase Details */}
+                                  <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                    <span className="text-xs text-gray-600 dark:text-gray-400 block mb-2">Purchase Details:</span>
+                                    <div className="flex flex-wrap gap-1">
+                                      <button
+                                        onClick={() => handleOpenPOModal(asset, { subAssetIndex: index, category: expandedClassificationType! })}
+                                        className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200"
+                                        title="Link Purchase Order"
+                                      >
+                                        <Receipt className="w-3 h-3" />
+                                        PO
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenReplacementModal(asset, { subAssetIndex: index, category: expandedClassificationType! })}
+                                        className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200"
+                                        title="Record Replacement"
+                                      >
+                                        <RotateCcw className="w-3 h-3" />
+                                        Replace
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenLifecycleModal(asset, { subAssetIndex: index, category: expandedClassificationType! })}
+                                        className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200"
+                                        title="Update Lifecycle Status"
+                                      >
+                                        <Activity className="w-3 h-3" />
+                                        Lifecycle
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Mobile Actions */}
+                                  <div className="mt-2">
+                                    <span className="text-xs text-gray-600 dark:text-gray-400 block mb-2">Actions:</span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {classificationAsset.hasDigitalAssets && classificationAsset.digitalAssets?.qrCode && (
+                                        <button
+                                          onClick={() => handleQRCodeClick(classificationAsset.digitalAssets!.qrCode!)}
+                                          className="flex items-center gap-1 px-2 py-1 bg-green-50 rounded-md border border-green-200 hover:bg-green-100 transition-colors"
+                                          title="Click to view QR Code"
+                                        >
+                                          <QrCode className="w-3 h-3 text-green-600" />
+                                          <span className="text-xs text-green-700">QR</span>
+                                        </button>
+                                      )}
+                                      {classificationAsset.digitalAssets?.nfcData && (
+                                        <div className="flex items-center gap-1 px-2 py-1 bg-purple-50 rounded-md border border-purple-200">
+                                          <Wifi className="w-3 h-3 text-purple-600" />
+                                          <span className="text-xs text-purple-700">NFC</span>
+                                        </div>
+                                      )}
+                                      <button
+                                        onClick={() => handleInventoryClick(asset._id, index, 'consumables')}
+                                        className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                          selectedInventoryType[`${asset._id}-${index}`] === 'consumables'
+                                            ? 'text-white bg-orange-600 hover:bg-orange-700 shadow-sm'
+                                            : 'text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200'
+                                        }`}
+                                        title="View Consumables"
+                                      >
+                                        <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                        <span>Consumables</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleInventoryClick(asset._id, index, 'spareParts')}
+                                        className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                          selectedInventoryType[`${asset._id}-${index}`] === 'spareParts'
+                                            ? 'text-white bg-blue-600 hover:bg-blue-700 shadow-sm'
+                                            : 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200'
+                                        }`}
+                                        title="View Spare Parts"
+                                      >
+                                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                        <span>Spare Parts</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleInventoryClick(asset._id, index, 'tools')}
+                                        className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                          selectedInventoryType[`${asset._id}-${index}`] === 'tools'
+                                            ? 'text-white bg-green-600 hover:bg-green-700 shadow-sm'
+                                            : 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-200'
+                                        }`}
+                                        title="View Tools"
+                                      >
+                                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                        <span>Tools</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
              
             {filteredAssets.length === 0 && (
@@ -2686,6 +3356,552 @@ export default function AdminAssetsPage() {
                       Save Complete Asset
                     </Button>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Enhanced Asset Management Modals */}
+        
+        {/* Purchase Order Modal */}
+        {showPOModal && selectedAssetForManagement && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Link Purchase Order
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {selectedSubAssetForManagement 
+                      ? `Sub-Asset: ${selectedAssetForManagement.tagId} - ${selectedSubAssetForManagement.category}`
+                      : `Main Asset: ${selectedAssetForManagement.tagId}`
+                    }
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowPOModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      PO Number <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={poData.poNumber || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, poNumber: e.target.value }))}
+                      placeholder="e.g., PO-2024-001"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      PO Date <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      type="date"
+                      value={poData.poDate || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, poDate: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Vendor <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={poData.vendor || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, vendor: e.target.value }))}
+                      placeholder="e.g., Kirloskar Brothers Ltd"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Vendor Contact
+                    </Label>
+                    <Input
+                      value={poData.vendorContact || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, vendorContact: e.target.value }))}
+                      placeholder="e.g., sales@kirloskar.com"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Purchase Cost
+                    </Label>
+                    <Input
+                      type="number"
+                      value={poData.purchaseCost || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, purchaseCost: parseFloat(e.target.value) || 0 }))}
+                      placeholder="e.g., 150000"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Currency
+                    </Label>
+                    <Select value={poData.currency || 'INR'} onValueChange={(value) => setPOData(prev => ({ ...prev, currency: value }))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INR">INR</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Payment Terms
+                    </Label>
+                    <Input
+                      value={poData.paymentTerms || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, paymentTerms: e.target.value }))}
+                      placeholder="e.g., Net 30"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Delivery Date
+                    </Label>
+                    <Input
+                      type="date"
+                      value={poData.deliveryDate || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Invoice Number
+                    </Label>
+                    <Input
+                      value={poData.invoiceNumber || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                      placeholder="e.g., INV-2024-001"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Invoice Date
+                    </Label>
+                    <Input
+                      type="date"
+                      value={poData.invoiceDate || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Notes
+                    </Label>
+                    <Input
+                      value={poData.notes || ''}
+                      onChange={(e) => setPOData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Additional notes..."
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setShowPOModal(false)}
+                    variant="outline"
+                    className="px-4 py-2"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSavePO}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Link Purchase Order'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Replacement Modal */}
+        {showReplacementModal && selectedAssetForManagement && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Record Asset Replacement
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {selectedSubAssetForManagement 
+                      ? `Sub-Asset: ${selectedAssetForManagement.tagId} - ${selectedSubAssetForManagement.category}`
+                      : `Main Asset: ${selectedAssetForManagement.tagId}`
+                    }
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowReplacementModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Replaced Asset Tag ID <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={replacementData.replacedAssetTagId || ''}
+                      onChange={(e) => setReplacementData(prev => ({ ...prev, replacedAssetTagId: e.target.value }))}
+                      placeholder="e.g., OLD-SSWTP001"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Replacement Date <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      type="date"
+                      value={replacementData.replacementDate || ''}
+                      onChange={(e) => setReplacementData(prev => ({ ...prev, replacementDate: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Replacement Reason <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={replacementData.replacementReason || ''}
+                      onChange={(e) => setReplacementData(prev => ({ ...prev, replacementReason: e.target.value }))}
+                      placeholder="e.g., Equipment failure - motor burnt out"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Cost of Replacement
+                    </Label>
+                    <Input
+                      type="number"
+                      value={replacementData.costOfReplacement || ''}
+                      onChange={(e) => setReplacementData(prev => ({ ...prev, costOfReplacement: parseFloat(e.target.value) || 0 }))}
+                      placeholder="e.g., 75000"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Replaced By
+                    </Label>
+                    <Input
+                      value={replacementData.replacedBy || ''}
+                      onChange={(e) => setReplacementData(prev => ({ ...prev, replacedBy: e.target.value }))}
+                      placeholder="e.g., John Doe"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Notes
+                    </Label>
+                    <Input
+                      value={replacementData.notes || ''}
+                      onChange={(e) => setReplacementData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Additional notes..."
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setShowReplacementModal(false)}
+                    variant="outline"
+                    className="px-4 py-2"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveReplacement}
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white"
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Record Replacement'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Lifecycle Modal */}
+        {showLifecycleModal && selectedAssetForManagement && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Update Lifecycle Status
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {selectedSubAssetForManagement 
+                      ? `Sub-Asset: ${selectedAssetForManagement.tagId} - ${selectedSubAssetForManagement.category}`
+                      : `Main Asset: ${selectedAssetForManagement.tagId}`
+                    }
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowLifecycleModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Status <span className="text-red-500">*</span>
+                    </Label>
+                    <Select value={lifecycleData.status || 'operational'} onValueChange={(value) => setLifecycleData(prev => ({ ...prev, status: value as any }))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="procured">Procured</SelectItem>
+                        <SelectItem value="received">Received</SelectItem>
+                        <SelectItem value="installed">Installed</SelectItem>
+                        <SelectItem value="commissioned">Commissioned</SelectItem>
+                        <SelectItem value="operational">Operational</SelectItem>
+                        <SelectItem value="under_maintenance">Under Maintenance</SelectItem>
+                        <SelectItem value="retired">Retired</SelectItem>
+                        <SelectItem value="disposed">Disposed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Date <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      type="date"
+                      value={lifecycleData.date || ''}
+                      onChange={(e) => setLifecycleData(prev => ({ ...prev, date: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Updated By
+                    </Label>
+                    <Input
+                      value={lifecycleData.updatedBy || ''}
+                      onChange={(e) => setLifecycleData(prev => ({ ...prev, updatedBy: e.target.value }))}
+                      placeholder="e.g., John Doe"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Notes
+                    </Label>
+                    <Input
+                      value={lifecycleData.notes || ''}
+                      onChange={(e) => setLifecycleData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Additional notes..."
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setShowLifecycleModal(false)}
+                    variant="outline"
+                    className="px-4 py-2"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveLifecycle}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Update Status'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Financial Modal */}
+        {showFinancialModal && selectedAssetForManagement && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Manage Financial Data
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Main Asset: {selectedAssetForManagement.tagId}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowFinancialModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Total Cost
+                    </Label>
+                    <Input
+                      type="number"
+                      value={financialData.totalCost || ''}
+                      onChange={(e) => setFinancialData(prev => ({ ...prev, totalCost: parseFloat(e.target.value) || 0 }))}
+                      placeholder="e.g., 150000"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Depreciation Rate (%)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={financialData.depreciationRate || ''}
+                      onChange={(e) => setFinancialData(prev => ({ ...prev, depreciationRate: parseFloat(e.target.value) || 0 }))}
+                      placeholder="e.g., 10"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Current Value
+                    </Label>
+                    <Input
+                      type="number"
+                      value={financialData.currentValue || ''}
+                      onChange={(e) => setFinancialData(prev => ({ ...prev, currentValue: parseFloat(e.target.value) || 0 }))}
+                      placeholder="e.g., 120000"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setShowFinancialModal(false)}
+                    variant="outline"
+                    className="px-4 py-2"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveFinancial}
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white"
+                    disabled={loading}
+                  >
+                    {loading ? 'Saving...' : 'Update Financial Data'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* QR Code Modal */}
+        {showQRModal && selectedQRData && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+                    QR Code
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Generated on {new Date(selectedQRData.generatedAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 text-center">
+                <div className="mb-4 sm:mb-6">
+                  <img
+                    src={selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in/api${selectedQRData.url}`}
+                    alt="QR Code"
+                    className="mx-auto border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm"
+                    style={{ width: '250px', height: '250px', objectFit: 'contain' }}
+                    onError={(e) => {
+                      console.error('QR Code image failed to load:', selectedQRData.url)
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    onClick={() => {
+                      const link = document.createElement('a')
+                      const fullUrl = selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in/api${selectedQRData.url}`
+                      link.href = fullUrl
+                      link.download = `qr-code-${Date.now()}.png`
+                      link.click()
+                    }}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                  >
+                    Download QR Code
+                  </Button>
+                  <Button
+                    onClick={() => setShowQRModal(false)}
+                    variant="outline"
+                    className="px-4 py-2 w-full sm:w-auto"
+                  >
+                    Close
+                  </Button>
                 </div>
               </div>
             </div>

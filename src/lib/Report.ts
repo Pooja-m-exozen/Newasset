@@ -78,17 +78,17 @@ export interface SubAsset {
   digitalAssets?: {
     qrCode?: {
       url: string;
-      data?: any;
+      data?: Record<string, unknown>;
       generatedAt?: string;
     };
     barcode?: {
       url: string;
-      data?: any;
+      data?: Record<string, unknown>;
       generatedAt?: string;
     };
     nfcData?: {
       url: string;
-      data?: any;
+      data?: Record<string, unknown>;
       generatedAt?: string;
     };
   };
@@ -96,7 +96,7 @@ export interface SubAsset {
   digitalTagType?: string;
   status?: string;
   priority?: string;
-  scanHistory?: any[];
+  scanHistory?: Array<Record<string, unknown>>;
   createdAt?: string;
   updatedAt?: string;
   inventory?: {

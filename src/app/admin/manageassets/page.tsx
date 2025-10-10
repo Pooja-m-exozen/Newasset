@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AssetProvider, useAssetContext } from '../../../contexts/AdminAssetContext';
-import { Asset, assetApi } from '../../../lib/adminasset';
+import { Asset } from '../../../lib/adminasset';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { AssetViewModal } from '../../../components/ui/asset-view-modal';
@@ -16,7 +16,7 @@ import { PermissionsUI } from '../../../components/ui/permissions-ui';
 
 import { useToast, ToastContainer } from '../../../components/ui/toast';
 import { useAuth } from '../../../contexts/AuthContext';
-import { QrCode, Barcode, Wifi, Package } from 'lucide-react';
+import { Package } from 'lucide-react';
 
 // Define the Permissions type to match what PermissionsUI expects
 // interface PermissionCategory {

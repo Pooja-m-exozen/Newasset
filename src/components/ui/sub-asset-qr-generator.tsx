@@ -10,7 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { QrCode, Download, Loader2, CheckCircle, XCircle, Package, Building } from 'lucide-react'
 import { assetApi, Asset } from '@/lib/adminasset'
 
-interface SubAssetQRGeneratorProps {}
+interface SubAssetQRGeneratorProps {
+  // No props needed for this component
+}
 
 export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
   const [assets, setAssets] = useState<Asset[]>([])
@@ -23,8 +25,40 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
     includeUrl: true
   })
   const [loading, setLoading] = useState(false)
-  const [generatedQR, setGeneratedQR] = useState<any>(null)
-  const [qrResponse, setQrResponse] = useState<any>(null)
+  const [generatedQR, setGeneratedQR] = useState<{
+    success: boolean
+    message: string
+    qrCode: {
+      url: string
+      shortUrl: string
+      data: any
+      optimizedFor: string
+      scanSettings: any
+    }
+    subAsset: {
+      tagId: string
+      assetName: string
+      category: string
+      brand: string
+    }
+  } | null>(null)
+  const [qrResponse, setQrResponse] = useState<{
+    success: boolean
+    message: string
+    qrCode: {
+      url: string
+      shortUrl: string
+      data: any
+      optimizedFor: string
+      scanSettings: any
+    }
+    subAsset: {
+      tagId: string
+      assetName: string
+      category: string
+      brand: string
+    }
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [qrImageUrl, setQrImageUrl] = useState<string>('')

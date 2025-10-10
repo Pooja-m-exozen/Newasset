@@ -14,7 +14,9 @@ import { assetApi, Asset } from '@/lib/adminasset'
 // API Base URL constant
 const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
 
-interface SubAssetBulkGeneratorProps {}
+interface SubAssetBulkGeneratorProps {
+  // No props needed for this component
+}
 
 export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
   const [assets, setAssets] = useState<Asset[]>([])
@@ -23,7 +25,27 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
   const [qrOptions, setQrOptions] = useState({ size: 400 })
   const [barcodeOptions, setBarcodeOptions] = useState({ scale: 3 })
   const [loading, setLoading] = useState(false)
-  const [generatedAssets, setGeneratedAssets] = useState<any[]>([])
+  const [generatedAssets, setGeneratedAssets] = useState<Array<{
+    success: boolean
+    message: string
+    generated?: {
+      qrCode?: {
+        url: string
+        shortUrl: string
+        data: any
+        optimizedFor: string
+        scanSettings: any
+      }
+      barcode?: {
+        url: string
+        data: string
+        generatedAt: string
+      }
+    }
+    tagId: string
+    category: string
+    subAssetIndex: number
+  }>>([])
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [imageLoadingStates, setImageLoadingStates] = useState<{[key: string]: boolean}>({})
@@ -37,12 +59,12 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
   // Load images as blobs when generatedAssets changes
   useEffect(() => {
     if (generatedAssets.length > 0) {
-      generatedAssets.forEach((asset, index) => {
+      generatedAssets.forEach((asset) => {
         if (asset.generated?.qrCode) {
-          loadImageAsBlob(asset.generated.qrCode, `qr-${asset.tagId}`)
+          loadImageAsBlob(asset.generated.qrCode.url, `qr-${asset.tagId}`)
         }
         if (asset.generated?.barcode) {
-          loadImageAsBlob(asset.generated.barcode, `barcode-${asset.tagId}`)
+          loadImageAsBlob(asset.generated.barcode.url, `barcode-${asset.tagId}`)
         }
       })
     }
@@ -151,7 +173,7 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
         
         // Add a delay before showing assets to give server time to process images
         setTimeout(() => {
-          setGeneratedAssets(result.results || [])
+          setGeneratedAssets(result.results as any || [])
           setSuccess(`Successfully generated ${result.results?.length || 0} digital assets!`)
         }, 3000) // Wait 3 seconds for images to be processed and saved
         
@@ -171,11 +193,11 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
     generatedAssets.forEach(asset => {
       if (asset.generated?.qrCode) {
         const link = document.createElement('a')
-        link.href = asset.generated.qrCode.startsWith('http') 
-          ? asset.generated.qrCode 
-          : asset.generated.qrCode.startsWith('/') 
-            ? `${API_BASE_URL}${asset.generated.qrCode}`
-            : `${API_BASE_URL}/${asset.generated.qrCode}`
+        link.href = asset.generated.qrCode.url.startsWith('http') 
+          ? asset.generated.qrCode.url 
+          : asset.generated.qrCode.url.startsWith('/') 
+            ? `${API_BASE_URL}${asset.generated.qrCode.url}`
+            : `${API_BASE_URL}/${asset.generated.qrCode.url}`
         link.download = `qr_sub_${asset.tagId}.png`
         document.body.appendChild(link)
         link.click()
@@ -183,11 +205,11 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
       }
       if (asset.generated?.barcode) {
         const link = document.createElement('a')
-        link.href = asset.generated.barcode.startsWith('http') 
-          ? asset.generated.barcode 
-          : asset.generated.barcode.startsWith('/') 
-            ? `${API_BASE_URL}${asset.generated.barcode}`
-            : `${API_BASE_URL}/${asset.generated.barcode}`
+        link.href = asset.generated.barcode.url.startsWith('http') 
+          ? asset.generated.barcode.url 
+          : asset.generated.barcode.url.startsWith('/') 
+            ? `${API_BASE_URL}${asset.generated.barcode.url}`
+            : `${API_BASE_URL}/${asset.generated.barcode.url}`
         link.download = `barcode_sub_${asset.tagId}.png`
         document.body.appendChild(link)
         link.click()
@@ -384,11 +406,11 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
                           size="sm"
                           onClick={() => {
                             const link = document.createElement('a')
-                            link.href = asset.generated.qrCode.startsWith('http') 
-                              ? asset.generated.qrCode 
-                              : asset.generated.qrCode.startsWith('/') 
-                                ? `${API_BASE_URL}${asset.generated.qrCode}`
-                                : `${API_BASE_URL}/${asset.generated.qrCode}`
+                            link.href = asset.generated?.qrCode?.url?.startsWith('http') 
+                              ? asset.generated.qrCode.url 
+                              : asset.generated?.qrCode?.url?.startsWith('/') 
+                                ? `${API_BASE_URL}${asset.generated.qrCode.url}`
+                                : `${API_BASE_URL}/${asset.generated?.qrCode?.url || ''}`
                             link.download = `qr_sub_${asset.tagId}.png`
                             document.body.appendChild(link)
                             link.click()
@@ -421,11 +443,11 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
                           size="sm"
                           onClick={() => {
                             const link = document.createElement('a')
-                            link.href = asset.generated.barcode.startsWith('http') 
-                              ? asset.generated.barcode 
-                              : asset.generated.barcode.startsWith('/') 
-                                ? `${API_BASE_URL}${asset.generated.barcode}`
-                                : `${API_BASE_URL}/${asset.generated.barcode}`
+                            link.href = asset.generated?.barcode?.url?.startsWith('http') 
+                              ? asset.generated.barcode.url 
+                              : asset.generated?.barcode?.url?.startsWith('/') 
+                                ? `${API_BASE_URL}${asset.generated.barcode.url}`
+                                : `${API_BASE_URL}/${asset.generated?.barcode?.url || ''}`
                             link.download = `barcode_sub_${asset.tagId}.png`
                             document.body.appendChild(link)
                             link.click()

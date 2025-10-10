@@ -1071,7 +1071,7 @@ export const assetApi = {
     qrCode: {
       url: string;
       shortUrl: string;
-      data: any;
+      data: Record<string, unknown>;
       tagId: string;
     };
   }> => {
@@ -1093,7 +1093,7 @@ export const assetApi = {
     digitalTypes: string[] = ['qr', 'barcode', 'nfc']
   ): Promise<{
     success: boolean;
-    digitalAssets: any;
+    digitalAssets: Record<string, unknown>;
     message: string;
   }> => {
     return apiRequest(`/digital-assets/sub-asset/${assetId}/${subAssetIndex}/${category}/all`, {
@@ -1112,7 +1112,7 @@ export const assetApi = {
     } = {}
   ): Promise<{
     success: boolean;
-    results: any[];
+    results: Array<Record<string, unknown>>;
     message: string;
     summary?: {
       total: number;

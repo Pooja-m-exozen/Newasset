@@ -25,7 +25,39 @@ interface ApiSubAsset {
   capacity: string
   location: string
   digitalTagType?: string  // Digital tag type
-  digitalAssets?: any  // Digital assets
+  digitalAssets?: {
+    qrCode?: {
+      url: string
+      data: any
+      generatedAt: string
+    }
+    barcode?: {
+      url: string
+      data: {
+        t: string
+        a: string
+        s: string
+        b: string
+        m: string
+        st: string
+        p: string
+        l: any
+        u: string
+        pr: string
+        lm: string | null
+        nm: string | null
+        url: string
+        ts: number
+        c: string
+      }
+      generatedAt: string
+    }
+    nfcData?: {
+      url: string
+      data: any
+      generatedAt: string
+    }
+  }
   hasDigitalAssets?: boolean  // Digital assets flag
   inventory: {
     consumables: InventoryItem[]
@@ -87,7 +119,39 @@ interface AssetClassificationItem {
   reason: string
   tagId?: string  // NEW: Sub-asset tag ID
   digitalTagType?: string  // NEW: Digital tag type
-  digitalAssets?: any  // NEW: Digital assets
+  digitalAssets?: {
+    qrCode?: {
+      url: string
+      data: any
+      generatedAt: string
+    }
+    barcode?: {
+      url: string
+      data: {
+        t: string
+        a: string
+        s: string
+        b: string
+        m: string
+        st: string
+        p: string
+        l: any
+        u: string
+        pr: string
+        lm: string | null
+        nm: string | null
+        url: string
+        ts: number
+        c: string
+      }
+      generatedAt: string
+    }
+    nfcData?: {
+      url: string
+      data: any
+      generatedAt: string
+    }
+  }
   hasDigitalAssets?: boolean  // NEW: Quick check flag
   inventory: {
     consumables: InventoryItem[]
@@ -182,7 +246,7 @@ export default function AdminAssetsPage() {
               capacity: subAsset.capacity,
               location: subAsset.location,
               digitalTagType: subAsset.digitalTagType, // Include digital tag type
-              digitalAssets: subAsset.digitalAssets, // Include digital assets
+              digitalAssets: subAsset.digitalAssets as any, // Include digital assets
               hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
               inventory: subAsset.inventory
             })),
@@ -198,7 +262,7 @@ export default function AdminAssetsPage() {
               capacity: subAsset.capacity,
               location: subAsset.location,
               digitalTagType: subAsset.digitalTagType, // Include digital tag type
-              digitalAssets: subAsset.digitalAssets, // Include digital assets
+              digitalAssets: subAsset.digitalAssets as any, // Include digital assets
               hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
               inventory: subAsset.inventory
             }))
@@ -302,7 +366,7 @@ export default function AdminAssetsPage() {
         inventory: subAsset.inventory,
         tagId: subAsset.tagId, // Include tag ID
         digitalTagType: subAsset.digitalTagType, // Include digital tag type
-        digitalAssets: subAsset.digitalAssets, // Include digital assets
+        digitalAssets: subAsset.digitalAssets as any, // Include digital assets
         hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
         reason: subAsset.category === 'Movable'
           ? 'Portable equipment that can be relocated as needed.'
@@ -322,7 +386,7 @@ export default function AdminAssetsPage() {
         inventory: subAsset.inventory,
         tagId: subAsset.tagId, // Include tag ID
         digitalTagType: subAsset.digitalTagType, // Include digital tag type
-        digitalAssets: subAsset.digitalAssets, // Include digital assets
+        digitalAssets: subAsset.digitalAssets as any, // Include digital assets
         hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
         reason: subAsset.category === 'Immovable'
           ? 'Permanently installed infrastructure that cannot be moved without demolition.'

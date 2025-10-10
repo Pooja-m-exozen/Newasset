@@ -18,7 +18,8 @@ import {
   Download,
   Copy,
   X,
-  Eye
+  Eye,
+  Building
 } from 'lucide-react'
 import { StatusBadge } from './status-badge'
 import NextImage from 'next/image'
@@ -716,6 +717,198 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
                   </div>
                 </div>
 
+                {/* Sub-Assets Section */}
+                {selectedAsset?.subAssets && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Sub-Assets</h3>
+                    
+                    {/* Movable Sub-Assets */}
+                    {selectedAsset.subAssets.movable && selectedAsset.subAssets.movable.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                          <Package className="w-4 h-4 text-green-600" />
+                          Movable Sub-Assets ({selectedAsset.subAssets.movable.length})
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {selectedAsset.subAssets.movable.map((subAsset, index) => (
+                            <div key={subAsset._id || index} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Package className="w-4 h-4 text-green-600" />
+                                  <span className="text-sm font-medium">{subAsset.assetName}</span>
+                                </div>
+                                <span className="text-xs text-gray-500 font-mono">{subAsset.tagId}</span>
+                              </div>
+                              
+                              {/* Sub-Asset Details */}
+                              <div className="space-y-1 text-xs text-gray-600">
+                                {subAsset.brand && (
+                                  <div>Brand: {subAsset.brand}</div>
+                                )}
+                                {subAsset.model && (
+                                  <div>Model: {subAsset.model}</div>
+                                )}
+                                {subAsset.capacity && (
+                                  <div>Capacity: {subAsset.capacity}</div>
+                                )}
+                                {subAsset.location && (
+                                  <div>Location: {subAsset.location}</div>
+                                )}
+                              </div>
+                              
+                              {/* QR Code Display */}
+                              <div className="mt-2">
+                                {subAsset.hasDigitalAssets && subAsset.digitalAssets?.qrCode ? (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-center">
+                                      <NextImage
+                                        src={`https://digitalasset.zenapi.co.in${subAsset.digitalAssets?.qrCode?.url}`}
+                                        alt={`QR Code for ${subAsset.tagId}`}
+                                        width={48}
+                                        height={48}
+                                        className="w-12 h-12 object-contain border border-gray-200 rounded"
+                                        onError={(e) => {
+                                          console.error('Sub-asset QR Code failed to load:', subAsset.digitalAssets?.qrCode?.url, e)
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => {
+                                          if (subAsset.digitalAssets?.qrCode?.url) {
+                                            const url = `https://digitalasset.zenapi.co.in${subAsset.digitalAssets.qrCode.url}`
+                                            copyToClipboard(url)
+                                          }
+                                        }}
+                                        className="flex-1 h-7 text-xs bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200"
+                                      >
+                                        <Copy className="w-3 h-3 mr-1" />
+                                        Copy
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => {
+                                          if (subAsset.digitalAssets?.qrCode?.url) {
+                                            const url = `https://digitalasset.zenapi.co.in${subAsset.digitalAssets.qrCode.url}`
+                                            downloadFile(url, `qr_${subAsset.tagId}.png`)
+                                          }
+                                        }}
+                                        className="flex-1 h-7 text-xs bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
+                                      >
+                                        <Download className="w-3 h-3 mr-1" />
+                                        Download
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="p-2 bg-gray-100 rounded text-xs text-center text-gray-500">
+                                    QR Code: Not Generated
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Immovable Sub-Assets */}
+                    {selectedAsset.subAssets.immovable && selectedAsset.subAssets.immovable.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                          <Building className="w-4 h-4 text-blue-600" />
+                          Immovable Sub-Assets ({selectedAsset.subAssets.immovable.length})
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {selectedAsset.subAssets.immovable.map((subAsset, index) => (
+                            <div key={subAsset._id || index} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Building className="w-4 h-4 text-blue-600" />
+                                  <span className="text-sm font-medium">{subAsset.assetName}</span>
+                                </div>
+                                <span className="text-xs text-gray-500 font-mono">{subAsset.tagId}</span>
+                              </div>
+                              
+                              {/* Sub-Asset Details */}
+                              <div className="space-y-1 text-xs text-gray-600">
+                                {subAsset.brand && (
+                                  <div>Brand: {subAsset.brand}</div>
+                                )}
+                                {subAsset.model && (
+                                  <div>Model: {subAsset.model}</div>
+                                )}
+                                {subAsset.capacity && (
+                                  <div>Capacity: {subAsset.capacity}</div>
+                                )}
+                                {subAsset.location && (
+                                  <div>Location: {subAsset.location}</div>
+                                )}
+                              </div>
+                              
+                              {/* QR Code Display */}
+                              <div className="mt-2">
+                                {subAsset.hasDigitalAssets && subAsset.digitalAssets?.qrCode ? (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-center">
+                                      <NextImage
+                                        src={`https://digitalasset.zenapi.co.in${subAsset.digitalAssets?.qrCode?.url}`}
+                                        alt={`QR Code for ${subAsset.tagId}`}
+                                        width={48}
+                                        height={48}
+                                        className="w-12 h-12 object-contain border border-gray-200 rounded"
+                                        onError={(e) => {
+                                          console.error('Sub-asset QR Code failed to load:', subAsset.digitalAssets?.qrCode?.url, e)
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => {
+                                          if (subAsset.digitalAssets?.qrCode?.url) {
+                                            const url = `https://digitalasset.zenapi.co.in${subAsset.digitalAssets.qrCode.url}`
+                                            copyToClipboard(url)
+                                          }
+                                        }}
+                                        className="flex-1 h-7 text-xs bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200"
+                                      >
+                                        <Copy className="w-3 h-3 mr-1" />
+                                        Copy
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => {
+                                          if (subAsset.digitalAssets?.qrCode?.url) {
+                                            const url = `https://digitalasset.zenapi.co.in${subAsset.digitalAssets.qrCode.url}`
+                                            downloadFile(url, `qr_${subAsset.tagId}.png`)
+                                          }
+                                        }}
+                                        className="flex-1 h-7 text-xs bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
+                                      >
+                                        <Download className="w-3 h-3 mr-1" />
+                                        Download
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="p-2 bg-gray-100 rounded text-xs text-center text-gray-500">
+                                    QR Code: Not Generated
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Project Info */}
                 <div className="border-t pt-4">

@@ -494,14 +494,15 @@ function AssetsLogsContent() {
           
           // Movable Assets Table
           if (subAssets?.movable && subAssets.movable.length > 0) {
-            const movableColumns = [
-              { header: '#', key: 'sno', width: 10 },
-              { header: 'Component Name', key: 'name', width: 45 },
-              { header: 'Brand', key: 'brand', width: 30 },
-              { header: 'Model', key: 'model', width: 30 },
-              { header: 'Capacity', key: 'capacity', width: 18 },
-              { header: 'Location', key: 'location', width: 42 }
-            ];
+          const movableColumns = [
+            { header: '#', key: 'sno', width: 8 },
+            { header: 'Tag ID', key: 'tagId', width: 25 },
+            { header: 'Component Name', key: 'name', width: 35 },
+            { header: 'Brand', key: 'brand', width: 22 },
+            { header: 'Model', key: 'model', width: 22 },
+            { header: 'Capacity', key: 'capacity', width: 15 },
+            { header: 'Location', key: 'location', width: 28 }
+          ];
             
             const movableTableWidth = movableColumns.reduce((sum, col) => sum + col.width, 0);
             
@@ -544,6 +545,7 @@ function AssetsLogsContent() {
             (asset as ExtendedAsset).subAssets?.movable?.forEach((subAsset: SubAsset, index: number) => {
               const rowData = [
                 (index + 1).toString(),
+                subAsset.tagId || 'N/A',
                 subAsset.assetName || 'N/A',
                 subAsset.brand || 'N/A',
                 subAsset.model || 'N/A',
@@ -595,14 +597,15 @@ function AssetsLogsContent() {
           
           // Immovable Assets Table
           if (subAssets?.immovable && subAssets.immovable.length > 0) {
-            const immovableColumns = [
-              { header: '#', key: 'sno', width: 10 },
-              { header: 'Component Name', key: 'name', width: 45 },
-              { header: 'Brand', key: 'brand', width: 30 },
-              { header: 'Model', key: 'model', width: 30 },
-              { header: 'Capacity', key: 'capacity', width: 18 },
-              { header: 'Location', key: 'location', width: 42 }
-            ];
+          const immovableColumns = [
+            { header: '#', key: 'sno', width: 8 },
+            { header: 'Tag ID', key: 'tagId', width: 25 },
+            { header: 'Component Name', key: 'name', width: 35 },
+            { header: 'Brand', key: 'brand', width: 22 },
+            { header: 'Model', key: 'model', width: 22 },
+            { header: 'Capacity', key: 'capacity', width: 15 },
+            { header: 'Location', key: 'location', width: 28 }
+          ];
             
             const immovableTableWidth = immovableColumns.reduce((sum, col) => sum + col.width, 0);
             
@@ -645,6 +648,7 @@ function AssetsLogsContent() {
             (asset as ExtendedAsset).subAssets?.immovable?.forEach((subAsset: SubAsset, index: number) => {
               const rowData = [
                 (index + 1).toString(),
+                subAsset.tagId || 'N/A',
                 subAsset.assetName || 'N/A',
                 subAsset.brand || 'N/A',
                 subAsset.model || 'N/A',
@@ -816,19 +820,8 @@ function AssetsLogsContent() {
         ['Digital Tag Type', asset.digitalTagType || 'N/A'],
         ['Status', asset.status || 'N/A'],
         ['Priority', asset.priority || 'N/A'],
-        ['Assigned To', (() => {
-          if (typeof asset.assignedTo === 'object' && asset.assignedTo?.name) {
-            return `${asset.assignedTo.name} (${asset.assignedTo.email})`;
-          } else if (typeof asset.assignedTo === 'string') {
-            return asset.assignedTo;
-          }
-          return 'Unassigned';
-        })()],
-        ['Created By', asset.createdBy?.name ? `${asset.createdBy.name} (${asset.createdBy.email})` : 'N/A'],
         ['Project', asset.project?.projectName || 'N/A'],
-        ['Location', formatLocation(asset.location || null)],
-        ['Created Date', asset.createdAt ? formatDate(asset.createdAt) : 'N/A'],
-        ['Last Updated', asset.updatedAt ? formatDate(asset.updatedAt) : 'N/A']
+        ['Location', formatLocation(asset.location || null)]
       ];
       
       // Draw asset details table
@@ -1016,12 +1009,13 @@ function AssetsLogsContent() {
           currentY += 8;
           
           const movableColumns = [
-            { header: '#', key: 'sno', width: 10 },
-            { header: 'Component Name', key: 'name', width: 50 },
-            { header: 'Brand', key: 'brand', width: 35 },
-            { header: 'Model', key: 'model', width: 35 },
-            { header: 'Capacity', key: 'capacity', width: 20 },
-            { header: 'Location', key: 'location', width: 30 }
+            { header: '#', key: 'sno', width: 8 },
+            { header: 'Tag ID', key: 'tagId', width: 25 },
+            { header: 'Component Name', key: 'name', width: 40 },
+            { header: 'Brand', key: 'brand', width: 22 },
+            { header: 'Model', key: 'model', width: 22 },
+            { header: 'Capacity', key: 'capacity', width: 15 },
+            { header: 'Location', key: 'location', width: 28 }
           ];
           
           const movableTableWidth = movableColumns.reduce((sum, col) => sum + col.width, 0);
@@ -1063,6 +1057,7 @@ function AssetsLogsContent() {
             
             const rowData = [
               (index + 1).toString(),
+              subAsset.tagId || 'N/A',
               subAsset.assetName || 'N/A',
               subAsset.brand || 'N/A',
               subAsset.model || 'N/A',
@@ -1126,12 +1121,13 @@ function AssetsLogsContent() {
           currentY += 8;
           
           const immovableColumns = [
-            { header: '#', key: 'sno', width: 10 },
-            { header: 'Component Name', key: 'name', width: 50 },
-            { header: 'Brand', key: 'brand', width: 35 },
-            { header: 'Model', key: 'model', width: 35 },
-            { header: 'Capacity', key: 'capacity', width: 20 },
-            { header: 'Location', key: 'location', width: 30 }
+            { header: '#', key: 'sno', width: 8 },
+            { header: 'Tag ID', key: 'tagId', width: 25 },
+            { header: 'Component Name', key: 'name', width: 40 },
+            { header: 'Brand', key: 'brand', width: 22 },
+            { header: 'Model', key: 'model', width: 22 },
+            { header: 'Capacity', key: 'capacity', width: 15 },
+            { header: 'Location', key: 'location', width: 28 }
           ];
           
           const immovableTableWidth = immovableColumns.reduce((sum, col) => sum + col.width, 0);
@@ -1173,6 +1169,7 @@ function AssetsLogsContent() {
             
             const rowData = [
               (index + 1).toString(),
+              subAsset.tagId || 'N/A',
               subAsset.assetName || 'N/A',
               subAsset.brand || 'N/A',
               subAsset.model || 'N/A',
@@ -1420,7 +1417,7 @@ function AssetsLogsContent() {
                           TAG & SERIAL
                         </th>
                         <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
-                          VENDOR
+                          Brand
                         </th>
                         <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-sm">
                           CATEGORY

@@ -5,6 +5,8 @@ import { BarcodeGenerator } from '@/components/ui/barcode-generator'
 import { NFCGenerator } from '@/components/ui/nfc-generator'
 import { BulkDigitalAssetsGenerator } from '@/components/ui/bulk-digital-assets-generator'
 import { AssetsViewer } from '@/components/ui/assets-viewer'
+import { SubAssetQRGenerator } from '@/components/ui/sub-asset-qr-generator'
+import { SubAssetBulkGenerator } from '@/components/ui/sub-asset-bulk-generator'
 import {
   QrCode,
   Barcode,
@@ -12,7 +14,9 @@ import {
   Database,
   Play,
   Eye,
-  X
+  X,
+  Package,
+  Building
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -29,6 +33,26 @@ export default function GeneratePage() {
       component: BulkDigitalAssetsGenerator,
       status: 'Active',
       lastUsed: '2 hours ago'
+    },
+    {
+      id: 'sub-asset-qr',
+      name: 'Sub-Asset QR Codes',
+      description: 'Generate QR codes for individual sub-assets',
+      icon: Package,
+      color: 'bg-green-100 text-green-800',
+      component: SubAssetQRGenerator,
+      status: 'Active',
+      lastUsed: 'Just now'
+    },
+    {
+      id: 'sub-asset-bulk',
+      name: 'Sub-Asset Bulk Generation',
+      description: 'Generate digital assets for all sub-assets',
+      icon: Building,
+      color: 'bg-purple-100 text-purple-800',
+      component: SubAssetBulkGenerator,
+      status: 'Active',
+      lastUsed: 'Just now'
     },
     {
       id: 'qr',

@@ -74,6 +74,31 @@ export interface SubAsset {
   capacity?: string;
   location?: string;
   category?: 'Movable' | 'Immovable';
+  tagId?: string;
+  digitalAssets?: {
+    qrCode?: {
+      url: string;
+      data?: any;
+      generatedAt?: string;
+    };
+    barcode?: {
+      url: string;
+      data?: any;
+      generatedAt?: string;
+    };
+    nfcData?: {
+      url: string;
+      data?: any;
+      generatedAt?: string;
+    };
+  };
+  hasDigitalAssets?: boolean;
+  digitalTagType?: string;
+  status?: string;
+  priority?: string;
+  scanHistory?: any[];
+  createdAt?: string;
+  updatedAt?: string;
   inventory?: {
     consumables: InventoryItem[];
     spareParts: InventoryItem[];

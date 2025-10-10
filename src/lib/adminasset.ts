@@ -11,6 +11,7 @@ export interface InventoryItem {
 export interface SubAsset {
   id?: string
   _id?: string
+  tagId?: string  // NEW: Sub-asset tag ID
   assetName: string
   description?: string
   category: 'Movable' | 'Immovable'
@@ -18,6 +19,11 @@ export interface SubAsset {
   model: string
   capacity: string
   location: string
+  digitalTagType?: string  // NEW: Digital tag type (qr, barcode, nfc)
+  digitalAssets?: DigitalAsset  // NEW: Complete digital assets
+  hasDigitalAssets?: boolean  // NEW: Quick check flag
+  status?: string
+  priority?: string
   inventory: {
     consumables: InventoryItem[]
     spareParts: InventoryItem[]
@@ -396,6 +402,7 @@ export interface DigitalAsset {
 
 export interface Asset {
   subAssets?: SubAssets;
+  subAssetSummary?: SubAssetSummary;  // NEW: Summary statistics
   _id?: string;
   tagId: string;
   assetType: string;
@@ -437,11 +444,26 @@ export interface PaginationInfo {
   pages: number;
 }
 
+export interface SubAssetSummary {
+  totalMovable: number;
+  totalImmovable: number;
+  totalSubAssets: number;
+  withTagIds: number;
+  withDigitalAssets: number;
+}
+
+export interface SubAssetInfo {
+  message: string;
+  note: string;
+}
+
 export interface AssetsResponse {
   success: boolean;
   assets: Asset[];
   pagination?: PaginationInfo;
   message?: string;
+  includeSubAssets?: boolean;  // NEW: Control flag
+  subAssetInfo?: SubAssetInfo;  // NEW: Information about sub-assets
 }
 
 // Project interfaces
@@ -1018,6 +1040,102 @@ export const assetApi = {
       method: 'POST',
       body: JSON.stringify({ role, permissions }),
     });
+  },
+
+  // Update sub-asset tag ID
+  updateSubAssetTagId: async (
+    assetId: string,
+    subAssetIndex: number,
+    category: 'movable' | 'immovable',
+    tagId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    return apiRequest<{ success: boolean; message: string }>(`/assets/${assetId}/sub-asset/${subAssetIndex}/${category}/tag-id`, {
+      method: 'PUT',
+      body: JSON.stringify({ tagId }),
+    });
+  },
+
+  // Sub-asset Digital Asset Generation APIs
+  // 1. Individual Sub-Asset QR Code Generation
+  generateSubAssetQRCode: async (
+    assetId: string,
+    subAssetIndex: number,
+    category: 'movable' | 'immovable',
+    options: {
+      size?: number;
+      quality?: number;
+      includeUrl?: boolean;
+    } = {}
+  ): Promise<{
+    success: boolean;
+    qrCode: {
+      url: string;
+      shortUrl: string;
+      data: any;
+      tagId: string;
+    };
+  }> => {
+    return apiRequest(`/digital-assets/sub-asset/${assetId}/${subAssetIndex}/${category}/qr`, {
+      method: 'POST',
+      body: JSON.stringify({
+        size: options.size || 500,
+        quality: options.quality || 1.0,
+        includeUrl: options.includeUrl !== false
+      }),
+    });
+  },
+
+  // 2. Generate All Digital Assets for One Sub-Asset
+  generateSubAssetAllDigitalAssets: async (
+    assetId: string,
+    subAssetIndex: number,
+    category: 'movable' | 'immovable',
+    digitalTypes: string[] = ['qr', 'barcode', 'nfc']
+  ): Promise<{
+    success: boolean;
+    digitalAssets: any;
+    message: string;
+  }> => {
+    return apiRequest(`/digital-assets/sub-asset/${assetId}/${subAssetIndex}/${category}/all`, {
+      method: 'POST',
+      body: JSON.stringify({ digitalTypes }),
+    });
+  },
+
+  // 3. Bulk Generate Digital Assets for All Sub-Assets
+  bulkGenerateSubAssetDigitalAssets: async (
+    assetId: string,
+    options: {
+      digitalTypes?: string[];
+      qr?: { size?: number };
+      barcode?: { scale?: number };
+    } = {}
+  ): Promise<{
+    success: boolean;
+    results: any[];
+    message: string;
+    summary?: {
+      total: number;
+      successful: number;
+      failed: number;
+    };
+  }> => {
+    return apiRequest(`/digital-assets/sub-asset/bulk/${assetId}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        digitalTypes: options.digitalTypes || ['qr', 'barcode'],
+        qr: options.qr || { size: 400 },
+        barcode: options.barcode || { scale: 3 }
+      }),
+    });
+  },
+
+  // Get assets with sub-asset details (performance control)
+  getAssetsWithSubAssets: async (includeSubAssets: boolean = true): Promise<AssetsResponse> => {
+    const params = new URLSearchParams({
+      includeSubAssets: includeSubAssets.toString()
+    });
+    return apiRequest<AssetsResponse>(`/assets?${params.toString()}`);
   },
 };
 

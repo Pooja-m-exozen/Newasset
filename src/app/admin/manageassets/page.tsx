@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AssetProvider, useAssetContext } from '../../../contexts/AdminAssetContext';
-import { Asset } from '../../../lib/adminasset';
+import { Asset, assetApi } from '../../../lib/adminasset';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { AssetViewModal } from '../../../components/ui/asset-view-modal';
@@ -16,6 +16,7 @@ import { PermissionsUI } from '../../../components/ui/permissions-ui';
 
 import { useToast, ToastContainer } from '../../../components/ui/toast';
 import { useAuth } from '../../../contexts/AuthContext';
+import { QrCode, Barcode, Wifi, Package } from 'lucide-react';
 
 // Define the Permissions type to match what PermissionsUI expects
 // interface PermissionCategory {
@@ -199,6 +200,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
 
 
 
+
   const filteredAssets = state.assets.filter(asset => {
     // First filter by project name/ID to show only assets for the current user's project
     let matchesProject = true;
@@ -360,6 +362,27 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                               <div className="text-xs text-blue-600">
                                 {asset.assetType || 'Unknown Type'}
                               </div>
+                              {/* Sub-asset Summary */}
+                              {asset.subAssetSummary && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {asset.subAssetSummary.totalSubAssets > 0 && (
+                                    <span className="inline-flex items-center gap-1">
+                                      <Package className="w-3 h-3" />
+                                      {asset.subAssetSummary.totalSubAssets} sub-assets
+                                      {asset.subAssetSummary.withTagIds > 0 && (
+                                        <span className="text-blue-600">
+                                          ({asset.subAssetSummary.withTagIds} with tag IDs)
+                                        </span>
+                                      )}
+                                      {asset.subAssetSummary.withDigitalAssets > 0 && (
+                                        <span className="text-green-600">
+                                          ({asset.subAssetSummary.withDigitalAssets} with digital assets)
+                                        </span>
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>

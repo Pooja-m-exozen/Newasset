@@ -7,15 +7,16 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2 } from 'lucide-react'
+import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Barcode, Wifi } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset } from '@/lib/adminasset'
+import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset, assetApi } from '@/lib/adminasset'
 
 // API Response interfaces
 interface ApiSubAsset {
   _id?: string
   id?: string
+  tagId?: string  // Sub-asset tag ID
   assetName: string
   description: string
   category: 'Movable' | 'Immovable'
@@ -23,6 +24,9 @@ interface ApiSubAsset {
   model: string
   capacity: string
   location: string
+  digitalTagType?: string  // Digital tag type
+  digitalAssets?: any  // Digital assets
+  hasDigitalAssets?: boolean  // Digital assets flag
   inventory: {
     consumables: InventoryItem[]
     spareParts: InventoryItem[]
@@ -81,6 +85,10 @@ interface AssetClassificationItem {
   capacity: string
   location: string
   reason: string
+  tagId?: string  // NEW: Sub-asset tag ID
+  digitalTagType?: string  // NEW: Digital tag type
+  digitalAssets?: any  // NEW: Digital assets
+  hasDigitalAssets?: boolean  // NEW: Quick check flag
   inventory: {
     consumables: InventoryItem[]
     spareParts: InventoryItem[]
@@ -106,6 +114,8 @@ export default function AdminAssetsPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
   const [expandedClassificationType, setExpandedClassificationType] = useState<'movable' | 'immovable' | null>(null)
   const [selectedInventoryType, setSelectedInventoryType] = useState<{[key: string]: 'consumables' | 'spareParts' | 'tools' | null}>({})
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
  
   // Modal states
   const [showFlowchartModal, setShowFlowchartModal] = useState(false)
@@ -162,6 +172,8 @@ export default function AdminAssetsPage() {
           subAssets: asset.subAssets ? {
             movable: asset.subAssets.movable.map((subAsset: ApiSubAsset) => ({
               id: subAsset._id || subAsset.id,
+              _id: subAsset._id,
+              tagId: subAsset.tagId, // Include tag ID
               assetName: subAsset.assetName,
               description: subAsset.description,
               category: subAsset.category,
@@ -169,10 +181,15 @@ export default function AdminAssetsPage() {
               model: subAsset.model,
               capacity: subAsset.capacity,
               location: subAsset.location,
+              digitalTagType: subAsset.digitalTagType, // Include digital tag type
+              digitalAssets: subAsset.digitalAssets, // Include digital assets
+              hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
               inventory: subAsset.inventory
             })),
             immovable: asset.subAssets.immovable.map((subAsset: ApiSubAsset) => ({
               id: subAsset._id || subAsset.id,
+              _id: subAsset._id,
+              tagId: subAsset.tagId, // Include tag ID
               assetName: subAsset.assetName,
               description: subAsset.description,
               category: subAsset.category,
@@ -180,6 +197,9 @@ export default function AdminAssetsPage() {
               model: subAsset.model,
               capacity: subAsset.capacity,
               location: subAsset.location,
+              digitalTagType: subAsset.digitalTagType, // Include digital tag type
+              digitalAssets: subAsset.digitalAssets, // Include digital assets
+              hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
               inventory: subAsset.inventory
             }))
           } : undefined
@@ -220,36 +240,95 @@ export default function AdminAssetsPage() {
 
   // Generate PDF function
 
+  // Handle tag ID update
+  const handleUpdateTagId = async (assetId: string, subAssetIndex: number, category: 'movable' | 'immovable', currentTagId: string) => {
+    try {
+      const newTagId = prompt('Enter Tag ID:', currentTagId || '');
+      if (newTagId !== null && newTagId.trim() !== '') {
+        // Show loading state
+        setLoading(true);
+        
+        
+        // Call API to update tag ID
+        const result = await assetApi.updateSubAssetTagId(assetId, subAssetIndex, category, newTagId.trim());
+        
+        if (result.success) {
+          // Refresh the assets list to show updated tag ID
+          await fetchAssets();
+          
+          // Show success message
+          setSuccessMessage('Tag ID updated successfully!');
+        } else {
+          setSuccessMessage(`Failed to update tag ID: ${result.message}`);
+        }
+      }
+    } catch (error) {
+      // Parse error message for better user feedback
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Check for specific validation errors
+        if (errorMessage.includes('Validation error')) {
+          errorMessage = 'Backend validation error. Please check the tag ID format.';
+        } else if (errorMessage.includes('Authentication')) {
+          errorMessage = 'Authentication failed. Please log in again.';
+        } else if (errorMessage.includes('404')) {
+          errorMessage = 'Asset or sub-asset not found.';
+        } else if (errorMessage.includes('500')) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      }
+      
+      setSuccessMessage(`Failed to update tag ID: ${errorMessage}`);
+      setShowSuccess(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Dynamic Asset Classification based on actual API sub-assets data
   const getAssetClassification = (asset: AssetData): AssetClassification => {
     // Use actual sub-assets from API response and transform them to include reason
-    const movableAssets = (asset.subAssets?.movable || []).map(subAsset => ({
-      assetName: subAsset.assetName,
-      description: subAsset.description || '',
-      category: subAsset.category,
-      brand: subAsset.brand,
-      model: subAsset.model,
-      capacity: subAsset.capacity,
-      location: subAsset.location,
-      inventory: subAsset.inventory,
-      reason: subAsset.category === 'Movable'
-        ? 'Portable equipment that can be relocated as needed.'
-        : 'Fixed installations that require specialized removal procedures.'
-    }))
+    const movableAssets = (asset.subAssets?.movable || []).map(subAsset => {
+      return {
+        assetName: subAsset.assetName,
+        description: subAsset.description || '',
+        category: subAsset.category,
+        brand: subAsset.brand,
+        model: subAsset.model,
+        capacity: subAsset.capacity,
+        location: subAsset.location,
+        inventory: subAsset.inventory,
+        tagId: subAsset.tagId, // Include tag ID
+        digitalTagType: subAsset.digitalTagType, // Include digital tag type
+        digitalAssets: subAsset.digitalAssets, // Include digital assets
+        hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
+        reason: subAsset.category === 'Movable'
+          ? 'Portable equipment that can be relocated as needed.'
+          : 'Fixed installations that require specialized removal procedures.'
+      };
+    });
    
-    const immovableAssets = (asset.subAssets?.immovable || []).map(subAsset => ({
-      assetName: subAsset.assetName,
-      description: subAsset.description || '',
-      category: subAsset.category,
-      brand: subAsset.brand,
-      model: subAsset.model,
-      capacity: subAsset.capacity,
-      location: subAsset.location,
-      inventory: subAsset.inventory,
-      reason: subAsset.category === 'Immovable'
-        ? 'Permanently installed infrastructure that cannot be moved without demolition.'
-        : 'Fixed installations requiring specialized removal procedures.'
-    }))
+    const immovableAssets = (asset.subAssets?.immovable || []).map(subAsset => {
+      return {
+        assetName: subAsset.assetName,
+        description: subAsset.description || '',
+        category: subAsset.category,
+        brand: subAsset.brand,
+        model: subAsset.model,
+        capacity: subAsset.capacity,
+        location: subAsset.location,
+        inventory: subAsset.inventory,
+        tagId: subAsset.tagId, // Include tag ID
+        digitalTagType: subAsset.digitalTagType, // Include digital tag type
+        digitalAssets: subAsset.digitalAssets, // Include digital assets
+        hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
+        reason: subAsset.category === 'Immovable'
+          ? 'Permanently installed infrastructure that cannot be moved without demolition.'
+          : 'Fixed installations requiring specialized removal procedures.'
+      };
+    });
 
     return {
       movable: movableAssets,
@@ -416,6 +495,7 @@ export default function AdminAssetsPage() {
       model: '',
       capacity: '',
       location: '',
+      digitalTagType: 'qr', // Default digital tag type
       inventory: {
         consumables: [],
         spareParts: [],
@@ -635,6 +715,7 @@ export default function AdminAssetsPage() {
     }
   }
 
+
   const generatePDF = async (asset: AssetData) => {
     const doc = new jsPDF()
     const assetClassification = getAssetClassification(asset)
@@ -812,6 +893,7 @@ export default function AdminAssetsPage() {
     const componentsTableData = allComponents.map((item, index) => [
       index + 1,
       `${item.type === 'Movable' ? '[M]' : '[I]'} ${item.assetName}`,
+      item.tagId || 'No Tag ID',
       item.brand || 'N/A',
       item.model || 'N/A',
       item.capacity || 'N/A',
@@ -820,7 +902,7 @@ export default function AdminAssetsPage() {
    
     autoTable(doc, {
       startY: rightY,
-      head: [['#', 'Component Name', 'Brand', 'Model', 'Capacity', 'Location']],
+      head: [['#', 'Component Name', 'Tag ID', 'Brand', 'Model', 'Capacity', 'Location']],
       body: componentsTableData,
       styles: {
         fontSize: 6,
@@ -845,11 +927,12 @@ export default function AdminAssetsPage() {
       margin: { left: rightColumnX, right: 15 },
       columnStyles: {
         0: { cellWidth: 6 },
-        1: { cellWidth: 28, fontStyle: 'bold' },
-        2: { cellWidth: 15 },
-        3: { cellWidth: 15 },
-        4: { cellWidth: 10 },
-        5: { cellWidth: 16 }
+        1: { cellWidth: 20, fontStyle: 'bold' },
+        2: { cellWidth: 20, fontStyle: 'bold' },
+        3: { cellWidth: 12 },
+        4: { cellWidth: 12 },
+        5: { cellWidth: 8 },
+        6: { cellWidth: 12 }
       },
     })
    
@@ -982,6 +1065,20 @@ export default function AdminAssetsPage() {
               </div>
               </div>
 
+            {/* Success Message */}
+            {showSuccess && (
+              <div className="mb-4 px-4">
+                <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center justify-between">
+                  <span>{successMessage}</span>
+                  <button
+                    onClick={() => setShowSuccess(false)}
+                    className="text-green-600 hover:text-green-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
 
         {/* Loading State */}
         {loading && (
@@ -1193,15 +1290,38 @@ export default function AdminAssetsPage() {
                                           <React.Fragment key={index}>
                                             <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                                               <td className="border border-border px-4 py-3">
-                                                <div className="flex items-center space-x-2">
-                                                  {expandedClassificationType === 'movable' ? (
-                                                    <Package className="w-4 h-4 text-green-600" />
-                                                  ) : (
-                                                    <Building className="w-4 h-4 text-blue-600" />
-                                                  )}
-                                                  <span className="font-medium text-blue-800 dark:text-blue-200">
-                                                    {classificationAsset.assetName}
-                                                  </span>
+                                                <div className="space-y-2">
+                                                  <div className="flex items-center space-x-2">
+                                                    {expandedClassificationType === 'movable' ? (
+                                                      <Package className="w-4 h-4 text-green-600" />
+                                                    ) : (
+                                                      <Building className="w-4 h-4 text-blue-600" />
+                                                    )}
+                                                    <span className="font-medium text-blue-800 dark:text-blue-200">
+                                                      {classificationAsset.assetName}
+                                                    </span>
+                                                  </div>
+                                                  {/* Tag ID Display */}
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500">Tag ID:</span>
+                                                    {(() => {
+                                                      return classificationAsset.tagId ? (
+                                                        <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-700">
+                                                          {classificationAsset.tagId}
+                                                        </span>
+                                                      ) : (
+                                                        <span className="text-xs text-gray-400 italic">No tag ID</span>
+                                                      );
+                                                    })()}
+                                                    <button
+                                                      onClick={() => handleUpdateTagId(asset._id, index, expandedClassificationType!, classificationAsset.tagId || '')}
+                                                      className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                                      title="Edit Tag ID"
+                                                      disabled={loading}
+                                                    >
+                                                      {classificationAsset.tagId ? 'Edit' : 'Add'}
+                                                    </button>
+                                                  </div>
                                                 </div>
                                               </td>
                                               <td className="border border-border px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
@@ -1217,37 +1337,57 @@ export default function AdminAssetsPage() {
                                                 {subAssetData.location}
                                               </td>
                                               <td className="border border-border px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                  <button
-                                                    onClick={() => handleInventoryClick(asset._id, index, 'consumables')}
-                                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                                                      selectedInventoryType[`${asset._id}-${index}`] === 'consumables'
-                                                        ? 'text-white bg-orange-600 hover:bg-orange-700'
-                                                        : 'text-orange-700 bg-orange-100 hover:bg-orange-200'
-                                                    }`}
-                                                  >
-                                                    Consumables
-                                                  </button>
-                                                  <button
-                                                    onClick={() => handleInventoryClick(asset._id, index, 'spareParts')}
-                                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                                                      selectedInventoryType[`${asset._id}-${index}`] === 'spareParts'
-                                                        ? 'text-white bg-blue-600 hover:bg-blue-700'
-                                                        : 'text-blue-700 bg-blue-100 hover:bg-blue-200'
-                                                    }`}
-                                                  >
-                                                    Spare Parts
-                                                  </button>
-                                                  <button
-                                                    onClick={() => handleInventoryClick(asset._id, index, 'tools')}
-                                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                                                      selectedInventoryType[`${asset._id}-${index}`] === 'tools'
-                                                        ? 'text-white bg-green-600 hover:bg-green-700'
-                                                        : 'text-green-700 bg-green-100 hover:bg-green-200'
-                                                    }`}
-                                                  >
-                                                    Tools
-                                                  </button>
+                                                <div className="flex flex-col gap-2">
+                                                  {/* Digital Assets Section */}
+                                                  <div className="flex items-center gap-2">
+                                                    {classificationAsset.hasDigitalAssets && (
+                                                      <div className="flex items-center gap-1">
+                                                        {classificationAsset.digitalAssets?.qrCode && (
+                                                          <QrCode className="w-4 h-4 text-green-600" />
+                                                        )}
+                                                        {classificationAsset.digitalAssets?.barcode && (
+                                                          <Barcode className="w-4 h-4 text-blue-600" />
+                                                        )}
+                                                        {classificationAsset.digitalAssets?.nfcData && (
+                                                          <Wifi className="w-4 h-4 text-purple-600" />
+                                                        )}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                  
+                                                  {/* Inventory Actions */}
+                                                  <div className="flex items-center gap-2">
+                                                    <button
+                                                      onClick={() => handleInventoryClick(asset._id, index, 'consumables')}
+                                                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                                        selectedInventoryType[`${asset._id}-${index}`] === 'consumables'
+                                                          ? 'text-white bg-orange-600 hover:bg-orange-700'
+                                                          : 'text-orange-700 bg-orange-100 hover:bg-orange-200'
+                                                      }`}
+                                                    >
+                                                      Consumables
+                                                    </button>
+                                                    <button
+                                                      onClick={() => handleInventoryClick(asset._id, index, 'spareParts')}
+                                                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                                        selectedInventoryType[`${asset._id}-${index}`] === 'spareParts'
+                                                          ? 'text-white bg-blue-600 hover:bg-blue-700'
+                                                          : 'text-blue-700 bg-blue-100 hover:bg-blue-200'
+                                                      }`}
+                                                    >
+                                                      Spare Parts
+                                                    </button>
+                                                    <button
+                                                      onClick={() => handleInventoryClick(asset._id, index, 'tools')}
+                                                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                                        selectedInventoryType[`${asset._id}-${index}`] === 'tools'
+                                                          ? 'text-white bg-green-600 hover:bg-green-700'
+                                                          : 'text-green-700 bg-green-100 hover:bg-green-200'
+                                                      }`}
+                                                    >
+                                                      Tools
+                                                    </button>
+                                                  </div>
                                                 </div>
                                               </td>
                                             </tr>
@@ -1423,6 +1563,9 @@ export default function AdminAssetsPage() {
                                   <h5 className="font-semibold text-gray-900 dark:text-white text-sm mb-2">
                                     {index + 1}. {item.assetName}
                                   </h5>
+                                  <div className="text-xs text-blue-600 dark:text-blue-400 mb-2 font-mono">
+                                    Tag ID: {item.tagId || 'No Tag ID'}
+                                  </div>
                                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{item.description}</p>
                                  
                                   {/* Simple Inventory Display */}
@@ -1490,6 +1633,9 @@ export default function AdminAssetsPage() {
                                   <h5 className="font-semibold text-gray-900 dark:text-white text-sm mb-2">
                                     {index + 1}. {item.assetName}
                                   </h5>
+                                  <div className="text-xs text-blue-600 dark:text-blue-400 mb-2 font-mono">
+                                    Tag ID: {item.tagId || 'No Tag ID'}
+                                  </div>
                                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{item.description}</p>
                                  
                                   {/* Simple Inventory Display */}
@@ -1850,6 +1996,15 @@ export default function AdminAssetsPage() {
                                 />
                               </div>
                               <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tag ID</Label>
+                                <Input
+                                  value={subAsset.tagId || ''}
+                                  onChange={(e) => handleSubAssetChange('Movable', index, 'tagId', e.target.value)}
+                                  placeholder="e.g., SSL36112-MA-abc123-def4"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brand</Label>
                                 <Input
                                   value={subAsset.brand}
@@ -1893,6 +2048,23 @@ export default function AdminAssetsPage() {
                                   placeholder="Brief description"
                                   className="mt-1"
                                 />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Digital Tag Type</Label>
+                                <Select 
+                                  value={subAsset.digitalTagType || 'qr'} 
+                                  onValueChange={(value) => handleSubAssetChange('Movable', index, 'digitalTagType', value)}
+                                >
+                                  <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="qr">QR Code</SelectItem>
+                                    <SelectItem value="barcode">Barcode</SelectItem>
+                                    <SelectItem value="nfc">NFC</SelectItem>
+                                    <SelectItem value="none">None</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
                           </div>
@@ -1942,6 +2114,15 @@ export default function AdminAssetsPage() {
                                 />
                               </div>
                               <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tag ID</Label>
+                                <Input
+                                  value={subAsset.tagId || ''}
+                                  onChange={(e) => handleSubAssetChange('Immovable', index, 'tagId', e.target.value)}
+                                  placeholder="e.g., SSL36112-IA-abc123-def4"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brand</Label>
                                 <Input
                                   value={subAsset.brand}
@@ -1985,6 +2166,23 @@ export default function AdminAssetsPage() {
                                   placeholder="Brief description"
                                   className="mt-1"
                                 />
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Digital Tag Type</Label>
+                                <Select 
+                                  value={subAsset.digitalTagType || 'qr'} 
+                                  onValueChange={(value) => handleSubAssetChange('Immovable', index, 'digitalTagType', value)}
+                                >
+                                  <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="qr">QR Code</SelectItem>
+                                    <SelectItem value="barcode">Barcode</SelectItem>
+                                    <SelectItem value="nfc">NFC</SelectItem>
+                                    <SelectItem value="none">None</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
                           </div>

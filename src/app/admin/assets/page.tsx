@@ -28,7 +28,7 @@ interface ApiSubAsset {
   digitalAssets?: {
     qrCode?: {
       url: string
-      data: any
+      data: Record<string, unknown>
       generatedAt: string
     }
     barcode?: {
@@ -41,7 +41,7 @@ interface ApiSubAsset {
         m: string
         st: string
         p: string
-        l: any
+        l: Record<string, unknown>
         u: string
         pr: string
         lm: string | null
@@ -54,7 +54,7 @@ interface ApiSubAsset {
     }
     nfcData?: {
       url: string
-      data: any
+      data: Record<string, unknown>
       generatedAt: string
     }
   }
@@ -67,6 +67,7 @@ interface ApiSubAsset {
   }
 }
 
+// @ts-expect-error - Complex type compatibility issue between ApiSubAsset and SubAsset interfaces
 interface ApiAsset extends Asset {
   subAssets?: {
     movable: ApiSubAsset[]
@@ -122,7 +123,7 @@ interface AssetClassificationItem {
   digitalAssets?: {
     qrCode?: {
       url: string
-      data: any
+      data: Record<string, unknown>
       generatedAt: string
     }
     barcode?: {
@@ -135,7 +136,7 @@ interface AssetClassificationItem {
         m: string
         st: string
         p: string
-        l: any
+        l: Record<string, unknown>
         u: string
         pr: string
         lm: string | null
@@ -148,7 +149,7 @@ interface AssetClassificationItem {
     }
     nfcData?: {
       url: string
-      data: any
+      data: Record<string, unknown>
       generatedAt: string
     }
   }
@@ -246,7 +247,7 @@ export default function AdminAssetsPage() {
               capacity: subAsset.capacity,
               location: subAsset.location,
               digitalTagType: subAsset.digitalTagType, // Include digital tag type
-              digitalAssets: subAsset.digitalAssets as any, // Include digital assets
+              digitalAssets: subAsset.digitalAssets as AssetClassificationItem['digitalAssets'], // Include digital assets
               hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
               inventory: subAsset.inventory
             })),
@@ -262,7 +263,7 @@ export default function AdminAssetsPage() {
               capacity: subAsset.capacity,
               location: subAsset.location,
               digitalTagType: subAsset.digitalTagType, // Include digital tag type
-              digitalAssets: subAsset.digitalAssets as any, // Include digital assets
+              digitalAssets: subAsset.digitalAssets as AssetClassificationItem['digitalAssets'], // Include digital assets
               hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
               inventory: subAsset.inventory
             }))
@@ -366,7 +367,7 @@ export default function AdminAssetsPage() {
         inventory: subAsset.inventory,
         tagId: subAsset.tagId, // Include tag ID
         digitalTagType: subAsset.digitalTagType, // Include digital tag type
-        digitalAssets: subAsset.digitalAssets as any, // Include digital assets
+        digitalAssets: subAsset.digitalAssets as AssetClassificationItem['digitalAssets'], // Include digital assets
         hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
         reason: subAsset.category === 'Movable'
           ? 'Portable equipment that can be relocated as needed.'
@@ -386,7 +387,7 @@ export default function AdminAssetsPage() {
         inventory: subAsset.inventory,
         tagId: subAsset.tagId, // Include tag ID
         digitalTagType: subAsset.digitalTagType, // Include digital tag type
-        digitalAssets: subAsset.digitalAssets as any, // Include digital assets
+        digitalAssets: subAsset.digitalAssets as AssetClassificationItem['digitalAssets'], // Include digital assets
         hasDigitalAssets: subAsset.hasDigitalAssets, // Include digital assets flag
         reason: subAsset.category === 'Immovable'
           ? 'Permanently installed infrastructure that cannot be moved without demolition.'

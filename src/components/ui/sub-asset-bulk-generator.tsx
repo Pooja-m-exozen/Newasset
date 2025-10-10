@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +15,7 @@ import { assetApi, Asset } from '@/lib/adminasset'
 // API Base URL constant
 const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface SubAssetBulkGeneratorProps {
   // No props needed for this component
 }
@@ -32,9 +34,9 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
       qrCode?: {
         url: string
         shortUrl: string
-        data: any
+        data: Record<string, unknown>
         optimizedFor: string
-        scanSettings: any
+        scanSettings: Record<string, unknown>
       }
       barcode?: {
         url: string
@@ -173,7 +175,27 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
         
         // Add a delay before showing assets to give server time to process images
         setTimeout(() => {
-          setGeneratedAssets(result.results as any || [])
+          setGeneratedAssets(result.results as Array<{
+            success: boolean
+            message: string
+            generated?: {
+              qrCode?: {
+                url: string
+                shortUrl: string
+                data: Record<string, unknown>
+                optimizedFor: string
+                scanSettings: Record<string, unknown>
+              }
+              barcode?: {
+                url: string
+                data: string
+                generatedAt: string
+              }
+            }
+            tagId: string
+            category: string
+            subAssetIndex: number
+          }> || [])
           setSuccess(`Successfully generated ${result.results?.length || 0} digital assets!`)
         }, 3000) // Wait 3 seconds for images to be processed and saved
         
@@ -391,9 +413,11 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
                             <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                           )}
                           {imageUrls[`qr-${asset.tagId}`] ? (
-                            <img
+                            <Image
                               src={imageUrls[`qr-${asset.tagId}`]}
                               alt={`QR Code for ${asset.tagId}`}
+                              width={64}
+                              height={64}
                               className="w-full h-full object-contain"
                             />
                           ) : (
@@ -428,9 +452,11 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
                             <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                           )}
                           {imageUrls[`barcode-${asset.tagId}`] ? (
-                            <img
+                            <Image
                               src={imageUrls[`barcode-${asset.tagId}`]}
                               alt={`Barcode for ${asset.tagId}`}
+                              width={64}
+                              height={32}
                               className="w-full h-full object-contain"
                             />
                           ) : (

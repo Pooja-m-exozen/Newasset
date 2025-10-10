@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { QrCode, Download, Loader2, CheckCircle, XCircle, Package, Building } from 'lucide-react'
 import { assetApi, Asset } from '@/lib/adminasset'
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface SubAssetQRGeneratorProps {
   // No props needed for this component
 }
@@ -31,9 +33,9 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
     qrCode: {
       url: string
       shortUrl: string
-      data: any
+      data: Record<string, unknown>
       optimizedFor: string
-      scanSettings: any
+      scanSettings: Record<string, unknown>
     }
     subAsset: {
       tagId: string
@@ -48,9 +50,9 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
     qrCode: {
       url: string
       shortUrl: string
-      data: any
+      data: Record<string, unknown>
       optimizedFor: string
-      scanSettings: any
+      scanSettings: Record<string, unknown>
     }
     subAsset: {
       tagId: string
@@ -71,8 +73,8 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
 
   // Load QR image as blob when generatedQR changes
   useEffect(() => {
-    if (generatedQR?.url) {
-      loadQRImageAsBlob(generatedQR.url)
+    if (generatedQR?.qrCode?.url) {
+      loadQRImageAsBlob(generatedQR.qrCode.url)
     }
   }, [generatedQR])
 
@@ -164,8 +166,40 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
       )
 
       if (result.success) {
-        setGeneratedQR(result.qrCode)
-        setQrResponse(result)
+        setGeneratedQR(result as unknown as {
+          success: boolean
+          message: string
+          qrCode: {
+            url: string
+            shortUrl: string
+            data: Record<string, unknown>
+            optimizedFor: string
+            scanSettings: Record<string, unknown>
+          }
+          subAsset: {
+            tagId: string
+            assetName: string
+            category: string
+            brand: string
+          }
+        })
+        setQrResponse(result as unknown as {
+          success: boolean
+          message: string
+          qrCode: {
+            url: string
+            shortUrl: string
+            data: Record<string, unknown>
+            optimizedFor: string
+            scanSettings: Record<string, unknown>
+          }
+          subAsset: {
+            tagId: string
+            assetName: string
+            category: string
+            brand: string
+          }
+        })
         setSuccess('QR Code generated successfully!')
       } else {
         setError(`Failed to generate QR Code`)
@@ -178,9 +212,9 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
   }
 
   const handleDownloadQR = () => {
-    if (generatedQR?.url) {
+    if (generatedQR?.qrCode?.url) {
       const link = document.createElement('a')
-      link.href = `https://digitalasset.zenapi.co.in${generatedQR.url}`
+      link.href = `https://digitalasset.zenapi.co.in${generatedQR.qrCode.url}`
       link.download = `qr_sub_${qrResponse?.subAsset?.tagId || 'unknown'}.png`
       document.body.appendChild(link)
       link.click()
@@ -348,9 +382,11 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 {qrImageUrl ? (
-                  <img
+                  <Image
                     src={qrImageUrl}
                     alt={`QR Code for ${qrResponse?.subAsset?.tagId || 'Unknown'}`}
+                    width={300}
+                    height={300}
                     className="w-full max-w-xs mx-auto border rounded"
                   />
                 ) : qrImageLoading ? (
@@ -373,7 +409,7 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
                 </div>
                 <div>
                   <Label className="font-semibold">Short URL:</Label>
-                  <p className="text-sm text-blue-600 break-all">{generatedQR.shortUrl}</p>
+                  <p className="text-sm text-blue-600 break-all">{generatedQR?.qrCode?.shortUrl || 'N/A'}</p>
                 </div>
                 <div>
                   <Label className="font-semibold">Asset Name:</Label>

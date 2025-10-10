@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import ProtectedRoute from "@/components/ProtectedRoute"
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Barcode, Wifi, Receipt, RotateCcw, Activity, DollarSign, Calendar, User, FileText } from 'lucide-react'
+import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Wifi, Receipt, RotateCcw, Activity } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset, assetApi, PurchaseOrder, ReplacementRecord, LifecycleStatus, FinancialData } from '@/lib/adminasset'
@@ -905,17 +906,6 @@ export default function AdminAssetsPage() {
       date: new Date().toISOString().split('T')[0],
       notes: '',
       updatedBy: ''
-    })
-  }
-
-  const handleOpenFinancialModal = (asset: AssetData) => {
-    setSelectedAssetForManagement(asset)
-    setShowFinancialModal(true)
-    // Reset form
-    setFinancialData({
-      totalCost: 0,
-      depreciationRate: 0,
-      currentValue: 0
     })
   }
 
@@ -3689,7 +3679,7 @@ export default function AdminAssetsPage() {
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Status <span className="text-red-500">*</span>
                     </Label>
-                    <Select value={lifecycleData.status || 'operational'} onValueChange={(value) => setLifecycleData(prev => ({ ...prev, status: value as any }))}>
+                    <Select value={lifecycleData.status || 'operational'} onValueChange={(value) => setLifecycleData(prev => ({ ...prev, status: value as 'procured' | 'received' | 'installed' | 'commissioned' | 'operational' | 'under_maintenance' | 'retired' | 'disposed' }))}>
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
@@ -3870,11 +3860,13 @@ export default function AdminAssetsPage() {
 
               <div className="p-4 sm:p-6 text-center">
                 <div className="mb-4 sm:mb-6">
-                  <img
+                  <Image
                     src={selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in/api${selectedQRData.url}`}
                     alt="QR Code"
+                    width={250}
+                    height={250}
                     className="mx-auto border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm"
-                    style={{ width: '250px', height: '250px', objectFit: 'contain' }}
+                    style={{ objectFit: 'contain' }}
                     onError={(e) => {
                       console.error('QR Code image failed to load:', selectedQRData.url)
                       e.currentTarget.style.display = 'none'

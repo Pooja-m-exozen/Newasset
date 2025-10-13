@@ -3861,7 +3861,7 @@ export default function AdminAssetsPage() {
               <div className="p-4 sm:p-6 text-center">
                 <div className="mb-4 sm:mb-6">
                   <Image
-                    src={selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in/api${selectedQRData.url}`}
+                    src={selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in${selectedQRData.url}`}
                     alt="QR Code"
                     width={250}
                     height={250}
@@ -3878,7 +3878,7 @@ export default function AdminAssetsPage() {
                   <Button
                     onClick={() => {
                       const link = document.createElement('a')
-                      const fullUrl = selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in/api${selectedQRData.url}`
+                      const fullUrl = selectedQRData.url.startsWith('http') ? selectedQRData.url : `https://digitalasset.zenapi.co.in${selectedQRData.url}`
                       link.href = fullUrl
                       link.download = `qr-code-${Date.now()}.png`
                       link.click()

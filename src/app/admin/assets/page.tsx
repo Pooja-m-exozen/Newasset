@@ -1458,16 +1458,28 @@ export default function AdminAssetsPage() {
           <div className="bg-background rounded-lg shadow-lg overflow-hidden border border-border w-full">
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto w-full">
+              <style jsx>{`
+                @media (min-width: 1024px) and (max-width: 1280px) {
+                  .table-fixed {
+                    min-width: 1200px;
+                  }
+                }
+                @media (min-width: 1280px) {
+                  .table-fixed {
+                    min-width: 1400px;
+                  }
+                }
+              `}</style>
               <table className="w-full border-collapse font-sans text-base table-fixed" style={{width: '100%', tableLayout: 'fixed'}}>
                 <thead>
                   <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
-                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '8%'}}>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '10%'}}>
                       ASSET ID
                     </th>
-                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '18%'}}>
                       TYPE & SUBCATEGORY
                     </th>
-                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '12%'}}>
                       BRAND & MODEL
                     </th>
                     <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '8%'}}>
@@ -1476,10 +1488,10 @@ export default function AdminAssetsPage() {
                     <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '8%'}}>
                       STATUS
                     </th>
-                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '20%'}}>
                       LOCATION
                     </th>
-                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '12%'}}>
                       <div className="flex flex-col items-center gap-1">
                         <span>PURCHASE DETAILS</span>
                         <div className="text-xs font-normal text-blue-600 dark:text-blue-300">
@@ -1487,7 +1499,7 @@ export default function AdminAssetsPage() {
                         </div>
                       </div>
                     </th>
-                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '12%'}}>
                       <div className="flex flex-col items-center gap-1">
                         <span>ACTIONS</span>
                         <div className="text-xs font-normal text-blue-600 dark:text-blue-300">
@@ -1506,12 +1518,12 @@ export default function AdminAssetsPage() {
                       <React.Fragment key={asset._id}>
                         {/* Main Asset Row */}
                         <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '8%'}}>
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '10%'}}>
                             <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
                               {asset.tagId}
                             </span>
                           </td>
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '18%'}}>
                             <div className="flex items-center gap-2 sm:gap-3">
                               <div className="p-1 sm:p-2 bg-blue-50 rounded-lg">
                                 {asset.mobilityCategory === 'Movable' ? (
@@ -1520,22 +1532,22 @@ export default function AdminAssetsPage() {
                                   <Building className="w-3 h-3 sm:w-5 sm:h-5 text-blue-800" />
                                 )}
                               </div>
-                              <div>
-                                <div className="text-xs sm:text-sm font-medium text-blue-800">
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs sm:text-sm font-medium text-blue-800 truncate">
                                   {asset.assetType}
                                 </div>
-                                <div className="text-xs text-blue-600">
+                                <div className="text-xs text-blue-600 truncate">
                                   {asset.subcategory || 'No subcategory'}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                            <div>
-                              <div className="text-xs sm:text-sm font-medium text-blue-800">
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '12%'}}>
+                            <div className="min-w-0">
+                              <div className="text-xs sm:text-sm font-medium text-blue-800 truncate">
                                 {asset.brand}
                               </div>
-                              <div className="text-xs text-blue-600">
+                              <div className="text-xs text-blue-600 truncate">
                                 {asset.model || 'No model'}
                               </div>
                             </div>
@@ -1550,19 +1562,19 @@ export default function AdminAssetsPage() {
                               {asset.status || 'Active'}
                             </span>
                           </td>
-                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3">
-                            <div className="text-xs sm:text-sm text-blue-800">
+                          <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '20%'}}>
+                            <div className="text-xs sm:text-sm text-blue-800 break-words leading-tight">
                               {asset.location?.building && asset.location?.floor && asset.location?.room
                                 ? `${asset.location.building}, ${asset.location.floor}, ${asset.location.room}`
                                 : 'Location not set'
                               }
                             </div>
                           </td>
-                          <td className="border border-border px-4 py-3">
-                            <div className="flex items-center gap-1 justify-center">
+                          <td className="border border-border px-2 py-3" style={{width: '12%'}}>
+                            <div className="flex flex-col items-center gap-1">
                               <button
                                 onClick={() => handleOpenPOModal(asset)}
-                                className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm whitespace-nowrap"
+                                className="px-1.5 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm whitespace-nowrap w-full justify-center"
                                 title="Link Purchase Order"
                               >
                                 <Receipt className="w-3 h-3" />
@@ -1570,7 +1582,7 @@ export default function AdminAssetsPage() {
                               </button>
                               <button
                                 onClick={() => handleOpenReplacementModal(asset)}
-                                className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:shadow-sm whitespace-nowrap"
+                                className="px-1.5 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:shadow-sm whitespace-nowrap w-full justify-center"
                                 title="Record Replacement"
                               >
                                 <RotateCcw className="w-3 h-3" />
@@ -1578,7 +1590,7 @@ export default function AdminAssetsPage() {
                               </button>
                               <button
                                 onClick={() => handleOpenLifecycleModal(asset)}
-                                className="px-2 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm whitespace-nowrap"
+                                className="px-1.5 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm whitespace-nowrap w-full justify-center"
                                 title="Update Lifecycle Status"
                               >
                                 <Activity className="w-3 h-3" />
@@ -1586,15 +1598,15 @@ export default function AdminAssetsPage() {
                               </button>
                             </div>
                           </td>
-                          <td className="border border-border px-4 py-3">
-                            <div className="flex items-center gap-1 justify-center">
+                          <td className="border border-border px-2 py-3" style={{width: '12%'}}>
+                            <div className="flex flex-col items-center gap-1">
                               <button
                                 onClick={() => handleMovableClick(asset)}
-                                className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
+                                className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
                                   isExpanded && expandedClassificationType === 'movable'
                                     ? 'text-white bg-green-600 hover:bg-green-700 shadow-md transform scale-105'
                                     : 'text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm'
-                                } whitespace-nowrap`}
+                                } whitespace-nowrap w-full justify-center`}
                                 title="View Movable Assets"
                               >
                                 <Package className="w-3 h-3" />
@@ -1602,11 +1614,11 @@ export default function AdminAssetsPage() {
                               </button>
                               <button
                                 onClick={() => handleImmovableClick(asset)}
-                                className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
+                                className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
                                   isExpanded && expandedClassificationType === 'immovable'
                                     ? 'text-white bg-blue-600 hover:bg-blue-700 shadow-md transform scale-105'
                                     : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm'
-                                } whitespace-nowrap`}
+                                } whitespace-nowrap w-full justify-center`}
                                 title="View Immovable Assets"
                               >
                                 <Building className="w-3 h-3" />
@@ -1614,7 +1626,7 @@ export default function AdminAssetsPage() {
                               </button>
                               <button
                                 onClick={() => handleViewFlowchart(asset)}
-                                className="px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 hover:shadow-sm whitespace-nowrap"
+                                className="px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 hover:shadow-sm whitespace-nowrap w-full justify-center"
                                 title="View Asset Classification Flowchart"
                               >
                                 <Eye className="w-3 h-3" />

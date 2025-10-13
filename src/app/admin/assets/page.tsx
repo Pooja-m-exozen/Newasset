@@ -1458,19 +1458,7 @@ export default function AdminAssetsPage() {
           <div className="bg-background rounded-lg shadow-lg overflow-hidden border border-border w-full">
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto w-full">
-              <style jsx>{`
-                @media (min-width: 1024px) and (max-width: 1280px) {
-                  .table-fixed {
-                    min-width: 1200px;
-                  }
-                }
-                @media (min-width: 1280px) {
-                  .table-fixed {
-                    min-width: 1400px;
-                  }
-                }
-              `}</style>
-              <table className="w-full border-collapse font-sans text-base table-fixed" style={{width: '100%', tableLayout: 'fixed'}}>
+              <table className="w-full border-collapse font-sans text-base table-fixed min-w-[1200px] xl:min-w-[1400px]" style={{width: '100%', tableLayout: 'fixed'}}>
                 <thead>
                   <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
                     <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '10%'}}>

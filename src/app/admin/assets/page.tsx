@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Wifi, Receipt, RotateCcw, Activity } from 'lucide-react'
+import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Wifi, Receipt, RotateCcw, Activity, Droplets, Wrench, Settings } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset, assetApi, PurchaseOrder, ReplacementRecord, LifecycleStatus, FinancialData } from '@/lib/adminasset'
@@ -19,12 +19,13 @@ interface ApiSubAsset {
   id?: string
   tagId?: string  // Sub-asset tag ID
   assetName: string
-  description: string
-  category: 'Movable' | 'Immovable'
+  description?: string  // Made optional to match actual data
+  category: string  // Made flexible to accept any string
   brand: string
   model: string
   capacity: string
   location: string
+  parentAsset?: AssetData  // Added parentAsset property
   digitalTagType?: string  // Digital tag type
   digitalAssets?: {
     qrCode?: {
@@ -60,6 +61,7 @@ interface ApiSubAsset {
     }
   }
   hasDigitalAssets?: boolean  // Digital assets flag
+  purchaseOrder?: PurchaseOrder  // Added purchaseOrder property
   inventory: {
     consumables: InventoryItem[]
     spareParts: InventoryItem[]
@@ -171,7 +173,7 @@ interface AssetClassification {
 
 export default function AdminAssetsPage() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedMobility, setSelectedMobility] = useState<'all' | 'movable' | 'immovable'>('all')
+  const [selectedMobility, setSelectedMobility] = useState<'all' | 'movable' | 'immovable' | 'assets'>('all')
   const [assets, setAssets] = useState<AssetData[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -192,6 +194,8 @@ export default function AdminAssetsPage() {
   const [showPOModal, setShowPOModal] = useState(false)
   const [showReplacementModal, setShowReplacementModal] = useState(false)
   const [showLifecycleModal, setShowLifecycleModal] = useState(false)
+  const [showSubAssetDetailsModal, setShowSubAssetDetailsModal] = useState(false)
+  const [selectedSubAssetForDetails, setSelectedSubAssetForDetails] = useState<ApiSubAsset | null>(null)
   const [showFinancialModal, setShowFinancialModal] = useState(false)
   const [selectedAssetForManagement, setSelectedAssetForManagement] = useState<AssetData | null>(null)
   const [selectedSubAssetForManagement, setSelectedSubAssetForManagement] = useState<{
@@ -279,7 +283,7 @@ export default function AdminAssetsPage() {
       let response
       if (searchTerm.trim()) {
         response = await searchAssets(searchTerm)
-      } else if (selectedMobility !== 'all') {
+      } else if (selectedMobility === 'movable' || selectedMobility === 'immovable') {
         response = await getAssetsByMobility(selectedMobility)
       } else {
         response = await getAssets()
@@ -545,7 +549,8 @@ export default function AdminAssetsPage() {
   }
 
   const handleRadioChange = (value: string) => {
-    setSelectedMobility(value as 'all' | 'movable' | 'immovable')
+    console.log('Radio button clicked:', value)
+    setSelectedMobility(value as 'all' | 'movable' | 'immovable' | 'assets')
     // Don't show classification table on radio button selection
     // Only show when clicking action buttons
   }
@@ -553,6 +558,11 @@ export default function AdminAssetsPage() {
   const handleViewFlowchart = (asset: AssetData) => {
     setSelectedAssetForFlowchart(asset)
     setShowFlowchartModal(true)
+  }
+
+  const handleViewSubAssetDetails = (subAsset: ApiSubAsset) => {
+    setSelectedSubAssetForDetails(subAsset)
+    setShowSubAssetDetailsModal(true)
   }
 
   const handleCloseFlowchartModal = () => {
@@ -1400,6 +1410,13 @@ export default function AdminAssetsPage() {
                           <span>Immovable</span>
                         </Label>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="assets" id="assets" />
+                        <Label htmlFor="assets" className="cursor-pointer flex items-center space-x-1 text-sm">
+                          <Package className="w-4 h-4" />
+                          <span>Assets</span>
+                        </Label>
+                      </div>
                     </RadioGroup>
                   </div>
                    
@@ -1453,8 +1470,132 @@ export default function AdminAssetsPage() {
           </div>
         )}
 
+        {/* Assets Classification Table - Show when Assets radio button is selected */}
+        {selectedMobility === 'assets' && (
+          <div className="mt-6 bg-background rounded-lg shadow-lg overflow-hidden border border-border">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                    <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                      SI Number
+                    </th>
+                    <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                      Asset Name / Type
+                    </th>
+                    <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                      Brand
+                    </th>
+                    <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                      Model
+                    </th>
+                    <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                      Location
+                    </th>
+                    <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                      Details
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    // Debug: Log the structure of filteredAssets
+                    console.log('Debug - filteredAssets:', filteredAssets)
+                    console.log('Debug - first asset subAssets:', filteredAssets[0]?.subAssets)
+                    
+                    // Get all sub-assets directly from the API response
+                    const allSubAssets = filteredAssets.flatMap((asset) => {
+                      console.log('Debug - processing asset:', asset.assetType, 'subAssets:', asset.subAssets)
+                      
+                      const movableSubAssets = (asset.subAssets?.movable || []).map(subAsset => ({
+                        ...subAsset,
+                        parentAsset: asset,
+                        category: 'Movable'
+                      }))
+                      const immovableSubAssets = (asset.subAssets?.immovable || []).map(subAsset => ({
+                        ...subAsset,
+                        parentAsset: asset,
+                        category: 'Immovable'
+                      }))
+                      return [...movableSubAssets, ...immovableSubAssets]
+                    })
+                    
+                    console.log('Debug - allSubAssets found:', allSubAssets.length, allSubAssets)
+                    
+                    if (allSubAssets.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={5} className="border border-border px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <div className="flex flex-col items-center gap-2">
+                              <Package className="w-8 h-8 text-gray-400" />
+                              <p>No sub-assets found</p>
+                              <p className="text-sm">Debug: Found {filteredAssets.length} main assets</p>
+                              <p className="text-xs text-gray-400">
+                                Check console for detailed asset structure
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    }
+                    
+                    return allSubAssets.map((subAsset, index) => (
+                      <tr key={`${subAsset.parentAsset._id}-${index}`} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                        <td className="border border-border px-4 py-3">
+                          <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                            {index + 1}
+                          </span>
+                        </td>
+                        <td className="border border-border px-4 py-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              {subAsset.category === 'Movable' ? (
+                                <Package className="w-4 h-4 text-green-600" />
+                              ) : (
+                                <Building className="w-4 h-4 text-blue-600" />
+                              )}
+                              <span className="font-medium text-blue-800 dark:text-blue-200">
+                                {subAsset.assetName}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="border border-border px-4 py-3">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {subAsset.brand}
+                          </span>
+                        </td>
+                        <td className="border border-border px-4 py-3">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {subAsset.model || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="border border-border px-4 py-3">
+                          <div className="text-sm text-gray-700 dark:text-gray-300">
+                            {subAsset.location}
+                          </div>
+                        </td>
+                        <td className="border border-border px-4 py-3">
+                          <button
+                            onClick={() => handleViewSubAssetDetails(subAsset as ApiSubAsset)}
+                            className="group relative px-4 py-2.5 text-sm font-medium rounded-lg bg-purple-50 dark:bg-purple-900/10 border-2 border-purple-300 dark:border-purple-600 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                          >
+                            <div className="absolute inset-0 rounded-lg bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-200"></div>
+                            <Eye className="w-4 h-4 relative z-10" />
+                            <span className="relative z-10">View Details</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Assets Table - Desktop View */}
-        {!loading && !error && (
+        {!loading && !error && selectedMobility !== 'assets' && (
           <div className="bg-background rounded-lg shadow-lg overflow-hidden border border-border w-full">
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto w-full">
@@ -1896,6 +2037,7 @@ export default function AdminAssetsPage() {
               </table>
             </div>
 
+
             {/* Mobile Card View */}
             <div className="lg:hidden">
               <div className="p-4 space-y-4">
@@ -2199,6 +2341,228 @@ export default function AdminAssetsPage() {
               </div>
             )}
             </div>
+        )}
+
+        {/* Sub-Asset Details Modal */}
+        {showSubAssetDetailsModal && selectedSubAssetForDetails && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] sm:max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+              {/* Modal Header */}
+              <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 p-3 sm:p-4 border-b border-gray-200 dark:border-gray-600">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-white dark:bg-gray-700 shadow-sm flex-shrink-0">
+                      {selectedSubAssetForDetails.category === 'Movable' ? (
+                        <Package className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                      ) : (
+                        <Building className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">
+                        {selectedSubAssetForDetails.assetName}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          selectedSubAssetForDetails.category === 'Movable' 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                        }`}>
+                          {selectedSubAssetForDetails.category}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Asset Details
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowSubAssetDetailsModal(false)}
+                    className="group p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 border border-gray-200 dark:border-gray-600"
+                  >
+                    <X className="w-5 h-5 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-white dark:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+                {/* Quick Actions Section */}
+                <div className="mb-6">
+                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Activity className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Quick Actions
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <button
+                        onClick={() => selectedSubAssetForDetails.parentAsset && handleOpenPOModal(selectedSubAssetForDetails.parentAsset, { 
+                          subAssetIndex: 0, 
+                          category: selectedSubAssetForDetails.category.toLowerCase() as 'movable' | 'immovable' 
+                        })}
+                        disabled={!selectedSubAssetForDetails.parentAsset}
+                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Receipt className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Purchase Order</span>
+                      </button>
+                      <button
+                        onClick={() => selectedSubAssetForDetails.parentAsset && handleOpenReplacementModal(selectedSubAssetForDetails.parentAsset, { 
+                          subAssetIndex: 0, 
+                          category: selectedSubAssetForDetails.category.toLowerCase() as 'movable' | 'immovable' 
+                        })}
+                        disabled={!selectedSubAssetForDetails.parentAsset}
+                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RotateCcw className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Replacement</span>
+                      </button>
+                      <button
+                        onClick={() => selectedSubAssetForDetails.parentAsset && handleOpenLifecycleModal(selectedSubAssetForDetails.parentAsset, { 
+                          subAssetIndex: 0, 
+                          category: selectedSubAssetForDetails.category.toLowerCase() as 'movable' | 'immovable' 
+                        })}
+                        disabled={!selectedSubAssetForDetails.parentAsset}
+                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Activity className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Lifecycle</span>
+                      </button>
+                      {selectedSubAssetForDetails.digitalAssets?.qrCode && (
+                        <button
+                          onClick={() => handleQRCodeClick(selectedSubAssetForDetails.digitalAssets!.qrCode!)}
+                          className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2"
+                        >
+                          <QrCode className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">QR Code</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inventory Management Section */}
+                <div className="mb-6">
+                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Package className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Inventory Management
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <button
+                        onClick={() => selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'consumables')}
+                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2"
+                      >
+                        <Droplets className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Consumables</span>
+                      </button>
+                      <button
+                        onClick={() => selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'spareParts')}
+                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2"
+                      >
+                        <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Spare Parts</span>
+                      </button>
+                      <button
+                        onClick={() => selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'tools')}
+                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2"
+                      >
+                        <Wrench className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Tools</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Information Sections */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Basic Information */}
+                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Package className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Basic Information
+                      </h3>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Asset Name</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.assetName}</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Brand</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.brand}</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Model</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.model || 'N/A'}</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Location</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.location}</p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Category</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.category}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Purchase Details */}
+                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Receipt className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Purchase Details
+                      </h3>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">PO Number</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                          {selectedSubAssetForDetails.purchaseOrder?.poNumber || 'N/A'}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Supplier</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                          {selectedSubAssetForDetails.purchaseOrder?.supplier || 'N/A'}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Purchase Date</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                          {selectedSubAssetForDetails.purchaseOrder?.purchaseDate 
+                            ? new Date(selectedSubAssetForDetails.purchaseOrder.purchaseDate).toLocaleDateString()
+                            : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Price</label>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                          {selectedSubAssetForDetails.purchaseOrder?.price || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowSubAssetDetailsModal(false)}
+                  className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
           </div>

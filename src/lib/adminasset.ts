@@ -21,6 +21,9 @@ export interface PurchaseOrder {
   invoiceNumber?: string
   invoiceDate?: string
   notes?: string
+  supplier?: string  // NEW: Alternative name for vendor
+  purchaseDate?: string  // NEW: Alternative name for poDate
+  price?: number  // NEW: Alternative name for purchaseCost
 }
 
 export interface ReplacementRecord {
@@ -67,6 +70,7 @@ export interface SubAsset {
   purchaseOrder?: PurchaseOrder  // NEW: Sub-asset PO tracking
   replacementHistory?: ReplacementRecord[]  // NEW: Sub-asset replacement tracking
   lifecycle?: LifecycleStatus[]  // NEW: Sub-asset lifecycle tracking
+  parentAsset?: AssetData  // NEW: Reference to parent asset
   inventory: {
     consumables: InventoryItem[]
     spareParts: InventoryItem[]

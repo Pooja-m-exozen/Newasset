@@ -3,12 +3,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import ProtectedRoute from "@/components/ProtectedRoute"
+import { useAuth } from '@/contexts/AuthContext'
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Wifi, Receipt, RotateCcw, Activity, Droplets, Wrench, Settings } from 'lucide-react'
+import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Wifi, Receipt, RotateCcw, Activity, Droplets, Wrench, Settings, Archive, MapPin } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset, assetApi, PurchaseOrder, ReplacementRecord, LifecycleStatus, FinancialData } from '@/lib/adminasset'
@@ -172,8 +173,9 @@ interface AssetClassification {
 
 
 export default function AdminAssetsPage() {
+  const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedMobility, setSelectedMobility] = useState<'all' | 'movable' | 'immovable' | 'assets'>('all')
+  const [selectedMobility, setSelectedMobility] = useState<'all' | 'movable' | 'immovable' | 'inventory' | 'far'>('all')
   const [assets, setAssets] = useState<AssetData[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -223,6 +225,10 @@ export default function AdminAssetsPage() {
     yearOfInstallation: '',
     status: 'Active',
     priority: 'Medium',
+    project: {
+      projectId: user?.projectId || localStorage.getItem('projectId') || '',
+      projectName: user?.projectName || localStorage.getItem('userProject') || localStorage.getItem('projectName') || localStorage.getItem('project') || 'Default Project'
+    },
     location: {
       building: '',
       floor: '',
@@ -234,8 +240,78 @@ export default function AdminAssetsPage() {
     }
   })
 
+  // Update project when user data changes
+  useEffect(() => {
+    const userProject = 
+      user?.projectName || 
+      localStorage.getItem('userProject') || 
+      localStorage.getItem('projectName') ||
+      localStorage.getItem('project') ||
+      'Default Project'
+    
+    const userProjectId = user?.projectId || localStorage.getItem('projectId') || ''
+    
+    if (userProject !== 'Default Project' || userProjectId) {
+      setNewAsset(prev => ({
+        ...prev,
+        project: {
+          projectId: userProjectId,
+          projectName: userProject
+        }
+      }))
+    }
+  }, [user])
+
   // Current step in the creation process
   const [currentStep, setCurrentStep] = useState<'main' | 'subassets' | 'inventory'>('main')
+
+  // Asset ID generation states
+  const [locationType, setLocationType] = useState('')
+  const [assetTypeCode, setAssetTypeCode] = useState('')
+
+  // Asset ID generation function
+  const generateAssetId = (locationType: string, assetTypeCode: string) => {
+    if (!user?.projectName || !locationType || !assetTypeCode) return ''
+    
+    // Extract city code from project address (assuming Bangalore for now)
+    const cityCode = 'BLR' // Can be made dynamic based on project address
+    
+    // Extract project abbreviation (first 4 characters)
+    const projectAbbr = user.projectName.substring(0, 4).toUpperCase()
+    
+    // Extract user name abbreviation (first 2 characters)
+    const userAbbr = user.name ? user.name.substring(0, 2).toUpperCase() : 'US'
+    
+    // Location type abbreviation - handle spaces and take meaningful parts
+    const locationWords = locationType.trim().split(' ')
+    const locationAbbr = locationWords.length > 1 
+      ? locationWords.map(word => word.charAt(0)).join('').toUpperCase()
+      : locationType.substring(0, 2).toUpperCase()
+    
+    // Asset type code - handle spaces and take meaningful parts
+    const assetWords = assetTypeCode.trim().split(' ')
+    const assetAbbr = assetWords.length > 1 
+      ? assetWords.map(word => word.charAt(0)).join('').toUpperCase()
+      : assetTypeCode.substring(0, 2).toUpperCase()
+    
+    return `${cityCode}/${projectAbbr}/${userAbbr}/${locationAbbr}/${assetAbbr}`
+  }
+
+  // Sub-asset tag ID generation function
+  const generateSubAssetTagId = (mainAssetId: string, subAssetName: string, category: 'Movable' | 'Immovable', index: number) => {
+    if (!mainAssetId || !subAssetName) return ''
+    
+    // Generate abbreviation from sub-asset name
+    const subAssetWords = subAssetName.trim().split(' ')
+    const subAssetAbbr = subAssetWords.length > 1 
+      ? subAssetWords.map(word => word.charAt(0)).join('').toUpperCase()
+      : subAssetName.substring(0, 2).toUpperCase()
+    
+    // Generate sequential number (01, 02, 03, etc.)
+    const sequentialNumber = String(index + 1).padStart(2, '0')
+    
+    return `${mainAssetId}-${subAssetAbbr}${sequentialNumber}`
+  }
 
   // Enhanced Asset Management Form States
   const [poData, setPOData] = useState<Partial<PurchaseOrder>>({
@@ -283,9 +359,11 @@ export default function AdminAssetsPage() {
       let response
       if (searchTerm.trim()) {
         response = await searchAssets(searchTerm)
-      } else if (selectedMobility === 'movable' || selectedMobility === 'immovable') {
-        response = await getAssetsByMobility(selectedMobility)
+      } else if (selectedMobility === 'movable' || selectedMobility === 'immovable' || selectedMobility === 'all' || selectedMobility === 'inventory') {
+        // For 'movable', 'immovable', 'all' and 'inventory' - get all assets with sub-assets
+        response = await assetApi.getAssetsWithSubAssets(true)
       } else {
+        // For 'far' - get all assets
         response = await getAssets()
       }
      
@@ -354,9 +432,46 @@ export default function AdminAssetsPage() {
   }, [searchTerm, fetchAssets])
 
   const getFilteredAssets = () => {
-    // Since we're fetching filtered data from API, we can return assets directly
-    // Client-side filtering is now handled by the API calls
-    return assets
+    if (selectedMobility === 'movable') {
+      // Filter assets that have movable sub-assets
+      return assets.filter(asset => 
+        asset.subAssets?.movable && asset.subAssets.movable.length > 0
+      )
+    } else if (selectedMobility === 'immovable') {
+      // Filter assets that have immovable sub-assets
+      return assets.filter(asset => 
+        asset.subAssets?.immovable && asset.subAssets.immovable.length > 0
+      )
+    } else if (selectedMobility === 'inventory') {
+      // For inventory, filter assets that have inventory items (consumables, spare parts, tools)
+      return assets.filter(asset => {
+        // Check if asset has any inventory items in movable or immovable sub-assets
+        const hasMovableInventory = asset.subAssets?.movable?.some(subAsset => 
+          subAsset.inventory && (
+            subAsset.inventory.consumables?.length > 0 ||
+            subAsset.inventory.spareParts?.length > 0 ||
+            subAsset.inventory.tools?.length > 0
+          )
+        )
+        const hasImmovableInventory = asset.subAssets?.immovable?.some(subAsset => 
+          subAsset.inventory && (
+            subAsset.inventory.consumables?.length > 0 ||
+            subAsset.inventory.spareParts?.length > 0 ||
+            subAsset.inventory.tools?.length > 0
+          )
+        )
+        return hasMovableInventory || hasImmovableInventory
+      })
+    } else if (selectedMobility === 'all') {
+      // For all, return all assets (will show classification table)
+      return assets
+    } else if (selectedMobility === 'far') {
+      // For FAR, return all assets (will show hierarchical view)
+      return assets
+    } else {
+      // For other cases, return all assets
+      return assets
+    }
   }
   // Load assets on component mount
   useEffect(() => {
@@ -550,9 +665,9 @@ export default function AdminAssetsPage() {
 
   const handleRadioChange = (value: string) => {
     console.log('Radio button clicked:', value)
-    setSelectedMobility(value as 'all' | 'movable' | 'immovable' | 'assets')
-    // Don't show classification table on radio button selection
-    // Only show when clicking action buttons
+    setSelectedMobility(value as 'all' | 'movable' | 'immovable' | 'inventory' | 'far')
+    // Trigger re-fetch when radio button changes
+    fetchAssets()
   }
 
   const handleViewFlowchart = (asset: AssetData) => {
@@ -573,6 +688,19 @@ export default function AdminAssetsPage() {
   const handleAddAsset = () => {
     setCurrentStep('main') // Set step first
     setShowAddAssetModal(true)
+    setLocationType('')
+    setAssetTypeCode('')
+    
+    // Get project from user context or localStorage fallback
+    const userProject = 
+      user?.projectName || 
+      localStorage.getItem('userProject') || 
+      localStorage.getItem('projectName') ||
+      localStorage.getItem('project') ||
+      'Default Project'
+    
+    const userProjectId = user?.projectId || localStorage.getItem('projectId') || ''
+    
     setNewAsset({
       tagId: '',
       assetType: '',
@@ -585,6 +713,10 @@ export default function AdminAssetsPage() {
       yearOfInstallation: '',
       status: 'Active',
       priority: 'Medium',
+      project: {
+        projectId: userProjectId,
+        projectName: userProject
+      },
       location: {
         building: '',
         floor: '',
@@ -603,16 +735,19 @@ export default function AdminAssetsPage() {
   }
 
   const handleMainAssetSave = () => {
-    if (!newAsset.tagId || !newAsset.assetType || !newAsset.brand) {
-      alert('Please fill in all required fields (Asset ID, Asset Type, Brand)')
+    if (!locationType || !assetTypeCode || !newAsset.brand) {
+      alert('Please fill in all required fields (Location Type, Asset Type, Brand)')
       return
     }
 
-    if (assets.some(asset => asset.tagId === newAsset.tagId)) {
-      alert('Asset ID already exists. Please use a different ID.')
+    const generatedId = generateAssetId(locationType, assetTypeCode)
+    if (assets.some(asset => asset.tagId === generatedId)) {
+      alert('Asset ID already exists. Please use a different combination.')
       return
     }
 
+    // Update the asset with the generated ID
+    setNewAsset(prev => ({ ...prev, tagId: generatedId }))
     setCurrentStep('subassets')
   }
 
@@ -657,13 +792,22 @@ export default function AdminAssetsPage() {
      
       const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
       const currentSubAssets = prev.subAssets[categoryKey] || []
+      
+      // Auto-generate tag ID when asset name changes
+      let updatedSubAsset = { ...currentSubAssets[index], [field]: value }
+      
+      if (field === 'assetName' && value.trim()) {
+        const mainAssetId = prev.tagId || generateAssetId(locationType, assetTypeCode)
+        const generatedTagId = generateSubAssetTagId(mainAssetId, value, category, index)
+        updatedSubAsset = { ...updatedSubAsset, tagId: generatedTagId }
+      }
      
       return {
         ...prev,
         subAssets: {
           ...prev.subAssets,
           [categoryKey]: currentSubAssets.map((subAsset, i) =>
-            i === index ? { ...subAsset, [field]: value } : subAsset
+            i === index ? updatedSubAsset : subAsset
           )
         }
       }
@@ -786,9 +930,14 @@ export default function AdminAssetsPage() {
         yearOfInstallation: newAsset.yearOfInstallation,
         status: newAsset.status as 'Active' | 'Inactive' | 'Maintenance' | 'Retired',
         priority: newAsset.priority as 'High' | 'Medium' | 'Low',
+        project: newAsset.project,
         location: newAsset.location!,
         subAssets: newAsset.subAssets
       }
+
+      // Debug: Log the data being sent
+      console.log('Asset data being sent to backend:', JSON.stringify(assetData, null, 2))
+      console.log('Project data:', assetData.project)
 
       // Validate the data before sending
       const validation = validateAssetData(assetData)
@@ -1411,10 +1560,17 @@ export default function AdminAssetsPage() {
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="assets" id="assets" />
-                        <Label htmlFor="assets" className="cursor-pointer flex items-center space-x-1 text-sm">
-                          <Package className="w-4 h-4" />
-                          <span>Assets</span>
+                        <RadioGroupItem value="inventory" id="inventory" />
+                        <Label htmlFor="inventory" className="cursor-pointer flex items-center space-x-1 text-sm">
+                          <Archive className="w-4 h-4" />
+                          <span>Inventory</span>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="far" id="far" />
+                        <Label htmlFor="far" className="cursor-pointer flex items-center space-x-1 text-sm">
+                          <MapPin className="w-4 h-4" />
+                          <span>FAR</span>
                         </Label>
                       </div>
                     </RadioGroup>
@@ -1470,8 +1626,8 @@ export default function AdminAssetsPage() {
           </div>
         )}
 
-        {/* Assets Classification Table - Show when Assets radio button is selected */}
-        {selectedMobility === 'assets' && (
+        {/* Assets Classification Table - Show when Inventory, All, Movable, or Immovable radio button is selected */}
+        {(selectedMobility === 'inventory' || selectedMobility === 'all' || selectedMobility === 'movable' || selectedMobility === 'immovable') && (
           <div className="mt-6 bg-background rounded-lg shadow-lg overflow-hidden border border-border">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
@@ -1594,8 +1750,318 @@ export default function AdminAssetsPage() {
           </div>
         )}
 
+        {/* FAR Table View - Show when FAR radio button is selected */}
+        {selectedMobility === 'far' && (
+          <div className="mt-6 bg-background rounded-lg shadow-lg overflow-hidden border border-border">
+            <div className="p-4 border-b border-border bg-blue-50 dark:bg-slate-800">
+              <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                FAR - Fixed Asset Register
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse font-sans text-base table-fixed min-w-[1200px] xl:min-w-[1400px]" style={{width: '100%', tableLayout: 'fixed'}}>
+                <thead>
+                  <tr className="bg-blue-50 dark:bg-slate-800 border-b border-border">
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '10%'}}>
+                      ASSET ID
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '18%'}}>
+                      TYPE & SUBCATEGORY
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '12%'}}>
+                      BRAND & MODEL
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '8%'}}>
+                      CAPACITY
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '8%'}}>
+                      STATUS
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '20%'}}>
+                      LOCATION
+                    </th>
+                    <th className="border border-border px-2 py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '12%'}}>
+                      <div className="flex flex-col items-center gap-1">
+                        <span>PURCHASE DETAILS</span>
+                        <div className="text-xs font-normal text-blue-600 dark:text-blue-300">
+                          PO, Replace, Lifecycle
+                        </div>
+                      </div>
+                    </th>
+                    <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm" style={{width: '12%'}}>
+                      <div className="flex flex-col items-center gap-1">
+                        <span>ACTIONS</span>
+                        <div className="text-xs font-normal text-blue-600 dark:text-blue-300">
+                          Classification & View
+                        </div>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAssets.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="border border-border px-4 py-8 text-center text-muted-foreground">
+                        No assets found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAssets.map((asset) => {
+                      const isExpanded = expandedRow === asset._id
+                      const assetClassification = isExpanded ? getAssetClassification(asset) : null
+                     
+                      return (
+                        <React.Fragment key={asset._id}>
+                          {/* Main Asset Row */}
+                          <tr className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                            <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '10%'}}>
+                              <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
+                                {asset.tagId}
+                              </span>
+                            </td>
+                            <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '18%'}}>
+                              <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="p-1 sm:p-2 bg-blue-50 rounded-lg">
+                                  {asset.mobilityCategory === 'Movable' ? (
+                                    <Package className="w-3 h-3 sm:w-5 sm:h-5 text-blue-800" />
+                                  ) : (
+                                    <Building className="w-3 h-3 sm:w-5 sm:h-5 text-blue-800" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs sm:text-sm font-medium text-blue-800 truncate">
+                                    {asset.assetType}
+                                  </div>
+                                  <div className="text-xs text-blue-600 truncate">
+                                    {asset.subcategory || 'No subcategory'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '12%'}}>
+                              <div className="text-xs sm:text-sm text-blue-800 break-words leading-tight">
+                                <div className="font-medium">{asset.brand || 'N/A'}</div>
+                                <div className="text-blue-600">{asset.model || 'No model'}</div>
+                              </div>
+                            </td>
+                            <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '8%'}}>
+                              <span className="text-xs sm:text-sm text-blue-800">
+                                {asset.capacity || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '8%'}}>
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                asset.status === 'Active' 
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                                  : asset.status === 'Inactive'
+                                  ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                              }`}>
+                                {asset.status || 'Active'}
+                              </span>
+                            </td>
+                            <td className="border border-border px-2 sm:px-4 py-2 sm:py-3" style={{width: '20%'}}>
+                              <div className="text-xs sm:text-sm text-blue-800 break-words leading-tight">
+                                {asset.location?.building && asset.location?.floor && asset.location?.room
+                                  ? `${asset.location.building}, ${asset.location.floor}, ${asset.location.room}`
+                                  : 'Location not set'
+                                }
+                              </div>
+                            </td>
+                            <td className="border border-border px-2 py-3" style={{width: '12%'}}>
+                              <div className="flex flex-col items-center gap-1">
+                                <button
+                                  onClick={() => handleOpenPOModal(asset)}
+                                  className="px-1.5 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm whitespace-nowrap w-full justify-center"
+                                  title="Link Purchase Order"
+                                >
+                                  <Receipt className="w-3 h-3" />
+                                  PO
+                                </button>
+                                <button
+                                  onClick={() => handleOpenReplacementModal(asset)}
+                                  className="px-1.5 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:shadow-sm whitespace-nowrap w-full justify-center"
+                                  title="Record Replacement"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  Replace
+                                </button>
+                                <button
+                                  onClick={() => handleOpenLifecycleModal(asset)}
+                                  className="px-1.5 py-1 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1 text-green-600 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm whitespace-nowrap w-full justify-center"
+                                  title="Update Lifecycle Status"
+                                >
+                                  <Activity className="w-3 h-3" />
+                                  Lifecycle
+                                </button>
+                              </div>
+                            </td>
+                            <td className="border border-border px-2 py-3" style={{width: '12%'}}>
+                              <div className="flex flex-col items-center gap-1">
+                                <button
+                                  onClick={() => handleMovableClick(asset)}
+                                  className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
+                                    isExpanded && expandedClassificationType === 'movable'
+                                      ? 'text-white bg-green-600 hover:bg-green-700 shadow-md transform scale-105'
+                                      : 'text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 hover:shadow-sm'
+                                  } whitespace-nowrap w-full justify-center`}
+                                  title="View Movable Assets"
+                                >
+                                  <Package className="w-3 h-3" />
+                                  Movable
+                                </button>
+                                <button
+                                  onClick={() => handleImmovableClick(asset)}
+                                  className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 ${
+                                    isExpanded && expandedClassificationType === 'immovable'
+                                      ? 'text-white bg-blue-600 hover:bg-blue-700 shadow-md transform scale-105'
+                                      : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:shadow-sm'
+                                  } whitespace-nowrap w-full justify-center`}
+                                  title="View Immovable Assets"
+                                >
+                                  <Building className="w-3 h-3" />
+                                  Immovable
+                                </button>
+                                <button
+                                  onClick={() => handleViewFlowchart(asset)}
+                                  className="px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1 text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-200 hover:shadow-sm whitespace-nowrap w-full justify-center"
+                                  title="View Asset Classification Flowchart"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          
+                          {/* Expanded Classification Row */}
+                          {isExpanded && assetClassification && (
+                            <tr>
+                              <td colSpan={8} className="border border-border p-0 bg-gray-50 dark:bg-gray-800">
+                                <div className="p-4">
+                                  <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                                    {expandedClassificationType === 'movable' ? 'Movable' : 'Immovable'} Assets Classification
+                                  </h4>
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse">
+                                      <thead>
+                                        <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                                          <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            Asset Name
+                                          </th>
+                                          <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            Tag ID
+                                          </th>
+                                          <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            Brand
+                                          </th>
+                                          <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            Model
+                                          </th>
+                                          <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            Capacity
+                                          </th>
+                                          <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            Location
+                                          </th>
+                                          <th className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            Actions
+                                          </th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {(expandedClassificationType === 'movable' ? assetClassification.movable : assetClassification.immovable).map((classificationAsset, index) => (
+                                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td className="border border-gray-200 dark:border-gray-600 px-3 py-2">
+                                              <div className="flex items-center gap-2">
+                                                {expandedClassificationType === 'movable' ? (
+                                                  <Package className="w-4 h-4 text-green-600" />
+                                                ) : (
+                                                  <Building className="w-4 h-4 text-blue-600" />
+                                                )}
+                                                <span className="font-medium text-blue-800 dark:text-blue-200">
+                                                  {classificationAsset.assetName}
+                                                </span>
+                                              </div>
+                                            </td>
+                                            <td className="border border-gray-200 dark:border-gray-600 px-3 py-2">
+                                              <span className="text-xs font-mono bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded text-gray-700 dark:text-gray-300">
+                                                {classificationAsset.tagId || 'No Tag ID'}
+                                              </span>
+                                            </td>
+                                            <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                              {classificationAsset.brand || 'N/A'}
+                                            </td>
+                                            <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                              {classificationAsset.model || 'N/A'}
+                                            </td>
+                                            <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                              {classificationAsset.capacity || 'N/A'}
+                                            </td>
+                                            <td className="border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                              {classificationAsset.location || 'N/A'}
+                                            </td>
+                                            <td className="border border-gray-200 dark:border-gray-600 px-3 py-2">
+                                              <div className="flex gap-1">
+                                                <button
+                                                  onClick={() => asset._id && handleInventoryClick(asset._id, index, 'consumables')}
+                                                  className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                                    selectedInventoryType[`${asset._id}-${index}`] === 'consumables'
+                                                      ? 'text-white bg-orange-600 hover:bg-orange-700 shadow-sm'
+                                                      : 'text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200'
+                                                  } whitespace-nowrap`}
+                                                  title="View Consumables"
+                                                >
+                                                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                                  Consumables
+                                                </button>
+                                                <button
+                                                  onClick={() => asset._id && handleInventoryClick(asset._id, index, 'spareParts')}
+                                                  className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                                    selectedInventoryType[`${asset._id}-${index}`] === 'spareParts'
+                                                      ? 'text-white bg-blue-600 hover:bg-blue-700 shadow-sm'
+                                                      : 'text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200'
+                                                  } whitespace-nowrap`}
+                                                  title="View Spare Parts"
+                                                >
+                                                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                                                  Spare Parts
+                                                </button>
+                                                <button
+                                                  onClick={() => asset._id && handleInventoryClick(asset._id, index, 'tools')}
+                                                  className={`px-2 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1 ${
+                                                    selectedInventoryType[`${asset._id}-${index}`] === 'tools'
+                                                      ? 'text-white bg-green-600 hover:bg-green-700 shadow-sm'
+                                                      : 'text-green-600 bg-green-50 hover:bg-green-100 border border-green-200'
+                                                  } whitespace-nowrap`}
+                                                  title="View Tools"
+                                                >
+                                                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                                                  Tools
+                                                </button>
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Assets Table - Desktop View */}
-        {!loading && !error && selectedMobility !== 'assets' && (
+        {!loading && !error && selectedMobility !== 'inventory' && selectedMobility !== 'all' && selectedMobility !== 'movable' && selectedMobility !== 'immovable' && selectedMobility !== 'far' && (
           <div className="bg-background rounded-lg shadow-lg overflow-hidden border border-border w-full">
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto w-full">
@@ -2845,24 +3311,113 @@ export default function AdminAssetsPage() {
                         </Label>
                         <Input
                           id="tagId"
-                          value={newAsset.tagId || ''}
+                          value={newAsset.tagId || generateAssetId(locationType, assetTypeCode)}
                           onChange={(e) => handleInputChange('tagId', e.target.value)}
-                          placeholder="e.g., WTP001, COMP001"
+                          placeholder="Auto-generated based on project info"
                           className="mt-1"
+                          readOnly
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Auto-generated: {generateAssetId(locationType, assetTypeCode) || 'Select location and asset type'}
+                        </p>
                       </div>
 
                       <div>
-                        <Label htmlFor="assetType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Asset Type <span className="text-red-500">*</span>
+                        <Label htmlFor="project" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Project
                         </Label>
                         <Input
-                          id="assetType"
-                          value={newAsset.assetType || ''}
-                          onChange={(e) => handleInputChange('assetType', e.target.value)}
-                          placeholder="e.g., WTP, Computer, Printer"
-                          className="mt-1"
+                          id="project"
+                          value={newAsset.project?.projectName || ''}
+                          className="mt-1 bg-gray-50 dark:bg-gray-700"
+                          readOnly
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Project assigned from your login
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="locationType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Location Type <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="flex gap-1 mt-1">
+                          <Select value={locationType} onValueChange={(value) => {
+                            setLocationType(value)
+                            const generatedId = generateAssetId(value, assetTypeCode)
+                            handleInputChange('tagId', generatedId)
+                          }}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select or enter location type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Common Area">Common Area</SelectItem>
+                              <SelectItem value="Office">Office</SelectItem>
+                              <SelectItem value="Workshop">Workshop</SelectItem>
+                              <SelectItem value="Storage">Storage</SelectItem>
+                              <SelectItem value="Maintenance">Maintenance</SelectItem>
+                              <SelectItem value="Utility">Utility</SelectItem>
+                              <SelectItem value="Security">Security</SelectItem>
+                              <SelectItem value="Parking">Parking</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            placeholder="Or enter custom location"
+                            value={locationType}
+                            onChange={(e) => {
+                              setLocationType(e.target.value)
+                              const generatedId = generateAssetId(e.target.value, assetTypeCode)
+                              handleInputChange('tagId', generatedId)
+                            }}
+                            className="flex-1"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="assetTypeCode" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Asset Type <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="flex gap-1 mt-1">
+                          <Select value={assetTypeCode} onValueChange={(value) => {
+                            setAssetTypeCode(value)
+                            const generatedId = generateAssetId(locationType, value)
+                            handleInputChange('tagId', generatedId)
+                            handleInputChange('assetType', value)
+                          }}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select or enter asset type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Borewell Pump">Borewell Pump (BP)</SelectItem>
+                              <SelectItem value="Water Treatment Plant">Water Treatment Plant (WTP)</SelectItem>
+                              <SelectItem value="Computer">Computer (CP)</SelectItem>
+                              <SelectItem value="Printer">Printer (PR)</SelectItem>
+                              <SelectItem value="Generator">Generator (GN)</SelectItem>
+                              <SelectItem value="Air Conditioner">Air Conditioner (AC)</SelectItem>
+                              <SelectItem value="Elevator">Elevator (EL)</SelectItem>
+                              <SelectItem value="Security Camera">Security Camera (SC)</SelectItem>
+                              <SelectItem value="Fire Extinguisher">Fire Extinguisher (FE)</SelectItem>
+                              <SelectItem value="Water Tank">Water Tank (WT)</SelectItem>
+                              <SelectItem value="Pump">Pump (PM)</SelectItem>
+                              <SelectItem value="Motor">Motor (MT)</SelectItem>
+                              <SelectItem value="Transformer">Transformer (TR)</SelectItem>
+                              <SelectItem value="Switchboard">Switchboard (SB)</SelectItem>
+                              <SelectItem value="Lighting">Lighting (LT)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            placeholder="Or enter custom asset type"
+                            value={assetTypeCode}
+                            onChange={(e) => {
+                              setAssetTypeCode(e.target.value)
+                              const generatedId = generateAssetId(locationType, e.target.value)
+                              handleInputChange('tagId', generatedId)
+                              handleInputChange('assetType', e.target.value)
+                            }}
+                            className="flex-1"
+                          />
+                        </div>
                       </div>
 
                       <div>
@@ -2873,7 +3428,7 @@ export default function AdminAssetsPage() {
                           id="subcategory"
                           value={newAsset.subcategory || ''}
                           onChange={(e) => handleInputChange('subcategory', e.target.value)}
-                          placeholder="e.g., Water Treatment Plant, Desktop"
+                          placeholder="e.g., Water Treatment Plant, Desktop Computer"
                           className="mt-1"
                         />
                       </div>
@@ -3087,11 +3642,15 @@ export default function AdminAssetsPage() {
                               <div>
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tag ID</Label>
                                 <Input
-                                  value={subAsset.tagId || ''}
+                                  value={subAsset.tagId || generateSubAssetTagId(newAsset.tagId || generateAssetId(locationType, assetTypeCode), subAsset.assetName, 'Movable', index)}
                                   onChange={(e) => handleSubAssetChange('Movable', index, 'tagId', e.target.value)}
-                                  placeholder="e.g., SSL36112-MA-abc123-def4"
+                                  placeholder="Auto-generated based on asset name"
                                   className="mt-1"
+                                  readOnly
                                 />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Auto-generated: {generateSubAssetTagId(newAsset.tagId || generateAssetId(locationType, assetTypeCode), subAsset.assetName, 'Movable', index) || 'Enter asset name'}
+                                </p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brand</Label>
@@ -3205,11 +3764,15 @@ export default function AdminAssetsPage() {
                               <div>
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tag ID</Label>
                                 <Input
-                                  value={subAsset.tagId || ''}
+                                  value={subAsset.tagId || generateSubAssetTagId(newAsset.tagId || generateAssetId(locationType, assetTypeCode), subAsset.assetName, 'Immovable', index)}
                                   onChange={(e) => handleSubAssetChange('Immovable', index, 'tagId', e.target.value)}
-                                  placeholder="e.g., SSL36112-IA-abc123-def4"
+                                  placeholder="Auto-generated based on asset name"
                                   className="mt-1"
+                                  readOnly
                                 />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Auto-generated: {generateSubAssetTagId(newAsset.tagId || generateAssetId(locationType, assetTypeCode), subAsset.assetName, 'Immovable', index) || 'Enter asset name'}
+                                </p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brand</Label>

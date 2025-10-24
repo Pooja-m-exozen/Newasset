@@ -312,15 +312,15 @@ export function EnhancedDashboard({
 
   const costAnalysisData = useMemo(() => (
     costData?.success && costData?.statistics ? {
-      totalPurchaseCost: costData.statistics.totalPurchaseCost,
-      totalCurrentValue: costData.statistics.totalCurrentValue,
-      totalDepreciation: costData.statistics.totalDepreciation,
-      avgDepreciationRate: costData.statistics.avgDepreciationRate,
-      assetCount: costData.statistics.assetCount,
+      totalPurchaseCost: costData.statistics.totalPurchaseCost || 0,
+      totalCurrentValue: costData.statistics.totalCurrentValue || 0,
+      totalDepreciation: costData.statistics.totalDepreciation || 0,
+      avgDepreciationRate: costData.statistics.avgDepreciationRate || 0,
+      assetCount: costData.statistics.assetCount || 0,
       breakdown: [
-        { category: "Purchase Cost", amount: costData.statistics.totalPurchaseCost, percentage: costData.statistics.totalPurchaseCost > 0 ? 100 : 0 },
-        { category: "Current Value", amount: costData.statistics.totalCurrentValue, percentage: costData.statistics.totalCurrentValue > 0 ? 100 : 0 },
-        { category: "Depreciation", amount: costData.statistics.totalDepreciation, percentage: costData.statistics.totalDepreciation > 0 ? 100 : 0 }
+        { category: "Purchase Cost", amount: costData.statistics.totalPurchaseCost || 0, percentage: (costData.statistics.totalPurchaseCost || 0) > 0 ? 100 : 0 },
+        { category: "Current Value", amount: costData.statistics.totalCurrentValue || 0, percentage: (costData.statistics.totalCurrentValue || 0) > 0 ? 100 : 0 },
+        { category: "Depreciation", amount: costData.statistics.totalDepreciation || 0, percentage: (costData.statistics.totalDepreciation || 0) > 0 ? 100 : 0 }
       ]
     } : {
       totalPurchaseCost: 0,

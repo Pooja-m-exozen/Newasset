@@ -91,6 +91,10 @@ export interface CreateAssetRequest {
   yearOfInstallation?: string
   status: 'Active' | 'Inactive' | 'Maintenance' | 'Retired'
   priority: 'High' | 'Medium' | 'Low'
+  project?: {
+    projectId: string
+    projectName: string
+  }
   location: {
     building?: string
     floor?: string
@@ -115,6 +119,10 @@ export interface AssetData {
   yearOfInstallation?: string
   status?: string
   priority?: string
+  project?: {
+    projectId: string
+    projectName: string
+  }
   location?: {
     building?: string
     floor?: string
@@ -144,13 +152,13 @@ export const createAsset = async (assetData: CreateAssetRequest): Promise<Create
     const backendData = {
       tagId: assetData.tagId,
       assetType: assetData.assetType,
-      subcategory: assetData.subcategory,
+      subcategory: assetData.subcategory || '',
       mobilityCategory: assetData.mobilityCategory.toLowerCase(), // Convert to lowercase
       brand: assetData.brand,
-      model: assetData.model,
-      serialNumber: assetData.serialNumber,
-      capacity: assetData.capacity,
-      yearOfInstallation: assetData.yearOfInstallation,
+      model: assetData.model && assetData.model.trim() !== '' ? assetData.model : undefined,
+      serialNumber: assetData.serialNumber && assetData.serialNumber.trim() !== '' ? assetData.serialNumber : undefined,
+      capacity: assetData.capacity && assetData.capacity.trim() !== '' ? assetData.capacity : undefined,
+      yearOfInstallation: assetData.yearOfInstallation && assetData.yearOfInstallation.trim() !== '' ? assetData.yearOfInstallation : undefined,
       status: assetData.status.toLowerCase(), // Convert to lowercase
       priority: assetData.priority.toLowerCase(), // Convert to lowercase
       location: {
@@ -160,6 +168,7 @@ export const createAsset = async (assetData: CreateAssetRequest): Promise<Create
       },
       subAssets: assetData.subAssets ? {
         movable: assetData.subAssets.movable.map(subAsset => ({
+          tagId: subAsset.tagId,
           assetName: subAsset.assetName,
           description: subAsset.description,
           category: subAsset.category,
@@ -170,6 +179,7 @@ export const createAsset = async (assetData: CreateAssetRequest): Promise<Create
           inventory: subAsset.inventory
         })),
         immovable: assetData.subAssets.immovable.map(subAsset => ({
+          tagId: subAsset.tagId,
           assetName: subAsset.assetName,
           description: subAsset.description,
           category: subAsset.category,
@@ -180,10 +190,17 @@ export const createAsset = async (assetData: CreateAssetRequest): Promise<Create
           inventory: subAsset.inventory
         }))
       } : undefined,
-      project: {
-        projectName: 'Default Project' // You might want to make this dynamic
+      project: assetData.project && assetData.project.projectName ? {
+        projectName: assetData.project.projectName,
+        ...(assetData.project.projectId && assetData.project.projectId.trim() !== '' ? { projectId: assetData.project.projectId } : {})
+      } : {
+        projectName: 'Default Project'
       }
     }
+    
+    // Debug: Log the backend data being sent
+    console.log('Backend data being sent:', JSON.stringify(backendData, null, 2))
+    console.log('Project in backend data:', backendData.project)
     
     const response = await fetch(`${API_BASE_URL}/assets`, {
       method: 'POST',

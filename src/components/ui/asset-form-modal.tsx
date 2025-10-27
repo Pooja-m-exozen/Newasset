@@ -804,6 +804,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
    
     // Debug: Log current form data
     console.log('Current form data:', formData);
+    console.log('Sub-assets data:', formData.subAssets);
     console.log('Project data:', formData.project);
     console.log('User project data:', { projectId: user?.projectId, projectName: user?.projectName });
     console.log('Note: If projectId is missing, projectName will be used as the identifier');
@@ -1828,9 +1829,34 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {formData.subAssets.movable.map((asset, index) => (
                           <div key={index} className="bg-white dark:bg-gray-800 rounded-md border border-gray-300 dark:border-gray-600 p-4">
-                            <div className="mb-4">
-                              <h6 className="text-sm font-semibold text-black dark:text-white">Asset -{index + 1}</h6>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">Movable Equipment</p>
+                            <div className="mb-4 flex justify-between items-start">
+                              <div>
+                                <h6 className="text-sm font-semibold text-black dark:text-white">Asset -{index + 1}</h6>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Movable Equipment</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  // Move asset from movable to immovable
+                                  const assetToMove = formData.subAssets.movable[index];
+                                  console.log('Moving asset from movable to immovable:', assetToMove);
+                                  setFormData(prev => {
+                                    const newData = {
+                                      ...prev,
+                                      subAssets: {
+                                        movable: prev.subAssets.movable.filter((_, i) => i !== index),
+                                        immovable: [...prev.subAssets.immovable, assetToMove]
+                                      }
+                                    };
+                                    console.log('Updated form data:', newData.subAssets);
+                                    return newData;
+                                  });
+                                }}
+                                className="px-2 py-1 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-colors duration-200 border border-orange-200 hover:border-orange-300"
+                                title="Change to Immovable"
+                              >
+                                Move to Immovable
+                              </button>
                             </div>
                            
                             <div className="space-y-3">
@@ -1970,9 +1996,34 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {formData.subAssets.immovable.map((asset, index) => (
                           <div key={index} className="bg-white dark:bg-gray-800 rounded-md border border-gray-300 dark:border-gray-600 p-4">
-                            <div className="mb-4">
-                              <h6 className="text-sm font-semibold text-black dark:text-white">Asset -{index + 1}</h6>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">Immovable Equipment</p>
+                            <div className="mb-4 flex justify-between items-start">
+                              <div>
+                                <h6 className="text-sm font-semibold text-black dark:text-white">Asset -{index + 1}</h6>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Immovable Equipment</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  // Move asset from immovable to movable
+                                  const assetToMove = formData.subAssets.immovable[index];
+                                  console.log('Moving asset from immovable to movable:', assetToMove);
+                                  setFormData(prev => {
+                                    const newData = {
+                                      ...prev,
+                                      subAssets: {
+                                        movable: [...prev.subAssets.movable, assetToMove],
+                                        immovable: prev.subAssets.immovable.filter((_, i) => i !== index)
+                                      }
+                                    };
+                                    console.log('Updated form data:', newData.subAssets);
+                                    return newData;
+                                  });
+                                }}
+                                className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md transition-colors duration-200 border border-blue-200 hover:border-blue-300"
+                                title="Change to Movable"
+                              >
+                                Move to Movable
+                              </button>
                             </div>
                            
                             <div className="space-y-3">

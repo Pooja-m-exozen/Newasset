@@ -321,7 +321,7 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
                         ASSET ID
                       </th>
                       <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
-                        BRAND & MODEL
+                        TYPE & MODEL
                       </th>
                       <th className="border border-border px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-blue-800 dark:text-slate-200 bg-blue-50 dark:bg-slate-800 text-xs sm:text-sm">
                         MOBILITY
@@ -627,6 +627,8 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
             }
           } else if (isEditModalOpen && editingAsset) {
             try {
+              console.log('Updating asset with ID:', editingAsset._id);
+              console.log('Sub-assets being sent to backend:', transformedData.subAssets);
               await updateAsset(editingAsset._id!, transformedData);
               
               // Refresh the assets list to show the updated asset

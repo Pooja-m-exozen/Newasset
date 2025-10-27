@@ -1015,6 +1015,16 @@ export const assetApi = {
   updateAsset: async (assetId: string, assetData: Partial<Asset> | FormData): Promise<{ success: boolean; asset: Asset }> => {
     const isFormData = assetData instanceof FormData;
     
+    // Debug: Log the asset ID and data being sent to backend
+    console.log('updateAsset - Asset ID being sent:', assetId);
+    console.log('updateAsset - Asset ID length:', assetId.length);
+    console.log('updateAsset - Asset ID format valid:', /^[0-9a-fA-F]{24}$/.test(assetId));
+    
+    if (!isFormData) {
+      console.log('updateAsset - Data being sent to backend:', JSON.stringify(assetData, null, 2));
+      console.log('updateAsset - Sub-assets in data:', assetData.subAssets);
+    }
+    
     return apiRequest<{ success: boolean; asset: Asset }>(`/assets/${assetId}`, {
       method: 'PUT',
       body: isFormData ? assetData : JSON.stringify(assetData),

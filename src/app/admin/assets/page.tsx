@@ -9,10 +9,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Wifi, Receipt, RotateCcw, Activity, Droplets, Wrench, Settings, Archive, MapPin } from 'lucide-react'
+import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, QrCode, Wifi, Receipt, RotateCcw, Activity, Archive, MapPin } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, getAssetsByMobility, searchAssets, InventoryItem, Asset, assetApi, PurchaseOrder, ReplacementRecord, LifecycleStatus, FinancialData } from '@/lib/adminasset'
+import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, searchAssets, InventoryItem, Asset, assetApi, PurchaseOrder, ReplacementRecord, LifecycleStatus, FinancialData } from '@/lib/adminasset'
 
 // API Response interfaces
 interface ApiSubAsset {
@@ -1727,7 +1727,7 @@ export default function AdminAssetsPage() {
                               <p className="text-sm">Debug: Found {filteredAssets.length} main assets, {allSubAssets.length} total sub-assets</p>
                               {searchTerm && (
                                 <p className="text-xs text-blue-600">
-                                  Try adjusting your search term: "{searchTerm}"
+                                  Try adjusting your search term: &quot;{searchTerm}&quot;
                                 </p>
                               )}
                             </div>
@@ -1874,7 +1874,7 @@ export default function AdminAssetsPage() {
                               <p>{searchTerm ? 'No matching assets found' : 'No assets found'}</p>
                               {searchTerm && (
                                 <p className="text-xs text-blue-600">
-                                  Try adjusting your search term: "{searchTerm}"
+                                  Try adjusting your search term: &quot;{searchTerm}&quot;
                                 </p>
                               )}
                             </div>
@@ -3088,15 +3088,15 @@ export default function AdminAssetsPage() {
                       <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-200 dark:border-blue-800 p-4">
                         {expandedDetailSection === 'po' ? (
                           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            Click "Purchase Order" button to add PO details
+                            Click &quot;Purchase Order&quot; button to add PO details
                           </div>
                         ) : expandedDetailSection === 'replacement' ? (
                           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            Click "Replacement" button to add replacement history
+                            Click &quot;Replacement&quot; button to add replacement history
                           </div>
                         ) : expandedDetailSection === 'lifecycle' ? (
                           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            Click "Lifecycle" button to add lifecycle status
+                            Click &quot;Lifecycle&quot; button to add lifecycle status
                           </div>
                         ) : (
                           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -3125,7 +3125,9 @@ export default function AdminAssetsPage() {
                         <button
                           onClick={() => {
                             setExpandedInventorySection(expandedInventorySection === 'consumables' ? null : 'consumables');
-                            selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'consumables');
+                            if (selectedSubAssetForDetails.parentAsset?._id) {
+                              handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'consumables');
+                            }
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                             expandedInventorySection === 'consumables'
@@ -3140,7 +3142,9 @@ export default function AdminAssetsPage() {
                         <button
                           onClick={() => {
                             setExpandedInventorySection(expandedInventorySection === 'spareParts' ? null : 'spareParts');
-                            selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'spareParts');
+                            if (selectedSubAssetForDetails.parentAsset?._id) {
+                              handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'spareParts');
+                            }
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                             expandedInventorySection === 'spareParts'
@@ -3155,7 +3159,9 @@ export default function AdminAssetsPage() {
                         <button
                           onClick={() => {
                             setExpandedInventorySection(expandedInventorySection === 'tools' ? null : 'tools');
-                            selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'tools');
+                            if (selectedSubAssetForDetails.parentAsset?._id) {
+                              handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'tools');
+                            }
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                             expandedInventorySection === 'tools'

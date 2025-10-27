@@ -198,6 +198,8 @@ export default function AdminAssetsPage() {
   const [showLifecycleModal, setShowLifecycleModal] = useState(false)
   const [showSubAssetDetailsModal, setShowSubAssetDetailsModal] = useState(false)
   const [selectedSubAssetForDetails, setSelectedSubAssetForDetails] = useState<ApiSubAsset | null>(null)
+  const [expandedDetailSection, setExpandedDetailSection] = useState<'po' | 'replacement' | 'lifecycle' | null>(null)
+  const [expandedInventorySection, setExpandedInventorySection] = useState<'consumables' | 'spareParts' | 'tools' | null>(null)
   const [showFinancialModal, setShowFinancialModal] = useState(false)
   const [selectedAssetForManagement, setSelectedAssetForManagement] = useState<AssetData | null>(null)
   const [selectedSubAssetForManagement, setSelectedSubAssetForManagement] = useState<{
@@ -361,10 +363,11 @@ export default function AdminAssetsPage() {
         response = await searchAssets(searchTerm)
       } else if (selectedMobility === 'movable' || selectedMobility === 'immovable' || selectedMobility === 'all' || selectedMobility === 'inventory') {
         // For 'movable', 'immovable', 'all' and 'inventory' - get all assets with sub-assets
-        response = await assetApi.getAssetsWithSubAssets(true)
+        // Set high limit to fetch all assets (1000 should be enough for most use cases)
+        response = await assetApi.getAssetsWithSubAssets(true, 1, 10000)
       } else {
         // For 'far' - get all assets
-        response = await getAssets()
+        response = await getAssets(1, 10000)
       }
      
       if (response.success) {
@@ -1637,13 +1640,16 @@ export default function AdminAssetsPage() {
                       SI Number
                     </th>
                     <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                      Tag ID
+                    </th>
+                    <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
                       Asset Name / Type
                     </th>
                     <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
-                      Brand
+                      Parent Asset
                     </th>
                     <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
-                      Model
+                      Parent Asset Tag ID
                     </th>
                     <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
                       Location
@@ -1663,43 +1669,83 @@ export default function AdminAssetsPage() {
                     const allSubAssets = filteredAssets.flatMap((asset) => {
                       console.log('Debug - processing asset:', asset.assetType, 'subAssets:', asset.subAssets)
                       
-                      const movableSubAssets = (asset.subAssets?.movable || []).map(subAsset => ({
-                        ...subAsset,
-                        parentAsset: asset,
-                        category: 'Movable'
-                      }))
-                      const immovableSubAssets = (asset.subAssets?.immovable || []).map(subAsset => ({
-                        ...subAsset,
-                        parentAsset: asset,
-                        category: 'Immovable'
-                      }))
-                      return [...movableSubAssets, ...immovableSubAssets]
+                      const subAssets = []
+                      
+                      // Only include movable sub-assets if mobility filter is 'movable', 'all', or 'inventory'
+                      if (selectedMobility === 'movable' || selectedMobility === 'all' || selectedMobility === 'inventory') {
+                        const movableSubAssets = (asset.subAssets?.movable || []).map(subAsset => ({
+                          ...subAsset,
+                          parentAsset: asset,
+                          category: 'Movable'
+                        }))
+                        subAssets.push(...movableSubAssets)
+                      }
+                      
+                      // Only include immovable sub-assets if mobility filter is 'immovable', 'all', or 'inventory'
+                      if (selectedMobility === 'immovable' || selectedMobility === 'all' || selectedMobility === 'inventory') {
+                        const immovableSubAssets = (asset.subAssets?.immovable || []).map(subAsset => ({
+                          ...subAsset,
+                          parentAsset: asset,
+                          category: 'Immovable'
+                        }))
+                        subAssets.push(...immovableSubAssets)
+                      }
+                      
+                      return subAssets
                     })
                     
-                    console.log('Debug - allSubAssets found:', allSubAssets.length, allSubAssets)
+                    // Apply search filter on sub-assets
+                    const searchTermLower = searchTerm.toLowerCase().trim()
+                    const filteredSubAssets = allSubAssets.filter(subAsset => {
+                      if (!searchTermLower) return true
+                      
+                      // Search in multiple fields
+                      const assetName = (subAsset.assetName || '').toLowerCase()
+                      const brand = (subAsset.brand || '').toLowerCase()
+                      const model = (subAsset.model || '').toLowerCase()
+                      const location = (subAsset.location || '').toLowerCase()
+                      const tagId = (subAsset.tagId || '').toLowerCase()
+                      const category = (subAsset.category || '').toLowerCase()
+                      
+                      return assetName.includes(searchTermLower) ||
+                             brand.includes(searchTermLower) ||
+                             model.includes(searchTermLower) ||
+                             location.includes(searchTermLower) ||
+                             tagId.includes(searchTermLower) ||
+                             category.includes(searchTermLower)
+                    })
                     
-                    if (allSubAssets.length === 0) {
+                    console.log('Debug - allSubAssets found:', allSubAssets.length, 'filtered:', filteredSubAssets.length)
+                    
+                    if (filteredSubAssets.length === 0) {
                       return (
                         <tr>
-                          <td colSpan={5} className="border border-border px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                          <td colSpan={7} className="border border-border px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                             <div className="flex flex-col items-center gap-2">
                               <Package className="w-8 h-8 text-gray-400" />
-                              <p>No sub-assets found</p>
-                              <p className="text-sm">Debug: Found {filteredAssets.length} main assets</p>
-                              <p className="text-xs text-gray-400">
-                                Check console for detailed asset structure
-                              </p>
+                              <p>{searchTerm ? 'No matching sub-assets found' : 'No sub-assets found'}</p>
+                              <p className="text-sm">Debug: Found {filteredAssets.length} main assets, {allSubAssets.length} total sub-assets</p>
+                              {searchTerm && (
+                                <p className="text-xs text-blue-600">
+                                  Try adjusting your search term: "{searchTerm}"
+                                </p>
+                              )}
                             </div>
                           </td>
                         </tr>
                       )
                     }
                     
-                    return allSubAssets.map((subAsset, index) => (
+                    return filteredSubAssets.map((subAsset, index) => (
                       <tr key={`${subAsset.parentAsset._id}-${index}`} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                         <td className="border border-border px-4 py-3">
                           <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
                             {index + 1}
+                          </span>
+                        </td>
+                        <td className="border border-border px-4 py-3">
+                          <span className="text-sm font-mono text-blue-700 dark:text-blue-300">
+                            {subAsset.tagId || 'N/A'}
                           </span>
                         </td>
                         <td className="border border-border px-4 py-3">
@@ -1718,12 +1764,12 @@ export default function AdminAssetsPage() {
                         </td>
                         <td className="border border-border px-4 py-3">
                           <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {subAsset.brand}
+                            {subAsset.parentAsset?.assetType || 'N/A'}
                           </span>
                         </td>
                         <td className="border border-border px-4 py-3">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {subAsset.model || 'N/A'}
+                          <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                            {subAsset.parentAsset?.tagId || 'N/A'}
                           </span>
                         </td>
                         <td className="border border-border px-4 py-3">
@@ -1800,14 +1846,44 @@ export default function AdminAssetsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAssets.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="border border-border px-4 py-8 text-center text-muted-foreground">
-                        No assets found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredAssets.map((asset) => {
+                  {(() => {
+                    // Apply search filter on main assets for FAR view
+                    const searchTermLower = searchTerm.toLowerCase().trim()
+                    const farFilteredAssets = searchTermLower 
+                      ? filteredAssets.filter(asset => {
+                          const tagId = (asset.tagId || '').toLowerCase()
+                          const assetType = (asset.assetType || '').toLowerCase()
+                          const subcategory = (asset.subcategory || '').toLowerCase()
+                          const brand = (asset.brand || '').toLowerCase()
+                          const model = (asset.model || '').toLowerCase()
+                          
+                          return tagId.includes(searchTermLower) ||
+                                 assetType.includes(searchTermLower) ||
+                                 subcategory.includes(searchTermLower) ||
+                                 brand.includes(searchTermLower) ||
+                                 model.includes(searchTermLower)
+                        })
+                      : filteredAssets
+                    
+                    if (farFilteredAssets.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={8} className="border border-border px-4 py-8 text-center text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <Package className="w-8 h-8 text-gray-400" />
+                              <p>{searchTerm ? 'No matching assets found' : 'No assets found'}</p>
+                              {searchTerm && (
+                                <p className="text-xs text-blue-600">
+                                  Try adjusting your search term: "{searchTerm}"
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    }
+                    
+                    return farFilteredAssets.map((asset) => {
                       const isExpanded = expandedRow === asset._id
                       const assetClassification = isExpanded ? getAssetClassification(asset) : null
                      
@@ -2053,7 +2129,7 @@ export default function AdminAssetsPage() {
                         </React.Fragment>
                       )
                     })
-                  )}
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -2825,9 +2901,16 @@ export default function AdminAssetsPage() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">
-                        {selectedSubAssetForDetails.assetName}
-                      </h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">
+                          {selectedSubAssetForDetails.assetName}
+                        </h2>
+                        {selectedSubAssetForDetails.tagId && (
+                          <span className="px-2 py-1 rounded text-xs font-mono font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600">
+                            #{selectedSubAssetForDetails.tagId}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           selectedSubAssetForDetails.category === 'Movable' 
@@ -2843,7 +2926,11 @@ export default function AdminAssetsPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowSubAssetDetailsModal(false)}
+                    onClick={() => {
+                      setShowSubAssetDetailsModal(false);
+                      setExpandedDetailSection(null);
+                      setExpandedInventorySection(null);
+                    }}
                     className="group p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 border border-gray-200 dark:border-gray-600"
                   >
                     <X className="w-5 h-5 text-gray-600 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200" />
@@ -2853,175 +2940,255 @@ export default function AdminAssetsPage() {
 
               {/* Modal Content */}
               <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-white dark:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
-                {/* Quick Actions Section */}
-                <div className="mb-6">
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Activity className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Quick Actions
-                      </h3>
+                {/* Parent Asset Information - First */}
+                {selectedSubAssetForDetails.parentAsset && (() => {
+                  const parentFields = [
+                    { label: 'Parent Asset ID', value: selectedSubAssetForDetails.parentAsset.tagId },
+                    { label: 'Asset Type', value: selectedSubAssetForDetails.parentAsset.assetType },
+                    { label: 'Brand', value: selectedSubAssetForDetails.parentAsset.brand },
+                    { label: 'Model', value: selectedSubAssetForDetails.parentAsset.model }
+                  ].filter(field => {
+                    if (!field.value) return false;
+                    const value = String(field.value).toUpperCase().trim();
+                    return value !== 'NA' && value !== 'N/A' && value !== '';
+                  });
+                  
+                  if (parentFields.length === 0) return null;
+                  
+                  return (
+                    <div className="mb-6">
+                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-5 shadow-sm">
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
+                            <Building className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Parent Asset Details
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {parentFields.map((field, idx) => (
+                            <div key={idx} className="p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600">
+                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1">{field.label}</label>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{field.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <button
-                        onClick={() => selectedSubAssetForDetails.parentAsset && handleOpenPOModal(selectedSubAssetForDetails.parentAsset, { 
-                          subAssetIndex: 0, 
-                          category: selectedSubAssetForDetails.category.toLowerCase() as 'movable' | 'immovable' 
-                        })}
-                        disabled={!selectedSubAssetForDetails.parentAsset}
-                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Receipt className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Purchase Order</span>
-                      </button>
-                      <button
-                        onClick={() => selectedSubAssetForDetails.parentAsset && handleOpenReplacementModal(selectedSubAssetForDetails.parentAsset, { 
-                          subAssetIndex: 0, 
-                          category: selectedSubAssetForDetails.category.toLowerCase() as 'movable' | 'immovable' 
-                        })}
-                        disabled={!selectedSubAssetForDetails.parentAsset}
-                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <RotateCcw className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Replacement</span>
-                      </button>
-                      <button
-                        onClick={() => selectedSubAssetForDetails.parentAsset && handleOpenLifecycleModal(selectedSubAssetForDetails.parentAsset, { 
-                          subAssetIndex: 0, 
-                          category: selectedSubAssetForDetails.category.toLowerCase() as 'movable' | 'immovable' 
-                        })}
-                        disabled={!selectedSubAssetForDetails.parentAsset}
-                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Activity className="w-5 h-5 text-green-600 dark:text-green-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Lifecycle</span>
-                      </button>
-                      {selectedSubAssetForDetails.digitalAssets?.qrCode && (
-                        <button
-                          onClick={() => handleQRCodeClick(selectedSubAssetForDetails.digitalAssets!.qrCode!)}
-                          className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2"
-                        >
-                          <QrCode className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">QR Code</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
-                {/* Inventory Management Section */}
+                {/* Basic Information - Second */}
                 <div className="mb-6">
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-4">
-                      <Package className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Inventory Management
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <button
-                        onClick={() => selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'consumables')}
-                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2"
-                      >
-                        <Droplets className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Consumables</span>
-                      </button>
-                      <button
-                        onClick={() => selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'spareParts')}
-                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2"
-                      >
-                        <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Spare Parts</span>
-                      </button>
-                      <button
-                        onClick={() => selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'tools')}
-                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-2"
-                      >
-                        <Wrench className="w-5 h-5 text-green-600 dark:text-green-400" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center">Tools</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Information Sections */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Basic Information */}
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Package className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                        <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                         Basic Information
                       </h3>
                     </div>
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Asset Name</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.assetName}</p>
-                      </div>
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Brand</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.brand}</p>
-                      </div>
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Model</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.model || 'N/A'}</p>
-                      </div>
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Location</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.location}</p>
-                      </div>
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Category</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{selectedSubAssetForDetails.category}</p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const basicFields = [
+                        { label: 'Asset Name', value: selectedSubAssetForDetails.assetName },
+                        { label: 'Tag ID', value: selectedSubAssetForDetails.tagId },
+                        { label: 'Brand', value: selectedSubAssetForDetails.brand },
+                        { label: 'Model', value: selectedSubAssetForDetails.model },
+                        { label: 'Location', value: selectedSubAssetForDetails.location },
+                        { label: 'Category', value: selectedSubAssetForDetails.category }
+                      ].filter(field => {
+                        if (!field.value) return false;
+                        const value = String(field.value).toUpperCase().trim();
+                        return value !== 'NA' && value !== 'N/A' && value !== '';
+                      });
+                      
+                      return (
+                        <div className="space-y-3">
+                          {basicFields.map((field, idx) => (
+                            <div key={idx} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1">{field.label}</label>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{field.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
+                </div>
 
-                  {/* Purchase Details */}
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                {/* Quick Actions - Third */}
+                <div className="mb-6">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-4">
-                      <Receipt className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                        <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Purchase Details
+                        Quick Actions
                       </h3>
                     </div>
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">PO Number</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                          {selectedSubAssetForDetails.purchaseOrder?.poNumber || 'N/A'}
-                        </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Left Column - Radio Buttons */}
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors">
+                          <input
+                            type="radio"
+                            name="detail-section"
+                            checked={expandedDetailSection === 'po'}
+                            onChange={() => setExpandedDetailSection(expandedDetailSection === 'po' ? null : 'po')}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                            disabled={!selectedSubAssetForDetails.parentAsset}
+                          />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Purchase Order
+                          </span>
+                        </label>
+                        
+                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors">
+                          <input
+                            type="radio"
+                            name="detail-section"
+                            checked={expandedDetailSection === 'replacement'}
+                            onChange={() => setExpandedDetailSection(expandedDetailSection === 'replacement' ? null : 'replacement')}
+                            className="w-4 h-4 text-orange-600 focus:ring-orange-500"
+                            disabled={!selectedSubAssetForDetails.parentAsset}
+                          />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Replacement
+                          </span>
+                        </label>
+                        
+                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors">
+                          <input
+                            type="radio"
+                            name="detail-section"
+                            checked={expandedDetailSection === 'lifecycle'}
+                            onChange={() => setExpandedDetailSection(expandedDetailSection === 'lifecycle' ? null : 'lifecycle')}
+                            className="w-4 h-4 text-green-600 focus:ring-green-500"
+                            disabled={!selectedSubAssetForDetails.parentAsset}
+                          />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Lifecycle
+                          </span>
+                        </label>
+                        
+                        {selectedSubAssetForDetails.digitalAssets?.qrCode && (
+                          <button
+                            onClick={() => handleQRCodeClick(selectedSubAssetForDetails.digitalAssets!.qrCode!)}
+                            className="w-full text-left px-3 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
+                          >
+                            View QR Code
+                          </button>
+                        )}
                       </div>
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Supplier</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                          {selectedSubAssetForDetails.purchaseOrder?.supplier || 'N/A'}
-                        </p>
-                      </div>
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Purchase Date</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                          {selectedSubAssetForDetails.purchaseOrder?.purchaseDate 
-                            ? new Date(selectedSubAssetForDetails.purchaseOrder.purchaseDate).toLocaleDateString()
-                            : 'N/A'}
-                        </p>
-                      </div>
-                      <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Price</label>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
-                          {selectedSubAssetForDetails.purchaseOrder?.price || 'N/A'}
-                        </p>
+                      
+                      {/* Right Column - Details */}
+                      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-200 dark:border-blue-800 p-4">
+                        {expandedDetailSection === 'po' ? (
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            Click "Purchase Order" button to add PO details
+                          </div>
+                        ) : expandedDetailSection === 'replacement' ? (
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            Click "Replacement" button to add replacement history
+                          </div>
+                        ) : expandedDetailSection === 'lifecycle' ? (
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            Click "Lifecycle" button to add lifecycle status
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            Select an option to view details
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Inventory Management Section - Two Column Layout */}
+                <div className="mb-6">
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700">
+                        <Package className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Inventory Management
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Left Column - Buttons */}
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => {
+                            setExpandedInventorySection(expandedInventorySection === 'consumables' ? null : 'consumables');
+                            selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'consumables');
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                            expandedInventorySection === 'consumables'
+                              ? 'bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700'
+                              : 'hover:bg-white/50 dark:hover:bg-gray-700/50 border border-orange-200 dark:border-orange-800'
+                          }`}
+                        >
+                          <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                            Consumables
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setExpandedInventorySection(expandedInventorySection === 'spareParts' ? null : 'spareParts');
+                            selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'spareParts');
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                            expandedInventorySection === 'spareParts'
+                              ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700'
+                              : 'hover:bg-white/50 dark:hover:bg-gray-700/50 border border-blue-200 dark:border-blue-800'
+                          }`}
+                        >
+                          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                            Spare Parts
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setExpandedInventorySection(expandedInventorySection === 'tools' ? null : 'tools');
+                            selectedSubAssetForDetails.parentAsset?._id && handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'tools');
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                            expandedInventorySection === 'tools'
+                              ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700'
+                              : 'hover:bg-white/50 dark:hover:bg-gray-700/50 border border-green-200 dark:border-green-800'
+                          }`}
+                        >
+                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                            Tools
+                          </span>
+                        </button>
+                      </div>
+                      
+                      {/* Right Column - Details */}
+                      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-600 p-4">
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          Click on a category to view details
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               {/* Modal Footer */}
               <div className="flex justify-end p-4 sm:p-6 border-t border-gray-200 dark:border-gray-700">
                 <button
-                  onClick={() => setShowSubAssetDetailsModal(false)}
+                  onClick={() => {
+                    setShowSubAssetDetailsModal(false);
+                    setExpandedDetailSection(null);
+                    setExpandedInventorySection(null);
+                  }}
                   className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
                 >
                   Close

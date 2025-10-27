@@ -225,11 +225,16 @@ export const createAsset = async (assetData: CreateAssetRequest): Promise<Create
 }
 
 // API Functions for Asset Management
-export const getAssets = async (): Promise<AssetsResponse> => {
+export const getAssets = async (page: number = 1, limit: number = 10000): Promise<AssetsResponse> => {
   try {
     const token = localStorage.getItem('authToken')
     
-    const response = await fetch(`${API_BASE_URL}/assets`, {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    })
+    
+    const response = await fetch(`${API_BASE_URL}/assets?${params.toString()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -1206,9 +1211,11 @@ export const assetApi = {
   },
 
   // Get assets with sub-asset details (performance control)
-  getAssetsWithSubAssets: async (includeSubAssets: boolean = true): Promise<AssetsResponse> => {
+  getAssetsWithSubAssets: async (includeSubAssets: boolean = true, page: number = 1, limit: number = 1000): Promise<AssetsResponse> => {
     const params = new URLSearchParams({
-      includeSubAssets: includeSubAssets.toString()
+      includeSubAssets: includeSubAssets.toString(),
+      page: page.toString(),
+      limit: limit.toString()
     });
     return apiRequest<AssetsResponse>(`/assets?${params.toString()}`);
   },

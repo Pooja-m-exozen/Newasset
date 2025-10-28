@@ -429,7 +429,7 @@ export default function AdminAssetsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, selectedMobility])
+  }, [searchTerm, selectedMobility, user?.projectName])
 
   // Search functionality with debouncing
   useEffect(() => {

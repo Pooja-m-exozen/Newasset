@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -58,7 +58,7 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
   // Fetch assets on component mount or when user changes
   useEffect(() => {
     fetchAssets()
-  }, [user?.projectName])
+  }, [fetchAssets])
 
   // Load images as blobs when generatedAssets changes
   useEffect(() => {
@@ -85,7 +85,7 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
     }
   }, [imageUrls])
 
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     try {
       const response = await assetApi.getAllAssets()
       if (response.success && response.assets) {
@@ -93,7 +93,7 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
         const userProjectName = user?.projectName?.trim().toLowerCase()
         const filteredAssets = userProjectName
           ? response.assets.filter((asset: Asset) => {
-              const assetProjectName = asset.project?.projectName?.trim().toLowerCase() || asset.projectName?.trim().toLowerCase()
+              const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
               return assetProjectName === userProjectName
             })
           : response.assets
@@ -103,7 +103,7 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
     } catch (error) {
       console.error('Error fetching assets:', error)
     }
-  }
+  }, [user?.projectName])
 
   // Function to load image as blob and create object URL
   const loadImageAsBlob = async (imagePath: string, key: string) => {

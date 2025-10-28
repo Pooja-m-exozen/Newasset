@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -71,7 +71,7 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
   // Fetch assets on component mount or when user changes
   useEffect(() => {
     fetchAssets()
-  }, [user?.projectName])
+  }, [fetchAssets])
 
   // Load QR image as blob when generatedQR changes
   useEffect(() => {
@@ -89,7 +89,7 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
     }
   }, [qrImageUrl])
 
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     try {
       const response = await assetApi.getAllAssets()
       if (response.success && response.assets) {
@@ -97,7 +97,7 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
         const userProjectName = user?.projectName?.trim().toLowerCase()
         const filteredAssets = userProjectName
           ? response.assets.filter((asset: Asset) => {
-              const assetProjectName = asset.project?.projectName?.trim().toLowerCase() || asset.projectName?.trim().toLowerCase()
+              const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
               return assetProjectName === userProjectName
             })
           : response.assets
@@ -107,7 +107,7 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
     } catch (error) {
       console.error('Error fetching assets:', error)
     }
-  }
+  }, [user?.projectName])
 
   // Function to load QR code image as blob
   const loadQRImageAsBlob = async (imagePath: string) => {

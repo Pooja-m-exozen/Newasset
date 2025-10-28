@@ -55,6 +55,27 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
   const [imageLoadingStates, setImageLoadingStates] = useState<{[key: string]: boolean}>({})
   const [imageUrls, setImageUrls] = useState<{[key: string]: string}>({})
 
+  // Fetch assets function
+  const fetchAssets = useCallback(async () => {
+    try {
+      const response = await assetApi.getAllAssets()
+      if (response.success && response.assets) {
+        // Filter assets by user's project
+        const userProjectName = user?.projectName?.trim().toLowerCase()
+        const filteredAssets = userProjectName
+          ? response.assets.filter((asset: Asset) => {
+              const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
+              return assetProjectName === userProjectName
+            })
+          : response.assets
+        
+        setAssets(filteredAssets)
+      }
+    } catch (error) {
+      console.error('Error fetching assets:', error)
+    }
+  }, [user?.projectName])
+
   // Fetch assets on component mount or when user changes
   useEffect(() => {
     fetchAssets()
@@ -84,26 +105,6 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
       })
     }
   }, [imageUrls])
-
-  const fetchAssets = useCallback(async () => {
-    try {
-      const response = await assetApi.getAllAssets()
-      if (response.success && response.assets) {
-        // Filter assets by user's project
-        const userProjectName = user?.projectName?.trim().toLowerCase()
-        const filteredAssets = userProjectName
-          ? response.assets.filter((asset: Asset) => {
-              const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
-              return assetProjectName === userProjectName
-            })
-          : response.assets
-        
-        setAssets(filteredAssets)
-      }
-    } catch (error) {
-      console.error('Error fetching assets:', error)
-    }
-  }, [user?.projectName])
 
   // Function to load image as blob and create object URL
   const loadImageAsBlob = async (imagePath: string, key: string) => {

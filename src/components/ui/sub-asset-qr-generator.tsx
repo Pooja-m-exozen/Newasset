@@ -68,6 +68,27 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
   const [qrImageUrl, setQrImageUrl] = useState<string>('')
   const [qrImageLoading, setQrImageLoading] = useState(false)
 
+  // Fetch assets function
+  const fetchAssets = useCallback(async () => {
+    try {
+      const response = await assetApi.getAllAssets()
+      if (response.success && response.assets) {
+        // Filter assets by user's project
+        const userProjectName = user?.projectName?.trim().toLowerCase()
+        const filteredAssets = userProjectName
+          ? response.assets.filter((asset: Asset) => {
+              const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
+              return assetProjectName === userProjectName
+            })
+          : response.assets
+        
+        setAssets(filteredAssets)
+      }
+    } catch (error) {
+      console.error('Error fetching assets:', error)
+    }
+  }, [user?.projectName])
+
   // Fetch assets on component mount or when user changes
   useEffect(() => {
     fetchAssets()
@@ -88,26 +109,6 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
       }
     }
   }, [qrImageUrl])
-
-  const fetchAssets = useCallback(async () => {
-    try {
-      const response = await assetApi.getAllAssets()
-      if (response.success && response.assets) {
-        // Filter assets by user's project
-        const userProjectName = user?.projectName?.trim().toLowerCase()
-        const filteredAssets = userProjectName
-          ? response.assets.filter((asset: Asset) => {
-              const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
-              return assetProjectName === userProjectName
-            })
-          : response.assets
-        
-        setAssets(filteredAssets)
-      }
-    } catch (error) {
-      console.error('Error fetching assets:', error)
-    }
-  }, [user?.projectName])
 
   // Function to load QR code image as blob
   const loadQRImageAsBlob = async (imagePath: string) => {

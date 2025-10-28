@@ -202,45 +202,20 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
 
 
   const filteredAssets = state.assets.filter(asset => {
-    // First filter by project name/ID to show only assets for the current user's project
-    let matchesProject = true;
-    if (user?.projectName) {
-      // Check if asset belongs to the user's project
-      matchesProject = asset.project?.projectName === user.projectName || 
-                      asset.project?.projectId === user.projectId;
-      
-      // Debug logging for project filtering
-      if (!matchesProject) {
-        console.log('Asset filtered out by project:', {
-          assetProjectName: asset.project?.projectName,
-          assetProjectId: asset.project?.projectId,
-          userProjectName: user.projectName,
-          userProjectId: user.projectId,
-          assetTagId: asset.tagId
-        });
-      }
+    // First filter by project name to show only assets for the current user's project
+    const userProjectName = user?.projectName?.trim().toLowerCase();
+    const assetProjectName = asset.project?.projectName?.trim().toLowerCase();
+    
+    // Only show assets from the same project as the logged-in user
+    if (userProjectName && assetProjectName !== userProjectName) {
+      return false;
     }
     
-    // Then apply search filter only
-    const matchesSearch = asset.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Asset must match project AND search
-    const finalResult = matchesProject && matchesSearch;
-    
-    // Debug logging for final result
-    if (finalResult) {
-      console.log('Asset included in filtered results:', {
-        tagId: asset.tagId,
-        projectName: asset.project?.projectName,
-        projectId: asset.project?.projectId,
-        status: asset.status
-      });
-    }
-    
-    return finalResult;
+    // Then apply search filter
+    return asset.tagId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   // Pagination calculations

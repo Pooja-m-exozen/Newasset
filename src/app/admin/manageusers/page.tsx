@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useUserManagement } from "@/contexts/UserManagementContext"
 import { User } from "@/lib/manageuser"
 import { useToast, ToastContainer } from "@/components/ui/toast"
+import { useAuth } from "@/contexts/AuthContext"
 import { 
   Plus,
   Search,
@@ -29,6 +30,7 @@ import {
 export default function AdminManageUsersPage() {
   const { users, roles, fetchUsers, fetchRoles, createRole, createUser, updateRole, updateUserRole, deleteUser } = useUserManagement()
   const { addToast, toasts, removeToast } = useToast()
+  const { user: currentUser } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -349,12 +351,22 @@ export default function AdminManageUsersPage() {
     }
   }
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.projectName.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredUsers = users.filter(user => {
+    // First, filter by current user's project
+    const currentUserProjectName = currentUser?.projectName?.trim().toLowerCase()
+    const userProjectName = user.projectName?.trim().toLowerCase()
+    
+    // Only show users from the same project as the logged-in user
+    if (currentUserProjectName && userProjectName !== currentUserProjectName) {
+      return false
+    }
+    
+    // Then apply search filter
+    return user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.projectName.toLowerCase().includes(searchTerm.toLowerCase())
+  })
 
   // Sort users
   const sortedUsers = [...filteredUsers].sort((a, b) => {

@@ -10,6 +10,7 @@ export interface Location {
   name: string;
   type: string;
   parentId: string | null;
+  projectName?: string;
   address: string;
   coordinates: LocationCoordinates;
   isDeleted: boolean;
@@ -22,6 +23,7 @@ export interface CreateLocationRequest {
   name: string;
   type: string;
   parentId?: string | null;
+  projectName?: string;
   address: string;
   coordinates: LocationCoordinates;
 }

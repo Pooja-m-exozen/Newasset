@@ -151,11 +151,12 @@ function AssetsLogsContent() {
       }
 
       // Filter assets by user's project name
+      const userProjectName = user.projectName?.trim().toLowerCase()
       const userAssets = allAssets.filter(asset => {
-        // Check both the old projectName property and the new nested project structure
-        const assetProjectName = asset.project?.projectName || asset.projectName;
-        return assetProjectName === user.projectName;
-      });
+        if (!userProjectName) return true
+        const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
+        return assetProjectName === userProjectName
+      })
 
       if (userAssets.length === 0) {
         console.warn(`No assets found for project: ${user.projectName}`);

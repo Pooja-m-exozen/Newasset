@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 // Alert component not available, using custom div-based alerts
 import { QrCode, Download, Loader2, CheckCircle, XCircle, Package, Building } from 'lucide-react'
 import { assetApi, Asset } from '@/lib/adminasset'
+import { useAuth } from '@/contexts/AuthContext'
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface SubAssetQRGeneratorProps {
@@ -17,6 +18,7 @@ interface SubAssetQRGeneratorProps {
 }
 
 export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
+  const { user } = useAuth()
   const [assets, setAssets] = useState<Asset[]>([])
   const [selectedAsset, setSelectedAsset] = useState<string>('')
   const [selectedSubAsset, setSelectedSubAsset] = useState<string>('')
@@ -66,10 +68,10 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
   const [qrImageUrl, setQrImageUrl] = useState<string>('')
   const [qrImageLoading, setQrImageLoading] = useState(false)
 
-  // Fetch assets on component mount
+  // Fetch assets on component mount or when user changes
   useEffect(() => {
     fetchAssets()
-  }, [])
+  }, [user?.projectName])
 
   // Load QR image as blob when generatedQR changes
   useEffect(() => {
@@ -90,8 +92,17 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
   const fetchAssets = async () => {
     try {
       const response = await assetApi.getAllAssets()
-      if (response.success) {
-        setAssets(response.assets)
+      if (response.success && response.assets) {
+        // Filter assets by user's project
+        const userProjectName = user?.projectName?.trim().toLowerCase()
+        const filteredAssets = userProjectName
+          ? response.assets.filter((asset: Asset) => {
+              const assetProjectName = asset.project?.projectName?.trim().toLowerCase() || asset.projectName?.trim().toLowerCase()
+              return assetProjectName === userProjectName
+            })
+          : response.assets
+        
+        setAssets(filteredAssets)
       }
     } catch (error) {
       console.error('Error fetching assets:', error)

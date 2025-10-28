@@ -1029,38 +1029,43 @@ export const assetApi = {
     let transformedData = assetData;
     if (!isFormData && assetData && typeof assetData === 'object') {
       // DON'T send tagId when updating - it's the unique identifier and should never change
-      const { tagId, ...dataWithoutTagId } = assetData as any;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { tagId: _tagId, ...dataWithoutTagId } = assetData as Record<string, unknown>;
       
       // Create a new object and transform sub-assets to clean up data
       transformedData = {
         ...dataWithoutTagId,
-        subAssets: assetData.subAssets ? {
+        subAssets: assetData.subAssets ? (({
           movable: assetData.subAssets.movable?.map(subAsset => {
             // Remove category, parentAsset, and empty inventory arrays
-            const { category, parentAsset, inventory, ...rest } = subAsset as any;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { category: _category, parentAsset: _parentAsset, inventory, ...rest } = subAsset as unknown as Record<string, unknown>;
             // Only include inventory if it has items
-            if (inventory && (inventory.consumables?.length > 0 || inventory.spareParts?.length > 0 || inventory.tools?.length > 0 || inventory.operationalSupply?.length > 0)) {
+            const inv = inventory as { consumables?: unknown[]; spareParts?: unknown[]; tools?: unknown[]; operationalSupply?: unknown[] };
+            if (inventory && ((inv.consumables?.length ?? 0) > 0 || (inv.spareParts?.length ?? 0) > 0 || (inv.tools?.length ?? 0) > 0 || (inv.operationalSupply?.length ?? 0) > 0)) {
               return { ...rest, inventory };
             }
             return rest;
           }).filter(Boolean) || [],
           immovable: assetData.subAssets.immovable?.map(subAsset => {
             // Remove category, parentAsset, and empty inventory arrays
-            const { category, parentAsset, inventory, ...rest } = subAsset as any;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { category: _category, parentAsset: _parentAsset, inventory, ...rest } = subAsset as unknown as Record<string, unknown>;
             // Only include inventory if it has items
-            if (inventory && (inventory.consumables?.length > 0 || inventory.spareParts?.length > 0 || inventory.tools?.length > 0 || inventory.operationalSupply?.length > 0)) {
+            const inv = inventory as { consumables?: unknown[]; spareParts?: unknown[]; tools?: unknown[]; operationalSupply?: unknown[] };
+            if (inventory && ((inv.consumables?.length ?? 0) > 0 || (inv.spareParts?.length ?? 0) > 0 || (inv.tools?.length ?? 0) > 0 || (inv.operationalSupply?.length ?? 0) > 0)) {
               return { ...rest, inventory };
             }
             return rest;
           }).filter(Boolean) || []
-        } : undefined
+        }) as unknown as SubAssets) : undefined
       };
       
       // Remove location field if it has invalid data (latitude/longitude as "0")
       if (transformedData && typeof transformedData === 'object' && 'location' in transformedData) {
-        const locData = transformedData as any;
+        const locData = transformedData as Record<string, unknown>;
         if (locData.location && typeof locData.location === 'object' && ('latitude' in locData.location || 'longitude' in locData.location)) {
-          const loc = locData.location as any;
+          const loc = locData.location as Record<string, unknown>;
           if (loc.latitude === "0" && loc.longitude === "0" && !loc.building && !loc.floor && !loc.room) {
             delete locData.location;
           }

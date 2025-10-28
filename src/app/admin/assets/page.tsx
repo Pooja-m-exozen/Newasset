@@ -198,7 +198,6 @@ export default function AdminAssetsPage() {
   const [showLifecycleModal, setShowLifecycleModal] = useState(false)
   const [showSubAssetDetailsModal, setShowSubAssetDetailsModal] = useState(false)
   const [selectedSubAssetForDetails, setSelectedSubAssetForDetails] = useState<ApiSubAsset | null>(null)
-  const [expandedDetailSection, setExpandedDetailSection] = useState<'po' | 'replacement' | 'lifecycle' | null>(null)
   const [expandedInventorySection, setExpandedInventorySection] = useState<'consumables' | 'spareParts' | 'tools' | null>(null)
   const [showFinancialModal, setShowFinancialModal] = useState(false)
   const [selectedAssetForManagement, setSelectedAssetForManagement] = useState<AssetData | null>(null)
@@ -2928,7 +2927,6 @@ export default function AdminAssetsPage() {
                   <button
                     onClick={() => {
                       setShowSubAssetDetailsModal(false);
-                      setExpandedDetailSection(null);
                       setExpandedInventorySection(null);
                     }}
                     className="group p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 border border-gray-200 dark:border-gray-600"
@@ -3018,7 +3016,7 @@ export default function AdminAssetsPage() {
                   </div>
                 </div>
 
-                {/* Quick Actions - Third */}
+                {/* Quick Actions & Inventory - Third */}
                 <div className="mb-6">
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-4">
@@ -3026,53 +3024,107 @@ export default function AdminAssetsPage() {
                         <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                       </div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Quick Actions
+                        Quick Actions & Inventory
                       </h3>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       {/* Left Column - Radio Buttons */}
                       <div className="space-y-3">
-                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors">
-                          <input
-                            type="radio"
-                            name="detail-section"
-                            checked={expandedDetailSection === 'po'}
-                            onChange={() => setExpandedDetailSection(expandedDetailSection === 'po' ? null : 'po')}
-                            className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                            disabled={!selectedSubAssetForDetails.parentAsset}
-                          />
+                        <button
+                          onClick={() => {
+                            if (!selectedSubAssetForDetails.parentAsset) return;
+                            
+                            // Find the sub-asset index in the parent asset
+                            const parentAsset = selectedSubAssetForDetails.parentAsset as AssetData;
+                            const category = selectedSubAssetForDetails.category === 'Movable' ? 'movable' : 'immovable';
+                            const subAssetsArray = category === 'movable' ? parentAsset.subAssets?.movable : parentAsset.subAssets?.immovable;
+                            
+                            const index = subAssetsArray?.findIndex(subAsset => {
+                              return subAsset.assetName === selectedSubAssetForDetails.assetName &&
+                                     subAsset.brand === selectedSubAssetForDetails.brand &&
+                                     subAsset.model === selectedSubAssetForDetails.model;
+                            }) ?? -1;
+                            
+                            if (index >= 0) {
+                              handleOpenPOModal(parentAsset, { subAssetIndex: index, category });
+                            } else {
+                              handleOpenPOModal(parentAsset);
+                            }
+                          }}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20"
+                          disabled={!selectedSubAssetForDetails.parentAsset}
+                        >
+                          <div className="w-4 h-4 border-2 border-blue-600 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                          </div>
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Purchase Order
                           </span>
-                        </label>
+                        </button>
                         
-                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors">
-                          <input
-                            type="radio"
-                            name="detail-section"
-                            checked={expandedDetailSection === 'replacement'}
-                            onChange={() => setExpandedDetailSection(expandedDetailSection === 'replacement' ? null : 'replacement')}
-                            className="w-4 h-4 text-orange-600 focus:ring-orange-500"
-                            disabled={!selectedSubAssetForDetails.parentAsset}
-                          />
+                        <button
+                          onClick={() => {
+                            if (!selectedSubAssetForDetails.parentAsset) return;
+                            
+                            // Find the sub-asset index in the parent asset
+                            const parentAsset = selectedSubAssetForDetails.parentAsset as AssetData;
+                            const category = selectedSubAssetForDetails.category === 'Movable' ? 'movable' : 'immovable';
+                            const subAssetsArray = category === 'movable' ? parentAsset.subAssets?.movable : parentAsset.subAssets?.immovable;
+                            
+                            const index = subAssetsArray?.findIndex(subAsset => {
+                              return subAsset.assetName === selectedSubAssetForDetails.assetName &&
+                                     subAsset.brand === selectedSubAssetForDetails.brand &&
+                                     subAsset.model === selectedSubAssetForDetails.model;
+                            }) ?? -1;
+                            
+                            if (index >= 0) {
+                              handleOpenReplacementModal(parentAsset, { subAssetIndex: index, category });
+                            } else {
+                              handleOpenReplacementModal(parentAsset);
+                            }
+                          }}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20"
+                          disabled={!selectedSubAssetForDetails.parentAsset}
+                        >
+                          <div className="w-4 h-4 border-2 border-orange-600 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+                          </div>
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Replacement
                           </span>
-                        </label>
+                        </button>
                         
-                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors">
-                          <input
-                            type="radio"
-                            name="detail-section"
-                            checked={expandedDetailSection === 'lifecycle'}
-                            onChange={() => setExpandedDetailSection(expandedDetailSection === 'lifecycle' ? null : 'lifecycle')}
-                            className="w-4 h-4 text-green-600 focus:ring-green-500"
-                            disabled={!selectedSubAssetForDetails.parentAsset}
-                          />
+                        <button
+                          onClick={() => {
+                            if (!selectedSubAssetForDetails.parentAsset) return;
+                            
+                            // Find the sub-asset index in the parent asset
+                            const parentAsset = selectedSubAssetForDetails.parentAsset as AssetData;
+                            const category = selectedSubAssetForDetails.category === 'Movable' ? 'movable' : 'immovable';
+                            const subAssetsArray = category === 'movable' ? parentAsset.subAssets?.movable : parentAsset.subAssets?.immovable;
+                            
+                            const index = subAssetsArray?.findIndex(subAsset => {
+                              return subAsset.assetName === selectedSubAssetForDetails.assetName &&
+                                     subAsset.brand === selectedSubAssetForDetails.brand &&
+                                     subAsset.model === selectedSubAssetForDetails.model;
+                            }) ?? -1;
+                            
+                            if (index >= 0) {
+                              handleOpenLifecycleModal(parentAsset, { subAssetIndex: index, category });
+                            } else {
+                              handleOpenLifecycleModal(parentAsset);
+                            }
+                          }}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20"
+                          disabled={!selectedSubAssetForDetails.parentAsset}
+                        >
+                          <div className="w-4 h-4 border-2 border-green-600 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                          </div>
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Lifecycle
                           </span>
-                        </label>
+                        </button>
                         
                         {selectedSubAssetForDetails.digitalAssets?.qrCode && (
                           <button
@@ -3084,101 +3136,68 @@ export default function AdminAssetsPage() {
                         )}
                       </div>
                       
-                      {/* Right Column - Details */}
-                      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-200 dark:border-blue-800 p-4">
-                        {expandedDetailSection === 'po' ? (
-                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            Click &quot;Purchase Order&quot; button to add PO details
-                          </div>
-                        ) : expandedDetailSection === 'replacement' ? (
-                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            Click &quot;Replacement&quot; button to add replacement history
-                          </div>
-                        ) : expandedDetailSection === 'lifecycle' ? (
-                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            Click &quot;Lifecycle&quot; button to add lifecycle status
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            Select an option to view details
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Inventory Management Section - Two Column Layout */}
-                <div className="mb-6">
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-5 shadow-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700">
-                        <Package className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Inventory Management
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Left Column - Buttons */}
-                      <div className="space-y-3">
-                        <button
-                          onClick={() => {
-                            setExpandedInventorySection(expandedInventorySection === 'consumables' ? null : 'consumables');
-                            if (selectedSubAssetForDetails.parentAsset?._id) {
-                              handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'consumables');
-                            }
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                            expandedInventorySection === 'consumables'
-                              ? 'bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700'
-                              : 'hover:bg-white/50 dark:hover:bg-gray-700/50 border border-orange-200 dark:border-orange-800'
-                          }`}
-                        >
-                          <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                            Consumables
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setExpandedInventorySection(expandedInventorySection === 'spareParts' ? null : 'spareParts');
-                            if (selectedSubAssetForDetails.parentAsset?._id) {
-                              handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'spareParts');
-                            }
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                            expandedInventorySection === 'spareParts'
-                              ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700'
-                              : 'hover:bg-white/50 dark:hover:bg-gray-700/50 border border-blue-200 dark:border-blue-800'
-                          }`}
-                        >
-                          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                            Spare Parts
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setExpandedInventorySection(expandedInventorySection === 'tools' ? null : 'tools');
-                            if (selectedSubAssetForDetails.parentAsset?._id) {
-                              handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'tools');
-                            }
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                            expandedInventorySection === 'tools'
-                              ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700'
-                              : 'hover:bg-white/50 dark:hover:bg-gray-700/50 border border-green-200 dark:border-green-800'
-                          }`}
-                        >
-                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                            Tools
-                          </span>
-                        </button>
-                      </div>
-                      
-                      {/* Right Column - Details */}
+                      {/* Right Column - Inventory Management */}
                       <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-600 p-4">
-                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                          Click on a category to view details
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700">
+                            <Package className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                          </div>
+                          <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                            Inventory
+                          </h4>
+                        </div>
+                        <div className="space-y-3">
+                          <button
+                            onClick={() => {
+                              setExpandedInventorySection(expandedInventorySection === 'consumables' ? null : 'consumables');
+                              if (selectedSubAssetForDetails.parentAsset?._id) {
+                                handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'consumables');
+                              }
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                              expandedInventorySection === 'consumables'
+                                ? 'bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-orange-200 dark:border-orange-800'
+                            }`}
+                          >
+                            <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                              Consumables
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setExpandedInventorySection(expandedInventorySection === 'spareParts' ? null : 'spareParts');
+                              if (selectedSubAssetForDetails.parentAsset?._id) {
+                                handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'spareParts');
+                              }
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                              expandedInventorySection === 'spareParts'
+                                ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-blue-200 dark:border-blue-800'
+                            }`}
+                          >
+                            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                              Spare Parts
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setExpandedInventorySection(expandedInventorySection === 'tools' ? null : 'tools');
+                              if (selectedSubAssetForDetails.parentAsset?._id) {
+                                handleInventoryClick(selectedSubAssetForDetails.parentAsset._id, 0, 'tools');
+                              }
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                              expandedInventorySection === 'tools'
+                                ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-green-200 dark:border-green-800'
+                            }`}
+                          >
+                            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                              Tools
+                            </span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -3192,7 +3211,6 @@ export default function AdminAssetsPage() {
                 <button
                   onClick={() => {
                     setShowSubAssetDetailsModal(false);
-                    setExpandedDetailSection(null);
                     setExpandedInventorySection(null);
                   }}
                   className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"

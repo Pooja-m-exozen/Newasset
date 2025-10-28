@@ -489,9 +489,9 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     } else {
       setFormData(prev => ({ ...prev, [field]: value }));
      
-      // Auto-generate tag ID when asset type changes
-      if (field === 'assetType' && value) {
-        // Generate new Tag ID immediately when asset type changes
+      // Auto-generate tag ID when asset type changes (ONLY for creating new assets, not editing)
+      if (field === 'assetType' && value && mode === 'create') {
+        // Generate new Tag ID immediately when asset type changes (only when creating)
         generateTagId();
       }
     }
@@ -995,17 +995,21 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                             onChange={(e) => handleInputChange('tagId', e.target.value)}
                             placeholder="e.g., SSPL001"
                             required
-                            className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                            readOnly={mode === 'edit'}
+                            disabled={mode === 'edit'}
+                            className="flex-1 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                           />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={generateTagId}
-                            className="border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-400 text-blue-700 dark:text-blue-300"
-                            title="Generate new Tag ID"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </Button>
+                          {mode === 'create' && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={generateTagId}
+                              className="border-blue-300 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-400 text-blue-700 dark:text-blue-300"
+                              title="Generate new Tag ID"
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                       <td className="border border-border px-4 py-3">

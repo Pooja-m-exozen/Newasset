@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox'
 import { Database, Download, Loader2, CheckCircle, XCircle, Package, Building } from 'lucide-react'
 import { assetApi, Asset } from '@/lib/adminasset'
+import { useAuth } from '@/contexts/AuthContext'
 
 // API Base URL constant
 const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
@@ -21,6 +22,7 @@ interface SubAssetBulkGeneratorProps {
 }
 
 export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
+  const { user } = useAuth()
   const [assets, setAssets] = useState<Asset[]>([])
   const [selectedAsset, setSelectedAsset] = useState<string>('')
   const [digitalTypes, setDigitalTypes] = useState<string[]>(['qr', 'barcode'])
@@ -53,10 +55,31 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
   const [imageLoadingStates, setImageLoadingStates] = useState<{[key: string]: boolean}>({})
   const [imageUrls, setImageUrls] = useState<{[key: string]: string}>({})
 
-  // Fetch assets on component mount
+  // Fetch assets function
+  const fetchAssets = useCallback(async () => {
+    try {
+      const response = await assetApi.getAllAssets()
+      if (response.success && response.assets) {
+        // Filter assets by user's project
+        const userProjectName = user?.projectName?.trim().toLowerCase()
+        const filteredAssets = userProjectName
+          ? response.assets.filter((asset: Asset) => {
+              const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
+              return assetProjectName === userProjectName
+            })
+          : response.assets
+        
+        setAssets(filteredAssets)
+      }
+    } catch (error) {
+      console.error('Error fetching assets:', error)
+    }
+  }, [user?.projectName])
+
+  // Fetch assets on component mount or when user changes
   useEffect(() => {
     fetchAssets()
-  }, [])
+  }, [fetchAssets])
 
   // Load images as blobs when generatedAssets changes
   useEffect(() => {
@@ -82,17 +105,6 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
       })
     }
   }, [imageUrls])
-
-  const fetchAssets = async () => {
-    try {
-      const response = await assetApi.getAllAssets()
-      if (response.success) {
-        setAssets(response.assets)
-      }
-    } catch (error) {
-      console.error('Error fetching assets:', error)
-    }
-  }
 
   // Function to load image as blob and create object URL
   const loadImageAsBlob = async (imagePath: string, key: string) => {

@@ -372,7 +372,16 @@ export default function AdminAssetsPage() {
       if (response.success) {
         // Transform backend data to frontend format
         const apiResponse = response as ApiAssetsResponse
-        const transformedAssets = apiResponse.assets.map((asset: ApiAsset) => ({
+        
+        // Filter assets by user's project
+        const userProjectName = user?.projectName?.trim().toLowerCase()
+        const assetsToProcess = apiResponse.assets.filter((asset: ApiAsset) => {
+          if (!userProjectName) return true
+          const assetProjectName = (asset.project?.projectName || '').trim().toLowerCase()
+          return assetProjectName === userProjectName
+        })
+        
+        const transformedAssets = assetsToProcess.map((asset: ApiAsset) => ({
           ...asset,
           subAssets: asset.subAssets ? {
             movable: asset.subAssets.movable.map((subAsset: ApiSubAsset) => ({
@@ -420,7 +429,7 @@ export default function AdminAssetsPage() {
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, selectedMobility])
+  }, [searchTerm, selectedMobility, user?.projectName])
 
   // Search functionality with debouncing
   useEffect(() => {
@@ -475,10 +484,10 @@ export default function AdminAssetsPage() {
       return assets
     }
   }
-  // Load assets on component mount
+  // Load assets on component mount and when user/project changes
   useEffect(() => {
     fetchAssets()
-  }, [fetchAssets])
+  }, [fetchAssets, user?.projectName])
 
   // Generate PDF function
 

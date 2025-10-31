@@ -16,10 +16,11 @@ import {
   Edit,
   Trash2,
   Loader2,
-  Map
+  Map as MapIcon
 } from 'lucide-react';
 import { Location, CreateLocationRequest, UpdateLocationRequest } from '../../../lib/location';
 import { Input } from '../../../components/ui/input';
+import { useAuth } from '../../../contexts/AuthContext';
 
 const LocationManagementPage = () => {
   return (
@@ -44,6 +45,7 @@ const LocationManagementContent = () => {
     openModal,
     closeModal,
   } = useManageLocation();
+  const { user: currentUser } = useAuth();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
@@ -77,24 +79,92 @@ const LocationManagementContent = () => {
 
   const handleModalSubmit = useCallback(async (data: CreateLocationRequest | UpdateLocationRequest) => {
     if (modalMode === 'create') {
-      await addLocation(data as CreateLocationRequest);
+      // Find the main project location (name matches project name and has no parent)
+      const userProjectName = currentUser?.projectName?.trim().toLowerCase();
+      const mainProjectLocation = userProjectName 
+        ? locations.find(loc => 
+            loc.name?.trim().toLowerCase() === userProjectName && 
+            (loc.projectName?.trim().toLowerCase() === userProjectName || !loc.projectName) &&
+            loc.parentId === null
+          )
+        : null;
+      
+      // Automatically add the current user's project name and set parent to main project location
+      const locationData = {
+        ...data,
+        projectName: currentUser?.projectName,
+        parentId: mainProjectLocation?._id || data.parentId || null
+      } as CreateLocationRequest;
+      
+      await addLocation(locationData);
       closeModal();
     } else if (modalMode === 'edit' && selectedLocation) {
       await editLocation(selectedLocation._id, data as UpdateLocationRequest);
       closeModal();
     }
-  }, [modalMode, selectedLocation, addLocation, editLocation, closeModal]);
+  }, [modalMode, selectedLocation, addLocation, editLocation, closeModal, currentUser, locations]);
 
   const filteredLocations = useMemo(() => {
+    const userProjectName = currentUser?.projectName?.trim().toLowerCase();
+    
     return locations.filter(location => {
-      const matchesSearch = location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          location.address.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesSearch;
+      // If no user project name, show all locations
+      if (!userProjectName) return true;
+      
+      // Helper function to check if a location belongs to the user's project
+      const belongsToProject = (loc: Location): boolean => {
+        const locProjectName = loc.projectName?.trim().toLowerCase();
+        const locName = loc.name?.trim().toLowerCase();
+        
+        // Check if location's projectName matches OR location name matches project name
+        if (locProjectName === userProjectName || locName === userProjectName) {
+          return true;
+        }
+        
+        // If this location has a parent, check recursively up the tree
+        if (loc.parentId) {
+          const parent = locations.find(l => l._id === loc.parentId);
+          if (parent) {
+            return belongsToProject(parent);
+          }
+        }
+        
+        return false;
+      };
+      
+      // Check if location belongs to the project hierarchy
+      const inProject = belongsToProject(location);
+      
+      if (!inProject) {
+        return false;
+      }
+      
+      // Then apply search filter
+      return location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             location.address.toLowerCase().includes(searchTerm.toLowerCase());
     });
-  }, [locations, searchTerm]);
+  }, [locations, searchTerm, currentUser]);
 
   const sortedLocations = useMemo(() => {
-    return [...filteredLocations].sort((a, b) => {
+    // Build a hierarchical structure
+    const mainLocations: Location[] = [];
+    const childrenMap: Record<string, Location[]> = {};
+    
+    filteredLocations.forEach(location => {
+      if (location.parentId) {
+        // This is a child location
+        if (!childrenMap[location.parentId]) {
+          childrenMap[location.parentId] = [];
+        }
+        childrenMap[location.parentId].push(location);
+      } else {
+        // This is a main location
+        mainLocations.push(location);
+      }
+    });
+    
+    // Sort main locations
+    const sortedMainLocations = [...mainLocations].sort((a, b) => {
       const aValue = a[sortField as keyof Location] || "";
       const bValue = b[sortField as keyof Location] || "";
       
@@ -104,6 +174,27 @@ const LocationManagementContent = () => {
         return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
       }
     });
+    
+    // Build final list: main location followed by its children
+    const finalList: Location[] = [];
+    sortedMainLocations.forEach(mainLocation => {
+      finalList.push(mainLocation);
+      const children = childrenMap[mainLocation._id] || [];
+      // Sort children too
+      const sortedChildren = children.sort((a: Location, b: Location) => {
+        const aValue = a[sortField as keyof Location] || "";
+        const bValue = b[sortField as keyof Location] || "";
+        
+        if (sortDirection === "asc") {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+        } else {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
+        }
+      });
+      finalList.push(...sortedChildren);
+    });
+    
+    return finalList;
   }, [filteredLocations, sortField, sortDirection]);
 
   const { startIndex, paginatedLocations } = useMemo(() => {
@@ -206,13 +297,13 @@ const LocationManagementContent = () => {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2">
-                <Button
+                  <Button
                   onClick={() => setShowMapView(true)}
                   disabled={locations.length === 0}
                   variant="outline"
                     className="flex items-center gap-2"
                   >
-                    <Map className="w-4 h-4" />
+                    <MapIcon className="w-4 h-4" />
                     <span>View on Map</span>
                 </Button>
                 <Button
@@ -294,21 +385,49 @@ const LocationManagementContent = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {paginatedLocations.map((location, index) => (
-                            <tr key={location._id} className="hover:bg-muted transition-colors">
+                          {paginatedLocations.map((location, index) => {
+                            const isChildLocation = location.parentId !== null;
+                            const parentLocation = locations.find(l => l._id === location.parentId);
+                            
+                            return (
+                            <tr 
+                              key={location._id} 
+                              className={`transition-colors ${
+                                isChildLocation 
+                                  ? 'bg-green-50/30 hover:bg-green-50/50 border-l-4 border-l-green-500' 
+                                  : 'bg-blue-50/30 hover:bg-blue-50/50 border-l-4 border-l-blue-600'
+                              }`}
+                            >
                               <td className="border border-border px-4 py-3 text-sm font-medium text-blue-800">
-                                <div className="flex items-center justify-center w-8 h-8 bg-blue-50 rounded-full text-sm font-semibold text-blue-800">
+                                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+                                  isChildLocation ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
                                   {startIndex + index + 1}
                                 </div>
                               </td>
                               <td className="border border-border px-4 py-3">
                                 <div className="flex items-center gap-2">
-                                  <div className="p-1.5 bg-muted rounded">
-                                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                                  <div className={`p-1.5 rounded ${isChildLocation ? 'bg-green-100' : 'bg-blue-100'}`}>
+                                    <MapPin className={`w-4 h-4 ${isChildLocation ? 'text-green-600' : 'text-blue-600'}`} />
                                   </div>
-                                  <span className="text-sm font-medium text-primary cursor-pointer hover:underline">
-                                    {location.name}
-                                  </span>
+                                  <div className="flex flex-col gap-0.5">
+                                    {!isChildLocation && (
+                                      <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                                        Main Location
+                                      </span>
+                                    )}
+                                    {isChildLocation && parentLocation && (
+                                      <span className="text-xs text-green-700 font-medium">
+                                        ↳ {parentLocation.name}
+                                      </span>
+                                    )}
+                                    <span className={`text-sm font-medium cursor-pointer hover:underline ${
+                                      isChildLocation ? 'text-green-800' : 'text-blue-800'
+                                    }`}>
+                                      {isChildLocation && <span className="text-green-600">└─ </span>}
+                                      {location.name}
+                                    </span>
+                                  </div>
                                 </div>
                               </td>
                               <td className="border border-border px-4 py-3">
@@ -348,7 +467,8 @@ const LocationManagementContent = () => {
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

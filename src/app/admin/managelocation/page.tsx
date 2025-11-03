@@ -104,33 +104,41 @@ const LocationManagementContent = () => {
     }
   }, [modalMode, selectedLocation, addLocation, editLocation, closeModal, currentUser, locations]);
 
+  // Helper function to check if a location belongs to the user's project
+  const belongsToProject = useCallback((loc: Location): boolean => {
+    const userProjectName = currentUser?.projectName?.trim().toLowerCase();
+    if (!userProjectName) return true;
+    
+    const locProjectName = loc.projectName?.trim().toLowerCase();
+    const locName = loc.name?.trim().toLowerCase();
+    
+    // Check if location's projectName matches OR location name matches project name
+    if (locProjectName === userProjectName || locName === userProjectName) {
+      return true;
+    }
+    
+    // If this location has a parent, check recursively up the tree
+    if (loc.parentId) {
+      const parent = locations.find(l => l._id === loc.parentId);
+      if (parent) {
+        return belongsToProject(parent);
+      }
+    }
+    
+    return false;
+  }, [locations, currentUser]);
+
+  // Locations filtered by project only (for map view)
+  const mapLocations = useMemo(() => {
+    return locations.filter(location => belongsToProject(location));
+  }, [locations, belongsToProject]);
+
   const filteredLocations = useMemo(() => {
     const userProjectName = currentUser?.projectName?.trim().toLowerCase();
     
     return locations.filter(location => {
       // If no user project name, show all locations
       if (!userProjectName) return true;
-      
-      // Helper function to check if a location belongs to the user's project
-      const belongsToProject = (loc: Location): boolean => {
-        const locProjectName = loc.projectName?.trim().toLowerCase();
-        const locName = loc.name?.trim().toLowerCase();
-        
-        // Check if location's projectName matches OR location name matches project name
-        if (locProjectName === userProjectName || locName === userProjectName) {
-          return true;
-        }
-        
-        // If this location has a parent, check recursively up the tree
-        if (loc.parentId) {
-          const parent = locations.find(l => l._id === loc.parentId);
-          if (parent) {
-            return belongsToProject(parent);
-          }
-        }
-        
-        return false;
-      };
       
       // Check if location belongs to the project hierarchy
       const inProject = belongsToProject(location);
@@ -143,7 +151,7 @@ const LocationManagementContent = () => {
       return location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
              location.address.toLowerCase().includes(searchTerm.toLowerCase());
     });
-  }, [locations, searchTerm, currentUser]);
+  }, [locations, searchTerm, currentUser, belongsToProject]);
 
   const sortedLocations = useMemo(() => {
     // Build a hierarchical structure
@@ -505,7 +513,7 @@ const LocationManagementContent = () => {
       <MapModal
         isOpen={showMapView}
         onClose={() => setShowMapView(false)}
-        locations={locations}
+        locations={mapLocations}
       />
     </div>
   );

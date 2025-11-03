@@ -1663,6 +1663,9 @@ export default function AdminAssetsPage() {
                       Location
                     </th>
                     <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                      QR Code
+                    </th>
+                    <th className="border border-border px-4 py-3 text-left font-semibold text-blue-800 dark:text-blue-200 text-sm">
                       Details
                     </th>
                   </tr>
@@ -1728,7 +1731,7 @@ export default function AdminAssetsPage() {
                     if (filteredSubAssets.length === 0) {
                       return (
                         <tr>
-                          <td colSpan={7} className="border border-border px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                          <td colSpan={8} className="border border-border px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                             <div className="flex flex-col items-center gap-2">
                               <Package className="w-8 h-8 text-gray-400" />
                               <p>{searchTerm ? 'No matching sub-assets found' : 'No sub-assets found'}</p>
@@ -1784,6 +1787,30 @@ export default function AdminAssetsPage() {
                           <div className="text-sm text-gray-700 dark:text-gray-300">
                             {subAsset.location}
                           </div>
+                        </td>
+                        <td className="border border-border px-4 py-3">
+                          {subAsset.digitalAssets?.qrCode ? (
+                            <button
+                              onClick={() => handleQRCodeClick(subAsset.digitalAssets!.qrCode!)}
+                              className="flex items-center justify-center p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer group"
+                              title="Click to view QR Code"
+                            >
+                              <Image
+                                src={subAsset.digitalAssets.qrCode.url.startsWith('http') ? subAsset.digitalAssets.qrCode.url : `https://digitalasset.zenapi.co.in${subAsset.digitalAssets.qrCode.url}`}
+                                alt="QR Code"
+                                width={50}
+                                height={50}
+                                className="border border-gray-200 dark:border-gray-600 rounded-md shadow-sm group-hover:shadow-md transition-shadow"
+                                style={{ objectFit: 'contain' }}
+                                onError={(e) => {
+                                  console.error('QR Code image failed to load:', subAsset.digitalAssets?.qrCode?.url)
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            </button>
+                          ) : (
+                            <span className="text-sm text-gray-400 dark:text-gray-500">N/A</span>
+                          )}
                         </td>
                         <td className="border border-border px-4 py-3">
                           <button

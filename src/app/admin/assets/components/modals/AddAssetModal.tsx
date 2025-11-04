@@ -46,7 +46,6 @@ interface AddAssetModalProps {
   handleRemoveInventoryItem: (category: 'Movable' | 'Immovable', subAssetIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply', itemIndex: number) => void
   handleMainAssetSave: () => void
   handleFinalSave: () => void
-  generateInventoryItemTagId: (mainAssetId: string, inventoryType: string, itemName: string, itemIndex: number) => string
 }
 
 export const AddAssetModal: React.FC<AddAssetModalProps> = ({
@@ -79,8 +78,7 @@ export const AddAssetModal: React.FC<AddAssetModalProps> = ({
   handleInventoryItemChange,
   handleRemoveInventoryItem,
   handleMainAssetSave,
-  handleFinalSave,
-  generateInventoryItemTagId: _generateInventoryItemTagId
+  handleFinalSave
 }) => {
   if (!isOpen) return null
 

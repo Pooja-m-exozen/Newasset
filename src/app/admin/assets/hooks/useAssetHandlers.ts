@@ -125,7 +125,7 @@ export const useAssetHandlers = (props: UseAssetHandlersProps) => {
     setPOData,
     setReplacementData,
     setLifecycleData,
-    setFinancialData,
+    setFinancialData: _setFinancialData,
     selectedAssetForManagement,
     selectedSubAssetForManagement,
     poData,

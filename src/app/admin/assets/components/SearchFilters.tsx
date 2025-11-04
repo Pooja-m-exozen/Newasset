@@ -43,7 +43,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             <Label className="text-sm font-medium text-blue-800 dark:text-blue-200 whitespace-nowrap">Mobility:</Label>
             <RadioGroup
               value={selectedMobility}
-              onValueChange={onMobilityChange}
+              onValueChange={(value) => onMobilityChange(value as 'all' | 'movable' | 'immovable' | 'inventory' | 'far')}
               className="flex flex-col sm:flex-row gap-2 sm:gap-4"
             >
               <div className="flex items-center space-x-2">

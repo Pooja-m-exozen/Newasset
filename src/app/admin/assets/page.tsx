@@ -12,7 +12,6 @@ import { useAssetHandlers } from './hooks/useAssetHandlers'
 
 // Import utilities
 import { getFilteredAssets } from './utils/asset-helpers'
-import { generateInventoryItemTagId } from './utils/tag-id-generator'
 
 // Import components
 import { AssetTables } from './components/AssetTables'
@@ -319,7 +318,6 @@ export default function AdminAssetsPage() {
               handleRemoveInventoryItem={handleRemoveInventoryItem}
               handleMainAssetSave={handleMainAssetSave}
               handleFinalSave={handleFinalSave}
-              generateInventoryItemTagId={generateInventoryItemTagId}
             />
 
             {/* Enhanced Asset Management Modals */}

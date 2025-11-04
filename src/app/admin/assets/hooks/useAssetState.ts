@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AssetData, InventoryItem, PurchaseOrder, ReplacementRecord, LifecycleStatus, FinancialData } from '@/lib/adminasset'
-import { Location, getLocations } from '@/lib/location'
+import { Location } from '@/lib/location'
 import { ApiSubAsset } from '../types'
 
 interface User {

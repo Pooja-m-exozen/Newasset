@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { getLocations } from '@/lib/location'
+import { getLocations, Location } from '@/lib/location'
 
 interface User {
   projectName?: string
@@ -10,7 +10,7 @@ interface User {
 interface UseAssetEffectsProps {
   user: User | null
   showAddAssetModal: boolean
-  setLocations: (locations: any[]) => void
+  setLocations: (locations: Location[]) => void
   setLoadingLocations: (loading: boolean) => void
   setSelectedLocationId: (id: string) => void
   setSelectedLocationName: (name: string) => void

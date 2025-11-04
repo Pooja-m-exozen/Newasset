@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AssetData, InventoryItem, SubAsset } from '@/lib/adminasset'
+import { AssetData, InventoryItem } from '@/lib/adminasset'
 import { Location } from '@/lib/location'
 import { generateAssetId, generateSubAssetTagId } from '../../utils/tag-id-generator'
 
@@ -27,16 +27,9 @@ interface AddAssetModalProps {
     tools: InventoryItem[]
     operationalSupply: InventoryItem[]
   }
-  setMainAssetInventory: React.Dispatch<React.SetStateAction<{
-    consumables: InventoryItem[]
-    spareParts: InventoryItem[]
-    tools: InventoryItem[]
-    operationalSupply: InventoryItem[]
-  }>>
   locations: Location[]
   loadingLocations: boolean
   selectedLocationId: string
-  setSelectedLocationId: (value: string) => void
   selectedLocationName: string
   user: { projectName?: string; name?: string; projectId?: string } | null
   assets: AssetData[]
@@ -68,11 +61,9 @@ export const AddAssetModal: React.FC<AddAssetModalProps> = ({
   assetTypeCode,
   setAssetTypeCode,
   mainAssetInventory,
-  setMainAssetInventory,
   locations,
   loadingLocations,
   selectedLocationId,
-  setSelectedLocationId,
   selectedLocationName,
   user,
   assets,
@@ -89,7 +80,7 @@ export const AddAssetModal: React.FC<AddAssetModalProps> = ({
   handleRemoveInventoryItem,
   handleMainAssetSave,
   handleFinalSave,
-  generateInventoryItemTagId
+  generateInventoryItemTagId: _generateInventoryItemTagId
 }) => {
   if (!isOpen) return null
 

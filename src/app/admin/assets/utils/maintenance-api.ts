@@ -1,7 +1,9 @@
+import { MaintenanceLog } from '@/lib/Report'
+
 /**
  * Fetch maintenance logs for a specific asset by tag ID
  */
-export const fetchMaintenanceLogsForAsset = async (assetTagId: string): Promise<any[]> => {
+export const fetchMaintenanceLogsForAsset = async (assetTagId: string): Promise<MaintenanceLog[]> => {
   try {
     const token = localStorage.getItem('authToken')
     if (!token) return []
@@ -21,7 +23,7 @@ export const fetchMaintenanceLogsForAsset = async (assetTagId: string): Promise<
     
     // Filter logs by asset tag ID
     if (Array.isArray(maintenanceLogs)) {
-      return maintenanceLogs.filter((log: any) => 
+      return maintenanceLogs.filter((log: MaintenanceLog | { asset?: string | { tagId?: string }; assetId?: string }) => 
         log.asset === assetTagId || 
         log.assetId === assetTagId || 
         (log.asset && typeof log.asset === 'object' && log.asset.tagId === assetTagId)

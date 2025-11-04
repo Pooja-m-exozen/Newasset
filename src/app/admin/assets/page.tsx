@@ -12,6 +12,7 @@ import { useAssetHandlers } from './hooks/useAssetHandlers'
 
 // Import utilities
 import { getFilteredAssets } from './utils/asset-helpers'
+import { generateInventoryItemTagId } from './utils/tag-id-generator'
 
 // Import components
 import { AssetTables } from './components/AssetTables'
@@ -55,8 +56,6 @@ export default function AdminAssetsPage() {
     setShowSubAssetDetailsModal,
     selectedSubAssetForDetails,
     setSelectedSubAssetForDetails,
-    expandedInventorySection,
-    setExpandedInventorySection,
     showFinancialModal,
     setShowFinancialModal,
     selectedAssetForManagement,
@@ -195,8 +194,7 @@ export default function AdminAssetsPage() {
     handleSavePO,
     handleSaveReplacement,
     handleSaveLifecycle,
-    handleSaveFinancial,
-    handleUpdateTagId
+    handleSaveFinancial
   } = handlers
 
   const filteredAssets = getFilteredAssets(assets, selectedMobility)
@@ -302,11 +300,9 @@ export default function AdminAssetsPage() {
               assetTypeCode={assetTypeCode}
               setAssetTypeCode={setAssetTypeCode}
               mainAssetInventory={mainAssetInventory}
-              setMainAssetInventory={setMainAssetInventory}
               locations={locations}
               loadingLocations={loadingLocations}
               selectedLocationId={selectedLocationId}
-              setSelectedLocationId={setSelectedLocationId}
               selectedLocationName={selectedLocationName}
               user={user}
               assets={assets}
@@ -323,10 +319,7 @@ export default function AdminAssetsPage() {
               handleRemoveInventoryItem={handleRemoveInventoryItem}
               handleMainAssetSave={handleMainAssetSave}
               handleFinalSave={handleFinalSave}
-              generateInventoryItemTagId={(mainAssetId: string, inventoryType: string, itemName: string, itemIndex: number) => {
-                const { generateInventoryItemTagId } = require('./utils/tag-id-generator')
-                return generateInventoryItemTagId(mainAssetId, inventoryType as any, itemName, itemIndex)
-              }}
+              generateInventoryItemTagId={generateInventoryItemTagId}
             />
 
             {/* Enhanced Asset Management Modals */}

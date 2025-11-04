@@ -364,7 +364,7 @@ export const SubAssetDetailsModal: React.FC<SubAssetDetailsModalProps> = ({
                 )}
               </div>
               {subAsset.parentAsset && (() => {
-                const parentAsset = subAsset.parentAsset as any
+                const parentAsset = subAsset.parentAsset as AssetData & { scanHistory?: ScanHistory[] }
                 const scanHistory: ScanHistory[] = parentAsset.scanHistory || []
                 const historyToShow = scanHistory.slice().reverse().slice(0, 10)
                 

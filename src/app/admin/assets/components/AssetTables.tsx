@@ -1,6 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
-import { Building, Package, Eye, Archive, MapPin } from 'lucide-react'
+import { Building, Package, Eye, MapPin } from 'lucide-react'
 import { AssetData } from '@/lib/adminasset'
 import { ApiSubAsset } from '../types'
 import { getAssetClassification } from '../utils/asset-helpers'

@@ -98,7 +98,7 @@ export const useAssetHandlers = (props: UseAssetHandlersProps) => {
     setExpandedClassificationType,
     selectedInventoryType,
     setSelectedInventoryType,
-    selectedMobility,
+    selectedMobility: _selectedMobility,
     setSelectedMobility,
     setCurrentStep,
     setShowAddAssetModal,

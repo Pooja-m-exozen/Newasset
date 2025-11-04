@@ -2,6 +2,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { AssetData } from '@/lib/adminasset'
 import { ScanHistory } from '@/lib/adminasset'
+import { MaintenanceLog } from '@/lib/Report'
 import { ApiSubAsset } from '../types'
 import { getAssetClassification } from './asset-helpers'
 import { fetchMaintenanceLogsForAsset } from './maintenance-api'
@@ -406,12 +407,12 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
   
   if (maintenanceLogs.length > 0) {
     // Separate PM and Breakdown Maintenance
-    const pmLogs = maintenanceLogs.filter((log: any) => 
+    const pmLogs = maintenanceLogs.filter((log: MaintenanceLog & { maintenanceType?: string }) => 
       log.maintenanceType?.toLowerCase().includes('preventive') || 
       log.maintenanceType?.toLowerCase().includes('pm') ||
       log.maintenanceType?.toLowerCase().includes('scheduled')
     )
-    const breakdownLogs = maintenanceLogs.filter((log: any) => 
+    const breakdownLogs = maintenanceLogs.filter((log: MaintenanceLog & { maintenanceType?: string }) => 
       log.maintenanceType?.toLowerCase().includes('breakdown') || 
       log.maintenanceType?.toLowerCase().includes('corrective') ||
       log.maintenanceType?.toLowerCase().includes('repair')
@@ -425,9 +426,9 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
       doc.text('Preventive Maintenance (PM) Records', 15, yPosition)
       yPosition += 7
       
-      const pmData = pmLogs.map((log: any, index: number) => [
+      const pmData = pmLogs.map((log: MaintenanceLog & { date?: string; createdAt?: string; title?: string; description?: string; performedBy?: { name?: string }; remarks?: string }, index: number) => [
         index + 1,
-        new Date(log.date || log.scheduledDate || log.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+        new Date(log.date || log.scheduledDate || log.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
         log.title || log.description?.substring(0, 30) || 'N/A',
         log.performedBy?.name || log.technicianName || 'N/A',
         log.status || 'N/A',
@@ -475,9 +476,9 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
       doc.text('Breakdown / Corrective Maintenance Records', 15, yPosition)
       yPosition += 7
       
-      const breakdownData = breakdownLogs.map((log: any, index: number) => {
-        const breakdownDate = new Date(log.date || log.createdAt)
-        const completedDate = log.workCompletedAt ? new Date(log.workCompletedAt) : null
+      const breakdownData = breakdownLogs.map((log: MaintenanceLog & { date?: string; createdAt?: string; title?: string; description?: string; performedBy?: { name?: string }; remarks?: string; actionTaken?: string }, index: number) => {
+        const breakdownDate = new Date(log.date || log.createdAt || log.scheduledDate || Date.now())
+        const completedDate = log.completedDate ? new Date(log.completedDate) : null
         const downtime = completedDate ? Math.round((completedDate.getTime() - breakdownDate.getTime()) / (1000 * 60 * 60)) : 'N/A'
         
         return [
@@ -546,12 +547,19 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
   yPosition += 8
   
   if (maintenanceLogs.length > 0) {
-    const allPartsUsed: any[] = []
-    maintenanceLogs.forEach((log: any) => {
+    interface PartUsed {
+      date: string
+      partName: string
+      quantity: number
+      cost: number
+      maintenanceType: string
+    }
+    const allPartsUsed: PartUsed[] = []
+    maintenanceLogs.forEach((log: MaintenanceLog & { partsUsed?: Array<{ name?: string; partName?: string; quantity?: number; cost?: number }>; date?: string; createdAt?: string; maintenanceType?: string }) => {
       if (log.partsUsed && Array.isArray(log.partsUsed) && log.partsUsed.length > 0) {
-        log.partsUsed.forEach((part: any) => {
-          allPartsUsed.push({
-            date: log.date || log.createdAt,
+        log.partsUsed.forEach((part: { name?: string; partName?: string; quantity?: number; cost?: number }) => {
+        allPartsUsed.push({
+          date: log.date || log.createdAt || log.scheduledDate || new Date().toISOString(),
             partName: part.name || part.partName || 'N/A',
             quantity: part.quantity || 1,
             cost: part.cost || 0,
@@ -562,7 +570,7 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
     })
     
     if (allPartsUsed.length > 0) {
-      const partsData = allPartsUsed.map((part: any, index: number) => [
+      const partsData = allPartsUsed.map((part: PartUsed, index: number) => [
         index + 1,
         new Date(part.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
         part.partName,
@@ -632,11 +640,20 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
   doc.text('4. COMPLIANCE & DOCUMENTATION', 15, yPosition)
   yPosition += 8
   
-  const assetFull = asset as any
+  interface ComplianceData {
+    certifications?: string[]
+    expiryDates?: string[]
+    regulatoryRequirements?: string[]
+  }
+  interface DocumentItem {
+    type?: string
+    name?: string
+  }
+  const assetFull = asset as AssetData & { compliance?: ComplianceData; documents?: DocumentItem[] }
   const compliance = assetFull.compliance
   const documents = assetFull.documents || []
   
-  const complianceData: any[] = []
+  const complianceData: Array<[string, string, string]> = []
   
   if (compliance) {
     if (compliance.certifications && Array.isArray(compliance.certifications)) {
@@ -656,7 +673,7 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
   }
   
   if (documents.length > 0) {
-    documents.forEach((docItem: any) => {
+    documents.forEach((docItem: DocumentItem) => {
       complianceData.push([
         docItem.type || 'Document',
         docItem.name || 'N/A',
@@ -715,8 +732,35 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
   doc.text('5. FINANCIAL & LIFECYCLE DATA', 15, yPosition)
   yPosition += 8
   
-  const financial = assetFull.financial || {}
-  const financialData: any[] = []
+  interface FinancialDataExtended {
+    purchaseOrder?: {
+      purchaseCost?: number
+      price?: number
+      poNumber?: string
+      poDate?: string
+      purchaseDate?: string
+      vendor?: string
+      supplier?: string
+      invoiceNumber?: string
+      invoiceDate?: string
+    }
+    totalCost?: number
+    currentValue?: number
+    depreciationRate?: number
+    replacementHistory?: Array<{
+      replacementDate?: string
+      replacementReason?: string
+      costOfReplacement?: number
+      replacedBy?: string
+    }>
+    lifecycle?: Array<{
+      status?: string
+      date?: string
+      notes?: string
+    }>
+  }
+  const financial = (assetFull.financial || {}) as FinancialDataExtended
+  const financialData: Array<[string, string]> = []
   
   // Purchase Order Information
   if (financial.purchaseOrder) {
@@ -738,7 +782,7 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
   if (financial.replacementHistory && Array.isArray(financial.replacementHistory) && financial.replacementHistory.length > 0) {
     financialData.push(['', '']) // Separator
     financialData.push(['REPLACEMENT HISTORY', ''])
-    financial.replacementHistory.forEach((replacement: any, idx: number) => {
+    financial.replacementHistory.forEach((replacement: NonNullable<FinancialDataExtended['replacementHistory']>[number], idx: number) => {
       financialData.push([`Replacement ${idx + 1} Date`, replacement.replacementDate || 'N/A'])
       financialData.push([`Replacement ${idx + 1} Reason`, replacement.replacementReason || 'N/A'])
       financialData.push([`Replacement ${idx + 1} Cost`, `₹${replacement.costOfReplacement || 0}`])
@@ -750,7 +794,7 @@ export const generateHistoryCardPDF = async (asset: AssetData, subAsset?: ApiSub
   if (financial.lifecycle && Array.isArray(financial.lifecycle) && financial.lifecycle.length > 0) {
     financialData.push(['', '']) // Separator
     financialData.push(['LIFECYCLE STATUS', ''])
-    financial.lifecycle.forEach((status: any) => {
+    financial.lifecycle.forEach((status: NonNullable<FinancialDataExtended['lifecycle']>[number]) => {
       financialData.push([`${status.status}`, status.date || 'N/A'])
       if (status.notes) financialData.push([`Notes`, status.notes])
     })

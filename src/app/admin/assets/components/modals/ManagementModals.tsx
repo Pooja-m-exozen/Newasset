@@ -375,7 +375,7 @@ export const ManagementModals: React.FC<ManagementModalsProps> = ({
                   </Label>
                   <Select 
                     value={lifecycleData.status || 'operational'} 
-                    onValueChange={(value) => onLifecycleDataChange({ ...lifecycleData, status: value as any })}
+                    onValueChange={(value) => onLifecycleDataChange({ ...lifecycleData, status: value as LifecycleStatus['status'] })}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue />

@@ -13,6 +13,7 @@ import { Building, Package, Search, Eye, X, ArrowDown, Download, Plus, Trash2, Q
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { createAsset, validateAssetData, CreateAssetRequest, SubAsset, AssetData, getAssets, searchAssets, InventoryItem, Asset, assetApi, PurchaseOrder, ReplacementRecord, LifecycleStatus, FinancialData } from '@/lib/adminasset'
+import { Location, getLocations } from '@/lib/location'
 
 // API Response interfaces
 interface ApiSubAsset {
@@ -213,6 +214,12 @@ export default function AdminAssetsPage() {
     generatedAt: string
   } | null>(null)
 
+  // Location states for dropdown
+  const [locations, setLocations] = useState<Location[]>([])
+  const [loadingLocations, setLoadingLocations] = useState(false)
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('')
+  const [selectedLocationName, setSelectedLocationName] = useState<string>('')
+
   // Add Asset form states
   const [newAsset, setNewAsset] = useState<Partial<AssetData>>({
     tagId: '',
@@ -241,6 +248,19 @@ export default function AdminAssetsPage() {
     }
   })
 
+  // Main asset inventory state (inventory directly attached to main asset, not sub-assets)
+  const [mainAssetInventory, setMainAssetInventory] = useState<{
+    consumables: InventoryItem[]
+    spareParts: InventoryItem[]
+    tools: InventoryItem[]
+    operationalSupply: InventoryItem[]
+  }>({
+    consumables: [],
+    spareParts: [],
+    tools: [],
+    operationalSupply: []
+  })
+
   // Update project when user data changes
   useEffect(() => {
     const userProject = 
@@ -262,6 +282,66 @@ export default function AdminAssetsPage() {
       }))
     }
   }, [user])
+
+  // Fetch locations when modal opens - only sub-locations for the project
+  useEffect(() => {
+    if (showAddAssetModal) {
+      const fetchLocationsData = async () => {
+        setLoadingLocations(true)
+        try {
+          const allLocations = await getLocations()
+          const userProjectName = user?.projectName?.trim().toLowerCase()
+          
+          // Filter to only show sub-locations (locations with parentId) for the user's project
+          // Also remove duplicates based on _id
+          const uniqueIds = new Set<string>()
+          const filteredLocations = allLocations.filter((location) => {
+            // Only include sub-locations (those with a parentId)
+            if (!location.parentId) return false
+            
+            // Filter by project if user has a project
+            if (userProjectName) {
+              const locProjectName = location.projectName?.trim().toLowerCase()
+              const locName = location.name?.trim().toLowerCase()
+              
+              // Check if location belongs to the user's project
+              if (locProjectName !== userProjectName && locName !== userProjectName) {
+                // Check if parent belongs to project
+                const parent = allLocations.find(l => l._id === location.parentId)
+                if (parent) {
+                  const parentProjectName = parent.projectName?.trim().toLowerCase()
+                  const parentName = parent.name?.trim().toLowerCase()
+                  if (parentProjectName !== userProjectName && parentName !== userProjectName) {
+                    return false
+                  }
+                } else {
+                  return false
+                }
+              }
+            }
+            
+            // Remove duplicates
+            if (uniqueIds.has(location._id)) {
+              return false
+            }
+            uniqueIds.add(location._id)
+            return true
+          })
+          
+          setLocations(filteredLocations)
+        } catch (error) {
+          console.error('Error fetching locations:', error)
+        } finally {
+          setLoadingLocations(false)
+        }
+      }
+      fetchLocationsData()
+    } else {
+      // Reset selected location when modal closes
+      setSelectedLocationId('')
+      setSelectedLocationName('')
+    }
+  }, [showAddAssetModal, user])
 
   // Current step in the creation process
   const [currentStep, setCurrentStep] = useState<'main' | 'subassets' | 'inventory'>('main')
@@ -312,6 +392,33 @@ export default function AdminAssetsPage() {
     const sequentialNumber = String(index + 1).padStart(2, '0')
     
     return `${mainAssetId}-${subAssetAbbr}${sequentialNumber}`
+  }
+
+  // Inventory item tag ID generation function
+  const generateInventoryItemTagId = (mainAssetId: string, inventoryType: string, itemName: string, itemIndex: number) => {
+    if (!mainAssetId) return ''
+    
+    // Generate abbreviation from inventory type
+    const typeWords = inventoryType.trim().split(/(?=[A-Z])/)
+    const typeAbbr = typeWords.length > 1 
+      ? typeWords.map(word => word.charAt(0)).join('').toUpperCase().substring(0, 3)
+      : inventoryType.substring(0, 3).toUpperCase()
+    
+    // Generate abbreviation from item name if available
+    let itemNameAbbr = ''
+    if (itemName && itemName.trim()) {
+      const nameWords = itemName.trim().split(' ')
+      if (nameWords.length > 1) {
+        itemNameAbbr = nameWords.map(word => word.charAt(0)).join('').toUpperCase().substring(0, 4)
+      } else {
+        itemNameAbbr = itemName.trim().substring(0, 4).toUpperCase()
+      }
+    } else {
+      // Fallback to sequential number if no name provided
+      itemNameAbbr = String(itemIndex + 1).padStart(3, '0')
+    }
+    
+    return `${mainAssetId}-INV-${typeAbbr}-${itemNameAbbr}`
   }
 
   // Enhanced Asset Management Form States
@@ -743,6 +850,13 @@ export default function AdminAssetsPage() {
   const handleCloseAddAssetModal = () => {
     setShowAddAssetModal(false)
     setCurrentStep('main')
+    // Reset main asset inventory
+    setMainAssetInventory({
+      consumables: [],
+      spareParts: [],
+      tools: [],
+      operationalSupply: []
+    })
   }
 
   const handleMainAssetSave = () => {
@@ -842,32 +956,99 @@ export default function AdminAssetsPage() {
     })
   }
 
-  const handleAddInventoryItem = (category: 'Movable' | 'Immovable', subAssetIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply') => {
+  // Handler for main asset inventory items (not tied to sub-assets)
+  const handleAddMainAssetInventoryItem = (inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply') => {
+    const currentInventory = mainAssetInventory[inventoryType] || []
+    const itemIndex = currentInventory.length
+    
+    // Generate tag ID for the new inventory item
+    const mainAssetId = newAsset.tagId || ''
+    const generatedTagId = mainAssetId ? generateInventoryItemTagId(mainAssetId, inventoryType, '', itemIndex) : ''
+    
     const newItem: InventoryItem = {
       itemName: '',
       quantity: 0,
       status: 'Available',
-      lastUpdated: new Date().toISOString().split('T')[0]
+      lastUpdated: new Date().toISOString().split('T')[0],
+      tagId: generatedTagId
     }
+    
+    setMainAssetInventory(prev => ({
+      ...prev,
+      [inventoryType]: [...prev[inventoryType], newItem]
+    }))
+  }
 
+  const handleMainAssetInventoryItemChange = (inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply', itemIndex: number, field: string, value: string | number) => {
+    setMainAssetInventory(prev => ({
+      ...prev,
+      [inventoryType]: prev[inventoryType].map((item, j) => {
+        if (j === itemIndex) {
+          const updatedItem = { ...item, [field]: value }
+          
+          // Auto-regenerate tag ID when item name changes
+          if (field === 'itemName' && newAsset.tagId) {
+            const newTagId = generateInventoryItemTagId(
+              newAsset.tagId,
+              inventoryType,
+              value as string,
+              itemIndex
+            )
+            updatedItem.tagId = newTagId
+          }
+          
+          return updatedItem
+        }
+        return item
+      })
+    }))
+  }
+
+  const handleRemoveMainAssetInventoryItem = (inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply', itemIndex: number) => {
+    setMainAssetInventory(prev => ({
+      ...prev,
+      [inventoryType]: prev[inventoryType].filter((_, i) => i !== itemIndex)
+    }))
+  }
+
+  const handleAddInventoryItem = (category: 'Movable' | 'Immovable', subAssetIndex: number, inventoryType: 'consumables' | 'spareParts' | 'tools' | 'operationalSupply') => {
     setNewAsset(prev => {
       if (!prev.subAssets) return prev
      
       const categoryKey = category.toLowerCase() as 'movable' | 'immovable'
       const currentSubAssets = prev.subAssets[categoryKey] || []
+      const subAsset = currentSubAssets[subAssetIndex]
+      
+      if (!subAsset) return prev
+      
+      // Get current inventory items count for tag ID generation
+      const currentInventory = subAsset.inventory[inventoryType] || []
+      const itemIndex = currentInventory.length
+      
+      // Generate initial tag ID (will be regenerated when item name is entered)
+      const mainAssetId = prev.tagId || ''
+      const generatedTagId = mainAssetId ? generateInventoryItemTagId(mainAssetId, inventoryType, '', itemIndex) : ''
+      
+      const newItem: InventoryItem = {
+        itemName: '',
+        quantity: 0,
+        status: 'Available',
+        lastUpdated: new Date().toISOString().split('T')[0],
+        tagId: generatedTagId
+      }
      
       return {
         ...prev,
         subAssets: {
           ...prev.subAssets,
-          [categoryKey]: currentSubAssets.map((subAsset, i) =>
+          [categoryKey]: currentSubAssets.map((subAssetItem, i) =>
             i === subAssetIndex ? {
-              ...subAsset,
+              ...subAssetItem,
               inventory: {
-                ...subAsset.inventory,
-                [inventoryType]: [...subAsset.inventory[inventoryType], newItem]
+                ...subAssetItem.inventory,
+                [inventoryType]: [...subAssetItem.inventory[inventoryType], newItem]
               }
-            } : subAsset
+            } : subAssetItem
           )
         }
       }
@@ -890,9 +1071,25 @@ export default function AdminAssetsPage() {
               ...subAsset,
               inventory: {
                 ...subAsset.inventory,
-                [inventoryType]: subAsset.inventory[inventoryType].map((item, j) =>
-                  j === itemIndex ? { ...item, [field]: value } : item
-                )
+                [inventoryType]: subAsset.inventory[inventoryType].map((item, j) => {
+                  if (j === itemIndex) {
+                    const updatedItem = { ...item, [field]: value }
+                    
+                    // Auto-regenerate tag ID when item name changes
+                    if (field === 'itemName' && prev.tagId) {
+                      const newTagId = generateInventoryItemTagId(
+                        prev.tagId,
+                        inventoryType,
+                        value as string,
+                        itemIndex
+                      )
+                      updatedItem.tagId = newTagId
+                    }
+                    
+                    return updatedItem
+                  }
+                  return item
+                })
               }
             } : subAsset
           )
@@ -1002,6 +1199,69 @@ export default function AdminAssetsPage() {
       setNewAsset(prev => ({
         ...prev,
         [field]: value
+      }))
+    }
+  }
+
+  // Handle location selection from dropdown
+  const handleLocationSelect = (locationId: string) => {
+    if (loadingLocations) return // Prevent selection while loading
+    setSelectedLocationId(locationId)
+    const selectedLocation = locations.find(loc => loc._id === locationId)
+    if (selectedLocation) {
+      // Store the display name
+      const displayName = `${selectedLocation.name}${selectedLocation.type ? ` (${selectedLocation.type})` : ''}`
+      setSelectedLocationName(displayName)
+      
+      // Auto-populate location fields based on selected location's address
+      // Try to extract building, floor, room from address or name
+      const address = selectedLocation.address || ''
+      const name = selectedLocation.name || ''
+      
+      // Simple parsing: try to extract building/floor/room from address or name
+      // This is a basic implementation - you may want to enhance this logic
+      let building = ''
+      let floor = ''
+      let room = ''
+      
+      // Try to extract from address (common patterns)
+      const addressLower = address.toLowerCase()
+      const nameLower = name.toLowerCase()
+      
+      // Look for floor indicators
+      const floorMatch = addressLower.match(/(\d+(?:st|nd|rd|th)?\s*floor|ground\s*floor|basement)/i)
+      if (floorMatch) {
+        floor = floorMatch[1]
+      }
+      
+      // Look for building indicators
+      const buildingMatch = addressLower.match(/(building\s*[a-z0-9]+|[^,]+building)/i)
+      if (buildingMatch) {
+        building = buildingMatch[1]
+      } else if (nameLower.includes('building')) {
+        building = name.split(' ')[0] + ' Building'
+      }
+      
+      // Look for room indicators
+      const roomMatch = addressLower.match(/(room\s*[a-z0-9]+|office|hall|lab)/i)
+      if (roomMatch) {
+        room = roomMatch[1]
+      }
+      
+      // If no specific fields found, use location name as building
+      if (!building && name) {
+        building = name
+      }
+      
+      // Update the asset location fields
+      setNewAsset(prev => ({
+        ...prev,
+        location: {
+          ...prev.location!,
+          building: building || prev.location?.building || '',
+          floor: floor || prev.location?.floor || '',
+          room: room || prev.location?.room || ''
+        }
       }))
     }
   }
@@ -3506,7 +3766,7 @@ export default function AdminAssetsPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] flex flex-col">
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <div>
+                <div className="flex-1">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     {currentStep === 'main' && 'Add New Asset'}
                     {currentStep === 'subassets' && 'Add Sub-Assets'}
@@ -3523,6 +3783,49 @@ export default function AdminAssetsPage() {
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Step Navigation Tabs */}
+              <div className="flex border-b border-gray-200 dark:border-gray-700 px-4">
+                <button
+                  onClick={() => setCurrentStep('main')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    currentStep === 'main'
+                      ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  Main Asset
+                </button>
+                <button
+                  onClick={() => setCurrentStep('subassets')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    currentStep === 'subassets'
+                      ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  Sub-Assets
+                </button>
+                <button
+                  onClick={() => {
+                    // Generate tag ID if it doesn't exist when navigating to inventory
+                    if (!newAsset.tagId && locationType && assetTypeCode) {
+                      const generatedId = generateAssetId(locationType, assetTypeCode)
+                      if (generatedId && !assets.some(asset => asset.tagId === generatedId)) {
+                        setNewAsset(prev => ({ ...prev, tagId: generatedId }))
+                      }
+                    }
+                    setCurrentStep('inventory')
+                  }}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    currentStep === 'inventory'
+                      ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  Inventory
                 </button>
               </div>
 
@@ -3780,6 +4083,41 @@ export default function AdminAssetsPage() {
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Location Details</h4>
                        
+                        <div>
+                          <Label htmlFor="location" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Select Location
+                          </Label>
+                          <Select 
+                            value={selectedLocationId} 
+                            onValueChange={handleLocationSelect}
+                          >
+                            <SelectTrigger className={`mt-1 ${loadingLocations ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                              {selectedLocationName ? (
+                                <span className="block truncate">{selectedLocationName}</span>
+                              ) : (
+                                <SelectValue placeholder={loadingLocations ? "Loading locations..." : "Select a location"} />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              {loadingLocations ? (
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                  Loading locations...
+                                </div>
+                              ) : locations.length === 0 ? (
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                  No locations available
+                                </div>
+                              ) : (
+                                locations.map((location) => (
+                                  <SelectItem key={location._id} value={location._id}>
+                                    {location.name} {location.type ? `(${location.type})` : ''}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
                         <div>
                           <Label htmlFor="building" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Building
@@ -4073,13 +4411,241 @@ export default function AdminAssetsPage() {
 
                 {currentStep === 'inventory' && (
                   <div className="space-y-6">
+                    {/* Tag ID Display for Inventory */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                            Asset Tag ID
+                          </Label>
+                          <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                            {newAsset.tagId || generateAssetId(locationType, assetTypeCode) || 'Generate by filling Location Type and Asset Type'}
+                          </p>
+                        </div>
+                        {!newAsset.tagId && locationType && assetTypeCode && (
+                          <Button
+                            onClick={() => {
+                              const generatedId = generateAssetId(locationType, assetTypeCode)
+                              if (generatedId && !assets.some(asset => asset.tagId === generatedId)) {
+                                setNewAsset(prev => ({ ...prev, tagId: generatedId }))
+                              } else if (generatedId) {
+                                alert('This Asset ID already exists. Please use a different combination.')
+                              }
+                            }}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            Generate Tag ID
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Main Asset Inventory (Direct inventory not tied to sub-assets) */}
+                    <div className="border border-blue-300 dark:border-blue-700 rounded-lg p-4 bg-blue-50/30 dark:bg-blue-900/10 mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <Package className="w-5 h-5 text-blue-600" />
+                        Main Asset Inventory
+                      </h3>
+
+                      {/* Consumables */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                            Consumables
+                          </h4>
+                          <Button
+                            onClick={() => handleAddMainAssetInventoryItem('consumables')}
+                            size="sm"
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {mainAssetInventory.consumables.map((item, itemIndex) => (
+                            <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <Input
+                                value={item.tagId || ''}
+                                onChange={(e) => handleMainAssetInventoryItemChange('consumables', itemIndex, 'tagId', e.target.value)}
+                                placeholder="Tag ID"
+                                className="text-sm font-mono"
+                              />
+                              <Input
+                                value={item.itemName}
+                                onChange={(e) => handleMainAssetInventoryItemChange('consumables', itemIndex, 'itemName', e.target.value)}
+                                placeholder="Item Name"
+                              />
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => handleMainAssetInventoryItemChange('consumables', itemIndex, 'quantity', parseInt(e.target.value) || 0)}
+                                placeholder="Quantity"
+                              />
+                              <Select value={item.status} onValueChange={(value) => handleMainAssetInventoryItemChange('consumables', itemIndex, 'status', value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Available">Available</SelectItem>
+                                  <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                  <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="date"
+                                value={item.lastUpdated}
+                                onChange={(e) => handleMainAssetInventoryItemChange('consumables', itemIndex, 'lastUpdated', e.target.value)}
+                              />
+                              <Button
+                                onClick={() => handleRemoveMainAssetInventoryItem('consumables', itemIndex)}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Spare Parts */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                            Spare Parts
+                          </h4>
+                          <Button
+                            onClick={() => handleAddMainAssetInventoryItem('spareParts')}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {mainAssetInventory.spareParts.map((item, itemIndex) => (
+                            <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <Input
+                                value={item.tagId || ''}
+                                onChange={(e) => handleMainAssetInventoryItemChange('spareParts', itemIndex, 'tagId', e.target.value)}
+                                placeholder="Tag ID"
+                                className="text-sm font-mono"
+                              />
+                              <Input
+                                value={item.itemName}
+                                onChange={(e) => handleMainAssetInventoryItemChange('spareParts', itemIndex, 'itemName', e.target.value)}
+                                placeholder="Item Name"
+                              />
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => handleMainAssetInventoryItemChange('spareParts', itemIndex, 'quantity', parseInt(e.target.value) || 0)}
+                                placeholder="Quantity"
+                              />
+                              <Select value={item.status} onValueChange={(value) => handleMainAssetInventoryItemChange('spareParts', itemIndex, 'status', value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Available">Available</SelectItem>
+                                  <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                  <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="date"
+                                value={item.lastUpdated}
+                                onChange={(e) => handleMainAssetInventoryItemChange('spareParts', itemIndex, 'lastUpdated', e.target.value)}
+                              />
+                              <Button
+                                onClick={() => handleRemoveMainAssetInventoryItem('spareParts', itemIndex)}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Tools */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                            Tools
+                          </h4>
+                          <Button
+                            onClick={() => handleAddMainAssetInventoryItem('tools')}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {mainAssetInventory.tools.map((item, itemIndex) => (
+                            <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <Input
+                                value={item.tagId || ''}
+                                onChange={(e) => handleMainAssetInventoryItemChange('tools', itemIndex, 'tagId', e.target.value)}
+                                placeholder="Tag ID"
+                                className="text-sm font-mono"
+                              />
+                              <Input
+                                value={item.itemName}
+                                onChange={(e) => handleMainAssetInventoryItemChange('tools', itemIndex, 'itemName', e.target.value)}
+                                placeholder="Item Name"
+                              />
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => handleMainAssetInventoryItemChange('tools', itemIndex, 'quantity', parseInt(e.target.value) || 0)}
+                                placeholder="Quantity"
+                              />
+                              <Select value={item.status} onValueChange={(value) => handleMainAssetInventoryItemChange('tools', itemIndex, 'status', value)}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Available">Available</SelectItem>
+                                  <SelectItem value="Low Stock">Low Stock</SelectItem>
+                                  <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="date"
+                                value={item.lastUpdated}
+                                onChange={(e) => handleMainAssetInventoryItemChange('tools', itemIndex, 'lastUpdated', e.target.value)}
+                              />
+                              <Button
+                                onClick={() => handleRemoveMainAssetInventoryItem('tools', itemIndex)}
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Movable Assets Inventory */}
-                    {newAsset.subAssets?.movable.map((subAsset, subAssetIndex) => (
-                      <div key={subAsset.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                          <Package className="w-5 h-5 text-green-600" />
-                          {subAsset.assetName || `Movable Asset #${subAssetIndex + 1}`}
-                        </h3>
+                    {newAsset.subAssets?.movable && newAsset.subAssets.movable.length > 0 && (
+                      newAsset.subAssets.movable.map((subAsset, subAssetIndex) => (
+                        <div key={subAsset.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <Package className="w-5 h-5 text-green-600" />
+                            {subAsset.assetName || `Movable Asset #${subAssetIndex + 1}`}
+                          </h3>
 
                         {/* Consumables */}
                         <div className="mb-6">
@@ -4098,7 +4664,13 @@ export default function AdminAssetsPage() {
                           </div>
                           <div className="space-y-2">
                             {subAsset.inventory.consumables.map((item, itemIndex) => (
-                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.tagId || ''}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'consumables', itemIndex, 'tagId', e.target.value)}
+                                  placeholder="Tag ID"
+                                  className="text-sm font-mono"
+                                />
                                 <Input
                                   value={item.itemName}
                                   onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'consumables', itemIndex, 'itemName', e.target.value)}
@@ -4155,7 +4727,13 @@ export default function AdminAssetsPage() {
                           </div>
                           <div className="space-y-2">
                             {subAsset.inventory.spareParts.map((item, itemIndex) => (
-                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.tagId || ''}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'spareParts', itemIndex, 'tagId', e.target.value)}
+                                  placeholder="Tag ID"
+                                  className="text-sm font-mono"
+                                />
                                 <Input
                                   value={item.itemName}
                                   onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'spareParts', itemIndex, 'itemName', e.target.value)}
@@ -4212,7 +4790,13 @@ export default function AdminAssetsPage() {
                           </div>
                           <div className="space-y-2">
                             {subAsset.inventory.tools.map((item, itemIndex) => (
-                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.tagId || ''}
+                                  onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'tools', itemIndex, 'tagId', e.target.value)}
+                                  placeholder="Tag ID"
+                                  className="text-sm font-mono"
+                                />
                                 <Input
                                   value={item.itemName}
                                   onChange={(e) => handleInventoryItemChange('Movable', subAssetIndex, 'tools', itemIndex, 'itemName', e.target.value)}
@@ -4252,11 +4836,13 @@ export default function AdminAssetsPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                      ))
+                    )}
 
                     {/* Immovable Assets Inventory */}
-                    {newAsset.subAssets?.immovable.map((subAsset, subAssetIndex) => (
-                      <div key={subAsset.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    {newAsset.subAssets?.immovable && newAsset.subAssets.immovable.length > 0 && (
+                      newAsset.subAssets.immovable.map((subAsset, subAssetIndex) => (
+                        <div key={subAsset.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                           <Building className="w-5 h-5 text-blue-600" />
                           {subAsset.assetName || `Immovable Asset #${subAssetIndex + 1}`}
@@ -4280,7 +4866,13 @@ export default function AdminAssetsPage() {
                           </div>
                           <div className="space-y-2">
                             {subAsset.inventory.consumables.map((item, itemIndex) => (
-                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.tagId || ''}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'consumables', itemIndex, 'tagId', e.target.value)}
+                                  placeholder="Tag ID"
+                                  className="text-sm font-mono"
+                                />
                                 <Input
                                   value={item.itemName}
                                   onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'consumables', itemIndex, 'itemName', e.target.value)}
@@ -4341,7 +4933,13 @@ export default function AdminAssetsPage() {
                           </div>
                           <div className="space-y-2">
                             {subAsset.inventory.spareParts.map((item, itemIndex) => (
-                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.tagId || ''}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'spareParts', itemIndex, 'tagId', e.target.value)}
+                                  placeholder="Tag ID"
+                                  className="text-sm font-mono"
+                                />
                                 <Input
                                   value={item.itemName}
                                   onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'spareParts', itemIndex, 'itemName', e.target.value)}
@@ -4402,7 +5000,13 @@ export default function AdminAssetsPage() {
                           </div>
                           <div className="space-y-2">
                             {subAsset.inventory.tools.map((item, itemIndex) => (
-                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                              <div key={itemIndex} className="grid grid-cols-1 md:grid-cols-6 gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                <Input
+                                  value={item.tagId || ''}
+                                  onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'tools', itemIndex, 'tagId', e.target.value)}
+                                  placeholder="Tag ID"
+                                  className="text-sm font-mono"
+                                />
                                 <Input
                                   value={item.itemName}
                                   onChange={(e) => handleInventoryItemChange('Immovable', subAssetIndex, 'tools', itemIndex, 'itemName', e.target.value)}
@@ -4445,7 +5049,8 @@ export default function AdminAssetsPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    ))
+                    )}
                   </div>
                 )}
               </div>

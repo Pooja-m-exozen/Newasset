@@ -23,11 +23,15 @@ export const fetchMaintenanceLogsForAsset = async (assetTagId: string): Promise<
     
     // Filter logs by asset tag ID
     if (Array.isArray(maintenanceLogs)) {
-      return maintenanceLogs.filter((log: MaintenanceLog | { asset?: string | { tagId?: string }; assetId?: string }) => 
-        log.asset === assetTagId || 
-        log.assetId === assetTagId || 
-        (log.asset && typeof log.asset === 'object' && log.asset.tagId === assetTagId)
-      )
+      return maintenanceLogs.filter((log: MaintenanceLog | { asset?: string | { tagId?: string }; assetId?: string }) => {
+        // Check if log has asset property (extended type)
+        if ('asset' in log) {
+          return log.asset === assetTagId || 
+                 (typeof log.asset === 'object' && log.asset?.tagId === assetTagId)
+        }
+        // Check assetId for MaintenanceLog type
+        return log.assetId === assetTagId
+      })
     }
     
     return []

@@ -98,7 +98,7 @@ export const useAssetHandlers = (props: UseAssetHandlersProps) => {
     setExpandedClassificationType,
     selectedInventoryType,
     setSelectedInventoryType,
-    selectedMobility: _selectedMobility,
+    selectedMobility: _selectedMobility, // eslint-disable-line @typescript-eslint/no-unused-vars
     setSelectedMobility,
     setCurrentStep,
     setShowAddAssetModal,
@@ -125,7 +125,7 @@ export const useAssetHandlers = (props: UseAssetHandlersProps) => {
     setPOData,
     setReplacementData,
     setLifecycleData,
-    setFinancialData: _setFinancialData,
+    setFinancialData: _setFinancialData, // eslint-disable-line @typescript-eslint/no-unused-vars
     selectedAssetForManagement,
     selectedSubAssetForManagement,
     poData,

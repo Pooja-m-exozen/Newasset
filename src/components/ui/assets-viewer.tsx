@@ -40,9 +40,13 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [showNfcModal, setShowNfcModal] = useState(false)
   const [nfcData, setNfcData] = useState<Asset | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_qrImgSrc, setQrImgSrc] = useState<string | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_barcodeImgSrc, setBarcodeImgSrc] = useState<string | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_qrLoading, setQrLoading] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_barcodeLoading, setBarcodeLoading] = useState(false)
   const [filters, setFilters] = useState({
     search: '',
@@ -187,6 +191,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
     }
   }, [selectedAsset])
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _handleQrError = async () => {
     try {
       const url = selectedAsset ? getQrUrl(selectedAsset) : null
@@ -203,6 +208,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _handleBarcodeError = async () => {
     try {
       const url = selectedAsset ? getBarcodeUrl(selectedAsset) : null
@@ -282,6 +288,7 @@ export const AssetsViewer: React.FC<AssetsViewerProps> = ({ className = '' }) =>
   }, [assets, filters])
 
   // Handle NFC data view
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _handleViewNfcData = async (asset: Asset) => {
     const url = getNfcUrl(asset)
     if (!url) return

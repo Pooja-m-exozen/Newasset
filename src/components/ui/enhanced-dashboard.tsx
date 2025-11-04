@@ -1,9 +1,10 @@
 
 "use client"
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { assetApi, AssetData } from '@/lib/adminasset'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card'
 import { Button } from './button'
 import { Badge } from './badge'
@@ -50,7 +51,9 @@ import {
   BarChart3,
   PieChart as PieChartIcon,
   Maximize2,
-  Eye
+  Eye,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
 
 interface AlertsData {
@@ -167,15 +170,23 @@ export function EnhancedDashboard({
   const [isAlertsLoading, setIsAlertsLoading] = useState(false)
   const [alertsError, setAlertsError] = useState<string | null>(null)
   
+  // Assets data state
+  const [assetsData, setAssetsData] = useState<AssetData[]>([])
+  const [isAssetsLoading, setIsAssetsLoading] = useState(false)
+  const [assetsError, setAssetsError] = useState<string | null>(null)
+  
   // Chart type states for each graph
-  const [confidenceChartType, setConfidenceChartType] = useState<'pie' | 'bar'>('bar')
+  const [assetClassificationChartType, setAssetClassificationChartType] = useState<'pie' | 'bar'>('bar')
   const [assetTypeChartType, setAssetTypeChartType] = useState<'pie' | 'bar'>('pie')
   const [maintenanceChartType, setMaintenanceChartType] = useState<'pie' | 'bar'>('bar')
   
   // View modal states for detailed views
-  const [isConfidenceViewOpen, setIsConfidenceViewOpen] = useState(false)
+  const [isAssetClassificationViewOpen, setIsAssetClassificationViewOpen] = useState(false)
   const [isAssetTypeViewOpen, setIsAssetTypeViewOpen] = useState(false)
   const [isMaintenanceViewOpen, setIsMaintenanceViewOpen] = useState(false)
+  
+  // Expanded assets state for accordion
+  const [expandedAssets, setExpandedAssets] = useState<Set<string>>(new Set())
  
   // Alert Rules Modal State
   const [isAlertRulesModalOpen, setIsAlertRulesModalOpen] = useState(false)
@@ -192,6 +203,26 @@ export function EnhancedDashboard({
     isActive: true,
     cooldown: 3600
   })
+
+  // Fetch assets data with subassets
+  useEffect(() => {
+    const fetchAssets = async () => {
+      try {
+        setIsAssetsLoading(true)
+        setAssetsError(null)
+        const response = await assetApi.getAssetsWithSubAssets(true, 1, 10000)
+        if (response.success && response.assets) {
+          setAssetsData(response.assets as AssetData[])
+        }
+      } catch (error) {
+        console.error('Error fetching assets:', error)
+        setAssetsError(error instanceof Error ? error.message : 'Failed to fetch assets')
+      } finally {
+        setIsAssetsLoading(false)
+      }
+    }
+    fetchAssets()
+  }, [])
 
   // Transform predictionsData to match the expected format
   const transformedPredictionsData = useMemo(() => {
@@ -342,21 +373,28 @@ export function EnhancedDashboard({
     }
   ), [costData])
 
-  // Process predictions data for separate graphs
-  const confidenceChartData = useMemo(() => {
-    if (!transformedPredictionsData?.predictions) return []
+  // Process assets data for Asset and Subasset Classification graph
+  const assetClassificationChartData = useMemo(() => {
+    if (!assetsData || assetsData.length === 0) return []
     
-    const predictions = transformedPredictionsData.predictions
-    const high = predictions.filter(p => p.prediction.confidence > 0.8).length
-    const medium = predictions.filter(p => p.prediction.confidence > 0.6 && p.prediction.confidence <= 0.8).length
-    const low = predictions.filter(p => p.prediction.confidence <= 0.6).length
+    let totalAssets = 0
+    let movableSubassets = 0
+    let immovableSubassets = 0
+    
+    assetsData.forEach(asset => {
+      totalAssets++
+      if (asset.subAssets) {
+        movableSubassets += asset.subAssets.movable?.length || 0
+        immovableSubassets += asset.subAssets.immovable?.length || 0
+      }
+    })
     
     return [
-      { name: 'High', value: high, color: '#10B981' },
-      { name: 'Medium', value: medium, color: '#F59E0B' },
-      { name: 'Low', value: low, color: '#EF4444' }
+      { name: 'Total Assets', value: totalAssets, color: '#3B82F6' },
+      { name: 'Movable Subassets', value: movableSubassets, color: '#10B981' },
+      { name: 'Immovable Subassets', value: immovableSubassets, color: '#F59E0B' }
     ]
-  }, [transformedPredictionsData])
+  }, [assetsData])
 
   const assetTypeChartData = useMemo(() => {
     if (!transformedPredictionsData?.predictions) return []
@@ -597,6 +635,18 @@ export function EnhancedDashboard({
         i === index ? { ...action, [field]: value } : action
       )
     }))
+  }
+
+  const toggleAssetExpansion = (assetId: string) => {
+    setExpandedAssets(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(assetId)) {
+        newSet.delete(assetId)
+      } else {
+        newSet.add(assetId)
+      }
+      return newSet
+    })
   }
 
 
@@ -1027,28 +1077,28 @@ export function EnhancedDashboard({
             </Card>
           </div>
 
-          {/* Row 2: Confidence Distribution + Quick Actions */}
+          {/* Row 2: Asset Classification + Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {/* Confidence Distribution Graph */}
+            {/* Asset and Subasset Classification Graph */}
             <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-sm sm:text-base font-semibold">Confidence Distribution</CardTitle>
-                    <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">AI prediction confidence levels</CardDescription>
+                    <CardTitle className="text-sm sm:text-base font-semibold">Asset Classification</CardTitle>
+                    <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">Assets and subassets classification</CardDescription>
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="sm"
                       className="h-7 px-2 sm:px-3 text-[10px] sm:text-xs bg-primary/5 hover:bg-primary/10 hover:text-primary border-primary/20 hover:border-primary/40 transition-all duration-200 shadow-sm hover:shadow-md flex-1 sm:flex-initial"
-                      onClick={() => setIsConfidenceViewOpen(true)}
+                      onClick={() => setIsAssetClassificationViewOpen(true)}
                     >
                       <Eye className="w-3 h-3 mr-1 sm:mr-1.5" />
                       <span className="hidden sm:inline">View Details</span>
                       <span className="sm:hidden">View</span>
                     </Button>
-                    <Select value={confidenceChartType} onValueChange={(value: string) => setConfidenceChartType(value as 'pie' | 'bar')}>
+                    <Select value={assetClassificationChartType} onValueChange={(value: string) => setAssetClassificationChartType(value as 'pie' | 'bar')}>
                       <SelectTrigger className="w-20 sm:w-24 h-7 text-[10px] sm:text-xs">
                         <SelectValue />
                       </SelectTrigger>
@@ -1061,31 +1111,31 @@ export function EnhancedDashboard({
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                {isPredictionsLoading ? (
+                {isAssetsLoading ? (
                   <div className="flex items-center justify-center py-16">
                     <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
-                ) : predictionsError ? (
+                ) : assetsError ? (
                   <div className="text-center py-16">
                     <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">{predictionsError}</p>
+                    <p className="text-xs text-muted-foreground">{assetsError}</p>
                   </div>
-                ) : confidenceChartData.length > 0 && confidenceChartData.some(d => d.value > 0) ? (
-                  <div className="h-[200px] sm:h-[240px] md:h-[280px]">
+                ) : assetClassificationChartData.length > 0 && assetClassificationChartData.some(d => d.value > 0) ? (
+                  <div className="h-[300px] sm:h-[340px] md:h-[380px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      {confidenceChartType === 'pie' ? (
+                      {assetClassificationChartType === 'pie' ? (
                         <PieChart>
                           <Pie
-                            data={confidenceChartData}
+                            data={assetClassificationChartData}
                             cx="50%"
                             cy="50%"
                             labelLine={false}
                             label={false}
-                            outerRadius={100}
+                            outerRadius={120}
                             fill="#8884d8"
                             dataKey="value"
                           >
-                            {confidenceChartData.map((entry, index) => (
+                            {assetClassificationChartData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                           </Pie>
@@ -1099,12 +1149,17 @@ export function EnhancedDashboard({
                           />
                         </PieChart>
                       ) : (
-                        <BarChart data={confidenceChartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                        <BarChart data={assetClassificationChartData} margin={{ top: 10, right: 10, left: 10, bottom: 80 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                           <XAxis 
                             dataKey="name" 
                             stroke="hsl(var(--muted-foreground))"
                             tick={{ fontSize: 11 }}
+                            angle={-45}
+                            textAnchor="end"
+                            height={100}
+                            dy={10}
+                            dx={-5}
                           />
                           <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 11 }} />
                           <Tooltip 
@@ -1116,7 +1171,7 @@ export function EnhancedDashboard({
                             }}
                           />
                           <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
-                            {confidenceChartData.map((entry, index) => (
+                            {assetClassificationChartData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                           </Bar>
@@ -1126,7 +1181,7 @@ export function EnhancedDashboard({
                   </div>
                 ) : (
                   <div className="text-center py-16">
-                    <Target className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                    <Building2 className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
                     <p className="text-xs text-muted-foreground">No data available</p>
                   </div>
                 )}
@@ -1596,41 +1651,297 @@ export function EnhancedDashboard({
         </DialogContent>
       </Dialog>
 
-      {/* Confidence Distribution Detailed View Modal - Categories Only */}
-      <Dialog open={isConfidenceViewOpen} onOpenChange={setIsConfidenceViewOpen}>
+      {/* Asset Classification Detailed View Modal - In Depth */}
+      <Dialog open={isAssetClassificationViewOpen} onOpenChange={setIsAssetClassificationViewOpen}>
         <DialogContent className="w-[95vw] sm:w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
-          <DialogHeader className="pb-3 sm:pb-4 border-b border-border/50">
-            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
-              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-              Confidence Distribution
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm mt-1 sm:mt-2">AI prediction confidence levels breakdown</DialogDescription>
+          <DialogHeader className="pb-2 sm:pb-3 border-b border-border/50">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <DialogTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                  <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-foreground" />
+                  Asset Classification - Detailed View
+                </DialogTitle>
+                <DialogDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">Complete breakdown of all assets with their Movable and Immovable classifications</DialogDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full hover:bg-muted"
+                onClick={() => setIsAssetClassificationViewOpen(false)}
+                aria-label="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </DialogHeader>
-          <div className="mt-4 sm:mt-6">
-            {/* Category Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              {confidenceChartData.map((item, index) => (
+          
+          <div className="mt-2 sm:mt-3 space-y-3">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+              {assetClassificationChartData.map((item: { name: string; value: number; color: string }, index: number) => (
                 <div 
                   key={index} 
-                  className="group flex flex-col items-center p-4 sm:p-5 bg-gradient-to-br from-white to-muted/30 dark:from-card dark:to-muted/20 border-2 border-border/50 rounded-xl shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-300 hover:scale-105"
+                  className="flex flex-col items-center justify-center p-3 sm:p-4 bg-card border border-border rounded-lg"
                 >
-                  <div 
-                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full mb-3 sm:mb-4 shadow-md ring-2 ring-white dark:ring-card" 
-                    style={{ backgroundColor: item.color }}
-                  ></div>
-                  <span className="text-xs sm:text-sm font-semibold text-foreground mb-2">{item.name}</span>
-                  <span className="text-2xl sm:text-3xl font-bold text-foreground">{item.value}</span>
-                  <div className="mt-2 w-full h-1 rounded-full bg-muted/50 overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ 
-                        backgroundColor: item.color,
-                        width: `${Math.max(10, (item.value / Math.max(...confidenceChartData.map(d => d.value), 1)) * 100)}%`
-                      }}
-                    />
-                  </div>
+                  <div className="w-1.5 h-1.5 rounded-full mb-2" style={{ backgroundColor: item.color }}></div>
+                  <span className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-1 text-center">{item.name}</span>
+                  <span className="text-xl sm:text-2xl font-bold text-foreground">{item.value}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Assets List */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-foreground/70" />
+                  <h3 className="text-sm sm:text-base font-semibold text-foreground">All Assets</h3>
+                </div>
+                <Badge variant="outline" className="text-xs px-2 py-0.5">
+                  {assetsData.length} {assetsData.length === 1 ? 'Asset' : 'Assets'}
+                </Badge>
+              </div>
+
+              {isAssetsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : assetsError ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">{assetsError}</p>
+                </div>
+              ) : assetsData.length === 0 ? (
+                <div className="text-center py-8">
+                  <Building2 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">No assets available</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {assetsData.map((asset) => {
+                    const assetId = asset._id || asset.tagId
+                    const isExpanded = expandedAssets.has(assetId)
+                    const movableCount = asset.subAssets?.movable?.length || 0
+                    const immovableCount = asset.subAssets?.immovable?.length || 0
+                    const hasSubassets = movableCount > 0 || immovableCount > 0
+
+                    return (
+                      <div 
+                        key={assetId}
+                        className="border border-border rounded-lg bg-card shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        {/* Parent Asset Header */}
+                        <div
+                          className={`flex items-start justify-between p-3 sm:p-4 transition-all ${
+                            hasSubassets 
+                              ? 'cursor-pointer hover:bg-muted/50' 
+                              : 'cursor-default'
+                          }`}
+                          onClick={() => hasSubassets && toggleAssetExpansion(assetId)}
+                        >
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {hasSubassets && (
+                              <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center transition-transform">
+                                {isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-primary" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-primary" />
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                              <div className="flex-shrink-0 mt-0.5">
+                                <Building2 className="w-4 h-4 text-foreground/60" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <h4 className="text-sm sm:text-base font-semibold text-foreground">
+                                    {asset.assetType || 'Asset'}
+                                  </h4>
+                                  <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-mono">
+                                    {asset.tagId}
+                                  </Badge>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                  {asset.brand && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-medium">Brand:</span>
+                                      <span className="text-foreground/80">{asset.brand}</span>
+                                    </div>
+                                  )}
+                                  {asset.model && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-medium">Model:</span>
+                                      <span className="text-foreground/80">{asset.model}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                            {movableCount > 0 && (
+                              <Badge variant="outline" className="text-xs px-2 py-1 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                                <Activity className="w-3 h-3 mr-1 inline" />
+                                {movableCount}
+                              </Badge>
+                            )}
+                            {immovableCount > 0 && (
+                              <Badge variant="outline" className="text-xs px-2 py-1 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800">
+                                <Target className="w-3 h-3 mr-1 inline" />
+                                {immovableCount}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded Content */}
+                        {isExpanded && hasSubassets && (
+                          <div className="border-t border-border bg-gradient-to-br from-muted/30 to-muted/10 dark:from-muted/20 dark:to-muted/5 p-4 sm:p-5 space-y-5">
+                            {/* Movable Section */}
+                            {movableCount > 0 && (
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2.5 pb-2.5 border-b border-green-200/50 dark:border-green-800/50">
+                                  <div className="w-6 h-6 rounded-lg bg-green-100 dark:bg-green-950/30 flex items-center justify-center">
+                                    <Activity className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                                  </div>
+                                  <h5 className="text-sm font-semibold text-foreground flex-1">Movable Subassets</h5>
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                                    {movableCount} {movableCount === 1 ? 'item' : 'items'}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {asset.subAssets?.movable?.map((subAsset, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="group relative p-3.5 bg-card border border-green-200/50 dark:border-green-800/30 rounded-lg hover:border-green-400 dark:hover:border-green-600 hover:shadow-md transition-all duration-200"
+                                    >
+                                      {/* Left border accent */}
+                                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-l-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                      
+                                      <div className="flex items-start justify-between mb-2.5">
+                                        <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                          <div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-md bg-green-50 dark:bg-green-950/30 flex items-center justify-center">
+                                            <Activity className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <h6 className="text-sm font-semibold text-foreground mb-0.5">{subAsset.assetName}</h6>
+                                            {subAsset.tagId && (
+                                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono mt-0.5">
+                                                {subAsset.tagId}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2 text-xs ml-9">
+                                        {subAsset.brand && (
+                                          <div className="flex items-start gap-2">
+                                            <span className="font-medium text-muted-foreground min-w-[65px] flex-shrink-0">Brand:</span>
+                                            <span className="text-foreground/90">{subAsset.brand}</span>
+                                          </div>
+                                        )}
+                                        {subAsset.model && (
+                                          <div className="flex items-start gap-2">
+                                            <span className="font-medium text-muted-foreground min-w-[65px] flex-shrink-0">Model:</span>
+                                            <span className="text-foreground/90">{subAsset.model}</span>
+                                          </div>
+                                        )}
+                                        {subAsset.capacity && (
+                                          <div className="flex items-start gap-2">
+                                            <span className="font-medium text-muted-foreground min-w-[65px] flex-shrink-0">Capacity:</span>
+                                            <span className="text-foreground/90">{subAsset.capacity}</span>
+                                          </div>
+                                        )}
+                                        {subAsset.location && (
+                                          <div className="flex items-start gap-2">
+                                            <MapPin className="w-3.5 h-3.5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                                            <span className="font-medium text-muted-foreground min-w-[65px] flex-shrink-0">Location:</span>
+                                            <span className="text-foreground/90">{subAsset.location}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Immovable Section */}
+                            {immovableCount > 0 && (
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2.5 pb-2.5 border-b border-orange-200/50 dark:border-orange-800/50">
+                                  <div className="w-6 h-6 rounded-lg bg-orange-100 dark:bg-orange-950/30 flex items-center justify-center">
+                                    <Target className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+                                  </div>
+                                  <h5 className="text-sm font-semibold text-foreground flex-1">Immovable Subassets</h5>
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-orange-50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800">
+                                    {immovableCount} {immovableCount === 1 ? 'item' : 'items'}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {asset.subAssets?.immovable?.map((subAsset, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="group relative p-3.5 bg-card border border-orange-200/50 dark:border-orange-800/30 rounded-lg hover:border-orange-400 dark:hover:border-orange-600 hover:shadow-md transition-all duration-200"
+                                    >
+                                      {/* Left border accent */}
+                                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-l-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                      
+                                      <div className="flex items-start justify-between mb-2.5">
+                                        <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                          <div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-md bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center">
+                                            <Target className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <h6 className="text-sm font-semibold text-foreground mb-0.5">{subAsset.assetName}</h6>
+                                            {subAsset.tagId && (
+                                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono mt-0.5">
+                                                {subAsset.tagId}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2 text-xs ml-9">
+                                        {subAsset.brand && (
+                                          <div className="flex items-start gap-2">
+                                            <span className="font-medium text-muted-foreground min-w-[65px] flex-shrink-0">Brand:</span>
+                                            <span className="text-foreground/90">{subAsset.brand}</span>
+                                          </div>
+                                        )}
+                                        {subAsset.model && (
+                                          <div className="flex items-start gap-2">
+                                            <span className="font-medium text-muted-foreground min-w-[65px] flex-shrink-0">Model:</span>
+                                            <span className="text-foreground/90">{subAsset.model}</span>
+                                          </div>
+                                        )}
+                                        {subAsset.capacity && (
+                                          <div className="flex items-start gap-2">
+                                            <span className="font-medium text-muted-foreground min-w-[65px] flex-shrink-0">Capacity:</span>
+                                            <span className="text-foreground/90">{subAsset.capacity}</span>
+                                          </div>
+                                        )}
+                                        {subAsset.location && (
+                                          <div className="flex items-start gap-2">
+                                            <MapPin className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                                            <span className="font-medium text-muted-foreground min-w-[65px] flex-shrink-0">Location:</span>
+                                            <span className="text-foreground/90">{subAsset.location}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </DialogContent>

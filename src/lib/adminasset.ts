@@ -6,6 +6,7 @@ export interface InventoryItem {
   quantity: number
   status: 'Available' | 'Low Stock' | 'Out of Stock'
   lastUpdated: string
+  tagId?: string  // Tag ID for individual inventory item
 }
 
 // Enhanced interfaces for Purchase Order, Replacement, and Lifecycle Management
@@ -133,6 +134,7 @@ export interface AssetData {
     movable: SubAsset[]
     immovable: SubAsset[]
   }
+  scanHistory?: ScanHistory[]  // Scan history for the asset
   createdAt?: string
   updatedAt?: string
 }

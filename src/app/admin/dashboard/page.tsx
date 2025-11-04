@@ -18,10 +18,7 @@ export default function AdminDashboardPage() {
     refreshHealth,
     costData,
     costError,
-    refreshCost,
-    trendsData,
-    trendsError,
-    refreshTrends
+    refreshCost
   } = useAdminDashboard()
 
   // Transform predictionsData to match the expected format for EnhancedDashboard
@@ -67,10 +64,6 @@ export default function AdminDashboardPage() {
         isCostLoading={false}
         costError={costError}
         onRefreshCost={refreshCost}
-        trendsData={trendsData}
-        isTrendsLoading={false}
-        trendsError={trendsError}
-        onRefreshTrends={refreshTrends}
       />
     </ProtectedRoute>
   )

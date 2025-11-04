@@ -13,7 +13,18 @@ import { Input } from './input'
 import { Label } from './label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { Textarea } from './textarea'
-import { AIPredictionsChart } from './ai-predictions-chart'
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer
+} from 'recharts'
 import {
   TrendingUp,
   Activity,
@@ -33,7 +44,13 @@ import {
   Plus,
   X,
   Calendar,
-  Clock as ClockIcon
+  Clock as ClockIcon,
+  Target,
+  Wrench,
+  BarChart3,
+  PieChart as PieChartIcon,
+  Maximize2,
+  Eye
 } from 'lucide-react'
 
 interface AlertsData {
@@ -125,20 +142,6 @@ interface EnhancedDashboardProps {
   isCostLoading?: boolean
   costError?: string | null
   onRefreshCost?: () => void
-  trendsData?: {
-    success?: boolean
-    period?: string
-    totalRecords?: number
-    trendData?: Array<{
-      maintenanceCount: number
-      pendingCount: number
-      completedCount: number
-      emergencyCount: number
-    }>
-  } | null
-  isTrendsLoading?: boolean
-  trendsError?: string | null
-  onRefreshTrends?: () => void
 }
 
 export function EnhancedDashboard({
@@ -156,9 +159,6 @@ export function EnhancedDashboard({
   costData,
   isCostLoading = false,
   costError = null,
-  trendsData,
-  isTrendsLoading = false,
-  trendsError = null,
 }: EnhancedDashboardProps) {
   const router = useRouter()
   const { user } = useAuth()
@@ -166,6 +166,16 @@ export function EnhancedDashboard({
   const [alertsData, setAlertsData] = useState<AlertsData | null>(null)
   const [isAlertsLoading, setIsAlertsLoading] = useState(false)
   const [alertsError, setAlertsError] = useState<string | null>(null)
+  
+  // Chart type states for each graph
+  const [confidenceChartType, setConfidenceChartType] = useState<'pie' | 'bar'>('bar')
+  const [assetTypeChartType, setAssetTypeChartType] = useState<'pie' | 'bar'>('pie')
+  const [maintenanceChartType, setMaintenanceChartType] = useState<'pie' | 'bar'>('bar')
+  
+  // View modal states for detailed views
+  const [isConfidenceViewOpen, setIsConfidenceViewOpen] = useState(false)
+  const [isAssetTypeViewOpen, setIsAssetTypeViewOpen] = useState(false)
+  const [isMaintenanceViewOpen, setIsMaintenanceViewOpen] = useState(false)
  
   // Alert Rules Modal State
   const [isAlertRulesModalOpen, setIsAlertRulesModalOpen] = useState(false)
@@ -332,27 +342,66 @@ export function EnhancedDashboard({
     }
   ), [costData])
 
-  const trendAnalysis = useMemo(() => (
-    trendsData?.success ? {
-      scheduled: trendsData.trendData?.reduce((sum: number, item) => sum + item.maintenanceCount, 0) || 0,
-      inProgress: trendsData.trendData?.reduce((sum: number, item) => sum + item.pendingCount, 0) || 0,
-      completed: trendsData.trendData?.reduce((sum: number, item) => sum + item.completedCount, 0) || 0,
-      overdue: trendsData.trendData?.reduce((sum: number, item) => sum + item.emergencyCount, 0) || 0,
-      total: trendsData.totalRecords || 0,
-      efficiency: trendsData.trendData && trendsData.trendData.length > 0 ? Math.round((trendsData.trendData.reduce((sum: number, item) => sum + item.completedCount, 0) / (trendsData.totalRecords || 1)) * 100) : 0,
-      avgCompletionTime: "2.3 days",
-      costSavings: "$12,500"
-    } : {
-      scheduled: 0,
-      inProgress: 0,
-      completed: 0,
-      overdue: 0,
-      total: 0,
-      efficiency: 0,
-      avgCompletionTime: "0 days",
-      costSavings: "$0"
-    }
-  ), [trendsData])
+  // Process predictions data for separate graphs
+  const confidenceChartData = useMemo(() => {
+    if (!transformedPredictionsData?.predictions) return []
+    
+    const predictions = transformedPredictionsData.predictions
+    const high = predictions.filter(p => p.prediction.confidence > 0.8).length
+    const medium = predictions.filter(p => p.prediction.confidence > 0.6 && p.prediction.confidence <= 0.8).length
+    const low = predictions.filter(p => p.prediction.confidence <= 0.6).length
+    
+    return [
+      { name: 'High', value: high, color: '#10B981' },
+      { name: 'Medium', value: medium, color: '#F59E0B' },
+      { name: 'Low', value: low, color: '#EF4444' }
+    ]
+  }, [transformedPredictionsData])
+
+  const assetTypeChartData = useMemo(() => {
+    if (!transformedPredictionsData?.predictions) return []
+    
+    const typeCounts: Record<string, number> = {}
+    transformedPredictionsData.predictions.forEach(p => {
+      const type = p.assetType || 'Unknown'
+      typeCounts[type] = (typeCounts[type] || 0) + 1
+    })
+    
+    return Object.entries(typeCounts).map(([name, value], index) => ({
+      name,
+      value,
+      color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#14B8A6'][index % 8]
+    }))
+  }, [transformedPredictionsData])
+
+  const maintenanceChartData = useMemo(() => {
+    if (!transformedPredictionsData?.predictions) return []
+    
+    const maintenanceData = transformedPredictionsData.predictions.reduce((acc: Record<string, number>, p) => {
+      const date = new Date(p.prediction.nextMaintenanceDate)
+      const daysUntil = Math.ceil((date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+      
+      if (daysUntil < 0) {
+        acc['Overdue'] = (acc['Overdue'] || 0) + 1
+      } else if (daysUntil <= 7) {
+        acc['This Week'] = (acc['This Week'] || 0) + 1
+      } else if (daysUntil <= 14) {
+        acc['Next Week'] = (acc['Next Week'] || 0) + 1
+      } else if (daysUntil <= 30) {
+        acc['This Month'] = (acc['This Month'] || 0) + 1
+      } else {
+        acc['Later'] = (acc['Later'] || 0) + 1
+      }
+      return acc
+    }, {})
+    
+    const order = ['Overdue', 'This Week', 'Next Week', 'This Month', 'Later']
+    return order.map((name, index) => ({
+      name,
+      value: maintenanceData[name] || 0,
+      color: ['#EF4444', '#F59E0B', '#3B82F6', '#10B981', '#6B7280'][index]
+    }))
+  }, [transformedPredictionsData])
 
 
   const handleAddUserClick = () => {
@@ -552,61 +601,36 @@ export function EnhancedDashboard({
 
 
     return (
-    <div className="flex h-screen bg-background transition-colors duration-200">
+    <div className="flex h-screen bg-gradient-to-br from-background via-background to-muted/20 transition-colors duration-200">
         <div className="flex-1 overflow-auto">
 
         {/* Main Content */}
-        <main className="px-2 pt-0 pb-1 sm:px-4 md:px-6 sm:pt-1 sm:pb-2 space-y-2 sm:space-y-3">
+        <main className="px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 pt-3 sm:pt-4 pb-4 sm:pb-6 space-y-4 sm:space-y-6 md:space-y-8">
          
-          {/* Dashboard Header */}
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              {user?.projectName ? (
-                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <p className="text-xs text-blue-800 dark:text-blue-200">
-                      <strong>Current Project:</strong> {user.projectName}
-                    </p>
-                </div>
-              ) : null}
-              </div>
-            <div className="flex items-center space-x-2">
-              {isLoading && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-muted-foreground">No data available</span>
-                </div>
-              )}
-              {error && (
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  <Button onClick={onRefresh} disabled={isLoading} variant="outline" size="sm">
-                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                    Refresh
-              </Button>
-            </div>
-              )}
-          </div>
-        </div>
-          {/* Advanced Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-            {advancedStats.map((stat) => (
-              <Card key={stat.title} className="border-border">
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between mb-2 sm:mb-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-lg flex items-center justify-center">
-                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+          {/* Advanced Stats Grid - Clean Minimalist Style */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {advancedStats.map((stat, index) => (
+              <Card 
+                key={stat.title} 
+                className="bg-white dark:bg-card border border-border/50 shadow-sm hover:shadow transition-shadow"
+              >
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex items-start justify-between mb-2 sm:mb-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-muted/50">
+                      <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-foreground/70" />
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <TrendingUp className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">
+                    <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-800">
+                      <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-600 dark:text-green-400" />
+                      <span className="text-[10px] sm:text-xs font-semibold text-green-700 dark:text-green-300">
                         {stat.change}
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-1 sm:space-y-2">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground">{stat.title}</p>
-                    <p className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">{stat.subValue}</p>
-                    <p className="text-xs text-muted-foreground hidden sm:block">{stat.description}</p>
+                  <div className="space-y-1">
+                    <p className="text-xs sm:text-sm font-medium text-foreground">{stat.title}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-foreground leading-none">{stat.value}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">{stat.subValue}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">{stat.description}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -614,456 +638,559 @@ export function EnhancedDashboard({
           </div>
 
           {/* Asset Health Monitoring and Cost Analysis */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-            {/* Asset Health Monitoring */}
-            <Card className="border-border">
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="flex items-center text-sm sm:text-base">
-                  <div className="flex items-center">
-                    <Thermometer className="w-4 h-4 mr-2 text-muted-foreground" />
-                    <span className="truncate">Asset Health Monitoring</span>
-                  </div>
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Real-time asset health status distribution</CardDescription>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {/* Asset Health Monitoring - Simplified */}
+            <Card className="bg-white dark:bg-card border border-border/50 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm sm:text-base font-semibold">Asset Health Monitoring</CardTitle>
+                <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">Real-time asset health status distribution</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                {/* Project Filter Indicator */}
-                {user?.projectName && (
-                  <div className="mb-2 sm:mb-3 p-2 bg-muted border border-border rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Thermometer className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs text-foreground truncate">
-                        Showing health data for: <strong className="truncate">{user.projectName}</strong>
-                      </span>
-                    </div>
-                  </div>
-                )}
-               
                 {isHealthLoading ? (
-                  <div className="flex items-center justify-center py-4 sm:py-6">
-                    <div className="text-center">
-                      <p className="text-muted-foreground text-xs sm:text-sm">No data available</p>
-                    </div>
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : healthError ? (
-                  <div className="text-center py-4 sm:py-6">
-                    <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-500 mx-auto mb-2 sm:mb-3" />
-                    <h3 className="text-sm sm:text-base font-semibold text-foreground mb-1 sm:mb-2">Failed to load health data</h3>
-                    <p className="text-muted-foreground mb-2 sm:mb-3 text-xs sm:text-sm">{healthError}</p>
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">{healthError}</p>
                   </div>
                 ) : healthData?.success ? (
-                  <div className="space-y-2 sm:space-y-3">
-                    {assetHealthData.map((asset, index) => (
-                      <div key={index} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 min-w-0 flex-1">
-                            <asset.icon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                            <span className="text-xs font-medium text-foreground truncate">{asset.name}</span>
+                  <div className="space-y-3">
+                    {assetHealthData.map((asset, index) => {
+                      const colorMap: Record<string, string> = {
+                        'bg-green-500': '#10B981',
+                        'bg-blue-500': '#3B82F6',
+                        'bg-yellow-500': '#F59E0B',
+                        'bg-orange-500': '#F97316',
+                        'bg-red-500': '#EF4444'
+                      }
+                      const hexColor = colorMap[asset.color] || '#6B7280'
+                      return (
+                        <div key={index} className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: hexColor }}></div>
+                              <span className="text-sm font-medium text-foreground">{asset.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-muted-foreground">{asset.percentage}%</span>
+                              <span className="text-sm font-semibold text-foreground">{asset.count}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                            <div className={`w-2 h-2 rounded-full ${asset.color}`}></div>
-                            <span className="text-xs text-muted-foreground">{asset.count}</span>
+                          <div className="w-full h-3 bg-muted/50 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full rounded-full transition-all"
+                              style={{ 
+                                width: `${asset.percentage}%`,
+                                backgroundColor: hexColor
+                              }}
+                            />
                           </div>
                         </div>
-                        <Progress value={asset.percentage} className="h-1.5" />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Percentage</span>
-                          <span>{asset.percentage}%</span>
-                        </div>
-                      </div>
-                    ))}
-                   
-                    {/* Health Summary */}
-                    <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 min-w-0 flex-1">
-                          <Thermometer className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-xs font-medium text-foreground truncate">
-                            Total: {assetHealthData.reduce((sum, asset) => sum + asset.count, 0)}
-                          </span>
-                        </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs flex-shrink-0">
-                          Real-time
-                        </Badge>
-                      </div>
-                      {user?.projectName && (
-                        <div className="mt-1 sm:mt-2 text-xs text-muted-foreground truncate">
-                          <span className="font-medium">Project:</span> <span className="truncate">{user.projectName}</span>
-                        </div>
-                      )}
+                      )
+                    })}
+                    <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Total: <span className="font-semibold text-foreground">{assetHealthData.reduce((sum, asset) => sum + asset.count, 0)}</span></span>
+                      <Badge variant="outline" className="text-xs">Real-time</Badge>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2 sm:space-y-3">
+                  <div className="space-y-3">
                     {[
-                      { name: "Excellent", count: 0, percentage: 0, color: "bg-green-500", icon: CheckCircle },
-                      { name: "Good", count: 0, percentage: 0, color: "bg-blue-500", icon: Activity },
-                      { name: "Fair", count: 0, percentage: 0, color: "bg-yellow-500", icon: AlertTriangle },
-                      { name: "Poor", count: 0, percentage: 0, color: "bg-orange-500", icon: AlertTriangle },
-                      { name: "Critical", count: 0, percentage: 0, color: "bg-red-500", icon: AlertCircle }
+                      { name: "Excellent", count: 0, percentage: 0, color: "#10B981" },
+                      { name: "Good", count: 0, percentage: 0, color: "#3B82F6" },
+                      { name: "Fair", count: 0, percentage: 0, color: "#F59E0B" },
+                      { name: "Poor", count: 0, percentage: 0, color: "#F97316" },
+                      { name: "Critical", count: 0, percentage: 0, color: "#EF4444" }
                     ].map((asset, index) => (
-                      <div key={index} className="space-y-1">
+                      <div key={index} className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 min-w-0 flex-1">
-                            <asset.icon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                            <span className="text-xs font-medium text-foreground truncate">{asset.name}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: asset.color }}></div>
+                            <span className="text-sm font-medium text-foreground">{asset.name}</span>
                           </div>
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                            <div className={`w-2 h-2 rounded-full ${asset.color}`}></div>
-                            <span className="text-xs text-muted-foreground">{asset.count}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-muted-foreground">{asset.percentage}%</span>
+                            <span className="text-sm font-semibold text-foreground">{asset.count}</span>
                           </div>
                         </div>
-                        <Progress value={asset.percentage} className="h-1.5" />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Percentage</span>
-                          <span>{asset.percentage}%</span>
-                        </div>
+                        <div className="w-full h-3 bg-muted/50 rounded-full"></div>
                       </div>
                     ))}
-                   
-                    {/* Health Summary */}
-                    <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 min-w-0 flex-1">
-                          <Thermometer className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-xs font-medium text-foreground truncate">
-                            Total: 0
-                          </span>
-                        </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs flex-shrink-0">
-                          No Data
-                        </Badge>
-                      </div>
+                    <div className="mt-4 pt-3 border-t border-border/50 text-center">
+                      <p className="text-xs text-muted-foreground">No Data Available</p>
                     </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Cost Analysis */}
-            <Card className="border-border">
+            {/* Cost Analysis - Simplified */}
+            <Card className="bg-white dark:bg-card border border-border/50 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-base">
-                  <div className="flex items-center">
-                    <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
-                    Cost Analysis
-                  </div>
-                </CardTitle>
-                <CardDescription className="text-sm">Asset cost analysis and depreciation tracking</CardDescription>
+                <CardTitle className="text-sm sm:text-base font-semibold">Cost Analysis</CardTitle>
+                <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">Asset cost analysis and depreciation tracking</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 {isCostLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <div className="text-center">
-                      <p className="text-muted-foreground text-sm">No data available</p>
-                    </div>
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : costError ? (
-                  <div className="text-center py-6">
-                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-foreground mb-2">Failed to load cost data</h3>
-                    <p className="text-muted-foreground mb-3 text-sm">{costError}</p>
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">{costError}</p>
                   </div>
                 ) : costData?.success ? (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Total Purchase Cost</span>
-                      <span className="text-sm font-bold text-foreground">
-                        ${costAnalysisData.totalPurchaseCost.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Current Value</span>
-                      <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                        ${costAnalysisData.totalCurrentValue.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Total Depreciation</span>
-                      <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                        ${costAnalysisData.totalDepreciation.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Avg. Depreciation Rate</span>
-                      <span className="text-xs font-medium text-foreground">
-                        {costAnalysisData.avgDepreciationRate.toFixed(2)}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={costAnalysisData.totalCurrentValue > 0 ? (costAnalysisData.totalCurrentValue / costAnalysisData.totalPurchaseCost) * 100 : 0}
-                      className="h-2"
-                    />
-                    <div className="space-y-1">
-                      {costAnalysisData.breakdown.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">{item.category}</span>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs font-medium text-foreground">
-                              ${item.amount.toLocaleString()}
-                            </span>
-                            <span className="text-xs text-muted-foreground">({item.percentage}%)</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                   
-                    {/* Cost Summary */}
-                    <div className="mt-3 p-2 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-foreground">
-                            Total Assets: {costAnalysisData.assetCount}
-                          </span>
-                        </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
-                          Real-time
-                        </Badge>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Purchase Cost</p>
+                        <p className="text-lg font-bold text-foreground">
+                          ${costAnalysisData.totalPurchaseCost.toLocaleString()}
+                        </p>
                       </div>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Current Value</p>
+                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                          ${costAnalysisData.totalCurrentValue.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-medium text-muted-foreground">Total Depreciation</p>
+                        <p className="text-sm font-bold text-red-600 dark:text-red-400">
+                          ${costAnalysisData.totalDepreciation.toLocaleString()}
+                        </p>
+                      </div>
+                      <Progress
+                        value={costAnalysisData.totalPurchaseCost > 0 ? (costAnalysisData.totalDepreciation / costAnalysisData.totalPurchaseCost) * 100 : 0}
+                        className="h-2"
+                      />
+                    </div>
+                    
+                    <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Total Assets: <span className="font-semibold text-foreground">{costAnalysisData.assetCount}</span></span>
+                      <Badge variant="outline" className="text-xs">Real-time</Badge>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Total Purchase Cost</span>
-                      <span className="text-sm font-bold text-foreground">$0</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Current Value</span>
-                      <span className="text-sm font-bold text-green-600 dark:text-green-400">$0</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Total Depreciation</span>
-                      <span className="text-sm font-bold text-red-600 dark:text-red-400">$0</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Avg. Depreciation Rate</span>
-                      <span className="text-xs font-medium text-foreground">0.00%</span>
-                    </div>
-                    <Progress value={0} className="h-2" />
-                   
-                    {/* Cost Summary */}
-                    <div className="mt-3 p-2 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-foreground">
-                            Total Assets: 0
-                          </span>
-                        </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
-                          No Data
-                        </Badge>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Purchase Cost</p>
+                        <p className="text-lg font-bold text-foreground">$0</p>
                       </div>
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Current Value</p>
+                        <p className="text-lg font-bold text-green-600 dark:text-green-400">$0</p>
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-medium text-muted-foreground">Total Depreciation</p>
+                        <p className="text-sm font-bold text-red-600 dark:text-red-400">$0</p>
+                      </div>
+                      <Progress value={0} className="h-2" />
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-border/50 text-center">
+                      <p className="text-xs text-muted-foreground">No Data Available</p>
                     </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Trend Analysis */}
-            <Card className="border-border">
+          </div>
+
+          {/* Graph Cards - Row 1: 2 Graphs */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Maintenance Timeline Graph */}
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-base">
-                  <div className="flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-2 text-muted-foreground" />
-                    Trend Analysis
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-sm sm:text-base font-semibold">Maintenance Timeline</CardTitle>
+                    <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">Scheduled maintenance overview</CardDescription>
                   </div>
-                </CardTitle>
-                <CardDescription className="text-sm">Performance trends and analytics</CardDescription>
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 sm:px-3 text-[10px] sm:text-xs bg-primary/5 hover:bg-primary/10 hover:text-primary border-primary/20 hover:border-primary/40 transition-all duration-200 shadow-sm hover:shadow-md flex-1 sm:flex-initial"
+                      onClick={() => setIsMaintenanceViewOpen(true)}
+                    >
+                      <Eye className="w-3 h-3 mr-1 sm:mr-1.5" />
+                      <span className="hidden sm:inline">View Details</span>
+                      <span className="sm:hidden">View</span>
+                    </Button>
+                    <Select value={maintenanceChartType} onValueChange={(value: string) => setMaintenanceChartType(value as 'pie' | 'bar')}>
+                      <SelectTrigger className="w-20 sm:w-24 h-7 text-[10px] sm:text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pie">Pie</SelectItem>
+                        <SelectItem value="bar">Bar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="pt-0">
-                {isTrendsLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <div className="text-center">
-                      <p className="text-muted-foreground text-sm">No data available</p>
-                    </div>
+                {isPredictionsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
-                ) : trendsError ? (
-                  <div className="text-center py-6">
-                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-foreground mb-2">Failed to load trends data</h3>
-                    <p className="text-muted-foreground mb-3 text-sm">{trendsError}</p>
+                ) : predictionsError ? (
+                  <div className="text-center py-16">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">{predictionsError}</p>
                   </div>
-                ) : trendsData?.success ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{trendAnalysis.scheduled}</p>
-                        <p className="text-xs text-muted-foreground">Scheduled</p>
-                      </div>
-                      <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">{trendAnalysis.inProgress}</p>
-                        <p className="text-xs text-muted-foreground">In Progress</p>
-                      </div>
-                      <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-green-600 dark:text-green-400">{trendAnalysis.completed}</p>
-                        <p className="text-xs text-muted-foreground">Completed</p>
-                      </div>
-                      <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-red-600 dark:text-red-400">{trendAnalysis.overdue}</p>
-                        <p className="text-xs text-muted-foreground">Overdue</p>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Efficiency</span>
-                        <span className="text-xs font-medium text-foreground">{trendAnalysis.efficiency}%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Avg. Completion</span>
-                        <span className="text-xs font-medium text-foreground">{trendAnalysis.avgCompletionTime}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Cost Savings</span>
-                        <span className="text-xs font-medium text-green-600 dark:text-green-400">{trendAnalysis.costSavings}</span>
-                      </div>
-                    </div>
-                   
-                    {/* Trends Summary */}
-                    <div className="mt-3 p-2 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-foreground">
-                            Period: {trendsData.period} | Total Records: {trendsData.totalRecords}
-                          </span>
-                        </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
-                          Real-time
-                        </Badge>
-                      </div>
-                    </div>
+                ) : maintenanceChartData.length > 0 && maintenanceChartData.some(d => d.value > 0) ? (
+                  <div className="h-[200px] sm:h-[240px] md:h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      {maintenanceChartType === 'pie' ? (
+                        <PieChart>
+                          <Pie
+                            data={maintenanceChartData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={false}
+                            outerRadius={100}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {maintenanceChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </PieChart>
+                      ) : (
+                        <BarChart data={maintenanceChartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis 
+                            dataKey="name" 
+                            stroke="hsl(var(--muted-foreground))"
+                            tick={{ fontSize: 11 }}
+                          />
+                          <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 11 }} />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px',
+                              fontSize: '12px'
+                            }}
+                          />
+                          <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+                            {maintenanceChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">0</p>
-                        <p className="text-xs text-muted-foreground">Scheduled</p>
-                      </div>
-                      <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">0</p>
-                        <p className="text-xs text-muted-foreground">In Progress</p>
-                      </div>
-                      <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-green-600 dark:text-green-400">0</p>
-                        <p className="text-xs text-muted-foreground">Completed</p>
-                      </div>
-                      <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-red-600 dark:text-red-400">0</p>
-                        <p className="text-xs text-muted-foreground">Overdue</p>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Efficiency</span>
-                        <span className="text-xs font-medium text-foreground">0%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Avg. Completion</span>
-                        <span className="text-xs font-medium text-foreground">0 days</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Cost Savings</span>
-                        <span className="text-xs font-medium text-green-600 dark:text-green-400">$0</span>
-                      </div>
-                    </div>
-                   
-                    {/* Trends Summary */}
-                    <div className="mt-3 p-2 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-foreground">
-                            No Data Available
-                          </span>
-                        </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
-                          No Data
-                        </Badge>
-                      </div>
-                    </div>
+                  <div className="text-center py-16">
+                    <Wrench className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">No data available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Comparative Analysis Graph - With Pie/Bar Toggle */}
+            <Card className="bg-white dark:bg-card border border-border/50 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-sm sm:text-base font-semibold">Comparative Analysis</CardTitle>
+                    <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">Data visualization</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 sm:px-3 text-[10px] sm:text-xs bg-primary/5 hover:bg-primary/10 hover:text-primary border-primary/20 hover:border-primary/40 transition-all duration-200 shadow-sm hover:shadow-md flex-1 sm:flex-initial"
+                      onClick={() => setIsAssetTypeViewOpen(true)}
+                    >
+                      <Eye className="w-3 h-3 mr-1 sm:mr-1.5" />
+                      <span className="hidden sm:inline">View Details</span>
+                      <span className="sm:hidden">View</span>
+                    </Button>
+                    <Select value={assetTypeChartType} onValueChange={(value: string) => setAssetTypeChartType(value as 'pie' | 'bar')}>
+                      <SelectTrigger className="w-20 sm:w-28 h-7 text-[10px] sm:text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pie">Pie Chart</SelectItem>
+                        <SelectItem value="bar">Bar Chart</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isPredictionsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : predictionsError ? (
+                  <div className="text-center py-16">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">{predictionsError}</p>
+                  </div>
+                ) : assetTypeChartData.length > 0 && assetTypeChartData.some(d => d.value > 0) ? (
+                  <div className="h-[200px] sm:h-[240px] md:h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      {assetTypeChartType === 'pie' ? (
+                        <PieChart>
+                          <Pie
+                            data={assetTypeChartData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={false}
+                            outerRadius={100}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {assetTypeChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </PieChart>
+                      ) : (
+                        <BarChart 
+                          data={assetTypeChartData} 
+                          margin={{ top: 15, right: 15, left: 5, bottom: 35 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis 
+                            dataKey="name" 
+                            stroke="hsl(var(--muted-foreground))"
+                            tick={{ fontSize: 10 }}
+                            angle={-45}
+                            textAnchor="end"
+                            height={70}
+                          />
+                          <YAxis 
+                            stroke="hsl(var(--muted-foreground))"
+                            tick={{ fontSize: 11 }}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              padding: '6px'
+                            }}
+                          />
+                          <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                            {assetTypeChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <Building2 className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">No data available</p>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
 
-          {/* AI Predictions Chart Section and Quick Actions - Side by Side */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-6">
-            {/* AI Predictions Chart Section - Reduced Width */}
-            <div className="xl:col-span-2">
-              <AIPredictionsChart
-                predictionsData={transformedPredictionsData || null}
-                isLoading={isPredictionsLoading}
-                error={predictionsError}
-                onRefreshAction={onRefreshPredictions || (() => {})}
-              />
-            </div>
-
-            {/* Quick Actions - Side Panel */}
-            <div className="xl:col-span-1">
-              <Card className="shadow-lg border-border h-full">
-                <CardHeader className="pb-2 sm:pb-3">
-                  <CardTitle className="flex items-center text-sm sm:text-base">
-                    <Zap className="w-4 h-4 mr-2 text-orange-600" />
-                    <span className="truncate">Quick Actions</span>
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Common tasks and shortcuts</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
-                    <Button
-                      variant="outline"
-                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
-                      onClick={handleAddUserClick}
-                      aria-label="Add a new user"
-                    >
-                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
-                      <span className="text-xs sm:text-sm font-medium">Add User</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
-                      onClick={handleAddAssetClick}
-                      aria-label="Add a new asset"
-                    >
-                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
-                      <span className="text-xs sm:text-sm font-medium">Add Asset</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
-                      onClick={handleAddLocationClick}
-                      aria-label="Add a new location"
-                    >
-                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
-                      <span className="text-xs sm:text-sm font-medium">Add Location</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2"
-                      onClick={handleGenerateReportClick}
-                      aria-label="Generate report"
-                    >
-                      <FileText className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
-                      <span className="text-xs sm:text-sm font-medium">Generate Report</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 sm:h-14 md:h-16 flex-col hover:bg-muted transition-colors justify-start p-2 col-span-2 sm:col-span-1"
-                      onClick={handleViewAlertsClick}
-                      aria-label="View system alerts"
-                    >
-                      <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mb-1 text-muted-foreground" />
-                      <span className="text-xs sm:text-sm font-medium">View Alerts</span>
-                    </Button>
+          {/* Row 2: Confidence Distribution + Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Confidence Distribution Graph */}
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-sm sm:text-base font-semibold">Confidence Distribution</CardTitle>
+                    <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">AI prediction confidence levels</CardDescription>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 sm:px-3 text-[10px] sm:text-xs bg-primary/5 hover:bg-primary/10 hover:text-primary border-primary/20 hover:border-primary/40 transition-all duration-200 shadow-sm hover:shadow-md flex-1 sm:flex-initial"
+                      onClick={() => setIsConfidenceViewOpen(true)}
+                    >
+                      <Eye className="w-3 h-3 mr-1 sm:mr-1.5" />
+                      <span className="hidden sm:inline">View Details</span>
+                      <span className="sm:hidden">View</span>
+                    </Button>
+                    <Select value={confidenceChartType} onValueChange={(value: string) => setConfidenceChartType(value as 'pie' | 'bar')}>
+                      <SelectTrigger className="w-20 sm:w-24 h-7 text-[10px] sm:text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pie">Pie</SelectItem>
+                        <SelectItem value="bar">Bar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isPredictionsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : predictionsError ? (
+                  <div className="text-center py-16">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">{predictionsError}</p>
+                  </div>
+                ) : confidenceChartData.length > 0 && confidenceChartData.some(d => d.value > 0) ? (
+                  <div className="h-[200px] sm:h-[240px] md:h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      {confidenceChartType === 'pie' ? (
+                        <PieChart>
+                          <Pie
+                            data={confidenceChartData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={false}
+                            outerRadius={100}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {confidenceChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </PieChart>
+                      ) : (
+                        <BarChart data={confidenceChartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis 
+                            dataKey="name" 
+                            stroke="hsl(var(--muted-foreground))"
+                            tick={{ fontSize: 11 }}
+                          />
+                          <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 11 }} />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px',
+                              fontSize: '12px'
+                            }}
+                          />
+                          <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+                            {confidenceChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <Target className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">No data available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions Section */}
+            <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div>
+                  <CardTitle className="text-sm sm:text-base font-semibold">Quick Actions</CardTitle>
+                  <CardDescription className="text-[10px] sm:text-xs mt-0.5 sm:mt-1">Common tasks and shortcuts</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-col gap-2 sm:gap-2 items-center">
+                <Button
+                  variant="outline"
+                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md rounded-lg"
+                  onClick={handleAddUserClick}
+                  aria-label="Add a new user"
+                >
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-[10px] sm:text-xs font-medium text-foreground">Add User</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-green-50 dark:hover:bg-green-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-green-500 dark:hover:border-green-400 hover:shadow-md rounded-lg"
+                  onClick={handleAddAssetClick}
+                  aria-label="Add a new asset"
+                >
+                  <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600 dark:text-green-400" />
+                  <span className="text-[10px] sm:text-xs font-medium text-foreground">Add Asset</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-yellow-50 dark:hover:bg-yellow-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-yellow-500 dark:hover:border-yellow-400 hover:shadow-md rounded-lg"
+                  onClick={handleAddLocationClick}
+                  aria-label="Add a new location"
+                >
+                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600 dark:text-yellow-400" />
+                  <span className="text-[10px] sm:text-xs font-medium text-foreground">Add Location</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-indigo-500 dark:hover:border-indigo-400 hover:shadow-md rounded-lg"
+                  onClick={handleGenerateReportClick}
+                  aria-label="Generate report"
+                >
+                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400" />
+                  <span className="text-[10px] sm:text-xs font-medium text-foreground">Generate Report</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-red-500 dark:hover:border-red-400 hover:shadow-md rounded-lg"
+                  onClick={handleViewAlertsClick}
+                  aria-label="View system alerts"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600 dark:text-red-400" />
+                  <span className="text-[10px] sm:text-xs font-medium text-foreground">View Alerts</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
           </div>
         </main>
       </div>
@@ -1465,9 +1592,129 @@ export function EnhancedDashboard({
                  )}
                </Button>
              </div>
-           </div>
-         </DialogContent>
-       </Dialog>
-     </div>
-   )
-} 
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confidence Distribution Detailed View Modal - Categories Only */}
+      <Dialog open={isConfidenceViewOpen} onOpenChange={setIsConfidenceViewOpen}>
+        <DialogContent className="w-[95vw] sm:w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
+          <DialogHeader className="pb-3 sm:pb-4 border-b border-border/50">
+            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              Confidence Distribution
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm mt-1 sm:mt-2">AI prediction confidence levels breakdown</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 sm:mt-6">
+            {/* Category Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {confidenceChartData.map((item, index) => (
+                <div 
+                  key={index} 
+                  className="group flex flex-col items-center p-4 sm:p-5 bg-gradient-to-br from-white to-muted/30 dark:from-card dark:to-muted/20 border-2 border-border/50 rounded-xl shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-300 hover:scale-105"
+                >
+                  <div 
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full mb-3 sm:mb-4 shadow-md ring-2 ring-white dark:ring-card" 
+                    style={{ backgroundColor: item.color }}
+                  ></div>
+                  <span className="text-xs sm:text-sm font-semibold text-foreground mb-2">{item.name}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-foreground">{item.value}</span>
+                  <div className="mt-2 w-full h-1 rounded-full bg-muted/50 overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ 
+                        backgroundColor: item.color,
+                        width: `${Math.max(10, (item.value / Math.max(...confidenceChartData.map(d => d.value), 1)) * 100)}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Asset Type Distribution Detailed View Modal - Categories Only */}
+      <Dialog open={isAssetTypeViewOpen} onOpenChange={setIsAssetTypeViewOpen}>
+        <DialogContent className="w-[95vw] sm:w-full max-w-5xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
+          <DialogHeader className="pb-3 sm:pb-4 border-b border-border/50">
+            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              Comparative Analysis
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Asset type categories breakdown</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 sm:mt-6">
+            {/* Category Cards Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {assetTypeChartData.map((item, index) => (
+                <div 
+                  key={index} 
+                  className="group flex flex-col items-center p-4 sm:p-5 bg-gradient-to-br from-white to-muted/30 dark:from-card dark:to-muted/20 border-2 border-border/50 rounded-xl shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-300 hover:scale-105"
+                >
+                  <div 
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full mb-3 sm:mb-4 shadow-md ring-2 ring-white dark:ring-card" 
+                    style={{ backgroundColor: item.color }}
+                  ></div>
+                  <span className="text-xs sm:text-sm font-semibold text-foreground mb-2 text-center leading-tight">{item.name}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-foreground">{item.value}</span>
+                  <div className="mt-2 w-full h-1 rounded-full bg-muted/50 overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ 
+                        backgroundColor: item.color,
+                        width: `${Math.max(10, (item.value / Math.max(...assetTypeChartData.map(d => d.value), 1)) * 100)}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Maintenance Timeline Detailed View Modal - Categories Only */}
+      <Dialog open={isMaintenanceViewOpen} onOpenChange={setIsMaintenanceViewOpen}>
+        <DialogContent className="w-[95vw] sm:w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
+          <DialogHeader className="pb-3 sm:pb-4 border-b border-border/50">
+            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              Maintenance Timeline
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm mt-1 sm:mt-2">Scheduled maintenance categories breakdown</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 sm:mt-6">
+            {/* Category Cards Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+              {maintenanceChartData.map((item, index) => (
+                <div 
+                  key={index} 
+                  className="group flex flex-col items-center p-4 sm:p-5 bg-gradient-to-br from-white to-muted/30 dark:from-card dark:to-muted/20 border-2 border-border/50 rounded-xl shadow-sm hover:shadow-lg hover:border-primary/50 transition-all duration-300 hover:scale-105"
+                >
+                  <div 
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full mb-3 sm:mb-4 shadow-md ring-2 ring-white dark:ring-card" 
+                    style={{ backgroundColor: item.color }}
+                  ></div>
+                  <span className="text-xs sm:text-sm font-semibold text-foreground mb-2 text-center leading-tight">{item.name}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-foreground">{item.value}</span>
+                  <div className="mt-2 w-full h-1 rounded-full bg-muted/50 overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ 
+                        backgroundColor: item.color,
+                        width: `${Math.max(10, (item.value / Math.max(...maintenanceChartData.map(d => d.value), 1)) * 100)}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

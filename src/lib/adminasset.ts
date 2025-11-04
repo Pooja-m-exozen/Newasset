@@ -134,6 +134,7 @@ export interface AssetData {
     movable: SubAsset[]
     immovable: SubAsset[]
   }
+  scanHistory?: ScanHistory[]  // Scan history for the asset
   createdAt?: string
   updatedAt?: string
 }

@@ -1121,7 +1121,7 @@ export function EnhancedDashboard({
                     <p className="text-xs text-muted-foreground">{assetsError}</p>
                   </div>
                 ) : assetClassificationChartData.length > 0 && assetClassificationChartData.some(d => d.value > 0) ? (
-                  <div className="h-[300px] sm:h-[340px] md:h-[380px]">
+                  <div className="h-[360px] sm:h-[400px] md:h-[440px]">
                     <ResponsiveContainer width="100%" height="100%">
                       {assetClassificationChartType === 'pie' ? (
                         <PieChart>
@@ -1131,7 +1131,7 @@ export function EnhancedDashboard({
                             cy="50%"
                             labelLine={false}
                             label={false}
-                            outerRadius={120}
+                            outerRadius={140}
                             fill="#8884d8"
                             dataKey="value"
                           >
@@ -1197,51 +1197,51 @@ export function EnhancedDashboard({
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="flex flex-col gap-2 sm:gap-2 items-center">
+                <div className="flex flex-col gap-3 sm:gap-3 items-center justify-center min-h-[360px] sm:min-h-[400px] md:min-h-[440px]">
                 <Button
                   variant="outline"
-                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md rounded-lg"
+                  className="w-full max-w-[200px] sm:max-w-[220px] h-14 sm:h-16 flex-row hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all duration-200 justify-center items-center gap-3 px-4 py-3 border-2 border-border/50 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md rounded-lg"
                   onClick={handleAddUserClick}
                   aria-label="Add a new user"
                 >
-                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-[10px] sm:text-xs font-medium text-foreground">Add User</span>
+                  <Users className="w-5 h-5 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs sm:text-sm font-medium text-foreground">Add User</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-green-50 dark:hover:bg-green-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-green-500 dark:hover:border-green-400 hover:shadow-md rounded-lg"
+                  className="w-full max-w-[200px] sm:max-w-[220px] h-14 sm:h-16 flex-row hover:bg-green-50 dark:hover:bg-green-950/20 transition-all duration-200 justify-center items-center gap-3 px-4 py-3 border-2 border-border/50 hover:border-green-500 dark:hover:border-green-400 hover:shadow-md rounded-lg"
                   onClick={handleAddAssetClick}
                   aria-label="Add a new asset"
                 >
-                  <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600 dark:text-green-400" />
-                  <span className="text-[10px] sm:text-xs font-medium text-foreground">Add Asset</span>
+                  <Building2 className="w-5 h-5 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
+                  <span className="text-xs sm:text-sm font-medium text-foreground">Add Asset</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-yellow-50 dark:hover:bg-yellow-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-yellow-500 dark:hover:border-yellow-400 hover:shadow-md rounded-lg"
+                  className="w-full max-w-[200px] sm:max-w-[220px] h-14 sm:h-16 flex-row hover:bg-yellow-50 dark:hover:bg-yellow-950/20 transition-all duration-200 justify-center items-center gap-3 px-4 py-3 border-2 border-border/50 hover:border-yellow-500 dark:hover:border-yellow-400 hover:shadow-md rounded-lg"
                   onClick={handleAddLocationClick}
                   aria-label="Add a new location"
                 >
-                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600 dark:text-yellow-400" />
-                  <span className="text-[10px] sm:text-xs font-medium text-foreground">Add Location</span>
+                  <MapPin className="w-5 h-5 sm:w-5 sm:h-5 text-yellow-600 dark:text-yellow-400" />
+                  <span className="text-xs sm:text-sm font-medium text-foreground">Add Location</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-indigo-500 dark:hover:border-indigo-400 hover:shadow-md rounded-lg"
+                  className="w-full max-w-[200px] sm:max-w-[220px] h-14 sm:h-16 flex-row hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all duration-200 justify-center items-center gap-3 px-4 py-3 border-2 border-border/50 hover:border-indigo-500 dark:hover:border-indigo-400 hover:shadow-md rounded-lg"
                   onClick={handleGenerateReportClick}
                   aria-label="Generate report"
                 >
-                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 dark:text-indigo-400" />
-                  <span className="text-[10px] sm:text-xs font-medium text-foreground">Generate Report</span>
+                  <FileText className="w-5 h-5 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400" />
+                  <span className="text-xs sm:text-sm font-medium text-foreground">Generate Report</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full max-w-[150px] sm:max-w-[180px] h-10 sm:h-12 flex-row hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 justify-center items-center gap-2 px-3 py-2 border-2 border-border/50 hover:border-red-500 dark:hover:border-red-400 hover:shadow-md rounded-lg"
+                  className="w-full max-w-[200px] sm:max-w-[220px] h-14 sm:h-16 flex-row hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 justify-center items-center gap-3 px-4 py-3 border-2 border-border/50 hover:border-red-500 dark:hover:border-red-400 hover:shadow-md rounded-lg"
                   onClick={handleViewAlertsClick}
                   aria-label="View system alerts"
                 >
-                  <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600 dark:text-red-400" />
-                  <span className="text-[10px] sm:text-xs font-medium text-foreground">View Alerts</span>
+                  <AlertCircle className="w-5 h-5 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" />
+                  <span className="text-xs sm:text-sm font-medium text-foreground">View Alerts</span>
                 </Button>
               </div>
             </CardContent>

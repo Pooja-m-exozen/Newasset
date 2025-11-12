@@ -187,7 +187,31 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
         
         // Add a delay before showing assets to give server time to process images
         setTimeout(() => {
-          setGeneratedAssets(result.results as Array<{
+          // Transform shortUrl to use production QR code image URL for each result
+          const transformedResults = (result.results || []).map((item: any) => {
+            if (item.generated?.qrCode?.url) {
+              const qrCodeUrl = item.generated.qrCode.url
+              const productionShortUrl = qrCodeUrl.startsWith('http')
+                ? qrCodeUrl
+                : qrCodeUrl.startsWith('/')
+                  ? `https://digitalasset.zenapi.co.in${qrCodeUrl}`
+                  : `https://digitalasset.zenapi.co.in/${qrCodeUrl}`
+              
+              return {
+                ...item,
+                generated: {
+                  ...item.generated,
+                  qrCode: {
+                    ...item.generated.qrCode,
+                    shortUrl: productionShortUrl
+                  }
+                }
+              }
+            }
+            return item
+          })
+          
+          setGeneratedAssets(transformedResults as Array<{
             success: boolean
             message: string
             generated?: {

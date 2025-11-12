@@ -178,7 +178,23 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
       )
 
       if (result.success) {
-        setGeneratedQR(result as unknown as {
+        // Transform shortUrl to use production QR code image URL
+        const qrCodeUrl = result.qrCode?.url || ''
+        const productionShortUrl = qrCodeUrl.startsWith('http')
+          ? qrCodeUrl
+          : qrCodeUrl.startsWith('/')
+            ? `https://digitalasset.zenapi.co.in${qrCodeUrl}`
+            : `https://digitalasset.zenapi.co.in/${qrCodeUrl}`
+        
+        const transformedResult = {
+          ...result,
+          qrCode: {
+            ...result.qrCode,
+            shortUrl: productionShortUrl
+          }
+        }
+        
+        setGeneratedQR(transformedResult as unknown as {
           success: boolean
           message: string
           qrCode: {
@@ -195,7 +211,7 @@ export function SubAssetQRGenerator({}: SubAssetQRGeneratorProps) {
             brand: string
           }
         })
-        setQrResponse(result as unknown as {
+        setQrResponse(transformedResult as unknown as {
           success: boolean
           message: string
           qrCode: {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,6 +15,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 import Image from "next/image"
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -87,8 +89,8 @@ export default function RegisterPage() {
       addToast({
         type: "success",
         title: "Registration Successful!",
-        message: "Please check your email to verify your account.",
-        duration: 5000
+        message: "Please check your email to verify your account. Redirecting to login...",
+        duration: 3000
       })
 
       setSuccessMessage("Registration successful! Please check your email to verify your account.")
@@ -103,10 +105,10 @@ export default function RegisterPage() {
       })
       setAgreeToTerms(false)
 
-      // Redirect to login after 3 seconds
+      // Redirect to login page after successful registration
       setTimeout(() => {
-        window.location.href = "/login"
-      }, 3000)
+        router.push("/login")
+      }, 2000)
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Registration failed. Please try again."

@@ -73,6 +73,8 @@ interface AssetFormData {
   };
   subAssets: {
     movable: Array<{
+      _id?: string;
+      tagId?: string;
       assetName: string;
       description: string;
       brand: string;
@@ -81,6 +83,8 @@ interface AssetFormData {
       location: string;
     }>;
     immovable: Array<{
+      _id?: string;
+      tagId?: string;
       assetName: string;
       description: string;
       brand: string;
@@ -126,7 +130,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
     tags: [] as string[], notes: '', customFields: {} as Record<string, string>,
     location: { latitude: '0', longitude: '0', building: '', floor: '', room: '' },
     compliance: { certifications: [] as string[], expiryDates: [] as string[], regulatoryRequirements: [] as string[] },
-    subAssets: { movable: [] as Array<{ assetName: string; description: string; brand: string; model: string; capacity: string; location: string; }>, immovable: [] as Array<{ assetName: string; description: string; brand: string; model: string; capacity: string; location: string; }> }
+    subAssets: { movable: [] as Array<{ _id?: string; tagId?: string; assetName: string; description: string; brand: string; model: string; capacity: string; location: string; }>, immovable: [] as Array<{ _id?: string; tagId?: string; assetName: string; description: string; brand: string; model: string; capacity: string; location: string; }> }
   });
 
   // UI state
@@ -395,6 +399,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
           },
           subAssets: {
             movable: (asset.subAssets?.movable || []).map(subAsset => ({
+              _id: subAsset._id,
+              tagId: subAsset.tagId,
               assetName: subAsset.assetName,
               description: subAsset.description || '',
               brand: subAsset.brand,
@@ -403,6 +409,8 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
               location: subAsset.location
             })),
             immovable: (asset.subAssets?.immovable || []).map(subAsset => ({
+              _id: subAsset._id,
+              tagId: subAsset.tagId,
               assetName: subAsset.assetName,
               description: subAsset.description || '',
               brand: subAsset.brand,

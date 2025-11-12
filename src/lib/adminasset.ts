@@ -1030,38 +1030,72 @@ export const assetApi = {
     // Transform the data if it's not FormData
     let transformedData = assetData;
     if (!isFormData && assetData && typeof assetData === 'object') {
-      // DON'T send tagId when updating - it's the unique identifier and should never change
+      // CRITICAL: DON'T send tagId when updating - it's the unique identifier and should NEVER change
+      // The backend should preserve the existing tagId regardless of other field changes
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { tagId: _tagId, ...dataWithoutTagId } = assetData as Record<string, unknown>;
       
-      // Create a new object and transform sub-assets to clean up data
+      // Double-check: Ensure tagId is completely removed (in case it was nested)
+      if ('tagId' in dataWithoutTagId) {
+        console.warn('WARNING: tagId found in update data after removal - removing it again');
+        delete (dataWithoutTagId as Record<string, unknown>).tagId;
+      }
+      
+      // CRITICAL: DO NOT send sub-assets in updates - their tagIds must NEVER change
+      // Sub-assets are immutable after creation - only the main asset properties can be updated
+      // If sub-assets are sent, remove tagIds from them as a safety measure
+      // But ideally, sub-assets should not be sent at all in update requests
+      const dataWithoutSubAssets = { ...dataWithoutTagId };
+      
+      // Remove sub-assets from update payload to prevent any tagId changes
+      if ('subAssets' in dataWithoutSubAssets) {
+        console.warn('WARNING: subAssets found in update payload - removing to preserve tagIds');
+        delete (dataWithoutSubAssets as Record<string, unknown>).subAssets;
+      }
+      
+      // Create a new object without sub-assets
+      transformedData = dataWithoutSubAssets;
+      
+      // NOTE: If sub-assets absolutely must be sent for some reason (e.g., adding new ones),
+      // the code below would process them, but we're explicitly NOT sending them to preserve tagIds
+      // This is commented out as a safety measure:
+      /*
       transformedData = {
         ...dataWithoutTagId,
         subAssets: assetData.subAssets ? (({
           movable: assetData.subAssets.movable?.map(subAsset => {
-            // Remove category, parentAsset, and empty inventory arrays
+            // CRITICAL: Preserve _id so backend knows which sub-asset to update
+            // Remove tagId, category, parentAsset, and empty inventory arrays
+            // Sub-asset tagId should NEVER change - it's the unique identifier
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { category: _category, parentAsset: _parentAsset, inventory, ...rest } = subAsset as unknown as Record<string, unknown>;
+            const { tagId: _subAssetTagId, category: _category, parentAsset: _parentAsset, inventory, ...rest } = subAsset as unknown as Record<string, unknown>;
+            // Preserve _id if it exists (for existing sub-assets)
+            const result = '_id' in subAsset && subAsset._id ? { ...rest, _id: subAsset._id } : rest;
             // Only include inventory if it has items
             const inv = inventory as { consumables?: unknown[]; spareParts?: unknown[]; tools?: unknown[]; operationalSupply?: unknown[] };
             if (inventory && ((inv.consumables?.length ?? 0) > 0 || (inv.spareParts?.length ?? 0) > 0 || (inv.tools?.length ?? 0) > 0 || (inv.operationalSupply?.length ?? 0) > 0)) {
-              return { ...rest, inventory };
+              return { ...result, inventory };
             }
-            return rest;
+            return result;
           }).filter(Boolean) || [],
           immovable: assetData.subAssets.immovable?.map(subAsset => {
-            // Remove category, parentAsset, and empty inventory arrays
+            // CRITICAL: Preserve _id so backend knows which sub-asset to update
+            // Remove tagId, category, parentAsset, and empty inventory arrays
+            // Sub-asset tagId should NEVER change - it's the unique identifier
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { category: _category, parentAsset: _parentAsset, inventory, ...rest } = subAsset as unknown as Record<string, unknown>;
+            const { tagId: _subAssetTagId, category: _category, parentAsset: _parentAsset, inventory, ...rest } = subAsset as unknown as Record<string, unknown>;
+            // Preserve _id if it exists (for existing sub-assets)
+            const result = '_id' in subAsset && subAsset._id ? { ...rest, _id: subAsset._id } : rest;
             // Only include inventory if it has items
             const inv = inventory as { consumables?: unknown[]; spareParts?: unknown[]; tools?: unknown[]; operationalSupply?: unknown[] };
             if (inventory && ((inv.consumables?.length ?? 0) > 0 || (inv.spareParts?.length ?? 0) > 0 || (inv.tools?.length ?? 0) > 0 || (inv.operationalSupply?.length ?? 0) > 0)) {
-              return { ...rest, inventory };
+              return { ...result, inventory };
             }
-            return rest;
+            return result;
           }).filter(Boolean) || []
         }) as unknown as SubAssets) : undefined
       };
+      */
       
       // Remove location field if it has invalid data (latitude/longitude as "0")
       if (transformedData && typeof transformedData === 'object' && 'location' in transformedData) {
@@ -1074,7 +1108,45 @@ export const assetApi = {
         }
       }
       
+      // Final safety check: Ensure tagId is absolutely not in the payload (main asset)
+      if (transformedData && typeof transformedData === 'object' && 'tagId' in transformedData) {
+        console.error('ERROR: Main asset tagId should never be in update payload - removing it');
+        delete (transformedData as Record<string, unknown>).tagId;
+      }
+      
+      // Final safety check: Ensure no sub-asset tagIds are in the payload
+      if (transformedData && typeof transformedData === 'object' && 'subAssets' in transformedData) {
+        const subAssets = (transformedData as Record<string, unknown>).subAssets as { movable?: unknown[]; immovable?: unknown[] } | undefined;
+        if (subAssets) {
+          // Check movable sub-assets
+          if (subAssets.movable && Array.isArray(subAssets.movable)) {
+            subAssets.movable.forEach((subAsset, index) => {
+              if (subAsset && typeof subAsset === 'object' && 'tagId' in subAsset) {
+                console.error(`ERROR: Sub-asset tagId found in movable[${index}] - removing it`);
+                delete (subAsset as Record<string, unknown>).tagId;
+              }
+            });
+          }
+          // Check immovable sub-assets
+          if (subAssets.immovable && Array.isArray(subAssets.immovable)) {
+            subAssets.immovable.forEach((subAsset, index) => {
+              if (subAsset && typeof subAsset === 'object' && 'tagId' in subAsset) {
+                console.error(`ERROR: Sub-asset tagId found in immovable[${index}] - removing it`);
+                delete (subAsset as Record<string, unknown>).tagId;
+              }
+            });
+          }
+        }
+      }
+      
       console.log('updateAsset - Transformed data (after cleanup):', JSON.stringify(transformedData, null, 2));
+      console.log('updateAsset - Confirming tagId is NOT in payload:', !('tagId' in transformedData));
+    }
+    
+    // For FormData, we can't easily check, but tagId should not be included in the form
+    if (isFormData && assetData instanceof FormData && assetData.has('tagId')) {
+      console.warn('WARNING: FormData contains tagId - this should be removed before sending');
+      assetData.delete('tagId');
     }
     
     return apiRequest<{ success: boolean; asset: Asset }>(`/assets/${assetId}`, {

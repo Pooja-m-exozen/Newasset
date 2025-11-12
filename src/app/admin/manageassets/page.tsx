@@ -173,12 +173,136 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
   };
 
   const handleAssetUpdated = (updatedAsset: Asset) => {
-    // Update the asset in the state
-    updateAssetInState(updatedAsset);
+    // CRITICAL: Preserve the original tagId - it should NEVER change
+    // Get the original asset from state to preserve its tagId and sub-asset tagIds
+    const originalAsset = state.assets.find(a => a._id === updatedAsset._id);
+    const originalTagId = originalAsset?.tagId || selectedAsset?.tagId;
+    
+    // Create updated asset with preserved tagId
+    const updatedAssetWithOriginalTagId: Asset = {
+      ...updatedAsset,
+      tagId: originalTagId || updatedAsset.tagId // Preserve original tagId, fallback to updated if somehow missing
+    };
+    
+    // CRITICAL: Preserve sub-asset tagIds - they should NEVER change
+    // Create a helper function to find original sub-asset by multiple methods
+    // This ensures we can match sub-assets even if backend changes tagIds
+    const findOriginalSubAsset = (
+      updatedSubAsset: { _id?: string; tagId?: string; assetName?: string; brand?: string; model?: string },
+      originalSubAssets: Array<{ _id?: string; tagId?: string; assetName?: string; brand?: string; model?: string }> | undefined,
+      index: number
+    ) => {
+      if (!originalSubAssets || originalSubAssets.length === 0) return undefined;
+      
+      // Method 1: Match by _id (most reliable - backend should preserve this)
+      if (updatedSubAsset._id) {
+        const found = originalSubAssets.find(sa => sa._id === updatedSubAsset._id);
+        if (found) return found;
+      }
+      
+      // Method 2: Match by tagId from updated asset (if backend preserved it)
+      if (updatedSubAsset.tagId) {
+        const found = originalSubAssets.find(sa => sa.tagId === updatedSubAsset.tagId);
+        if (found) return found;
+      }
+      
+      // Method 3: Match by assetName + brand + model (fallback for when tagId changes)
+      if (updatedSubAsset.assetName && updatedSubAsset.brand && updatedSubAsset.model) {
+        const found = originalSubAssets.find(sa => 
+          sa.assetName === updatedSubAsset.assetName &&
+          sa.brand === updatedSubAsset.brand &&
+          sa.model === updatedSubAsset.model
+        );
+        if (found) return found;
+      }
+      
+      // Method 4: Match by index as last resort (if order hasn't changed)
+      if (index >= 0 && index < originalSubAssets.length) {
+        return originalSubAssets[index];
+      }
+      
+      return undefined;
+    };
+    
+    // Preserve sub-asset tagIds - ensure subAssets exists before processing
+    const originalSubAssets = originalAsset?.subAssets;
+    const updatedSubAssets = updatedAssetWithOriginalTagId.subAssets;
+    
+    if (originalSubAssets && updatedSubAssets) {
+      // Process both movable and immovable sub-assets
+      const preservedMovable = originalSubAssets.movable && updatedSubAssets.movable
+        ? updatedSubAssets.movable.map((updatedSubAsset, index) => {
+            const originalSubAsset = findOriginalSubAsset(updatedSubAsset, originalSubAssets.movable, index);
+            
+            // ALWAYS preserve original tagId if it exists - regardless of what backend returns
+            if (originalSubAsset?.tagId) {
+              // If backend returned a different tagId, preserve the original
+              if (updatedSubAsset.tagId !== originalSubAsset.tagId) {
+                console.warn(`WARNING: Sub-asset tagId changed for movable sub-asset. Preserving original:`, {
+                  original: originalSubAsset.tagId,
+                  backend: updatedSubAsset.tagId,
+                  preserving: originalSubAsset.tagId,
+                  _id: updatedSubAsset._id,
+                  assetName: updatedSubAsset.assetName,
+                  index
+                });
+              }
+              return { ...updatedSubAsset, tagId: originalSubAsset.tagId };
+            }
+            
+            // If original had no tagId but updated has one, keep the updated one (newly created)
+            return updatedSubAsset;
+          })
+        : updatedSubAssets.movable;
+      
+      const preservedImmovable = originalSubAssets.immovable && updatedSubAssets.immovable
+        ? updatedSubAssets.immovable.map((updatedSubAsset, index) => {
+            const originalSubAsset = findOriginalSubAsset(updatedSubAsset, originalSubAssets.immovable, index);
+            
+            // ALWAYS preserve original tagId if it exists - regardless of what backend returns
+            if (originalSubAsset?.tagId) {
+              // If backend returned a different tagId, preserve the original
+              if (updatedSubAsset.tagId !== originalSubAsset.tagId) {
+                console.warn(`WARNING: Sub-asset tagId changed for immovable sub-asset. Preserving original:`, {
+                  original: originalSubAsset.tagId,
+                  backend: updatedSubAsset.tagId,
+                  preserving: originalSubAsset.tagId,
+                  _id: updatedSubAsset._id,
+                  assetName: updatedSubAsset.assetName,
+                  index
+                });
+              }
+              return { ...updatedSubAsset, tagId: originalSubAsset.tagId };
+            }
+            
+            // If original had no tagId but updated has one, keep the updated one (newly created)
+            return updatedSubAsset;
+          })
+        : updatedSubAssets.immovable;
+      
+      // Update subAssets with preserved tagIds
+      updatedAssetWithOriginalTagId.subAssets = {
+        ...updatedSubAssets,
+        ...(preservedMovable ? { movable: preservedMovable } : {}),
+        ...(preservedImmovable ? { immovable: preservedImmovable } : {})
+      };
+    }
+    
+    // Log warning if main asset tagId changed (should never happen)
+    if (updatedAsset.tagId !== originalTagId && originalTagId) {
+      console.warn('WARNING: Backend returned different tagId. Preserving original:', {
+        original: originalTagId,
+        backend: updatedAsset.tagId,
+        preserving: originalTagId
+      });
+    }
+    
+    // Update the asset in the state with preserved tagIds
+    updateAssetInState(updatedAssetWithOriginalTagId);
     
     // Update the selected asset if it's the one being viewed
     if (selectedAsset?._id === updatedAsset._id) {
-      setSelectedAsset(updatedAsset);
+      setSelectedAsset(updatedAssetWithOriginalTagId);
     }
     
     // Show success message
@@ -540,9 +664,19 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
           console.log('Form data being submitted:', data);
           console.log('User project info:', user);
           
+          // CRITICAL: Remove tagId from form data ONLY when editing - it should NEVER be sent in updates
+          // When creating, tagId should be included
+          let dataToTransform: Partial<typeof data> = data;
+          if (isEditModalOpen) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { tagId: _formTagId, ...dataWithoutTagId } = data;
+            dataToTransform = dataWithoutTagId as Partial<typeof data>;
+            console.log('Edit mode: Removed tagId from form data to prevent changes');
+          }
+          
           // Transform AssetFormData to match Asset interface structure
           const transformedData: Partial<Asset> = {
-            ...data,
+            ...dataToTransform,
             // Keep the project structure as is since it's already in the correct format
             project: data.project,
             assignedTo: data.assignedTo ? { _id: data.assignedTo, name: '', email: '' } : undefined,
@@ -574,6 +708,13 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
           };
           
           console.log('Transformed data for API:', transformedData);
+          
+          // Final verification: Ensure tagId is NOT in transformed data when editing
+          if (isEditModalOpen && 'tagId' in transformedData) {
+            console.error('ERROR: tagId found in transformed data for edit - removing it');
+            delete (transformedData as Record<string, unknown>).tagId;
+          }
+          console.log('TagId in transformed data (should be false for edit):', isEditModalOpen ? !('tagId' in transformedData) : 'N/A (create mode)');
 
           if (isCreateModalOpen) {
             try {
@@ -603,12 +744,86 @@ const AssetsList: React.FC<{ searchTerm: string }> = ({ searchTerm }) => {
           } else if (isEditModalOpen && editingAsset) {
             try {
               console.log('Updating asset with ID:', editingAsset._id);
-              console.log('Sub-assets being sent to backend:', transformedData.subAssets);
-              await updateAsset(editingAsset._id!, transformedData);
               
-              // Refresh the assets list to show the updated asset
-              console.log('Refreshing all assets - will filter by project on frontend');
-              await fetchAssets();
+              // CRITICAL: When editing, only send updatable fields
+              // Allowed fields: serialNumber, assignedTo, status, priority, notes, capacity, yearOfInstallation, location, customFields, compliance, tags, digitalTagType
+              // DO NOT send: tagId, assetType, subcategory, brand, model, project, subAssets (tagIds must never change)
+              // These fields are immutable and should never be updated after creation
+              const updatePayload: Partial<Asset> = {};
+              
+              // Only include allowed updatable fields
+              if (transformedData.serialNumber !== undefined) {
+                updatePayload.serialNumber = transformedData.serialNumber;
+              }
+              if (transformedData.assignedTo !== undefined) {
+                updatePayload.assignedTo = transformedData.assignedTo;
+              }
+              if (transformedData.status !== undefined) {
+                updatePayload.status = transformedData.status;
+              }
+              if (transformedData.priority !== undefined) {
+                updatePayload.priority = transformedData.priority;
+              }
+              if (transformedData.notes !== undefined) {
+                updatePayload.notes = transformedData.notes;
+              }
+              if (transformedData.capacity !== undefined) {
+                updatePayload.capacity = transformedData.capacity;
+              }
+              if (transformedData.yearOfInstallation !== undefined) {
+                updatePayload.yearOfInstallation = transformedData.yearOfInstallation;
+              }
+              
+              // Include location if it has meaningful data (not just "0" coordinates)
+              if (transformedData.location && 
+                  (transformedData.location.building || 
+                   transformedData.location.floor || 
+                   transformedData.location.room ||
+                   (transformedData.location.latitude !== '0' && transformedData.location.longitude !== '0'))) {
+                updatePayload.location = transformedData.location;
+              }
+              
+              // Include customFields if they exist
+              if (transformedData.customFields && Object.keys(transformedData.customFields).length > 0) {
+                updatePayload.customFields = transformedData.customFields;
+              }
+              
+              // Include compliance if it exists
+              if (transformedData.compliance) {
+                updatePayload.compliance = transformedData.compliance;
+              }
+              
+              // Include tags if they exist
+              if (transformedData.tags && transformedData.tags.length > 0) {
+                updatePayload.tags = transformedData.tags;
+              }
+              
+              // Include digitalTagType if it exists
+              if (transformedData.digitalTagType) {
+                updatePayload.digitalTagType = transformedData.digitalTagType;
+              }
+              
+              // EXPLICITLY EXCLUDE immutable fields to prevent accidental updates
+              // These should NEVER be in the update payload:
+              // - tagId (immutable identifier)
+              // - assetType (immutable)
+              // - subcategory (immutable)
+              // - brand (immutable)
+              // - model (immutable)
+              // - project (immutable)
+              // - subAssets (immutable - tagIds must never change)
+              // - mobilityCategory (immutable)
+              
+              // CRITICAL: DO NOT send subAssets in updates - their tagIds must never change
+              // The backend should preserve existing sub-assets and their tagIds
+              console.log('Update payload (sub-assets excluded to preserve tagIds):', updatePayload);
+              console.log('Sub-assets NOT sent - tagIds will be preserved by backend');
+              
+              const updatedAsset = await updateAsset(editingAsset._id!, updatePayload);
+              
+              // updateAsset already updates the state via the context, no need to refetch
+              // This ensures the assignedTo field is preserved correctly
+              console.log('Asset updated successfully, state updated via context');
               
               setIsEditModalOpen(false);
               setEditingAsset(null);

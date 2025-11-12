@@ -79,14 +79,85 @@ const assetReducer = (state: AssetState, action: AssetAction): AssetState => {
       return { ...state, selectedAsset: action.payload };
     case 'ADD_ASSET':
       return { ...state, assets: [...state.assets, action.payload] };
-    case 'UPDATE_ASSET':
+    case 'UPDATE_ASSET': {
+      // Preserve tagIds when updating asset in reducer
+      const originalAsset = state.assets.find(a => a._id === action.payload._id);
+      
+      // Helper function to preserve tagIds (same logic as in updateAsset)
+      const preserveTagIdsInReducer = (original: Asset | undefined, updated: Asset): Asset => {
+        if (!original) {
+          return updated;
+        }
+
+        const preserved: Asset = {
+          ...updated,
+          tagId: original.tagId || updated.tagId
+        };
+
+        // Preserve sub-asset tagIds
+        if (original.subAssets && updated.subAssets) {
+          const findOriginalSubAsset = (
+            updatedSub: { _id?: string; tagId?: string; assetName?: string; brand?: string; model?: string },
+            originalSubs: Array<{ _id?: string; tagId?: string; assetName?: string; brand?: string; model?: string }> | undefined,
+            idx: number
+          ) => {
+            if (!originalSubs || originalSubs.length === 0) return undefined;
+            if (updatedSub._id) {
+              const found = originalSubs.find(sa => sa._id === updatedSub._id);
+              if (found) return found;
+            }
+            if (updatedSub.tagId) {
+              const found = originalSubs.find(sa => sa.tagId === updatedSub.tagId);
+              if (found) return found;
+            }
+            if (updatedSub.assetName && updatedSub.brand && updatedSub.model) {
+              const found = originalSubs.find(sa => 
+                sa.assetName === updatedSub.assetName &&
+                sa.brand === updatedSub.brand &&
+                sa.model === updatedSub.model
+              );
+              if (found) return found;
+            }
+            if (idx >= 0 && idx < originalSubs.length) {
+              return originalSubs[idx];
+            }
+            return undefined;
+          };
+
+          const preservedMovable = original.subAssets.movable && updated.subAssets.movable
+            ? updated.subAssets.movable.map((sub, idx) => {
+                const orig = findOriginalSubAsset(sub, original.subAssets?.movable, idx);
+                return orig?.tagId ? { ...sub, tagId: orig.tagId } : sub;
+              })
+            : updated.subAssets.movable;
+          
+          const preservedImmovable = original.subAssets.immovable && updated.subAssets.immovable
+            ? updated.subAssets.immovable.map((sub, idx) => {
+                const orig = findOriginalSubAsset(sub, original.subAssets?.immovable, idx);
+                return orig?.tagId ? { ...sub, tagId: orig.tagId } : sub;
+              })
+            : updated.subAssets.immovable;
+          
+          preserved.subAssets = {
+            ...updated.subAssets,
+            ...(preservedMovable ? { movable: preservedMovable } : {}),
+            ...(preservedImmovable ? { immovable: preservedImmovable } : {})
+          };
+        }
+
+        return preserved;
+      };
+
+      const preservedAsset = preserveTagIdsInReducer(originalAsset, action.payload);
+      
       return {
         ...state,
         assets: state.assets.map(asset =>
-          asset._id === action.payload._id ? action.payload : asset
+          asset._id === preservedAsset._id ? preservedAsset : asset
         ),
-        selectedAsset: state.selectedAsset?._id === action.payload._id ? action.payload : state.selectedAsset,
+        selectedAsset: state.selectedAsset?._id === preservedAsset._id ? preservedAsset : state.selectedAsset,
       };
+    }
     case 'DELETE_ASSET':
       return {
         ...state,
@@ -392,17 +463,136 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
     }
   };
 
+  // Helper function to preserve tagIds from original asset
+  const preserveTagIds = (originalAsset: Asset | undefined, updatedAsset: Asset): Asset => {
+    if (!originalAsset) {
+      return updatedAsset;
+    }
+
+    // Preserve main asset tagId
+    const preservedAsset: Asset = {
+      ...updatedAsset,
+      tagId: originalAsset.tagId || updatedAsset.tagId
+    };
+
+    // Preserve sub-asset tagIds
+    if (originalAsset.subAssets && updatedAsset.subAssets) {
+      const findOriginalSubAsset = (
+        updatedSubAsset: { _id?: string; tagId?: string; assetName?: string; brand?: string; model?: string },
+        originalSubAssets: Array<{ _id?: string; tagId?: string; assetName?: string; brand?: string; model?: string }> | undefined,
+        index: number
+      ) => {
+        if (!originalSubAssets || originalSubAssets.length === 0) return undefined;
+        
+        // Method 1: Match by _id (most reliable)
+        if (updatedSubAsset._id) {
+          const found = originalSubAssets.find(sa => sa._id === updatedSubAsset._id);
+          if (found) return found;
+        }
+        
+        // Method 2: Match by tagId from updated asset
+        if (updatedSubAsset.tagId) {
+          const found = originalSubAssets.find(sa => sa.tagId === updatedSubAsset.tagId);
+          if (found) return found;
+        }
+        
+        // Method 3: Match by assetName + brand + model
+        if (updatedSubAsset.assetName && updatedSubAsset.brand && updatedSubAsset.model) {
+          const found = originalSubAssets.find(sa => 
+            sa.assetName === updatedSubAsset.assetName &&
+            sa.brand === updatedSubAsset.brand &&
+            sa.model === updatedSubAsset.model
+          );
+          if (found) return found;
+        }
+        
+        // Method 4: Match by index as last resort
+        if (index >= 0 && index < originalSubAssets.length) {
+          return originalSubAssets[index];
+        }
+        
+        return undefined;
+      };
+
+      const preservedMovable = originalAsset.subAssets.movable && updatedAsset.subAssets.movable
+        ? updatedAsset.subAssets.movable.map((updatedSubAsset, index) => {
+            const originalSubAsset = findOriginalSubAsset(updatedSubAsset, originalAsset.subAssets?.movable, index);
+            
+            if (originalSubAsset?.tagId) {
+              if (updatedSubAsset.tagId !== originalSubAsset.tagId) {
+                console.warn('WARNING: Sub-asset tagId changed for movable sub-asset. Preserving original:', {
+                  original: originalSubAsset.tagId,
+                  backend: updatedSubAsset.tagId,
+                  preserving: originalSubAsset.tagId,
+                  _id: updatedSubAsset._id,
+                  assetName: updatedSubAsset.assetName,
+                  index
+                });
+              }
+              return { ...updatedSubAsset, tagId: originalSubAsset.tagId };
+            }
+            
+            return updatedSubAsset;
+          })
+        : updatedAsset.subAssets.movable;
+      
+      const preservedImmovable = originalAsset.subAssets.immovable && updatedAsset.subAssets.immovable
+        ? updatedAsset.subAssets.immovable.map((updatedSubAsset, index) => {
+            const originalSubAsset = findOriginalSubAsset(updatedSubAsset, originalAsset.subAssets?.immovable, index);
+            
+            if (originalSubAsset?.tagId) {
+              if (updatedSubAsset.tagId !== originalSubAsset.tagId) {
+                console.warn('WARNING: Sub-asset tagId changed for immovable sub-asset. Preserving original:', {
+                  original: originalSubAsset.tagId,
+                  backend: updatedSubAsset.tagId,
+                  preserving: originalSubAsset.tagId,
+                  _id: updatedSubAsset._id,
+                  assetName: updatedSubAsset.assetName,
+                  index
+                });
+              }
+              return { ...updatedSubAsset, tagId: originalSubAsset.tagId };
+            }
+            
+            return updatedSubAsset;
+          })
+        : updatedAsset.subAssets.immovable;
+      
+      preservedAsset.subAssets = {
+        ...updatedAsset.subAssets,
+        ...(preservedMovable ? { movable: preservedMovable } : {}),
+        ...(preservedImmovable ? { immovable: preservedImmovable } : {})
+      };
+    }
+
+    // Log warning if main asset tagId changed
+    if (updatedAsset.tagId !== originalAsset.tagId && originalAsset.tagId) {
+      console.warn('WARNING: Backend returned different tagId. Preserving original:', {
+        original: originalAsset.tagId,
+        backend: updatedAsset.tagId,
+        preserving: originalAsset.tagId
+      });
+    }
+
+    return preservedAsset;
+  };
+
   // Update asset
   const updateAsset = async (assetId: string, assetData: Partial<Asset> | FormData): Promise<Asset> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
       
+      // Get original asset from state to preserve tagIds
+      const originalAsset = state.assets.find(a => a._id === assetId);
+      
       const response = await assetApi.updateAsset(assetId, assetData);
       
       if (response.success) {
-        dispatch({ type: 'UPDATE_ASSET', payload: response.asset });
-        return response.asset;
+        // Preserve tagIds from original asset
+        const preservedAsset = preserveTagIds(originalAsset, response.asset);
+        dispatch({ type: 'UPDATE_ASSET', payload: preservedAsset });
+        return preservedAsset;
       } else {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to update asset' });
         throw new Error('Failed to update asset');
@@ -443,10 +633,15 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
       
+      // Get original asset from state to preserve tagIds
+      const originalAsset = state.assets.find(a => a._id === assetId);
+      
       const response = await assetApi.scanAsset(assetId, scanData);
       
       if (response.success) {
-        dispatch({ type: 'UPDATE_ASSET', payload: response.asset });
+        // Preserve tagIds from original asset
+        const preservedAsset = preserveTagIds(originalAsset, response.asset);
+        dispatch({ type: 'UPDATE_ASSET', payload: preservedAsset });
       } else {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to scan asset' });
       }
@@ -463,7 +658,12 @@ export const AssetProvider: React.FC<AssetProviderProps> = ({ children }) => {
 
   // Update asset in state (without API call)
   const updateAssetInState = (updatedAsset: Asset) => {
-    dispatch({ type: 'UPDATE_ASSET', payload: updatedAsset });
+    // Get original asset from state to preserve tagIds
+    const originalAsset = state.assets.find(a => a._id === updatedAsset._id);
+    
+    // Preserve tagIds from original asset
+    const preservedAsset = preserveTagIds(originalAsset, updatedAsset);
+    dispatch({ type: 'UPDATE_ASSET', payload: preservedAsset });
   };
 
   // Clear error

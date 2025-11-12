@@ -16,6 +16,29 @@ import { useAuth } from '@/contexts/AuthContext'
 // API Base URL constant
 const API_BASE_URL = 'https://digitalasset.zenapi.co.in'
 
+// Type for generated asset result
+type GeneratedAssetResult = {
+  success: boolean
+  message: string
+  generated?: {
+    qrCode?: {
+      url: string
+      shortUrl: string
+      data: Record<string, unknown>
+      optimizedFor: string
+      scanSettings: Record<string, unknown>
+    }
+    barcode?: {
+      url: string
+      data: string
+      generatedAt: string
+    }
+  }
+  tagId: string
+  category: string
+  subAssetIndex: number
+}
+
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface SubAssetBulkGeneratorProps {
   // No props needed for this component
@@ -29,27 +52,7 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
   const [qrOptions, setQrOptions] = useState({ size: 400 })
   const [barcodeOptions, setBarcodeOptions] = useState({ scale: 3 })
   const [loading, setLoading] = useState(false)
-  const [generatedAssets, setGeneratedAssets] = useState<Array<{
-    success: boolean
-    message: string
-    generated?: {
-      qrCode?: {
-        url: string
-        shortUrl: string
-        data: Record<string, unknown>
-        optimizedFor: string
-        scanSettings: Record<string, unknown>
-      }
-      barcode?: {
-        url: string
-        data: string
-        generatedAt: string
-      }
-    }
-    tagId: string
-    category: string
-    subAssetIndex: number
-  }>>([])
+  const [generatedAssets, setGeneratedAssets] = useState<GeneratedAssetResult[]>([])
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [imageLoadingStates, setImageLoadingStates] = useState<{[key: string]: boolean}>({})
@@ -188,7 +191,7 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
         // Add a delay before showing assets to give server time to process images
         setTimeout(() => {
           // Transform shortUrl to use production QR code image URL for each result
-          const transformedResults = (result.results || []).map((item: any) => {
+          const transformedResults = ((result.results || []) as GeneratedAssetResult[]).map((item: GeneratedAssetResult) => {
             if (item.generated?.qrCode?.url) {
               const qrCodeUrl = item.generated.qrCode.url
               const productionShortUrl = qrCodeUrl.startsWith('http')
@@ -211,27 +214,7 @@ export function SubAssetBulkGenerator({}: SubAssetBulkGeneratorProps) {
             return item
           })
           
-          setGeneratedAssets(transformedResults as Array<{
-            success: boolean
-            message: string
-            generated?: {
-              qrCode?: {
-                url: string
-                shortUrl: string
-                data: Record<string, unknown>
-                optimizedFor: string
-                scanSettings: Record<string, unknown>
-              }
-              barcode?: {
-                url: string
-                data: string
-                generatedAt: string
-              }
-            }
-            tagId: string
-            category: string
-            subAssetIndex: number
-          }> || [])
+          setGeneratedAssets(transformedResults)
           setSuccess(`Successfully generated ${result.results?.length || 0} digital assets!`)
         }, 3000) // Wait 3 seconds for images to be processed and saved
         

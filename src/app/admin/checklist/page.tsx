@@ -82,7 +82,7 @@ const STATUS_COLORS = {
 
 
 export default function ChecklistPage() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const { toasts, addToast, removeToast } = useToast()
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -132,7 +132,16 @@ export default function ChecklistPage() {
               ...checklist,
               progress: calculateProgress(checklist.items || [])
             }))
-            setChecklists(transformedChecklists)
+            
+            // Filter checklists to only show those created by the logged-in user
+            const userEmail = user?.email
+            const filteredChecklists = userEmail 
+              ? transformedChecklists.filter((checklist: Checklist) => 
+                  checklist.createdBy?.email === userEmail
+                )
+              : transformedChecklists
+            
+            setChecklists(filteredChecklists)
           }
         } else {
           console.error('Failed to fetch checklists:', response.status)
@@ -145,7 +154,7 @@ export default function ChecklistPage() {
     }
 
     fetchChecklists()
-  }, [])
+  }, [user?.email])
 
 
 
@@ -177,7 +186,16 @@ export default function ChecklistPage() {
               ...checklist,
               progress: calculateProgress(checklist.items || [])
             }))
-            setChecklists(transformedChecklists)
+            
+            // Filter checklists to only show those created by the logged-in user
+            const userEmail = user?.email
+            const filteredChecklists = userEmail 
+              ? transformedChecklists.filter((checklist: Checklist) => 
+                  checklist.createdBy?.email === userEmail
+                )
+              : transformedChecklists
+            
+            setChecklists(filteredChecklists)
           }
         } else {
           console.error('Failed to fetch checklists:', response.status)

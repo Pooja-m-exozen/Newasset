@@ -310,13 +310,16 @@ export function EnhancedDashboard({
     ]
   ), [healthData])
 
-  const costAnalysisData = useMemo(() => (
-    costData?.success && costData?.statistics ? {
+  const costAnalysisData = useMemo(() => {
+    // Use the correct project-specific asset count from dashboardData instead of costData statistics
+    const correctAssetCount = dashboardData?.data?.assetStats?.totalAssets ?? 0
+    
+    return costData?.success && costData?.statistics ? {
       totalPurchaseCost: costData.statistics.totalPurchaseCost || 0,
       totalCurrentValue: costData.statistics.totalCurrentValue || 0,
       totalDepreciation: costData.statistics.totalDepreciation || 0,
       avgDepreciationRate: costData.statistics.avgDepreciationRate || 0,
-      assetCount: costData.statistics.assetCount || 0,
+      assetCount: correctAssetCount, // Use the correct project-specific count
       breakdown: [
         { category: "Purchase Cost", amount: costData.statistics.totalPurchaseCost || 0, percentage: (costData.statistics.totalPurchaseCost || 0) > 0 ? 100 : 0 },
         { category: "Current Value", amount: costData.statistics.totalCurrentValue || 0, percentage: (costData.statistics.totalCurrentValue || 0) > 0 ? 100 : 0 },
@@ -327,10 +330,10 @@ export function EnhancedDashboard({
       totalCurrentValue: 0,
       totalDepreciation: 0,
       avgDepreciationRate: 0,
-      assetCount: 0,
+      assetCount: correctAssetCount, // Use the correct project-specific count even when no cost data
       breakdown: [] as { category: string; amount: number; percentage: number }[]
     }
-  ), [costData])
+  }, [costData, dashboardData])
 
   const trendAnalysis = useMemo(() => (
     trendsData?.success ? {
@@ -741,30 +744,42 @@ export function EnhancedDashboard({
 
             {/* Cost Analysis */}
             <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-base">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center text-sm sm:text-base">
                   <div className="flex items-center">
                     <DollarSign className="w-4 h-4 mr-2 text-muted-foreground" />
-                    Cost Analysis
+                    <span className="truncate">Cost Analysis</span>
                   </div>
                 </CardTitle>
-                <CardDescription className="text-sm">Asset cost analysis and depreciation tracking</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Asset cost analysis and depreciation tracking</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
+                {/* Project Filter Indicator */}
+                {user?.projectName && (
+                  <div className="mb-2 sm:mb-3 p-2 bg-muted border border-border rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                      <span className="text-xs text-foreground truncate">
+                        Showing cost data for: <strong className="truncate">{user.projectName}</strong>
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
                 {isCostLoading ? (
-                  <div className="flex items-center justify-center py-6">
+                  <div className="flex items-center justify-center py-4 sm:py-6">
                     <div className="text-center">
-                      <p className="text-muted-foreground text-sm">No data available</p>
+                      <p className="text-muted-foreground text-xs sm:text-sm">No data available</p>
                     </div>
                   </div>
                 ) : costError ? (
-                  <div className="text-center py-6">
-                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-foreground mb-2">Failed to load cost data</h3>
-                    <p className="text-muted-foreground mb-3 text-sm">{costError}</p>
+                  <div className="text-center py-4 sm:py-6">
+                    <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-500 mx-auto mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-foreground mb-1 sm:mb-2">Failed to load cost data</h3>
+                    <p className="text-muted-foreground mb-2 sm:mb-3 text-xs sm:text-sm">{costError}</p>
                   </div>
                 ) : costData?.success ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">Total Purchase Cost</span>
                       <span className="text-sm font-bold text-foreground">
@@ -808,18 +823,23 @@ export function EnhancedDashboard({
                     </div>
                    
                     {/* Cost Summary */}
-                    <div className="mt-3 p-2 bg-muted rounded-lg">
+                    <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-foreground">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          <DollarSign className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs font-medium text-foreground truncate">
                             Total Assets: {costAnalysisData.assetCount}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs flex-shrink-0">
                           Real-time
                         </Badge>
                       </div>
+                      {user?.projectName && (
+                        <div className="mt-1 sm:mt-2 text-xs text-muted-foreground truncate">
+                          <span className="font-medium">Project:</span> <span className="truncate">{user.projectName}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -863,45 +883,57 @@ export function EnhancedDashboard({
 
             {/* Trend Analysis */}
             <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-base">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center text-sm sm:text-base">
                   <div className="flex items-center">
                     <TrendingUp className="w-4 h-4 mr-2 text-muted-foreground" />
-                    Trend Analysis
+                    <span className="truncate">Trend Analysis</span>
                   </div>
                 </CardTitle>
-                <CardDescription className="text-sm">Performance trends and analytics</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Performance trends and analytics</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
+                {/* Project Filter Indicator */}
+                {user?.projectName && (
+                  <div className="mb-2 sm:mb-3 p-2 bg-muted border border-border rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                      <span className="text-xs text-foreground truncate">
+                        Showing trends data for: <strong className="truncate">{user.projectName}</strong>
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
                 {isTrendsLoading ? (
-                  <div className="flex items-center justify-center py-6">
+                  <div className="flex items-center justify-center py-4 sm:py-6">
                     <div className="text-center">
-                      <p className="text-muted-foreground text-sm">No data available</p>
+                      <p className="text-muted-foreground text-xs sm:text-sm">No data available</p>
                     </div>
                   </div>
                 ) : trendsError ? (
-                  <div className="text-center py-6">
-                    <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-foreground mb-2">Failed to load trends data</h3>
-                    <p className="text-muted-foreground mb-3 text-sm">{trendsError}</p>
+                  <div className="text-center py-4 sm:py-6">
+                    <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-500 mx-auto mb-2 sm:mb-3" />
+                    <h3 className="text-sm sm:text-base font-semibold text-foreground mb-1 sm:mb-2">Failed to load trends data</h3>
+                    <p className="text-muted-foreground mb-2 sm:mb-3 text-xs sm:text-sm">{trendsError}</p>
                   </div>
                 ) : trendsData?.success ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{trendAnalysis.scheduled}</p>
+                        <p className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">{trendAnalysis.scheduled}</p>
                         <p className="text-xs text-muted-foreground">Scheduled</p>
                       </div>
                       <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">{trendAnalysis.inProgress}</p>
+                        <p className="text-base sm:text-lg font-bold text-yellow-600 dark:text-yellow-400">{trendAnalysis.inProgress}</p>
                         <p className="text-xs text-muted-foreground">In Progress</p>
                       </div>
                       <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-green-600 dark:text-green-400">{trendAnalysis.completed}</p>
+                        <p className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">{trendAnalysis.completed}</p>
                         <p className="text-xs text-muted-foreground">Completed</p>
                       </div>
                       <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-red-600 dark:text-red-400">{trendAnalysis.overdue}</p>
+                        <p className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400">{trendAnalysis.overdue}</p>
                         <p className="text-xs text-muted-foreground">Overdue</p>
                       </div>
                     </div>
@@ -921,37 +953,42 @@ export function EnhancedDashboard({
                     </div>
                    
                     {/* Trends Summary */}
-                    <div className="mt-3 p-2 bg-muted rounded-lg">
+                    <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-foreground">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          <TrendingUp className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs font-medium text-foreground truncate">
                             Period: {trendsData.period} | Total Records: {trendsData.totalRecords}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs flex-shrink-0">
                           Real-time
                         </Badge>
                       </div>
+                      {user?.projectName && (
+                        <div className="mt-1 sm:mt-2 text-xs text-muted-foreground truncate">
+                          <span className="font-medium">Project:</span> <span className="truncate">{user.projectName}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">0</p>
+                        <p className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">0</p>
                         <p className="text-xs text-muted-foreground">Scheduled</p>
                       </div>
                       <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">0</p>
+                        <p className="text-base sm:text-lg font-bold text-yellow-600 dark:text-yellow-400">0</p>
                         <p className="text-xs text-muted-foreground">In Progress</p>
                       </div>
                       <div className="text-center p-2 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-green-600 dark:text-green-400">0</p>
+                        <p className="text-base sm:text-lg font-bold text-green-600 dark:text-green-400">0</p>
                         <p className="text-xs text-muted-foreground">Completed</p>
                       </div>
                       <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                        <p className="text-lg font-bold text-red-600 dark:text-red-400">0</p>
+                        <p className="text-base sm:text-lg font-bold text-red-600 dark:text-red-400">0</p>
                         <p className="text-xs text-muted-foreground">Overdue</p>
                       </div>
                     </div>
@@ -971,15 +1008,15 @@ export function EnhancedDashboard({
                     </div>
                    
                     {/* Trends Summary */}
-                    <div className="mt-3 p-2 bg-muted rounded-lg">
+                    <div className="mt-2 sm:mt-3 p-2 bg-muted rounded-lg">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs font-medium text-foreground">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          <TrendingUp className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs font-medium text-foreground truncate">
                             No Data Available
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-muted-foreground border-border text-xs">
+                        <Badge variant="outline" className="text-muted-foreground border-border text-xs flex-shrink-0">
                           No Data
                         </Badge>
                       </div>
